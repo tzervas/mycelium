@@ -1,23 +1,26 @@
-//! `reveal` — desugar-on-demand, Increment-1 (**M-1051**; DN-38 §5/§8.3; DN-110 §3.4/§8.4;
-//! DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3).
+//! `reveal` — desugar-on-demand, Increment-1 + Increment-3 (**M-1051**; DN-38 §5/§8.3; DN-110
+//! §3.4/§8.4; DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3).
 //!
 //! `reveal` is the transparency inspector house rule #2 requires: it shows the **real L0 term the
-//! kernel runs**, never a lossy text reconstruction (DN-38 §5). This module ships the
-//! **E3-enabling core** — the four primitives a future E1/E3 hygiene-experiment harness (M-1055) or
-//! `reveal` CLI / `certified`-mode round-trip check composes: [`reveal_l0`] (the shown L0 term),
-//! [`render_surface`] (a best-effort, honestly-labelled surface pretty-printer), [`alpha_eq`] (the
-//! structural alpha-equivalence [`Node`] needs but its derived-looking [`PartialEq`] does not
-//! provide), and [`reelaborate`] (the closedness-re-derivation primitive the L0-level round-trip
-//! witness composes from — **not yet wired to a genuine E3 regression corpus**; see the "honest
-//! scoping" callout below).
+//! kernel runs**, never a lossy text reconstruction (DN-38 §5). This module ships the Increment-1
+//! primitives — [`reveal_l0`] (the shown L0 term), [`render_surface`] (a best-effort, honestly-
+//! labelled surface pretty-printer), [`alpha_eq`] (the structural alpha-equivalence [`Node`] needs
+//! but its derived-looking [`PartialEq`] does not provide), and [`reelaborate`] (the closedness-
+//! re-derivation primitive) — **plus the Increment-3 `certified` round-trip check**,
+//! [`certified_roundtrip`], that composes them into the DN-38 §5 `delaborate ∘ lower = id`
+//! obligation, now backed by a genuine, non-vacuous go/no-go regression
+//! (`src/tests/reveal_roundtrip_e3.rs`, the DN-110-8.2-hygiene-deepdive §7 E3 experiment, M-1055).
+//! See [`certified_roundtrip`]'s own doc for the STEP-0 empirical finding that scopes exactly what
+//! Increment-3 does and does not certify.
 //!
-//! # Scope (Increment-1 — do not read more into this module than it claims)
+//! # Scope (do not read more into this module than it claims)
 //!
 //! - **`site` is an entry symbol**, exactly like [`crate::elab::elaborate`]'s `entry: &str` — no
-//!   source-span resolver (Increment-2).
-//! - **No CLI** (Increment-2) and **no `certified`-mode round-trip *check*** wired into the checker
-//!   (Increment-3, DN-38 §5's `delaborate ∘ lower = id` obligation *gated by* `certified`); this
-//!   module only supplies the primitives those increments compose.
+//!   source-span resolver (Increment-2, still unbuilt).
+//! - **No CLI** (Increment-2, still unbuilt). [`certified_roundtrip`] is the DN-38 §5 `certified`-
+//!   mode round-trip *check* primitive itself (Increment-3, now built) — wiring it into the checker
+//!   as a `certified`-mode gate, and into a `reveal` CLI, remain Increment-2/a later increment; this
+//!   module supplies the checked primitive, not the surface command.
 //! - **No `Node`/`Expr` type-definition changes** — this module reads the existing frozen grammar
 //!   ([`mycelium_core::node`]) and the existing [`crate::elab::elaborate`] entry points; it adds no
 //!   kernel surface (KC-3).
@@ -26,15 +29,17 @@
 //!
 //! - **DN-38 §8.3 (v0 fidelity).** v0 is the **true L0-term view**: [`reveal_l0`] returns the
 //!   literal [`Node`] [`crate::elab::elaborate`] produces — not a re-rendered/reconstructed
-//!   approximation of it. The `certified` round-trip *check* (translation-validation over this view)
-//!   is a later increment, out of scope here.
-//! - **DN-110-8.2-hygiene-deepdive §10 OQ-H3 (surface fidelity for `%`-names).** Option **(a)**:
-//!   the surface rendering ([`render_surface`]) declares `%`-freshened hygienic names
-//!   **out-of-contract** — it shows them **raw** (never munged/hidden — house rule #2) and
-//!   **honestly labels** the rendering non-re-parseable ([`Rendered::reparseable`]), rather than
-//!   building a display-renaming pass. **The identity witness for the round-trip property is at the
-//!   L0-*term* level ([`alpha_eq`] over [`reveal_l0`]'s output), never a surface re-parse** — this is
-//!   the deep-dive §5 resolution the E3 experiment (§7) exists to force into the open, applied here.
+//!   approximation of it.
+//! - **DN-110-8.2-hygiene-deepdive §10 OQ-H3 (surface fidelity for `%`-names) — disposition
+//!   CONFIRMED option (1)/(a), option (2) display-renaming DEFERRED.** the surface rendering
+//!   ([`render_surface`]) declares `%`-freshened hygienic names **out-of-contract** — it shows them
+//!   **raw** (never munged/hidden — house rule #2) and **honestly labels** the rendering non-
+//!   re-parseable ([`Rendered::reparseable`]), rather than building a display-renaming pass (option
+//!   (2), not built here and not planned in this increment). **The identity witness for the
+//!   round-trip property is at the L0-*term* level ([`alpha_eq`] over [`reveal_l0`]'s output), never
+//!   a surface re-parse** — [`certified_roundtrip`] implements exactly this: the L0-term witness is
+//!   *always* computed; the surface round-trip is a *secondary*, best-effort, `%`-free-only
+//!   convenience over it, per the E3 experiment's (§7) findings (`src/tests/reveal_roundtrip_e3.rs`).
 //!   The same non-reparseable labelling is extended (consistently, not as a new ruling) to two other
 //!   surface-token gaps the L0 grammar exposes that OQ-H3 did not separately enumerate: a
 //!   [`Node::Swap`]'s `policy` (a resolved [`mycelium_core::ContentHash`], no surface `Path` spelling
@@ -42,7 +47,29 @@
 //!   `ctor` (a resolved [`mycelium_core::CtorRef`] `#<hash>#<i>`, likewise nameless at L0 — ADR-003).
 //!   Both render via their own canonical `Display` (`CtorRef`'s Unison spelling) or an explicit
 //!   `#`-prefixed marker, and both trip the same reparseable=false flag as a `%`-name (see
-//!   [`render_surface`]'s doc for the exact marker scan).
+//!   [`render_surface`]'s doc for the exact marker scan). **A third, independently-discovered gap
+//!   (M-1051 Increment-3 STEP-0, empirical) widens this further: every [`Node::Op`] kernel prim name
+//!   is namespaced with a `.`/`:`** (`bin.add`, `bit.not`, `cmp.eq`, `fuse_join:binary`, …;
+//!   `crate::checkty::prim_kernel_name`'s mapping is total and has **no bare-identifier target**), so
+//!   [`render_surface`]'s `is_bare_ident` check routes **every** `Op` through the `#op[…]` marker —
+//!   `Op` is *unconditionally* non-reparseable, independent of `%`-freshening. Combined with
+//!   [`Node::Fix`]/[`Node::FixGroup`] (always `#fix[…]`/`#fixgroup[…]`-marked, module doc above) and
+//!   [`Node::Construct`]/[`Node::Swap`] (always `#`-marked per this ruling), the genuinely
+//!   surface-round-trippable [`Node`] fragment is narrower still than a first read of "every marker
+//!   gap" suggests: it is **[`Node::Const`] (finite scalar payloads), [`Node::Var`], and
+//!   [`Node::Let`] built *only* from those — and no further** (an "no-op identity-shuffle" fragment).
+//!   **[`Node::App`] and [`Node::Match`] do NOT close, even `%`-free and marker-free** — this is
+//!   tested, not merely asserted, by `src/tests/reveal_roundtrip_e3.rs`'s
+//!   `app_is_honestly_reparse_failed`/`match_is_honestly_alpha_mismatch` (adversarially found in
+//!   PR #1423 review, 2026-07-11): `App` renders `reparseable = true` but re-check refuses
+//!   (`unknown function/constructor/prim`, since nothing besides `Lam`/`Fix`/`FixGroup` is callable
+//!   in the surface grammar, and those are already excluded above) — a genuine
+//!   `SurfaceOutcome::ReparseFailed`; `Match` reparses and re-elaborates, but the elaborator injects
+//!   an extra scrutinee-binding `let` (`let scrut%N = … in match scrut%N { … }`) absent from the
+//!   original, so the result is **not** `alpha_eq` to it — a genuine `SurfaceOutcome::AlphaMismatch`.
+//!   See [`certified_roundtrip`]'s doc for the further STEP-0 finding that even the `Const`/`Var`/
+//!   `Let` fragment's `reparseable=true` flag is not sufficient for real parser acceptance (the
+//!   [`Node::Lam`] counterexample).
 //!
 //! # Guarantee tags (VR-5 — no upgrade past what is checked here)
 //!
@@ -55,9 +82,25 @@
 //!   proof of alpha-comparison correctness or of the pretty-printer's grammar coverage claim).
 //! - The **closedness-preservation** property tested here (`src/tests/reveal.rs`'s
 //!   `reveal_l0_output_is_closed_and_survives_reelaboration`),
-//!   `alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x))` over the fixture corpus: **`Empirical`**,
-//!   but see the honest-scoping callout immediately below — **this is not yet the DN-110-8.2-hygiene-
-//!   deepdive §7 E3 regression test**, and no claim here should be read as E3 evidence.
+//!   `alpha_eq(reelaborate(reveal_l0(x)), reveal_l0(x))` over the fixture corpus: **`Empirical`**
+//!   — this test alone is still self-clone-vacuous re: `alpha_eq`'s own correctness (see the callout
+//!   below); the non-vacuous E3 claim is a *separate*, composed result (next bullet).
+//! - **The L0-term-level round-trip claim, `alpha_eq(reelaborate(expand(rhs)), independent_oracle)`
+//!   over an actual `%`-freshened sugar expansion (M-1055 E3, `src/tests/reveal_roundtrip_e3.rs`):
+//!   `Declared → Empirical`** (M-1051 Increment-3) — **scoped to the reparseable fragment identified
+//!   above**, checked by the E3 fixture corpus + its mutation self-check (disabling freshening must
+//!   fail), **never `Proven`**. This is the one upgrade this increment makes; it is **not** a blanket
+//!   upgrade of every claim in this module, and it does **not** by itself upgrade DN-110's overall
+//!   status (M-1054's facility and full reveal-transparency remain `Declared`/unbuilt) — see
+//!   `docs/notes/DN-110-8.2-hygiene-deepdive.md` §7/§10 and `DN-110-Native-Metaprogramming-And-
+//!   Sugar-Lowering-Facility.md` §8.4 for the exact scope of the upgrade.
+//! - The **surface round-trip** ([`certified_roundtrip`]'s [`SurfaceOutcome`]): **`Empirical`**,
+//!   and **only** for the narrow no-op-identity-shuffle fragment above (`Const`/`Var`/`Let` built
+//!   only from those) — the surface `delaborate ∘ lower = id` obligation for `%`-names, or for any
+//!   term containing an `Op`/`Lam`/`Fix`/`FixGroup`/`Construct`/`Swap`/**`App`**/**`Match`**, is
+//!   **not** claimed and stays out-of-contract/unbuilt (`SurfaceOutcome::OutOfContract`/
+//!   `ReparseFailed`/`AlphaMismatch`), honestly, per STEP-0's empirical finding (`App`/`Match`
+//!   tested directly, not merely inferred — `src/tests/reveal_roundtrip_e3.rs`).
 //!
 //! # `reelaborate` at v0 — what it actually checks, honestly
 //!
@@ -73,23 +116,33 @@
 //! input **iff** the closedness re-derivation succeeds, and a never-silent [`RevealError::NotClosed`]
 //! naming the offending free names otherwise (G2). This gives the closedness property real teeth (a
 //! `reveal_l0` that ever leaked an unbound reference would fail it) while staying honest about not
-//! being a full re-elaboration-from-surface — that stronger obligation is DN-38 §5's `certified`
-//! round-trip, Increment-3.
+//! being a full re-elaboration-from-surface — that stronger obligation is [`certified_roundtrip`]'s
+//! surface path (Increment-3), scoped to the narrow reparseable fragment above.
 //!
-//! **Honest scoping (VR-5 — do not overclaim this as E3): the corpus round-trip test is NOT yet
-//! the DN-110-8.2-hygiene-deepdive §7 E3 regression test, and must not be read/cited as such.**
+//! **Honest scoping (VR-5 — this module's OWN corpus round-trip test, `reveal_l0_output_is_closed_
+//! and_survives_reelaboration` in `src/tests/reveal.rs`, is still self-clone-vacuous; do not cite
+//! IT as E3 evidence — E3 itself now exists, separately, and is not vacuous; see below.**
 //! [`reelaborate`] returns `shown.clone()` on the success path (see above — v0 has no lossy step to
-//! invert, so re-derivation is a validated clone). Composed with `alpha_eq`, the corpus test therefore
-//! compares a term to a **bit-identical clone of itself** — it would pass even with a broken
-//! `alpha_eq` (a `false`-always or `true`-always comparator both happen to agree on identical
+//! invert, so re-derivation is a validated clone). Composed with `alpha_eq`, that specific test
+//! therefore compares a term to a **bit-identical clone of itself** — it would pass even with a
+//! broken `alpha_eq` (a `false`-always or `true`-always comparator both happen to agree on identical
 //! operands via different code paths; only a genuinely *differently-spelled-but-equivalent* pair
 //! distinguishes a correct alpha-comparator from a broken one). What it *does* check, and check
 //! validly, is **closedness-preservation**: that `reveal_l0`'s output survives an independent
-//! closedness re-derivation with its structure intact. The real E3 — genuinely different-but-
-//! alpha-equivalent pairs, produced by an actual sugar **expansion** with `%`-freshening
-//! (`expand → reveal_l0 → reelaborate → alpha_eq`) — needs expression-position sugar rules that do
-//! not exist yet; it is the E1/E3 experiment DN-110-8.2-hygiene-deepdive §7 names, tracked as a
-//! follow-on (M-1055), not built in this increment. `alpha_eq` itself is separately unit-tested
+//! closedness re-derivation with its structure intact.
+//!
+//! **The real E3 — now built** (M-1051 Increment-3 / M-1055; `src/tests/reveal_roundtrip_e3.rs`) —
+//! avoids that vacuity by construction, the same way the E1 capture-avoidance experiment
+//! (`src/tests/hygiene_expr_sugar.rs`) does: a test-only sugar-`expand` prototype (a fresh,
+//! self-contained instance in the E3 test file — not a cross-module import of E1's, to respect this
+//! increment's edit-scope boundary; same discipline, independently re-derived) produces
+//! `%`-freshened, genuinely *differently-spelled* terms, checked against an **independently
+//! hand-built oracle** (disjoint binder spellings `expand` never produces) via
+//! `alpha_eq(reelaborate(expand(rhs, params, args)), oracle)` **and** an
+//! [`mycelium_interp::Interpreter::eval`] differential that does not go through `alpha_eq` at all —
+//! plus a **mutation self-check**: disabling `expand`'s `%`-freshening must (and does) make both the
+//! `alpha_eq` and the `eval` checks fail, demonstrating the harness would catch a real regression,
+//! not merely fail to trigger one it never exercises. `alpha_eq` itself is separately unit-tested
 //! against hand-built alpha-variant pairs (renamed binders across every binder-introducing `Node`
 //! form — `Let`/`Lam`/`Fix`/`FixGroup`/`Alt::Ctor`) in `src/tests/reveal.rs`, which *is* a genuine
 //! (if synthetic, non-sugar-derived) correctness check on the comparator in isolation.
@@ -99,7 +152,7 @@ use std::fmt::Write as _;
 
 use mycelium_core::{Alt, Node, Payload, Repr, ScalarKind, SparsityClass, Trit, Value};
 
-use crate::checkty::Env;
+use crate::checkty::{check_nodule, Env};
 use crate::elab::{elaborate, ElabError};
 use crate::totality::{WalkDepthExceeded, MAX_WALK_DEPTH};
 
@@ -834,4 +887,179 @@ fn hex_encode(bytes: &[u8]) -> String {
         let _ = write!(s, "{b:02x}");
     }
     s
+}
+
+// ---------------------------------------------------------------------------------------------
+// certified_roundtrip — Increment-3 (M-1051; DN-38 §5's `delaborate ∘ lower = id` obligation
+// *gated by* `certified`; DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3 option (1))
+// ---------------------------------------------------------------------------------------------
+
+/// The L0-term-level identity witness (OQ-H3 option (1), module doc) — the property the
+/// `certified` round-trip claim actually rests on. Always computed by [`certified_roundtrip`],
+/// independent of whether the surface path (below) is even attempted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum L0Witness {
+    /// [`reelaborate`] re-derived `shown`'s closedness and the result is [`alpha_eq`] to `shown`.
+    /// The expected outcome for every well-formed `shown`; see [`reelaborate`]'s own doc for why
+    /// this specific composition, taken alone, does not exercise `alpha_eq`'s own correctness (it
+    /// compares a term to a structural clone of itself) — the E3 experiment's non-vacuity instead
+    /// comes from composing this same witness over an **independently-spelled oracle**
+    /// (`src/tests/reveal_roundtrip_e3.rs`), never from this method call alone.
+    Closed,
+    /// `reelaborate` succeeded but its output was (impossible under the current v0 "clone on
+    /// success" implementation — kept as an explicit variant, not an `unreachable!()`/panic, so a
+    /// future non-identity `reelaborate` cannot regress silently, G2) not alpha-equivalent to
+    /// `shown`.
+    ClosedButNotAlphaEq,
+    /// `shown` was not closed, or its closedness walk exceeded the shared recursion budget —
+    /// wraps the underlying [`RevealError`].
+    Refused(RevealError),
+}
+
+/// The (secondary, best-effort) surface round-trip outcome (OQ-H3 option (1): out-of-contract for
+/// `%`-names, module doc). **Never assumes success from [`Rendered::reparseable`] alone** — the
+/// M-1051 Increment-3 STEP-0 empirical finding is that `reparseable` (no `%`/`#` byte in the text)
+/// is **necessary but not sufficient** for real re-parse: e.g. [`render_node`]'s `Node::Lam` arm
+/// emits `lambda(param) => body` with **no parameter type annotation**, which the real
+/// [`crate::parse::Parser::parse_params_opt`] grammar *requires* (`name ':' type`) — so a `%`-free,
+/// marker-free rendering of any term containing a `Lam` is flagged `reparseable = true` yet
+/// genuinely fails to re-parse. [`certified_roundtrip`] always *attempts* the real
+/// lex→parse→check→elaborate pipeline when `reparseable` is `true`, rather than trusting the flag,
+/// and reports exactly what happened — never silently treating "the flag said reparseable" as "it
+/// round-tripped" (G2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SurfaceOutcome {
+    /// [`render_surface`] itself refused ([`RenderError`]) — there is no text to even attempt a
+    /// reparse of (its `Display` text, kept for diagnostics/EXPLAIN).
+    RenderFailed(String),
+    /// `render_surface` flagged the text non-reparseable (a `%`-name or a `#`-marker is present,
+    /// per [`Rendered::reparseable`]'s marker scan) — the surface path is honestly out of contract
+    /// here; the [`L0Witness`] is the only claim made for this `shown` term.
+    OutOfContract {
+        /// The rendered (non-reparseable) text, kept for diagnostics/EXPLAIN.
+        text: String,
+    },
+    /// `reparseable` was `true`, but the real lex/parse/check/elaborate pipeline over the wrapped
+    /// text still refused — the STEP-0 finding above, made concrete on this particular `shown`
+    /// term (`reason` is the parse/check/elab error's own `Display` text).
+    ReparseFailed {
+        /// The rendered (reparseable-flagged) text that nonetheless failed to reparse.
+        text: String,
+        /// Why (the parse/check/elab error text).
+        reason: String,
+    },
+    /// The text reparsed, re-checked, and re-elaborated cleanly, but the resulting term was
+    /// **not** [`alpha_eq`] to the original `shown` term — a genuine round-trip failure, reported
+    /// rather than silenced (G2).
+    AlphaMismatch {
+        /// The rendered text.
+        text: String,
+    },
+    /// The full surface round-trip closed: the rendered text reparsed, re-checked, re-elaborated,
+    /// and the result is [`alpha_eq`] to the original `shown` term. Only ever reached for the
+    /// narrow no-op-identity-shuffle fragment identified in the module doc — `Const`/`Var`/`Let`
+    /// built **only** from those. `App` and `Match` do **not** close this even `%`-free/marker-free
+    /// (module doc; tested by `src/tests/reveal_roundtrip_e3.rs`'s
+    /// `app_is_honestly_reparse_failed`/`match_is_honestly_alpha_mismatch`) — they land in
+    /// [`SurfaceOutcome::ReparseFailed`]/[`SurfaceOutcome::AlphaMismatch`] respectively, never here.
+    Ok {
+        /// The rendered text that round-tripped.
+        text: String,
+    },
+}
+
+/// The Increment-3 `certified`-mode round-trip verdict (DN-38 §5). Always carries the
+/// [`L0Witness`] (the primary identity witness backing the `certified` claim, OQ-H3 option (1))
+/// and the best-effort [`SurfaceOutcome`] (secondary, `%`-free-only convenience) — never a bare
+/// `bool`; both are EXPLAIN-able and never-silent (G2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CertVerdict {
+    /// The L0-term-level identity witness — the property the `certified` round-trip claim
+    /// actually rests on.
+    pub l0: L0Witness,
+    /// The secondary, best-effort surface round-trip outcome (never gates `l0_witness_holds`).
+    pub surface: SurfaceOutcome,
+}
+
+impl CertVerdict {
+    /// `true` iff the L0-term-level witness holds — the property `certified` mode actually
+    /// certifies (OQ-H3 option (1)). The surface outcome is diagnostic/secondary and never gates
+    /// this: a `SurfaceOutcome::OutOfContract`/`ReparseFailed` term can still have
+    /// `l0_witness_holds() == true`.
+    #[must_use]
+    pub fn l0_witness_holds(&self) -> bool {
+        matches!(self.l0, L0Witness::Closed)
+    }
+}
+
+/// Run the Increment-3 `certified` round-trip check over `shown` (an already-elaborated, closed
+/// L0 [`Node`] — typically [`reveal_l0`]'s output, or a test-harness sugar-expansion output
+/// standing in for it, `src/tests/reveal_roundtrip_e3.rs`). `ret_ty_surface` is the entry's
+/// surface return-type spelling the caller supplies (e.g. `"Binary{8}"`) — kept an explicit
+/// parameter rather than this module growing its own [`crate::ast::TypeRef`] pretty-printer
+/// (KC-3/YAGNI: no such printer exists in the crate today, and a future checker-integrated
+/// `certified`-mode caller already holds the entry's [`Env`] and so its declared
+/// [`crate::ast::TypeRef`] text directly).
+///
+/// Always computes [`L0Witness`] first (never skipped, regardless of the surface outcome), then
+/// attempts [`SurfaceOutcome`]: [`render_surface`] the term; if it flags `reparseable = false`,
+/// stop there (`SurfaceOutcome::OutOfContract`, module doc's narrow-fragment ruling); otherwise
+/// genuinely wrap the text in a throwaway one-fn nodule, `crate::parse::parse` →
+/// `crate::checkty::check_nodule` → [`elaborate`] it, and compare the result to `shown` via
+/// [`alpha_eq`] — reporting whichever of [`SurfaceOutcome`]'s variants actually happened. Never
+/// panics, never silently upgrades a partial result (G2): every branch is an explicit,
+/// `#[must_use]`-returned [`CertVerdict`].
+#[must_use]
+pub fn certified_roundtrip(shown: &Node, ret_ty_surface: &str) -> CertVerdict {
+    let l0 = match reelaborate(shown) {
+        Ok(clone) if alpha_eq(&clone, shown) => L0Witness::Closed,
+        Ok(_) => L0Witness::ClosedButNotAlphaEq,
+        Err(e) => L0Witness::Refused(e),
+    };
+
+    let rendered = match render_surface(shown) {
+        Ok(r) => r,
+        Err(e) => {
+            return CertVerdict {
+                l0,
+                surface: SurfaceOutcome::RenderFailed(e.to_string()),
+            }
+        }
+    };
+
+    if !rendered.reparseable {
+        return CertVerdict {
+            l0,
+            surface: SurfaceOutcome::OutOfContract {
+                text: rendered.text,
+            },
+        };
+    }
+
+    let surface = match reparse_check_elaborate(&rendered.text, ret_ty_surface) {
+        Ok(reelaborated) if alpha_eq(&reelaborated, shown) => SurfaceOutcome::Ok {
+            text: rendered.text,
+        },
+        Ok(_) => SurfaceOutcome::AlphaMismatch {
+            text: rendered.text,
+        },
+        Err(reason) => SurfaceOutcome::ReparseFailed {
+            text: rendered.text,
+            reason,
+        },
+    };
+    CertVerdict { l0, surface }
+}
+
+/// Wrap `text` as a throwaway one-fn nodule's body and run it through the **real** front end
+/// (`crate::parse::parse` → `crate::checkty::check_nodule` → [`elaborate`]) — the genuine
+/// lex→parse→check→elaborate pipeline [`certified_roundtrip`]'s surface path attempts, never a
+/// simulation of it. `Err`'s `String` is the underlying [`crate::error::ParseError`]/
+/// [`crate::checkty::CheckError`]/[`ElabError`]'s own `Display` text, stage-prefixed so a failure
+/// names which stage refused.
+fn reparse_check_elaborate(text: &str, ret_ty_surface: &str) -> Result<Node, String> {
+    let src = format!("nodule d;\nfn __certified_roundtrip__() => {ret_ty_surface} = {text};");
+    let nodule = crate::parse::parse(&src).map_err(|e| format!("parse: {e}"))?;
+    let env = check_nodule(&nodule).map_err(|e| format!("check: {e}"))?;
+    elaborate(&env, "__certified_roundtrip__").map_err(|e| format!("elab: {e}"))
 }

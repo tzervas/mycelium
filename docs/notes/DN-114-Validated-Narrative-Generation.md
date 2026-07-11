@@ -1,8 +1,8 @@
-# Design Note DN-112 — Validated Narrative Generation (a sentence-level faithfulness oracle for the `gen-book`/`gen-manual` interpretive layer, so generated prose never hallucinates)
+# Design Note DN-114 — Validated Narrative Generation (a sentence-level faithfulness oracle for the `gen-book`/`gen-manual` interpretive layer, so generated prose never hallucinates)
 
 | Field | Value |
 |---|---|
-| **Note** | DN-112 |
+| **Note** | DN-114 |
 | **Status** | **Draft** (2026-07-11) — proposes a **faithfulness oracle** that gates the *interpretive* prose the Narrative-Authoring-Pipeline's `gen-book`/`gen-manual` generators emit (M-363), so the "actual read" can be **generated** — via parameterized, idempotent prompts over context chunks — while remaining **validated (no hallucination, no trash)**. **Refines** `docs/spec/Narrative-Authoring-Pipeline.md` §4/§4.1/§6 and the *Narrative-Capture-and-Authoring* §5 draft-then-review floor; **enacts nothing** and **moves no other doc's status** (house rule #3, append-only). Requires maintainer ratification to move Draft → Accepted. All tags `Declared` unless a cited source holds them higher (VR-5). |
 | **Decides** | *Proposes, for ratification:* (a) a **sentence-level faithfulness oracle** — every generated interpretive sentence must be *grounded in its cited extracted facts and nothing else*, checked by a resolvable-`doc_refs` requirement + an adversarial claim-grounding pass, yielding a **`validated_fraction`** (the honest number, modeled on the transpiler's `checked_fraction`); (b) **commit-only-validated**: only sentences that pass are written to the corpus; the rest are **dropped, never-silently reported** (G2), and unvalidated material stays `Declared`; (c) **idempotent, content-addressed generation** (cache key = hash of facts + template + model-id + seed) so re-runs are stable and updates are **differential**; (d) the operationalization as a `narrate/` harness on the `coauthor.py` skeleton + a `/gen-book` skill applying DN-96 context-windowing. |
 | **Consumes** | `docs/spec/Narrative-Authoring-Pipeline.md` (§1 "no hallucinating prose"; §4 total-projection / "flag undocumented, never invent"; §4.1 quality-bar lint; §6/G2); `docs/notes/Narrative-Capture-and-Authoring.md` (§5 draft-then-review floor); `tools/llm-harness/coauthor.py` (the generate→validate→feedback skeleton, VR-5 tag gate, dual reports); `crates/mycelium-transpile/src/vet.rs` (the `checked_fraction` oracle discipline); `tools/github/doc_refs_check.py` (the `api:`/`corpus:`/`src:` grounding grammar); `crates/mycelium-doc/src/{apiref,lib_index,doc_lint}.rs` (the validated extraction basis); DN-96 (context-windowing); DN-09 (KC-2 verdict: LLM leverage sanctioned). |
@@ -126,6 +126,6 @@ This note **refines, does not supersede**, `Narrative-Authoring-Pipeline.md`:
 ---
 
 ### Changelog
-- 2026-07-11 — DN-112 created (Draft): the faithfulness oracle for validated narrative generation; refines
+- 2026-07-11 — DN-114 created (Draft): the faithfulness oracle for validated narrative generation; refines
   Narrative-Authoring-Pipeline §4/§4.1/§6; ships the `narrate/` harness + `/gen-book` skill as Draft. Tags
   `Declared` pending ratification (VR-5).
