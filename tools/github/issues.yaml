@@ -13770,6 +13770,30 @@ issues:
         (see DN-101 §5). FLAG-tr-unknown-prim (the known-prim symbol table) still owed here (register
         #21/#50). Register rows #72/#85 corrected `tr-only` → `language-enabler` (DN-34 §8.21).
 
+      CLI reconciliation (2026-07-11, PR #1427, `claude/leaf/m1024-linker-reconciliation`, merged to
+      `dev` — append-only, does not edit the record above). Collapses `mycelium-cli`'s own duplicate
+      flatten-by-name linker (`merge_phylum_env`/`merge_map`/`fmt_pair_key`, ~155 LOC) onto the
+      canonical `PhylumEnv::link` from this issue (DRY — one linker, not two); `run_multi_nodule` now
+      calls `phylum_env.link()` directly. Fixes a real user-facing bug found along the way: `myc check`
+      type-checked each `.myc` source in isolation (a phylum-of-one) so a project with a genuine
+      cross-nodule `use` always refused, even though the identical project ran fine under `myc run`
+      (which already assembled every source into one `Phylum`). New shared seam
+      `assemble_and_check_phylum` in `mycelium-cli` is now the one path both `myc check` and
+      `myc run`/`myc build` share. Intentional behavioral delta (per DN-101 §5-A v0 flat-namespace
+      semantics): `link` refuses ANY cross-nodule simple-name duplicate, even byte-identical, stricter
+      than the retired linker's identical-bytes tolerance — a correctness upgrade, not a regression.
+      `CheckReport.checked`/`failures` corrected to the same all-or-nothing honesty as
+      `mycelium-check`'s `PhylumReport` (VR-5) since `check_phylum` cannot supply a per-nodule verdict.
+      `checkty.rs` untouched (confirmed via diff — parallel-safe with the concurrent M-1054 facility
+      build touching that file). `cargo test -p mycelium-cli`: 36 passed (2 new); `cargo test -p
+      mycelium-check`: 9 passed unchanged; `cargo test -p mycelium-l1 --test phylum_exec`: 6 passed
+      unchanged (the `link` differential this issue landed, untouched by the CLI-side change).
+      FLAGGED follow-up (not done here, out of this leaf's declared scope): `mycelium-check`'s
+      `check_project`/`check_sources` (phylum-of-one) still exist alongside `check_phylum_dir`
+      (already phylum-aware) — a smaller in-crate follow-up could point `myc-check --project` at
+      `check_phylum_dir` instead. Does not change this issue's own `status:in-progress` / AOT-parity
+      residual above.
+
   - id: M-1025
     title: "enb ENB-2 — `?` try-operator grammar sugar + desugar"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -15019,6 +15043,27 @@ issues:
       (`reelaborate` has no lossy step to invert; see M-1055's landed_basis). Increment-2 (CLI/LSP
       surfacing of `desugar`/`expand`) and Increment-3 (the `certified`-mode round-trip check, DN-38
       §5/§8.3) remain unbuilt — this issue stays `in-progress`, not `done`.
+
+      **Increment-3 landed (2026-07-11, append-only, does not edit the record above).** PR #1423
+      (`claude/leaf/m1051-inc3-e3-reveal-roundtrip`, merged to `dev`, adversarial-review fast-follow
+      `2ae0cd63`) adds `certified_roundtrip` (DN-38 §5's `delaborate . lower = id` obligation gated by
+      `certified` mode): always computes the L0-term-level identity witness (`reelaborate` +
+      `alpha_eq`), and, as a secondary best-effort convenience, attempts a genuine surface round-trip
+      (real reparse → real re-check → real re-elaborate → `alpha_eq`) whenever `render_surface` flags
+      the text `reparseable` — reporting an explicit `SurfaceOutcome`, never trusting the flag alone
+      (G2). **Verify-first finding (empirical, review-hardened):** `reparseable = true` is necessary
+      but not sufficient for real parser acceptance — confirmed for `Node::Lam` (no param-type
+      annotation in the render), every `Node::Op` (unconditionally non-reparseable via the `#op[..]`
+      marker, kernel prim names being `.`/`:`-namespaced), and — added during adversarial review —
+      `App`/`Match` also fail real re-check even when `%`/`#`-marker-free. The genuinely surface-
+      round-trippable fragment is narrow: `Const`/`Var`/`Let`(-of-those) only. **OQ-H3 disposition
+      confirmed as option (1)/(a): L0-term-level identity witness, never a surface re-parse for
+      `%`-names**; option (2) (display-renaming) stays deferred. This is the M-1051 half of M-1055's
+      E3 experiment (`crates/mycelium-l1/src/tests/reveal_roundtrip_e3.rs`, 6 tests green — see
+      M-1055's own landed_basis for the experiment-side verdict). The reveal spine moves
+      `Declared → Empirical` **only** for the L0-term-level claim on the reparseable fragment, not a
+      blanket upgrade (VR-5). **Increment-2 (CLI/LSP surfacing) is the sole remaining gap** — this
+      issue stays `in-progress`, not `done`.
     body: |
       Filed 2026-07-11 from the maintainer's ratification of DN-106 (ENB-10 triage). The maintainer
       established a general **surface-sugar transparency** principle ("that's re 106"): "We can carry
@@ -15251,6 +15296,46 @@ issues:
       blocked/gate status and records the architecture; it does not itself certify any stage as built,
       which remains for this epic's own DoD to show, checked independently.
 
+      **Stage 0 + Stage 1 landed (2026-07-11, append-only, integration close-out; mitigation #14 --
+      verified against the merged code, not rubber-stamped).** Stage 0 landed via PR #1426
+      (`claude/leaf/m1054-stage0-facility-skeleton`, merged to `dev`): `LowerDecl::value_params`
+      (ast.rs), `Cx::check_sugar_call` (checkty.rs, tried only as `check_app`'s last resort, after
+      every existing resolution path has missed -- arity/type-matches then unconditionally refuses,
+      naming the Stage-1 gate), and `elaborate_lower_rule_with_args` (elab.rs, a value-parametric
+      extension of `elaborate_lower_rule`, which becomes a thin empty-args wrapper so its public
+      signature and every existing caller are untouched). Stage 1 landed via PR #1429
+      (`claude/leaf/m1054-stage1-facility-hygiene`, merged to `dev`, human + Grok adversarial review
+      resolved in follow-up commit `26344f99`): **the first facility stage that actually emits an
+      expansion.** `elab.rs` gains a two-pass hygienic expansion in `elaborate_lower_rule_with_args`
+      -- pass 1 ordinary `Elab::expr` elaboration of the RHS with value params bound to their bare
+      surface spelling, pass 2 `sugar_expand` (a direct port of the M-1055 E1 prototype's
+      `Expander::go`) freshening every RHS-introduced binder via `Elab::fresh` under a process-wide
+      site-qualified namespace (`SUGAR_EXPANSION_SITE`) and substituting value-parameter
+      placeholders with their matched argument `Node`s. New `src/tests/facility_stage1_hygiene.rs`
+      (7 fixtures post-review, each checked 3 ways: `alpha_eq` vs. an independent oracle,
+      `Interpreter::eval` agreement, and a disable-freshening negative control). **Verdict: PASS --
+      production capture-avoidance (A)+(B) on the real `elaborate_lower_rule_with_args` path moves
+      `Declared -> Empirical`, for that path specifically** (E1's own `Empirical` stays scoped to the
+      test-only prototype it covered). `cargo test -p mycelium-l1 --lib`: 526 passed, 0 failed, 1
+      ignored (was 519 pre-Stage-1; +7). `clippy -D warnings` / `fmt` clean.
+
+      **Stage 1b residual -- the facility is NOT yet reachable end-to-end (honest, not a full DoD
+      close).** (C) def-site resolution and (D) affine-on-expanded-L0 stay `Declared` (Stage 2/3,
+      untouched by Stage 1). `checkty::Cx::check_sugar_call` is UNCHANGED by Stage 1 -- it still
+      refuses every recognized sugar-rule call site; the facility is not yet wired into the
+      ordinary program-elaboration dispatch (`Cx::check_app` / `self.app`), so no ordinary `.myc`
+      program can invoke it yet. Also flagged: `elaborate_lower_rule`'s synthetic-single-function-
+      `Env` mechanism cannot elaborate a `lower` rule whose RHS is a lambda IIFE at all (pre-existing,
+      confirmed independent of Stage 1); free RHS identifiers (neither a value parameter nor an
+      RHS-local binder) are left as bare `Var`s (Stage 2's OQ-H1 def-site-resolution job, not
+      attempted); `SUGAR_EXPANSION_SITE` is a process-wide monotonic counter, not bit-reproducible
+      across separate process runs (does not affect alpha-equivalence correctness; flagged for
+      anyone needing a stable content-hash through an expanded sugar site). Status stays
+      `in-progress` (label unchanged) -- Stage 0+1 are real, checked progress against this epic's
+      DoD, but the DoD itself (every sugar rule mechanical + `reveal`-able + hygiene-witnessed, wired
+      into ordinary elaboration) is not yet met. DN-110 stays `Accepted`, NOT `Enacted`; no tag
+      upgraded past its checked basis (VR-5).
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -15375,7 +15460,7 @@ issues:
   - id: M-1056
     title: "/native-translate methodology skill -- Rust-construct classification decision procedure (DN-110 §9)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -15384,6 +15469,27 @@ issues:
       - corpus:DN-109
       - corpus:DN-99
       - corpus:DN-106
+      - src:.claude/skills/native-translate/SKILL.md
+    landed_basis: >
+      status:done (2026-07-11, integration close-out; mitigation #14 -- verified against the merged
+      code, not rubber-stamped). PR #1422 (`worktree-agent-ad6a3b32b58f55011`, merged to `dev`)
+      authors `.claude/skills/native-translate/SKILL.md`: implements DN-110 §9's six steps verbatim
+      (verify-first against the DN-99 register + a corpus grep; identify the underlying PROBLEM, not
+      Rust's mechanism; classify via the DN-111 {exact?}x{native?} generator into
+      NativeEquivalent|IdiomaticRemapping|Approximation|InteropBridge; apply the DN-109 §3.2 auto-fire
+      ratchet; a sugar-specific `lower`-rule case; produce the §9 Step-6 register-style artifact),
+      the per-category VR-5 tag ceiling, the (construct, context)-pair + time-indexed caveat (DN-111
+      §8.1/§8.4), and the `wild`-fold seam (DN-111 §8.3). Self-check basis: rather than a standalone
+      synthetic self-check against the DN-110 §1 J1-J5 table, the skill was applied in the SAME PR to
+      classify all 47 `tools/grammar/sugar.yaml` rows (45 keyword sugars + `?` glyph + `reveal`
+      not-lexed) -- a materially stronger validation than the DoD's literal minimum, covering the J1
+      exemplar (`lower`/`derive` -> NativeEquivalent, matching DN-110 §1's J1 row) and the J2 exemplar
+      (`object`/`via`/`impl` -> IdiomaticRemapping, matching DN-110 §1's J2 row) directly, plus 33
+      further NativeEquivalent rows, 1 Approximation (`lambda`'s deferred capture semantics), and 8
+      honestly `unclassified # needs-review` (Gap rows with no landed L1 construct, or `grow`'s
+      deliberate non-functional reservation) -- marked, never fabricated (VR-5). See M-1058's own
+      addendum for the sugar-index population detail. `python3 tools/grammar/sugar_index.py
+      --self-test` and `scripts/checks/sugar-index.sh` both green.
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110. A follow-up deliverable (DN-110
       §9/§12, not authored in DN-110 itself -- it would race the design note on scope). Authors a
@@ -15497,7 +15603,17 @@ issues:
       pass (2026-07-10): the deferred `native_strategy` column's placeholder comment in
       `sugar.yaml` updated to point at the now-ratified DN-111 enum (was "DN-109's taxonomy is
       still settling"); the column itself remains deferred — populating its 45 rows is bounded
-      follow-up work, not done here (VR-5, no invented per-row classifications). Cross-reference:
+      follow-up work, not done here (VR-5, no invented per-row classifications).
+
+      **Follow-up landed (2026-07-11, append-only — supersedes the "remains deferred" line above,
+      does not rewrite it; mitigation #14).** PR #1422 populates the `native_strategy` column for
+      all 47 rows (45 keyword sugars + the `?` glyph + `reveal` not-lexed) via the newly-authored
+      `/native-translate` skill (M-1056, landed same PR): 35 `NativeEquivalent`, 3
+      `IdiomaticRemapping` (`object`/`via`/`impl`'s inherent-desugar family), 1 `Approximation`
+      (`lambda`'s deferred capture semantics), 8 `unclassified # needs-review` (Gap rows with no
+      landed L1 construct, plus `grow`'s deliberate non-functional reservation) — marked, never
+      fabricated (VR-5). `sugar_index.py` regenerated to render the column;
+      `docs/sugar-index/INDEX.md`/`index.json` committed. Cross-reference:
       M-1051 is the SEPARATE runtime desugar/expand-on-demand tooling (developer-facing "show me
       the lowering at this sugar site"); this issue is unrelated to and distinct from the M-1054
       DN-110 native-metaprogramming epic (a same-numbered collision this issue was renumbered away
