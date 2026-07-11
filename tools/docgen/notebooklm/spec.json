@@ -4,7 +4,17 @@
   "chapters": [
     {
       "title": "Core spec & contracts",
-      "globs": ["docs/spec/*.md"]
+      "sources": [
+        "docs/spec/Lint-and-Autofix-Contract.md",
+        "docs/spec/Myc-Check-Driver-Contract.md",
+        "docs/spec/Mycfmt-Formatter-Contract.md",
+        "docs/spec/Narrative-Authoring-Pipeline.md",
+        "docs/spec/Nodule-Header-and-Project-Manifest.md",
+        "docs/spec/SPECIFICATION.md",
+        "docs/spec/Security-Checks-Contract.md",
+        "docs/spec/Spore-Build-and-Publish-Contract.md",
+        "docs/spec/Surface-Stability-Declaration.md"
+      ]
     },
     {
       "title": "Grammar & schemas",
