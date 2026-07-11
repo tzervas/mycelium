@@ -374,6 +374,20 @@ docs-container-build:
 docs-container-run:
     @bash scripts/docs-container.sh run
 
+# Docs asset automation (capture -> optimize -> replace-in-place -> prune): builds the local
+# docsite, captures the canonical screenshot set (light + dark themes) into docs/assets/ via
+# Playwright, optimizes the PNGs (oxipng/pngquant, skip-graceful), and prunes any docs/assets/*
+# file no committed doc references. Idempotent: STABLE, descriptive filenames (never
+# content-hashed) mean a re-run overwrites in place. Advisory, NOT part of `just check` (needs a
+# browser + first-run network access); the always-on companion gate is `just docs-assets-check`.
+docs-assets:
+    @bash scripts/docs-assets.sh
+# Drift/lint gate: docs/assets/ has no file referenced-but-missing or present-but-orphaned.
+# Lightweight + browser-free (pure reference check, no screenshot regeneration) — this is what
+# `just check` runs; see scripts/checks/docs-assets.sh for why it's scoped this way.
+docs-assets-check:
+    @bash scripts/checks/docs-assets.sh
+
 # --- spore registry: GHCR/OCI dense-map dogfood (ADR-037 / M-871) ---
 # Local OCI round-trip self-test: stand up a throwaway registry:2 (podman), publish+resolve the
 # example phyla against oci://localhost:5000, verify the hashes, tear down. Needs oras + podman.
