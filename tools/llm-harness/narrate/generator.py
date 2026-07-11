@@ -6,8 +6,9 @@ Mirrors ``coauthor.py``'s Generator posture:
   * :class:`Generator` — the protocol a real-LLM backend plugs into later.
   * :class:`MockGenerator` — the deterministic, offline / CI default.  It
     template-fills the EMIT SKELETON purely from the supplied facts, so its
-    output is grounded BY CONSTRUCTION (every code token comes from a fact).
-    Guarantee tag ``Declared`` (asserted mock output; VR-5).
+    output is grounded BY CONSTRUCTION (every code token comes from a fact, and
+    every sentence carries a fact-derived identifier).  Guarantee tag
+    ``Declared`` (asserted mock output; VR-5).
   * :class:`CachingGenerator` — the idempotence layer.  Cache key = a blake2b
     content hash over (facts + full template text + model-id + seed).  A re-run
     with identical inputs returns byte-identical cached prose (idempotent); any
@@ -27,6 +28,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from narrate.checker import segment
 from narrate.facts import Fact, FactSet
 from narrate.prompts import PromptTemplate
 
@@ -74,23 +76,25 @@ def _cite(fact: Fact) -> str:
 def _member_paragraph(fact: Fact, target: str) -> str:
     """Render one member fact as a grounded, cited paragraph.
 
-    Every code identifier is drawn verbatim from the fact (name / signature /
-    summary), so the paragraph is grounded by construction.  Undocumented facts
-    are narrated AS undocumented — never invented (G2).
+    EVERY sentence carries a fact-derived code identifier (the backticked name or
+    signature), so no sentence relies on the free-text lexical-overlap path.
+    Undocumented facts are narrated AS undocumented — never invented (G2).
     """
     name = fact.name
     sig = fact.signature.strip()
-    lead = {
-        "ref-manual-entry": f"`{name}` is a {fact.kind}.",
-        "book-chapter": f"Next is `{name}`, a {fact.kind}.",
-        "learning-lesson": f"Study `{name}` (a {fact.kind}).",
-    }.get(target, f"`{name}` is a {fact.kind}.")
 
-    sentences = [lead]
     if fact.documented and fact.summary:
-        sentences.append(_first_sentence(fact.summary))
+        lead = {
+            "ref-manual-entry": f"`{name}` is a {fact.kind}.",
+            "book-chapter": f"Next is `{name}`, a {fact.kind}.",
+            "learning-lesson": f"Study `{name}` (a {fact.kind}).",
+        }.get(target, f"`{name}` is a {fact.kind}.")
+        sentences = [lead, _first_sentence(fact.summary)]
     else:
-        sentences.append(f"This {fact.kind} is recorded without a prose summary.")
+        # undocumented: keep the backticked name IN the meta-sentence so it
+        # carries a code token (not vacuous free text) and stays honest (G2).
+        sentences = [f"`{name}` is a {fact.kind} recorded without a prose summary."]
+
     if sig:
         sentences.append(f"Its signature is `{sig}`.")
     body = " ".join(sentences)
@@ -135,18 +139,28 @@ class MockGenerator:
 
     Fills the template's EMIT SKELETON from the facts.  When given ``feedback``
     (dropped-sentence records from a prior round), it self-corrects by OMITTING
-    the flagged sentences on regeneration — the mock analogue of an LLM fixing an
-    ungrounded claim.  Output tag: ``Declared`` (VR-5 — asserted, not empirical).
+    the flagged sentences on regeneration, keyed on their (paragraph, sentence)
+    POSITION — the mock analogue of an LLM fixing an ungrounded claim.  Output
+    tag: ``Declared`` (VR-5 — asserted, not empirical).
+
+    Test hooks (never set in production paths): ``inject_hallucination`` + an
+    ``inject_style`` in {"backtick", "pascal", "freetext"} inject ONE ungrounded,
+    cited sentence — the negative controls the FaithfulnessChecker must catch.
     """
 
-    model_id = "mock-narrate-v1"
+    # model_id is the cache's version knob: bump it whenever the rendering
+    # changes so the content-hash cache invalidates by construction (v2 = the
+    # grounded-by-construction undocumented rendering; VR-5/idempotence).
+    model_id = "mock-narrate-v2"
     guarantee_tag = "Declared"
 
-    def __init__(self, inject_hallucination: str | None = None) -> None:
-        # Test hook: when set, ONE ungrounded sentence citing this bogus token is
-        # injected into the first paragraph (the negative control).  It is never
-        # set in production paths.
+    def __init__(
+        self,
+        inject_hallucination: str | None = None,
+        inject_style: str = "backtick",
+    ) -> None:
         self._inject = inject_hallucination
+        self._inject_style = inject_style
 
     def generate(
         self,
@@ -161,31 +175,52 @@ class MockGenerator:
         if self._inject:
             prose = self._apply_injection(prose, facts)
 
-        # Self-correction: drop any sentence flagged in the previous round.
+        # Self-correction: drop any sentence flagged in the previous round, keyed
+        # on its (paragraph_index, sentence_index) POSITION (not its text — two
+        # identical-text sentences must not both drop when only one was flagged).
         flagged = {
-            str(rec.get("text", "")).strip()
+            (int(rec["paragraph_index"]), int(rec["sentence_index"]))
             for rec in (feedback or [])
             if not rec.get("validated", False)
+            and "paragraph_index" in rec
+            and "sentence_index" in rec
         }
         if flagged:
-            prose = _drop_sentences(prose, flagged)
+            prose = _drop_positions(prose, flagged)
         return prose
 
     def _apply_injection(self, prose: str, facts: FactSet) -> str:
-        """Insert one ungrounded, cited sentence — the negative control.
+        """Insert one ungrounded, cited sentence — a negative control.
 
         The injected sentence cites a real fact (so the doc_refs gate passes) but
-        asserts a bogus backticked identifier absent from every fact, so the
-        grounding gate MUST catch and drop it.
+        asserts content absent from every fact, so the grounding/overlap gate MUST
+        catch and drop it.  Three styles pin the three gate paths:
+          * backtick — a backticked bogus identifier;
+          * pascal   — a BARE PascalCase type name (no backticks);
+          * freetext — a pure free-text claim with no code tokens or overlap.
         """
-        bogus = self._inject or "frobnicate"
         hdr = facts.header or (facts.facts[0] if facts.facts else None)
         cite = _cite(hdr) if hdr else "[doc_refs: src:unknown:0]"
-        bad = (
-            f"The `{bogus}` operation silently rewrites entropy across the colony."
-            f"\n{cite}"
-        )
-        # place it as its own paragraph after the first block
+        bogus = self._inject or "frobnicate"
+        if self._inject_style == "pascal":
+            name = bogus[:1].upper() + bogus[1:]
+            bad = (
+                f"The colony relies on a {name} to reroute entropy across every "
+                f"hypha.\n{cite}"
+            )
+        elif self._inject_style == "freetext":
+            # pure free text: opens with a common word and carries NO code-like
+            # token (no snake/camel/PascalCase), so it exercises the free-text
+            # (lexical-overlap) gate, not the code-token gate.
+            bad = (
+                "It quietly resolves here, always, without exception "
+                f"whatsoever.\n{cite}"
+            )
+        else:  # backtick (default)
+            bad = (
+                f"The `{bogus}` operation silently rewrites entropy across the "
+                f"colony.\n{cite}"
+            )
         blocks = prose.split("\n\n")
         insert_at = 2 if len(blocks) > 2 else len(blocks)
         blocks.insert(insert_at, bad)
@@ -226,35 +261,31 @@ class LlmNarrator:
         )
 
 
-def _drop_sentences(prose: str, flagged: set[str]) -> str:
-    """Remove flagged sentences from prose (mock self-correction)."""
-    if not flagged:
-        return prose
-    out_blocks: list[str] = []
-    for block in prose.split("\n\n"):
-        lines = block.splitlines()
-        cite_lines = [ln for ln in lines if ln.strip().startswith("[doc_refs:")]
-        prose_text = " ".join(
-            ln.strip() for ln in lines if not ln.strip().startswith("[doc_refs:")
-        )
-        import re as _re
+def _drop_positions(prose: str, positions: set[tuple[int, int]]) -> str:
+    """Rebuild prose omitting sentences at the given (paragraph, sentence) posns.
 
-        kept = [
-            s.strip()
-            for s in _re.split(r"(?<=[.!?])\s+", prose_text)
-            if s.strip() and s.strip() not in flagged
-        ]
-        if not kept and not prose_text.startswith("#"):
-            # whole paragraph was flagged away — drop it entirely
+    Uses the SAME segmentation as the checker (:func:`narrate.checker.segment`),
+    so a position reported by the checker maps back exactly.  Headings and
+    citation lines are preserved; a paragraph whose sentences are all dropped is
+    removed entirely.
+    """
+    if not positions:
+        return prose
+    out: list[str] = []
+    for p in segment(prose):
+        if not p.sentences and p.raw.strip().startswith("#"):
+            out.append(p.raw.strip())
             continue
-        if prose_text.startswith("#"):
-            out_blocks.append(block)
+        kept = [s for i, s in enumerate(p.sentences) if (p.index, i) not in positions]
+        if not kept:
             continue
-        rebuilt = " ".join(kept)
-        if cite_lines:
-            rebuilt = rebuilt + "\n" + "\n".join(cite_lines)
-        out_blocks.append(rebuilt)
-    return "\n\n".join(out_blocks)
+        body = " ".join(kept)
+        if p.doc_refs:
+            cite = "[doc_refs: " + " ".join(p.doc_refs) + "]"
+            out.append(f"{body}\n{cite}")
+        else:
+            out.append(body)
+    return "\n\n".join(out) + "\n"
 
 
 # ---------------------------------------------------------------------------
@@ -293,8 +324,7 @@ class CachingGenerator:
     A cache HIT returns byte-identical prose without re-invoking the base
     generator; a MISS computes, stores, and returns.  ``last_was_cache_hit``
     exposes which happened (for tests / reporting).  Feedback-driven regeneration
-    bypasses the cache (a correction is a distinct request) unless ``use_cache``
-    is set for that call.
+    bypasses the cache (a correction is a distinct request).
     """
 
     base: Generator

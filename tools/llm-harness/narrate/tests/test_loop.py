@@ -39,6 +39,29 @@ def test_self_correction_reaches_full_validation(synthetic_facts, ref_template):
     assert "frobnicate" not in run.committed_prose
 
 
+def test_self_correction_bare_pascalcase(synthetic_facts, ref_template):
+    # a bare-PascalCase injection is caught and self-corrected away too
+    gen = MockGenerator(inject_hallucination="Frobnicator", inject_style="pascal")
+    run = narrate_unit(synthetic_facts, ref_template, gen, MockChecker(), max_rounds=3)
+    assert run.status == STATUS_PARTIAL
+    assert run.validated_fraction == 1.0
+    assert "Frobnicator" not in run.committed_prose
+
+
+def test_drop_is_position_keyed_not_text():
+    # LOW fix: identical-text sentences in different paragraphs must not both drop
+    # when only one position was flagged — the drop keys on (paragraph, sentence).
+    from narrate.generator import _drop_positions
+
+    prose = (
+        "First `a` claim here.\n[doc_refs: src:x:1]\n\n"
+        "First `a` claim here.\n[doc_refs: src:x:2]\n"
+    )
+    out = _drop_positions(prose, {(1, 0)})  # flag only paragraph 1, sentence 0
+    assert "src:x:1" in out  # paragraph 0 (same text) survives
+    assert "src:x:2" not in out  # only the flagged paragraph is removed
+
+
 def test_dropped_sentences_recorded_when_uncorrectable(synthetic_facts, ref_template):
     # a generator that keeps re-injecting -> never fully validates, but the
     # residual drop is recorded and the good prose is still committed (never trash)

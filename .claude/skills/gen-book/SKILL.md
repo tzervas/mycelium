@@ -69,21 +69,33 @@ re-run returns byte-identical prose and any input change regenerates.
 
 ## The validation gate (the crux — mandatory, non-negotiable)
 
-`narrate.checker.FaithfulnessChecker` (Mock: deterministic; a `Checker` protocol
-lets a real adversarial-LLM verifier drop in) enforces, per sentence:
+`narrate.checker.FaithfulnessChecker` (a public alias of the deterministic
+`MockChecker`; a `Checker` protocol lets the real M-1063 adversarial-LLM verifier
+drop in) enforces, per sentence:
 
 - **(a) doc_refs gate** — every paragraph must carry ≥1 *resolvable* `doc_refs`
   token (`api:` / `corpus:` / `src:` grammar, per `tools/github/doc_refs_check.py`),
   and the token must be one the unit's facts license.
-- **(b) claim-grounding gate** — every code token a sentence uses (backticked
-  identifiers + bare snake_case/camelCase) must be in the fact-set vocabulary. A
-  token absent from the facts ⇒ the sentence is an ungrounded hallucination.
-- **(c) `validated_fraction`** = validated sentences / total. **Only validated
-  sentences are committed;** dropped ones are listed with reasons (never-silent).
+- **(b) claim-grounding gate** — every code token a sentence uses must be in the
+  fact-set vocabulary. Code tokens = backticked identifiers **plus** bare
+  identifiers that look like code: snake_case, camelCase, AND **bare PascalCase
+  type names** (Mycelium's convention — `Result`, `Binary`, `Frobnicator`; minus a
+  small common-word stoplist). Any token absent from the facts ⇒ an ungrounded
+  hallucination, dropped.
+- **(c) free-text gate** — a sentence with ZERO code tokens is *not* vacuously
+  passed: it must share ≥1 content word with the fact text its paragraph cites, or
+  it is routed to a distinct `unverifiable` bucket that does **not** count as
+  grounded (reported, never silently passed). True free-text faithfulness needs
+  the real M-1063 adversarial verifier via the `Checker` protocol.
+- **(d) `validated_fraction`** = validated sentences / total; per-bucket counts
+  (`validated` / `hallucinated` / `unverifiable` / `uncited`) are reported. **Only
+  validated sentences are committed;** dropped ones are listed with reasons (G2).
 
-Guarantee posture (VR-5): mock output is `Declared`, a real model's is
-`Empirical` — **never `Proven`/`Exact`** (enforced by `session.assert_model_tag`,
-mirroring `coauthor.py`).
+The Mock is deliberately *conservative* (VR-5): it over-flags an unknown
+capitalized word as a possible type name (drop-safe — an over-flag drops a real
+sentence, never passes a hallucination). Guarantee posture: mock output is
+`Declared`, a real model's is `Empirical` — **never `Proven`/`Exact`** (enforced by
+`session.assert_model_tag`, mirroring `coauthor.py`).
 
 ## Run it
 

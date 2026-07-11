@@ -68,6 +68,7 @@ class NarrateRound:
             "validated_fraction": round(self.result.validated_fraction, 6),
             "total_sentences": self.result.total_sentences,
             "validated_sentences": self.result.validated_sentences,
+            "bucket_counts": self.result.bucket_counts(),
             "dropped": [v.to_dict() for v in self.result.dropped],
         }
 

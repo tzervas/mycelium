@@ -93,6 +93,12 @@ def emit_reports(run: NarrateRun, reports_dir: Path, run_id: str) -> tuple[Path,
             f"{res.validated_sentences}/{res.total_sentences} validated "
             f"(fraction={res.validated_fraction:.4f}, dropped={len(res.dropped)})"
         )
+        buckets = res.bucket_counts()
+        if buckets:
+            lines.append(
+                "    buckets: "
+                + ", ".join(f"{k}={v}" for k, v in sorted(buckets.items()))
+            )
         for v in res.dropped:
             lines.append(
                 f"    DROPPED [p{v.paragraph_index}s{v.sentence_index}]: {v.reason}"

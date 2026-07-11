@@ -66,6 +66,21 @@ def test_bare_snake_case_is_a_candidate():
     assert "frobnicate_entropy" in toks
 
 
+def test_bare_pascalcase_is_a_candidate():
+    # Mycelium type-name convention: bare PascalCase must be flagged (the HIGH
+    # blind spot). Ordinary capitalized English (sentence openers) must not be.
+    toks = code_tokens("The colony spawns a Frobnicator to shadow Binary.")
+    assert "Frobnicator" in toks
+    assert "Binary" in toks
+    assert "The" not in toks  # common word, not a type name
+    assert "colony" not in toks  # bare lowercase is not code-like
+
+
+def test_interior_capital_is_a_candidate():
+    toks = code_tokens("It raises an IOError from mapErr somewhere.")
+    assert {"IOError", "mapErr"} <= toks
+
+
 # ---------------------------------------------------------------------------
 # Grounding over a clean, grounded-by-construction emission
 # ---------------------------------------------------------------------------
@@ -116,6 +131,59 @@ def test_negative_control_on_real_unit(result_facts, ref_template):
     assert result.validated_fraction < 1.0
     assert any("Frobnicator" in v.unsupported_tokens for v in result.dropped)
     assert "Frobnicator" not in result.validated_prose()
+
+
+def test_negative_control_bare_pascalcase_hallucination(synthetic_facts, ref_template):
+    # (a) a BARE PascalCase type-name hallucination (NO backticks) — the HIGH
+    # blind spot — must be caught and dropped, not vacuously "grounded".
+    gen = MockGenerator(inject_hallucination="Frobnicator", inject_style="pascal")
+    prose = gen.generate(synthetic_facts, ref_template, "", [])
+    assert "`Frobnicator`" not in prose  # the injection is bare, un-backticked
+    assert "Frobnicator" in prose
+
+    result = MockChecker().check(prose, synthetic_facts)
+    assert result.validated_fraction < 1.0
+    assert any("Frobnicator" in v.unsupported_tokens for v in result.dropped)
+
+    committed = result.validated_prose()
+    assert "Frobnicator" not in committed  # dropped, never silently kept
+    assert "twice" in committed  # grounded sentences survive
+
+
+def test_negative_control_free_text_is_bucketed(synthetic_facts, ref_template):
+    # (b) a pure free-text unsupported claim (zero code tokens, no overlap with
+    # the cited facts) must be flagged/bucketed, NOT vacuously passed.
+    from narrate.checker import BUCKET_UNVERIFIABLE
+
+    gen = MockGenerator(inject_hallucination="x", inject_style="freetext")
+    prose = gen.generate(synthetic_facts, ref_template, "", [])
+    result = MockChecker().check(prose, synthetic_facts)
+
+    assert result.validated_fraction < 1.0
+    unver = [v for v in result.verdicts if v.bucket == BUCKET_UNVERIFIABLE]
+    assert any("whatsoever" in v.text for v in unver)  # the injected free text
+    assert all(not v.validated for v in unver)  # never counted as grounded
+    assert result.bucket_counts().get(BUCKET_UNVERIFIABLE, 0) >= 1  # reported
+    assert "whatsoever" not in result.validated_prose()  # excluded from output
+
+
+def test_free_text_with_overlap_is_grounded(synthetic_facts):
+    # positive control: the overlap gate is a signal, not a blanket reject — a
+    # free-text sentence sharing content words with its cited fact IS grounded.
+    prose = (
+        "# Reference: demo.unit\n\n"
+        "The input value doubles here via double.\n"
+        "[doc_refs: src:lib/demo/unit.myc:3]\n"
+    )
+    result = MockChecker().check(prose, synthetic_facts)
+    assert result.validated_fraction == 1.0
+
+
+def test_faithfulness_checker_alias_is_mockchecker():
+    from narrate.checker import FaithfulnessChecker
+
+    assert FaithfulnessChecker is MockChecker
+    assert FaithfulnessChecker().guarantee_tag == "Empirical"
 
 
 # ---------------------------------------------------------------------------
