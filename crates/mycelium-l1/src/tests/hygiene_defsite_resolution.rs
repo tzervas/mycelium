@@ -196,7 +196,8 @@ impl DefEnv {
 ///
 /// The def-site lookup happens **before** falling back to "leave the bare `Var` as-is" (E1's own
 /// behavior for an unresolved free identifier) — so a name present in `def_env` is *replaced* by
-/// its def-site content, never left as a reference for the use site's scope to (mis)resolve later.
+/// its def-site content, never left as a reference for the use site's scope to wrongly resolve
+/// later.
 fn expand(rhs: &Node, params: &[String], args: &[Node], def_env: &DefEnv) -> Node {
     let mut ex = Expander {
         params,
@@ -336,7 +337,7 @@ fn fixture_defsite_shadowed_by_use_site_local() -> Fixture {
     // def-site helper's own (`x`) — non-vacuity point 1 (forces alpha_eq to do real work).
     let oracle = app(lam("x_h", add(v("x_h"), c(100))), c(5));
     // Captured (bug): the naive/E1-fallback expansion — `helper` left as a bare `Var`, which the
-    // wrapping use-site `let helper = … in …` then (mis)resolves at eval time.
+    // wrapping use-site `let helper = … in …` then wrongly resolves at eval time.
     let captured = app(v("helper"), c(5));
     Fixture {
         name: "defsite_shadowed_by_use_site_local (bump/helper)",
