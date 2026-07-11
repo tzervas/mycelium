@@ -1,4 +1,6 @@
-use crate::ast::{Item, Nodule};
+use crate::ast::{
+    BaseType, Expr, Item, Literal, LowerDecl, LowerRhs, Nodule, Param, Path, TypeRef, WidthRef,
+};
 use crate::checkty::*;
 use crate::parse;
 use std::collections::BTreeMap;
@@ -685,6 +687,174 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
         format!("{node_rules:?}"),
         "a `lower`/`derive` pair must add NO L0 to an unrelated entry (DN-54 §6, KC-3 by absence; \
          a rule's L0 is produced on demand, not spliced into an unrelated `main`)"
+    );
+}
+
+// -------------------------------------------------------------------------------------------
+// M-1054 Stage 0 — expression-position sugar-rule call-site recognition (`Cx::check_sugar_call`,
+// DN-110 §5-A). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args` matcher/guard
+// tests (the L0 elab-phase half of Stage 0). No surface grammar produces a non-empty
+// `LowerDecl::value_params` yet (§8.6 is an open naming question), so every fixture here
+// hand-constructs the rule and inserts it directly into a checked `Env` (white-box, matching the
+// house test-layout convention).
+// -------------------------------------------------------------------------------------------
+
+/// A `Binary{width}` surface `TypeRef` with no guarantee slot (the common fixture shape).
+fn bin_ty(width: u32) -> TypeRef {
+    TypeRef {
+        base: BaseType::Binary(WidthRef::Lit(width)),
+        guarantee: None,
+    }
+}
+
+/// M-1054 Stage 0 fixture: register a value-parametric `lower` rule with `n` `Binary{8}` value
+/// parameters `p0, p1, …` into `e` under `name`. The RHS is irrelevant to every recognition test
+/// below (`check_sugar_call` never reads it — Stage 0 refuses before it would); it reuses the
+/// base nodule's own `Eight` rule's RHS as an inert placeholder.
+fn register_value_parametric_rule(e: &mut Env, name: &str, n: usize) {
+    let rhs = e.lower_rules["Eight"].rhs.clone();
+    e.lower_rules.insert(
+        name.to_owned(),
+        LowerDecl {
+            name: name.to_owned(),
+            params: vec![],
+            value_params: (0..n)
+                .map(|i| Param {
+                    name: format!("p{i}"),
+                    ty: bin_ty(8),
+                })
+                .collect(),
+            rhs,
+        },
+    );
+}
+
+/// `Name(args...)` as an [`Expr::App`] over a single-segment [`Path`] — the exact shape
+/// `Cx::check_app` dispatches on.
+fn call_expr(name: &str, args: Vec<Expr>) -> Expr {
+    Expr::App {
+        head: Box::new(Expr::Path(Path(vec![name.to_owned()]))),
+        args,
+    }
+}
+
+/// An 8-bit binary literal argument (`Expr::Lit(Literal::Bin(..))`) — well-typed against
+/// [`register_value_parametric_rule`]'s declared `Binary{8}` parameters.
+fn bin8_lit(bits: &str) -> Expr {
+    Expr::Lit(Literal::Bin(bits.to_owned()))
+}
+
+/// The base fixture env every Stage 0 checkty test starts from: one ordinary nullary `lower` rule
+/// (`Eight`), checked the normal way, so [`register_value_parametric_rule`] has a real RHS to
+/// clone and the env's other registries (types/fns/traits) are non-trivially populated.
+fn stage0_base_env() -> Env {
+    env("nodule d;\nlower Eight = 0b0000_0001;")
+}
+
+/// **Recognition works.** A value-parametric sugar rule invoked with the right arity and
+/// well-typed arguments is *recognized and dispatched* to `check_sugar_call` — evidenced by the
+/// Stage-0 gate diagnostic (naming DN-110/Stage 1), not "unknown function" (which is what this
+/// name would have produced before this branch existed) and not a type/arity error (which would
+/// mean recognition dispatched but matching failed).
+#[test]
+fn stage0_sugar_call_is_recognized_and_dispatched() {
+    let mut e = stage0_base_env();
+    register_value_parametric_rule(&mut e, "Swap2", 2);
+    let call = call_expr("Swap2", vec![bin8_lit("0000_0001"), bin8_lit("0000_0010")]);
+    let err = infer_type(&e, &mut Vec::new(), &call).expect_err("Stage 0 must refuse the call");
+    assert!(
+        err.message.contains("recognized")
+            && err.message.contains("M-1054 Stage 0")
+            && err.message.contains("Stage 1"),
+        "expected the recognized-but-gated Stage-0/Stage-1 diagnostic, got: {}",
+        err.message
+    );
+    assert!(
+        !err.message.contains("unknown function"),
+        "a registered sugar rule must never fall through to the unknown-name diagnostic, got: {}",
+        err.message
+    );
+}
+
+/// **Arity mismatch is refused, never silently.** `Swap2` declares 2 value parameters; calling it
+/// with 1 argument is a distinct, named refusal — not the Stage-0 gate message (which only fires
+/// after a *successful* match) and not "unknown function".
+#[test]
+fn stage0_sugar_call_arity_mismatch_is_refused() {
+    let mut e = stage0_base_env();
+    register_value_parametric_rule(&mut e, "Swap2", 2);
+    let call = call_expr("Swap2", vec![bin8_lit("0000_0001")]); // only 1 of 2 declared params
+    let err = infer_type(&e, &mut Vec::new(), &call).expect_err("arity mismatch must be refused");
+    assert!(
+        err.message.contains("arity mismatch"),
+        "expected the arity-mismatch diagnostic, got: {}",
+        err.message
+    );
+}
+
+/// **A mismatched argument type is refused, never silently.** `Swap2`'s parameters are
+/// `Binary{8}`; a `Ternary{6}` argument must be a named per-parameter type refusal.
+#[test]
+fn stage0_sugar_call_type_mismatch_is_refused() {
+    let mut e = stage0_base_env();
+    register_value_parametric_rule(&mut e, "Swap2", 2);
+    let bad_ternary = Expr::Lit(Literal::Trit("+0-+0-".to_owned()));
+    let call = call_expr("Swap2", vec![bad_ternary, bin8_lit("0000_0010")]);
+    let err = infer_type(&e, &mut Vec::new(), &call).expect_err("a type mismatch must be refused");
+    assert!(
+        err.message.contains("p0"),
+        "expected the mismatch to name the failing parameter (`p0`), got: {}",
+        err.message
+    );
+}
+
+/// **An item-shaped rule has no expression-position form at all.** Calling `derive`-only rule
+/// `L2` (RHS `impl Trait for T { … }`) as `L2(…)` is a distinct, clearer refusal — never falls
+/// through to arity matching against a nonexistent value-param list.
+#[test]
+fn stage0_item_shaped_rule_has_no_expression_form() {
+    let mut e = stage0_base_env();
+    e.lower_rules.insert(
+        "ItemRule".to_owned(),
+        LowerDecl {
+            name: "ItemRule".to_owned(),
+            params: vec!["T".to_owned()],
+            value_params: vec![],
+            rhs: LowerRhs::Impl(crate::ast::ImplDecl {
+                trait_name: "Cmp".to_owned(),
+                trait_args: vec![],
+                for_ty: crate::ast::TypeRef {
+                    base: crate::ast::BaseType::Named("T".to_owned(), vec![]),
+                    guarantee: None,
+                },
+                methods: vec![],
+            }),
+        },
+    );
+    let call = call_expr("ItemRule", vec![]);
+    let err = infer_type(&e, &mut Vec::new(), &call).expect_err("item-shaped rule must refuse");
+    assert!(
+        err.message.contains("item-shaped") && err.message.contains("derive"),
+        "expected the item-shaped-rule refusal naming `derive`, got: {}",
+        err.message
+    );
+}
+
+/// **Regression** (M-1054 Stage 0 DoD): registering M-1054's Stage 0 machinery must not change
+/// how an ordinary nodule with a real `lower`/`derive` pair checks — `check_nodule` on the exact
+/// fixture `lower_derive_items_add_no_l0_to_an_unrelated_entry` uses above must still succeed and
+/// register the rule exactly as before (no new call-site recognition is reachable from the
+/// *checker's own* full-nodule pipeline, since the parser never emits a non-empty
+/// `value_params`).
+#[test]
+fn stage0_ordinary_lower_derive_nodule_still_checks_unchanged() {
+    let e = env(
+        "nodule d;\nlower Trivial = True;\nderive Trivial for Binary{8};\nfn main() => Binary{8} = 0b00000001;",
+    );
+    assert!(e.lower_rules.contains_key("Trivial"));
+    assert!(
+        e.lower_rules["Trivial"].value_params.is_empty(),
+        "the parser must never populate value_params (no surface grammar yet — DN-110 §8.6)"
     );
 }
 
