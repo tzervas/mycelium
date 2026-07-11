@@ -12,6 +12,47 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(docs-access): documentation-access & generation initiative — Claude Project prompt · themed+highlighted site + Pages/release publishing · NotebookLM export · validated narrative generation (DN-112) (2026-07-11)
+
+A cohesive documentation-access layer so the corpus is explorable, learnable, and shippable — built by
+**extending the existing ratified `myc-doc` pipeline**, not introducing a foreign generator (which would
+supersede `docs/spec/Narrative-Authoring-Pipeline.md` and fight the non-YAML pipe-table headers).
+
+- **Claude.ai Project system prompt** (`docs/claude-project-system-prompt.md`, `Declared` authoring aid) —
+  a copy-pasteable prompt grounding a Claude Web chat assistant in the charter, the guarantee lattice
+  (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`, VR-5), never-silent/append-only/anti-sycophancy house rules,
+  the fungal lexicon with honest keyword-status, the ADR/RFC/DN taxonomy + grounding labels, and a
+  navigation map. Modeled on `.claude/agent-context.md`.
+- **`mycelium-doc` renderer overhaul** (C1/C2/C4) — a comfortable reading theme (`src/theme.rs`: a
+  reviewed design-token system whose palette is the guarantee lattice made visual, serif reading column,
+  light+dark, scroll-safe tables, a sidebar+ToC+search shell), **lexer-span syntax highlighting**
+  (`src/highlight.rs` via `mycelium-l1` — **no new dep**; `Empirical/Declared` lexical, never-silent
+  plain-text fallback), inline-markdown rendering (bold/em/inline-code/links in prose, headings, and
+  table cells; code blocks untouched), a **differential re-emit cache** (`src/cache.rs`, id-hash keyed),
+  a `build --manifest` scoped emission, and a **Typst PDF print-legibility pass** (code ~0.82× body in a
+  hairline box, light-only). Dual-projection parity + all 8 §4.1 `doc_lint` checks stay green.
+- **Publishing** (C3) — `.github/workflows/publish-docs.yml` now deploys the full themed docsite
+  (corpus, agent index, and rustdoc) to GitHub Pages (manual-dispatch), and `scripts/dist/package-docs.sh` ships a
+  portable rendered-docs bundle **alongside** the release artifact (`just package-release`). `.gitattributes`
+  intentionally unchanged: GitHub-Linguist `.myc` highlighting stays hard-gated (adoption bar), and the
+  repo's own rule against a dishonest `.myc`→Rust mapping is honored — site highlighting deploys via Pages.
+- **NotebookLM export** (B) — 7 language-focused, book-manifest-shaped clusters (`tools/docgen/notebooklm/`),
+  a shared resolver, `scripts/docs/export-notebooklm-pdfs.sh` + `just notebooklm-pdfs` (ratified Typst path,
+  never-silent Markdown fallback), each cluster under NotebookLM's 500k-word/source cap.
+- **Validated narrative generation** — **DN-112 (Draft)** designs a sentence-level **faithfulness oracle**
+  that refines Narrative-Authoring-Pipeline §4/§4.1/§6, so `gen-book`/`gen-manual` (M-363) can *generate*
+  the interpretive read while never hallucinating; the `tools/llm-harness/narrate/` harness + `/gen-book`
+  skill implement it (constrained-from-facts generation, resolvable `doc_refs`, an adversarial
+  claim-grounding gate, a `validated_fraction`, commit-only-validated with never-silent drops, idempotent
+  content-addressed caching). Output is always `Empirical`/`Declared`; the shipped checker is honestly a
+  deterministic lexical stand-in (§7). Epic **E40-1** + **M-1060..M-1067** decompose the follow-on wave.
+- **Advances:** documentation access + the M-363 pipeline. **Verified:** `cargo test -p mycelium-doc`
+  (111) green + `myc-doc lint` green on the real corpus (332 docs / 14.7k nodes, all 8 checks); the
+  `narrate` harness 46 tests green, demo `validated_fraction = 1.0`, negative-control drops an injected
+  hallucination; `doc_refs_check` OK; markdown gate clean; the themed site screenshotted (light+dark) in
+  headless Chromium. Tags at supportable strength (renderer heuristics `Empirical/Declared`; DN-112 +
+  generated prose `Declared` pending ratification/review — VR-5).
+
 ### test(l1): M-1055 E2 + E5 hygiene experiments — close-out (2026-07-10)
 
 Integration-tier close-out reconciling the FLAGs from PR #1415 (`claude/leaf/m1055-e2-e5-hygiene`,
