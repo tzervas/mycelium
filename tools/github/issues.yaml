@@ -13977,6 +13977,7 @@ issues:
     doc_refs:
       - corpus:DN-104
       - corpus:DN-99
+      - corpus:DN-112
       - src:crates/mycelium-l1/src/checkty.rs
       - src:crates/mycelium-l1/tests/ctor_seal.rs
     body: |
@@ -14025,6 +14026,21 @@ issues:
       nodule-qualified identity first is what lets `pub(path)` (M-1050) actually deliver a real
       capability boundary rather than compounding an unforgeable-in-name-only mechanism. No change to
       this issue's own scope or DoD.
+
+      Mechanism note (2026-07-10, DN-112 ratified -- maintainer-delegated, orchestrator-selected on the
+      merits; append-only, does not edit the body above). This issue's mechanism is now decided:
+      **DN-112 Rank 1** (`docs/notes/DN-112-Nodule-Qualified-Type-Identity.md`) -- a nodule-qualified
+      name carried in the existing `Ty::Data` `String` slot, stamped at `resolve_ty` from the resolved
+      `DataInfo.home` (the declaring nodule, never the use-site), plus the `type_head` coherence-key fix
+      (in-scope, an automatic consequence of Rank 1). DN-112's ratification adds a CONDITION to this
+      issue's own Definition of Done: the implementation MUST ship a dedicated regression test pinning
+      the builtin/prelude uniform-home invariant (`Bool`/`Option`/`Result`/`Tuple$N` stay under one
+      reserved home across every nodule; a resolution path that over-qualifies a builtin must be
+      caught, not merely avoided by convention) -- DN-112 §10 item 9, the direct answer to its own
+      sharpest adversarial finding (§9). Guarantee posture: `Empirical` once the flipped
+      `ctor_seal.rs` differential, the general same-name-collision property test, and this
+      builtin-invariant test all land; `Declared` if a narrower point-patch is chosen instead (VR-5).
+      Status stays `todo` here -- DN-112 ratifies the mechanism, it does not implement it.
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"
@@ -15118,7 +15134,7 @@ issues:
   - id: M-1054
     title: "native metaprogramming/sugar facility -- generalize lower/derive to expression-position sugar rules (DN-110 Rank 1)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:epic, area:language, priority:P2, status:in-progress]
     epic: E28-1
     depends_on: [M-812, M-1051, M-1055]
     doc_refs:
@@ -15210,10 +15226,35 @@ issues:
          posture for the upper bound**; the lower bound is out of E5's (and any static
          affine-on-expanded-L0 pass's) reach by construction, not by an implementation gap.
 
+      Gate-met correction + FLAG-A architecture ratification (2026-07-10, append-only -- corrects the
+      stale "blocked ... until M-1055 PASS" framing above without editing it; mitigation #14, the
+      tracker lagged the codebase). **M-1055's E1+E3 go/no-go is now SATISFIED**: E1 PASSED (design
+      notes above) and **E3 PASSED** (`crates/mycelium-l1/src/tests/reveal_roundtrip_e3.rs`, landed PR
+      #1423, "E3 BUILT AND RUN, PASS, narrowly scoped" per DN-110-8.2-hygiene-deepdive.md's "E3 Result"
+      addendum) -- M-1055's own E1+E3 Definition of Done is met (M-1055 status corrected to `done`
+      below, same pass). **This epic is UNBLOCKED**; status corrected `todo -> in-progress` above (real
+      Stage-0 work is underway -- see below). Per maintainer direction relayed at this integration pass
+      and recorded in DN-110 §8.4 addendum 2 (2026-07-10), **FLAG-A, the facility's two-phase build
+      architecture, is ratified**: (1) an L1 check-phase resolving a value-parametric sugar call's
+      def-site and running the M-919 affine tracker on the *substituted* `Expr`, and (2) an L0
+      elab-phase extending `elaborate_lower_rule` to be value-parametric, freshening `%`-namespace
+      binders off the GLOBAL `Elab::fresh` counter (OQ-H5 above -- never a locally-reset counter). The
+      facility builds as a **staged serial pipeline**: **Stage 0** is the sanctioned entry point -- a
+      provably-inert, always-refusing recognition+matcher skeleton (recognizes a value-parametric sugar
+      call, arity/type-matches its arguments, but CANNOT emit an expansion -- every path a named
+      refusal, adversarially verified by construction); **hygiene (the %-freshening + capture-avoiding
+      substitution FLAG-A point 1 names) lands in Stage 1**, not Stage 0. A Stage-0 skeleton branch
+      (`claude/leaf/m1054-stage0-facility-skeleton`) exists with real, not-yet-merged work
+      (`LowerDecl::value_params`, `Cx::check_sugar_call`, `elaborate_lower_rule_with_args`) consistent
+      with this architecture. Guarantee posture unchanged: DN-110 stays `Accepted`, NOT `Enacted`;
+      nothing here upgrades a tag past its checked basis (VR-5) -- this corrects the epic's
+      blocked/gate status and records the architecture; it does not itself certify any stage as built,
+      which remains for this epic's own DoD to show, checked independently.
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-1051]
     doc_refs:
@@ -15285,6 +15326,20 @@ issues:
       identified beyond what M-1054's own body already carries for "whoever picks up the follow-on
       design/implementation work" (the PR's own FLAG language). This issue stays `in-progress`, not
       `done`.
+
+      E3 close-out (2026-07-10, append-only, does not edit the record above). PR #1423
+      (`claude/leaf/m1051-inc3-e3-reveal-roundtrip`, merged to `dev`) builds M-1051 Increment-3
+      (`certified_roundtrip`) and the E3 experiment itself
+      (`crates/mycelium-l1/src/tests/reveal_roundtrip_e3.rs`). **E3 verdict: BUILT AND RUN, PASS,
+      narrowly scoped** — non-vacuity shown via an independently-spelled oracle plus an `eval`
+      differential plus a mutation self-check (disabling freshening is caught), never via
+      `reelaborate`'s clone-on-success path (the trap this issue's own body flagged, avoided). Full
+      record: `docs/notes/DN-110-8.2-hygiene-deepdive.md`'s "E3 Result" addendum. **With E1 (PASS,
+      above) and E3 (PASS, this addendum) both built and run, this issue's own E1+E3 Definition of
+      Done is SATISFIED.** Status corrected `in-progress -> done` (label above), landed basis = PR
+      #1413 (E1) + PR #1423 (E3). This does not itself certify the facility (M-1054) as built — only
+      that the go/no-go gate M-1054 was blocked on is now met (see DN-110 §8.4 addendum 2 and M-1054's
+      own gate-met correction, same pass).
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110-8.2-hygiene-deepdive.md (the
       companion §8.2 deep-dive, itself accepted as the basis for DN-110 §8.2 at this ratification).
@@ -15520,3 +15575,58 @@ issues:
         `Declared` for full generality (DN-107 §6) — this issue's differential either witnesses the
         remaining generality or surfaces the one shape that needs divergence (reusing DN-107's
         `diverges` effect, never a new bottom type).
+
+  - id: M-1060
+    title: "implement the DN-113 v1 cross-phylum import/resolution subsystem"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1024]
+    doc_refs:
+      - corpus:DN-113
+      - src:crates/mycelium-l1/src/checkty.rs:1086
+      - src:crates/mycelium-proj/src/manifest.rs:84
+    body: |
+      Filed 2026-07-10 on DN-113's ratification (delegated -- maintainer-authorized, orchestrator-
+      selected the recommended design on the merits). Implements DN-113 v1: the cross-phylum
+      (crate-to-crate) import/resolution subsystem. `use dep::nod.sym` extends `use` with a `::`
+      phylum-boundary head (the local `[dependencies]` name); an additive `Phyla` dep-graph type plus
+      `check_phylum_with_deps` (`check_phylum` unchanged for a dep-free phylum); loading is v1 B2
+      (verified source tree, content hash asserted against the manifest pin) plus B4 (a generated
+      content-pinned lock); resolution is content-pinned to `(phylum_hash, qualified_name)` def-site
+      refs (the cross-phylum half of DN-110-8.2 OQ-H1, per-function hashing deferred); the diamond
+      policy is strict -- two different pinned hashes are two different phyla, never a silent
+      SemVer-coalesce (a type mismatch across them is a never-silent refusal); layered over the
+      existing `Exports`/`resolve_imports`/`PhylumEnv::link` machinery (M-1024, the canonical linker)
+      via a phylum-qualifier key dimension -- no second linker (DRY). v1 defers, never-silently:
+      separate compilation, re-export, glob cross-phylum `use` (folds into M-982), version ranges, and
+      runtime/dynamic multi-spore linking.
+
+      User stories (DN-113 §2):
+      - As a phylum author, I want to `use` a dependency phylum's `pub` symbol, so that I can build on
+        a published library without copying its code into my phylum (US-1).
+      - As a phylum author, I want a hash/version mismatch between what my manifest pins and what
+        actually resolves to be a loud, explicit error, so that I never silently link the wrong bytes
+        (US-2, ADR-003/G2).
+      - As a sugar-facility author (DN-110/M-1054), I want a cross-phylum def-site reference to expand
+        to a content-addressed, stable, unforgeable ref, so a `sugar` rule defined in phylum P and used
+        in phylum Q captures P's intended symbol across separate compilation (US-3).
+      - As the maintainer, I want cross-phylum resolution to be a layer over the single canonical
+        linker (M-1024), so I maintain one resolution path, not a third parallel one (US-4, DRY).
+      - As a kernel reviewer, I want v1 to add the minimum surface that makes US-1 work and defer
+        everything else never-silently, so the auditable kernel stays small (US-5, KC-3/YAGNI).
+
+      Definition of Done (DN-113 §11, ratified 2026-07-10):
+      - A two-phylum `myc check` fixture (a dep phylum plus a consumer) resolves a cross-phylum `use`
+        successfully.
+      - A hash-mismatch fixture refuses never-silently, naming the dep, the expected pin, and the
+        computed hash.
+      - A cycle fixture (`A` depends on `B` depends on `A`) refuses never-silently with the cycle path.
+      - A differential proves the linked `Env` a cross-phylum reference resolves through is the SAME
+        one `PhylumEnv::link` produces (the DRY proof, DN-113 §7) -- if an implementer finds themselves
+        writing a second `resolve_imports`, that is the signal the layering was abandoned.
+      - Every other named failure mode (unknown dep, unknown/private symbol, version skew, cross-phylum
+        name collision) is an explicit `CheckError`/refusal, never a silent winner.
+      - `.myc` parity noted, not silently assumed, per the checkty `.myc` port's own progress.
+      - Guarantee tags stay `Declared` until this DoD's fixtures/differentials land, then `Empirical`
+        (VR-5 -- no upgrade past the checked basis).

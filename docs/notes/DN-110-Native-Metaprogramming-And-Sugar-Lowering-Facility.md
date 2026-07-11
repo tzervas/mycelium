@@ -425,6 +425,39 @@ buried.
 > the checker (M-1051 Increment-2 and beyond) remain unbuilt, and the facility itself (M-1054) has not
 > landed. See `docs/notes/DN-110-8.2-hygiene-deepdive.md`'s "E3 Result" addendum for the full,
 > narrowly-scoped record (VR-5 — no upgrade past what was actually checked).
+>
+> **§8.4 addendum 2 (2026-07-10, FLAG-A — the facility's two-phase build architecture, plus the M-1054
+> gate-met correction) — append-only, does not edit the §8.4 text above or the first addendum.** Per
+> maintainer direction relayed at this integration pass — recorded here as the corpus's first citable
+> entry for this decision; no prior FLAG-A record existed before this addendum, so it is written down
+> now rather than left as an unrecorded verbal understanding (house rule #2, never-silent):
+>
+> 1. **FLAG-A — the two-phase architecture, ratified.** M-1054's implementation proceeds as **(a)** an
+>    **L1 check-phase** that resolves a value-parametric sugar call's def-site and runs the landed M-919
+>    affine tracker on the **substituted** `Expr` (the checked shape, not the raw RHS), and **(b)** an
+>    **L0 elab-phase** extending `elaborate_lower_rule` to be value-parametric, freshening `%`-namespace
+>    binders off the elaborator's **GLOBAL** `Elab::fresh` counter — never a locally-reset per-call
+>    counter (the exact OQ-H5 hazard the companion deep-dive's design-notes addendum on M-1054, item 1
+>    above, already names). This grounds the "FLAG-A" label the M-1054 Stage-0 skeleton work
+>    (`claude/leaf/m1054-stage0-facility-skeleton`, not yet merged to `dev` at this writing) already
+>    cites in its commit messages.
+> 2. **Gate-met correction (mitigation #14 — M-1054's body text lagged the codebase).** M-1054's body
+>    said the epic "does not decompose into leaf issues until the go/no-go experiments (M-1055) return a
+>    PASS verdict." That condition is now **satisfied**: **E1 PASSED** (the first §8.4 addendum, above)
+>    and **E3 PASSED** (`crates/mycelium-l1/src/tests/reveal_roundtrip_e3.rs`, landed PR #1423 —
+>    `docs/notes/DN-110-8.2-hygiene-deepdive.md`'s "E3 Result" addendum: "E3 BUILT AND RUN, PASS,
+>    narrowly scoped"), so M-1055's own E1+E3 Definition of Done is met and **M-1054 is unblocked**.
+>    Applied to `tools/github/issues.yaml` (M-1054, M-1055) by the integrating parent at this same pass.
+> 3. **The facility builds as a staged serial pipeline.** **Stage 0** is the sanctioned entry point — a
+>    provably-inert, always-refusing recognition+matcher skeleton: it recognizes a value-parametric
+>    sugar call, arity/type-matches its arguments, but **cannot emit an expansion** — every path is a
+>    named refusal, adversarially verified by construction (not merely argued). **Hygiene** — the
+>    `%`-freshening and capture-avoiding substitution point 1 above names — **lands in Stage 1**, not
+>    Stage 0.
+> 4. **Guarantee posture unchanged.** DN-110 stays **`Accepted`, NOT `Enacted`**; nothing in this
+>    addendum upgrades a tag past its checked basis (VR-5) — it ratifies the *architecture* and corrects
+>    a stale *status*, it does not certify any stage as built or tested, which remains for M-1054's own
+>    Definition of Done to show, checked independently.
 
 ### §8.5 The guarantee-tag-upgrade trap (VR-5)
 
@@ -681,6 +714,17 @@ the ratification, per house rule #3):**
 
 ## §13 Changelog
 
+- **2026-07-10 (later same day) — §8.4 addendum 2 (FLAG-A + M-1054 gate-met correction).** Appended a
+  second dated addendum to §8.4 (append-only, no edit to the pre-existing §8.4 text or the first
+  addendum): records **FLAG-A**, the facility's two-phase build architecture (L1 check-phase def-site
+  resolution + affine-on-substituted-`Expr`; L0 elab-phase value-parametric `elaborate_lower_rule`
+  freshening off the GLOBAL `Elab::fresh` counter) — the corpus's first citable record of this
+  previously-unrecorded decision; and corrects M-1054's stale "blocked until M-1055 PASS" body text
+  (mitigation #14) now that **both E1 and E3 have PASSED** (PR #1423 landed E3), satisfying M-1055's
+  own DoD and unblocking M-1054. Records the facility's staged serial pipeline: Stage 0 (provably-inert
+  recognition+matcher, cannot emit an expansion) as the sanctioned entry point, hygiene deferred to
+  Stage 1. Guarantee posture unchanged — DN-110 stays `Accepted`, NOT `Enacted` (VR-5); this is an
+  architecture ratification + status correction, not a build/test claim.
 - **2026-07-10 (following the E1+E3 hygiene-experiment go/no-go) — §8.4 addendum.** Appended a
   dated addendum to §8.4 (append-only, no edit to the pre-existing §8.4 text): **M-1051
   Increment-3** (`certified_roundtrip`) and the **E3 experiment** are now built and run (see
