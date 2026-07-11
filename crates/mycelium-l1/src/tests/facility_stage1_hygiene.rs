@@ -56,13 +56,14 @@
 use crate::ast::{BaseType, Expr, Literal, LowerDecl, LowerRhs, Param, Path, TypeRef, WidthRef};
 use crate::checkty::{check_nodule, Env};
 use crate::elab::{
-    elaborate_lower_rule, elaborate_lower_rule_with_args,
-    elaborate_value_parametric_rule_disable_freshening_for_test,
+    build_registry, elaborate_lower_rule, elaborate_lower_rule_with_args,
+    elaborate_value_parametric_rule_disable_freshening_for_test, sugar_expand, Elab,
 };
 use crate::parse;
 use crate::reveal::alpha_eq;
-use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Value};
+use mycelium_core::{Alt, ContentHash, CtorRef, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::Interpreter;
+use std::collections::BTreeMap;
 
 fn env(src: &str) -> Env {
     check_nodule(&parse(src).expect("parses")).expect("checks")
@@ -441,4 +442,317 @@ fn stage1_production_capture_avoidance_corpus() {
             f.name
         );
     }
+}
+
+// -------------------------------------------------------------------------------------------
+// Review-motivated additions (human maintainer + Grok adversarial pass, 2026-07-11) — each
+// closes one specific reviewer question with a concrete test rather than just a reply.
+// -------------------------------------------------------------------------------------------
+
+/// **Closes a reviewer question:** "what if a value parameter name shadows an RHS binder?"
+/// `shadow(a, b) = let a = b in add(a, a)` — the RHS re-binds its OWN parameter name `a` to `b`,
+/// then uses `a` twice. Per the Pass-1 invariant documented in `elab.rs` (a bare `Var(name)`
+/// surviving Pass 1 can only be a genuine, *unshadowed* parameter reference — a shadowing RHS
+/// binder always gets its own `Elab::fresh` name during ordinary elaboration, before the walker
+/// ever runs), `a`'s call-site argument must be **completely ignored**: the correct expansion
+/// computes `2 * b`, never touching `a`'s own value at all. `a`'s argument is deliberately a wildly
+/// different value (`99`) than what a capture bug would plausibly produce, so any regression that
+/// *did* leak the outer `a` would be impossible to miss.
+#[test]
+fn stage1_value_param_name_shadowed_by_rhs_binder_ignores_the_shadowed_arg() {
+    let rhs = slet("a", sv("b"), sadd(sv("a"), sv("a")));
+    let e = base_env_with_rule("Shadow", rhs);
+    let args = vec![c(99), c(5)]; // a=99 (must be ignored), b=5
+    let expanded = elaborate_lower_rule_with_args(&e, "Shadow", &args)
+        .expect("a value-param name shadowed by its own RHS binder must still expand");
+    let oracle = letn("inner_a", c(5), add(v("inner_a"), v("inner_a")));
+    assert!(
+        alpha_eq(&expanded, &oracle),
+        "expansion is not alpha-equivalent to the oracle — got {expanded:?}"
+    );
+    let interp = Interpreter::default();
+    let observed = interp
+        .eval(&expanded)
+        .unwrap_or_else(|err| panic!("eval(expansion) failed: {err}"));
+    assert_eq!(
+        as_i64(&observed),
+        10,
+        "the shadowed parameter's own argument (99) must be completely ignored — only `b`'s value \
+         (5) reaches the computation (2*5=10); any other result means the outer `a` leaked through \
+         the shadow"
+    );
+}
+
+/// **Closes a reviewer question:** `fresh_kernel_name_via_real_elaboration` only ever elicits the
+/// *first* (`%0`) fresh name a probe elaboration mints — a real caller's escaping free variable
+/// could just as plausibly collide with a *later*-numbered kernel name. This re-runs fixture 1's
+/// exact scenario (`swap2`) with a colliding name minted **after 5 other binders** in its own
+/// probe elaboration (`…%5`, not `…%0`), to confirm the mechanism's correctness does not depend on
+/// which specific counter value collides.
+fn fresh_kernel_name_via_real_elaboration_after(base: &str, skip: usize) -> String {
+    let mut inner = format!("let {base} = 0b00000000 in {base}");
+    for i in 0..skip {
+        inner = format!("let d{i} = 0b00000000 in {inner}");
+    }
+    let rule_name = format!("ProbeDeep{base}{skip}");
+    let src = format!("nodule d;\nlower {rule_name} = {inner};");
+    let e = env(&src);
+    let mut node = elaborate_lower_rule(&e, &rule_name).expect("the deep probe rule elaborates");
+    for _ in 0..skip {
+        let Node::Let { ref body, .. } = node else {
+            panic!("expected a nested Let while descending the deep probe, got {node:?}");
+        };
+        node = (**body).clone();
+    }
+    let Node::Let { ref id, .. } = node else {
+        panic!("expected the deep probe's innermost node to be a Let, got {node:?}");
+    };
+    id.clone()
+}
+
+#[test]
+fn stage1_capture_avoidance_holds_against_a_later_minted_colliding_name() {
+    // Wrap the real `let t = a in add(b, t)` behind 5 inert dummy `let`s so THIS rule's own Pass-1
+    // fresh counter reaches the same depth (`%5`) as the probe's, before minting `t`'s own fresh
+    // name -- otherwise the probe's `%5`-numbered name and this rule's own (still `%0`, with no
+    // dummies) binder would simply be two different strings that never collide either way,
+    // vacuously "passing" the negative control for the wrong reason.
+    const SKIP: usize = 5;
+    let mut rhs = slet("t", sv("a"), sadd(sv("b"), sv("t")));
+    for i in (0..SKIP).rev() {
+        rhs = slet(&format!("d{i}"), sc(0), rhs);
+    }
+    let colliding = fresh_kernel_name_via_real_elaboration_after("t", SKIP);
+    let e = base_env_with_rule("Swap2Deep", rhs);
+    let args = vec![c(1), v(&colliding)];
+
+    let expanded = elaborate_lower_rule_with_args(&e, "Swap2Deep", &args)
+        .expect("expansion must succeed regardless of which counter value the collision targets");
+    let mut oracle = letn("t_deep", c(1), add(v(&colliding), v("t_deep")));
+    for i in (0..SKIP).rev() {
+        oracle = letn(&format!("d_deep{i}"), c(0), oracle);
+    }
+    assert!(
+        alpha_eq(&expanded, &oracle),
+        "expansion is not alpha-equivalent to the oracle for a deep (`%5`-numbered) collision — \
+         got {expanded:?}"
+    );
+
+    let wrap = |inner: Node| letn(&colliding, c(7), inner);
+    let interp = Interpreter::default();
+    let observed_expanded = interp
+        .eval(&wrap(expanded))
+        .unwrap_or_else(|err| panic!("eval(expansion) failed: {err}"));
+    assert_eq!(
+        as_i64(&observed_expanded),
+        8,
+        "hygienic value must still be add(7,1)=8"
+    );
+
+    let disabled = elaborate_value_parametric_rule_disable_freshening_for_test(
+        &e,
+        "Swap2Deep",
+        &rhs_of("Swap2Deep", &e),
+        &[("a", &c(1)), ("b", &v(&colliding))],
+    )
+    .expect("the negative control must still expand");
+    let observed_disabled = interp
+        .eval(&wrap(disabled))
+        .unwrap_or_else(|err| panic!("eval(disabled-freshening) failed: {err}"));
+    assert_eq!(
+        as_i64(&observed_disabled),
+        2,
+        "disabling (A) freshening must reproduce the captured (wrong) value even when the \
+         collision targets a later-minted (`%5`) name, not just the first"
+    );
+}
+
+/// Read a registered rule's own RHS `Expr` back out of `e` (a small Law-of-Demeter helper so
+/// [`stage1_capture_avoidance_holds_against_a_later_minted_colliding_name`] doesn't have to thread
+/// the RHS through twice).
+fn rhs_of(rule_name: &str, e: &Env) -> Expr {
+    e.lower_rules[rule_name]
+        .expr_rhs()
+        .expect("Expr-shaped RHS")
+        .clone()
+}
+
+// -------------------------------------------------------------------------------------------
+// Direct `sugar_expand` walker unit tests (Lam/Fix/FixGroup/Alt::Ctor) — closes the reviewer's
+// Fixture-4 observation: the full `elaborate_lower_rule_with_args` pipeline only ever reaches the
+// walker's `Let` arm (no production fixture's RHS produces a `Lam`/`Fix`/`FixGroup`/`Alt::Ctor`
+// binder — the lambda-IIFE shape that would have is blocked by the orthogonal, pre-existing
+// synthetic-Env/mono.rs limitation documented on fixture 4). These bypass the full pipeline
+// entirely and drive `sugar_expand`/`sugar_expand_alt` directly on hand-built `Node`s (mirroring
+// how E1's own `Expander` was tested), giving DIRECT — not merely ported-code-inherited —
+// production coverage of every binder-introducing `Node` variant the walker handles.
+// -------------------------------------------------------------------------------------------
+
+fn bare_elab(e: &Env) -> Elab<'_> {
+    Elab {
+        env: e,
+        registry: build_registry(e).expect("registry builds for the trivial base env"),
+        fresh: 0,
+        rec: BTreeMap::new(),
+        depth: 0,
+    }
+}
+
+fn base_env() -> Env {
+    env("nodule d;\nlower Base = 0b00000000;")
+}
+
+#[test]
+fn sugar_expand_freshens_lam_binder_and_all_its_references() {
+    let e = base_env();
+    let mut el = bare_elab(&e);
+    let node = Node::Lam {
+        param: "t".to_owned(),
+        body: Box::new(v("t")),
+    };
+    let mut scope = Vec::new();
+    let out = sugar_expand(&mut el, "%test%base", true, &[], &mut scope, &node);
+    let Node::Lam { param, body } = &out else {
+        panic!("expected a Lam, got {out:?}");
+    };
+    assert_ne!(param, "t", "the Lam binder must be freshened, not left raw");
+    assert_eq!(
+        **body,
+        v(param),
+        "the body's reference must follow the binder to its fresh name"
+    );
+}
+
+#[test]
+fn sugar_expand_freshens_fix_binder_and_all_its_references() {
+    let e = base_env();
+    let mut el = bare_elab(&e);
+    let node = Node::Fix {
+        name: "f".to_owned(),
+        body: Box::new(v("f")),
+    };
+    let mut scope = Vec::new();
+    let out = sugar_expand(&mut el, "%test%base", true, &[], &mut scope, &node);
+    let Node::Fix { name, body } = &out else {
+        panic!("expected a Fix, got {out:?}");
+    };
+    assert_ne!(name, "f", "the Fix binder must be freshened, not left raw");
+    assert_eq!(
+        **body,
+        v(name),
+        "the body's reference must follow the binder to its fresh name"
+    );
+}
+
+#[test]
+fn sugar_expand_freshens_fixgroup_binders_with_distinct_names_and_correct_cross_references() {
+    let e = base_env();
+    let mut el = bare_elab(&e);
+    // A mutually-recursive pair: f's body refers to g, g's body refers to f, and the overall body
+    // refers to f — every occurrence must follow its OWN binder to a DISTINCT fresh name.
+    let node = Node::FixGroup {
+        defs: vec![
+            ("f".to_owned(), Box::new(v("g"))),
+            ("g".to_owned(), Box::new(v("f"))),
+        ],
+        body: Box::new(v("f")),
+    };
+    let mut scope = Vec::new();
+    let out = sugar_expand(&mut el, "%test%base", true, &[], &mut scope, &node);
+    let Node::FixGroup { defs, body } = &out else {
+        panic!("expected a FixGroup, got {out:?}");
+    };
+    assert_eq!(defs.len(), 2);
+    let (f_fresh, f_body) = &defs[0];
+    let (g_fresh, g_body) = &defs[1];
+    assert_ne!(f_fresh, "f");
+    assert_ne!(g_fresh, "g");
+    assert_ne!(
+        f_fresh, g_fresh,
+        "two different FixGroup members must get DISTINCT fresh names"
+    );
+    assert_eq!(
+        **f_body,
+        v(g_fresh),
+        "f's body must reference g's fresh name"
+    );
+    assert_eq!(
+        **g_body,
+        v(f_fresh),
+        "g's body must reference f's fresh name"
+    );
+    assert_eq!(
+        **body,
+        v(f_fresh),
+        "the outer body must reference f's fresh name"
+    );
+}
+
+#[test]
+fn sugar_expand_freshens_alt_ctor_binders_via_match() {
+    let e = base_env();
+    let mut el = bare_elab(&e);
+    let ctor = CtorRef::new(
+        ContentHash::parse("blake3:test").expect("valid content-hash shape"),
+        0,
+    );
+    let node = Node::Match {
+        scrutinee: Box::new(c(0)),
+        alts: vec![Alt::Ctor {
+            ctor: ctor.clone(),
+            binders: vec!["x".to_owned()],
+            body: v("x"),
+        }],
+        default: None,
+    };
+    let mut scope = Vec::new();
+    let out = sugar_expand(&mut el, "%test%base", true, &[], &mut scope, &node);
+    let Node::Match { alts, .. } = &out else {
+        panic!("expected a Match, got {out:?}");
+    };
+    let Alt::Ctor {
+        ctor: out_ctor,
+        binders,
+        body,
+    } = &alts[0]
+    else {
+        panic!("expected an Alt::Ctor, got {:?}", alts[0]);
+    };
+    assert_eq!(
+        *out_ctor, ctor,
+        "the constructor reference itself must pass through unchanged"
+    );
+    assert_eq!(binders.len(), 1);
+    assert_ne!(
+        binders[0], "x",
+        "the Alt::Ctor field binder must be freshened, not left raw"
+    );
+    assert_eq!(
+        *body,
+        v(&binders[0]),
+        "the arm body's reference must follow the binder to its fresh name"
+    );
+}
+
+#[test]
+fn sugar_expand_disable_freshening_leaves_every_binder_kind_raw() {
+    // The negative-control toggle's own unit-level witness: with freshening off, EVERY binder kind
+    // keeps its exact original spelling (not just Let, which the full-pipeline corpus already
+    // exercises) — the mechanism this test suite's non-vacuity claim rests on.
+    let e = base_env();
+    let mut el = bare_elab(&e);
+    let node = Node::Lam {
+        param: "t".to_owned(),
+        body: Box::new(v("t")),
+    };
+    let mut scope = Vec::new();
+    let out = sugar_expand(&mut el, "%test%base", false, &[], &mut scope, &node);
+    assert_eq!(
+        out,
+        Node::Lam {
+            param: "t".to_owned(),
+            body: Box::new(v("t")),
+        },
+        "with freshening disabled, a Lam binder must be byte-identical to the input"
+    );
 }

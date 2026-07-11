@@ -799,7 +799,10 @@ fn elaborate_value_parametric_rule_inner(
 ) -> Result<Node, ElabError> {
     mycelium_stack::with_deep_stack(|| {
         // The synthetic entry name is `%`-prefixed: `%` is not a surface identifier character (the
-        // lexer forbids it), so this can never collide with a real fn / rule / constructor name
+        // lexer forbids it — `crate::lexer::is_ident_start`/`is_ident_continue` admit only ASCII
+        // alphanumeric + `_`, re-confirmed against the current lexer at review time, 2026-07;
+        // `#`/`@` used elsewhere in this module's site-qualified fresh bases are equally
+        // surface-illegal), so this can never collide with a real fn / rule / constructor name
         // (G2 — no silent shadowing). The RHS becomes its body verbatim; its declared signature
         // carries the rule's own value parameters (unlike the nullary path's synthetic entry) so
         // `elab_prelude` can validate the reachable call graph exactly as any other definition's.
@@ -812,7 +815,14 @@ fn elaborate_value_parametric_rule_inner(
                 // does not re-check types — the checker already validated the call site); a
                 // `Binary{0}` placeholder is inert here as it is for the synthetic entry's return
                 // type below. `resolve_ty` never fails on a concrete literal width, so this cannot
-                // itself introduce a spurious `Residual`.
+                // itself introduce a spurious `Residual`. **Review note:** this placeholder is read
+                // *only* by `resolve_ty` (to populate `scope`'s `Ty` field for re-inference sites
+                // like `if`/`match`) — it is never compared against an actual argument type (the
+                // checker, not this function, is responsible for that, and Stage 1 does not re-run
+                // it). If `resolve_ty` ever grows a stricter invariant on `Binary{0}` specifically,
+                // that would surface here as an explicit `Residual` (never silently wrong), not a
+                // masked bug — consistent with the identical placeholder already used for the
+                // nullary path's synthetic return type, unchanged by this leaf.
                 ty: crate::ast::TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(0))),
             })
             .collect();
@@ -843,6 +853,18 @@ fn elaborate_value_parametric_rule_inner(
 
         // Pass 1 — elaborate the RHS with each value parameter bound to its own bare surface name
         // (see the doc comment above for why this cannot mis-scope a shadowed occurrence).
+        //
+        // **Review note (not a bug, an invariant worth stating explicitly):** a value parameter
+        // pushed into `scope` here is not a "placeholder that might accidentally collide" — it *is*
+        // the RHS's own local binding, exactly like an ordinary function's own parameter list
+        // (compare `Self::elab_fn_lam`'s identical `scope.push((p.name.clone(), …))` pattern for a
+        // real `fn`'s params). So a bare `Var(name)` reference inside the RHS where `name` matches a
+        // declared value parameter **always** means that parameter, by the same lexical-scoping rule
+        // that already governs every other `fn` body in this language — there is no "accidental"
+        // case to guard against within this RHS's own scope. What Pass 2 must (and does) guard is a
+        // *different* hazard: that a value's *own* free variable, once spliced in by (B), could later
+        // be re-captured by some RHS-local binder of the same spelling — which (A)'s freshening
+        // prevents (see [`sugar_expand`]).
         let mut scope: Vec<Binding> = Vec::with_capacity(fd.sig.value_params.len());
         for p in &fd.sig.value_params {
             let pty = resolve_ty(&entry, &mono_env.types, &[], &p.ty)
@@ -883,8 +905,14 @@ fn elaborate_value_parametric_rule_inner(
 /// convention), so a value parameter can never be captured by an RHS binder that happens to reuse
 /// its literal spelling. Every construct that introduces a kernel binder gets a fresh name; every
 /// other construct recurses structurally.
+///
+/// `pub(crate)` (not just `fn`) so `src/tests/facility_stage1_hygiene.rs` can unit-test this walker
+/// **directly** on hand-built `Node`s — the review-motivated closing of a real gap: the full
+/// `elaborate_lower_rule_with_args` pipeline only ever exercises the `Let` arm (no production
+/// fixture's RHS reaches a `Lam`/`Fix`/`FixGroup`/`Alt::Ctor` binder), so those arms were validated
+/// only by inheritance from E1's own prototype, never directly in this production corpus.
 #[allow(clippy::too_many_arguments)] // the (test-only) negative-control toggle adds one bool
-fn sugar_expand(
+pub(crate) fn sugar_expand(
     el: &mut Elab<'_>,
     base: &str,
     freshen_binders: bool,
@@ -1037,8 +1065,9 @@ fn sugar_expand(
 
 /// [`sugar_expand`]'s `Alt` companion (a `match` arm can itself introduce constructor-field
 /// binders) — same (A) freshening + (B) substitution discipline, ported from E1's `Expander::go_alt`.
+/// `pub(crate)` for the same direct-unit-test reason as [`sugar_expand`].
 #[allow(clippy::too_many_arguments)] // the (test-only) negative-control toggle adds one bool
-fn sugar_expand_alt(
+pub(crate) fn sugar_expand_alt(
     el: &mut Elab<'_>,
     base: &str,
     freshen_binders: bool,
