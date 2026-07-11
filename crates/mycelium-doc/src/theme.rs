@@ -114,8 +114,23 @@ main{padding:1.5rem 0 3.5rem;min-width:0;max-width:var(--measure);margin:0 auto}
 .nav-group{margin:.95rem 0 .2rem;font-size:.7rem;font-weight:700;letter-spacing:.1em;
   text-transform:uppercase;color:var(--dim)}
 .sidebar ul{list-style:none;margin:0;padding:0}
-.sidebar li a{display:block;padding:.22rem .5rem;border-radius:6px;color:var(--ink-soft);
-  text-decoration:none;border-left:2px solid transparent}
+/* collapsible family/topic groups (native details/summary — no JS) */
+.sidebar details{margin:.05rem 0}
+.sidebar summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:.35rem;
+  padding:.28rem .4rem;border-radius:6px;font-size:.82rem;font-weight:600;color:var(--ink-soft)}
+.sidebar summary::-webkit-details-marker{display:none}
+.sidebar summary::before{content:"\25b8";color:var(--dim);font-size:.7em;display:inline-block;
+  transition:transform .12s}
+.sidebar details[open]>summary::before{transform:rotate(90deg)}
+.sidebar summary:hover{background:var(--paper-2);color:var(--ink)}
+.sidebar summary:focus-visible{outline:2px solid var(--moss);outline-offset:1px}
+.sidebar .count{margin-left:auto;font-size:.72rem;font-weight:500;color:var(--dim);
+  font-variant-numeric:tabular-nums}
+.sidebar details>ul{margin:.05rem 0 .3rem .55rem;padding-left:.35rem;
+  border-left:1px solid var(--line-soft)}
+.sidebar li a{display:block;padding:.15rem .45rem;border-radius:6px;color:var(--ink-soft);
+  text-decoration:none;border-left:2px solid transparent;font-size:.82rem;line-height:1.35;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sidebar li a:hover{background:var(--paper-2);color:var(--ink)}
 .sidebar li a[aria-current="page"]{color:var(--moss-deep);font-weight:600;
   border-left-color:var(--moss);background:var(--paper-2)}

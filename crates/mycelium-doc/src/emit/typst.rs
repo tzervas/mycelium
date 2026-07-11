@@ -20,27 +20,35 @@ use crate::ir::{DocModel, Node, Payload};
 /// text — their resolved navigation is the `Xref` node, so the inline path never emits a broken PDF
 /// link to a raw `.md` path). Function forms are used throughout so code/link content with Typst
 /// metacharacters is robust (never a broken `.typ`).
+///
+/// Each inline **call** (`#raw`/`#strong`/`#emph`/`#link`) is followed by a zero-width space
+/// ([`CALL_SEP`]): in Typst markup a `(` or `[` immediately after a call is parsed as a *curried
+/// call* on its result (so a projected `` `math`(f64) `` → `#raw("math")(f64)` would be a call, not
+/// text — a `typst compile` failure). The zero-width break terminates the call so the following char
+/// is literal text, while remaining invisible in the PDF (G2: every `.typ` compiles, output unchanged).
 fn render_inline_typst(spans: &[Span<'_>]) -> String {
     let mut out = String::new();
     for span in spans {
         match span {
             Span::Text(t) => out.push_str(&escape(t)),
-            Span::Code(c) => out.push_str(&format!("#raw(\"{}\")", escape_str(c))),
+            Span::Code(c) => {
+                out.push_str(&format!("#raw(\"{}\"){CALL_SEP}", escape_str(c)));
+            }
             Span::Strong(inner) => {
                 out.push_str("#strong[");
                 out.push_str(&render_inline_typst(inner));
-                out.push(']');
+                out.push_str(&format!("]{CALL_SEP}"));
             }
             Span::Em(inner) => {
                 out.push_str("#emph[");
                 out.push_str(&render_inline_typst(inner));
-                out.push(']');
+                out.push_str(&format!("]{CALL_SEP}"));
             }
             Span::Link { text, href } => {
                 if inline::is_external(href) {
                     out.push_str(&format!("#link(\"{}\")[", escape_str(href)));
                     out.push_str(&render_inline_typst(text));
-                    out.push(']');
+                    out.push_str(&format!("]{CALL_SEP}"));
                 } else {
                     out.push_str(&render_inline_typst(text));
                 }
@@ -50,9 +58,58 @@ fn render_inline_typst(spans: &[Span<'_>]) -> String {
     out
 }
 
+/// The zero-width space appended after each inline Typst call to terminate a possible curried-call
+/// chain (see [`render_inline_typst`]). Invisible in the rendered PDF.
+const CALL_SEP: &str = "\u{200b}";
+
 /// Parse + render inline markdown in `text` to Typst markup (the common one-shot).
 fn inline_typst(text: &str) -> String {
     render_inline_typst(&inline::parse(text))
+}
+
+/// Render a whole prose block to Typst, **line by line**, so the emitted `.typ` always compiles.
+///
+/// Two robustness invariants, both never-silent (G2 — every `.typ` compiles):
+/// - **Per-line inline parsing.** Prose carries embedded newlines (soft wraps / the rows of a
+///   projected pipe-table joined by the block parser). Parsing the *whole* block risks an unbalanced
+///   backtick/marker pairing across lines (inverting text↔code and colliding Typst's `[]`/`""`
+///   delimiters). Parsing each line independently bounds any unbalanced marker to that one line
+///   (where it degrades to literal text), so the delimiters stay balanced.
+/// - **Leading-markup guard.** Typst reads block markup only at a LINE START — `/ ` (description-list
+///   term), `- `/`+ ` (bullets), `= ` (heading), `N.`/`N)` (ordered list). A rendered line beginning
+///   with one is prefixed with a zero-width `#h(0pt)` so the trigger is no longer at line start and
+///   Typst reads it as literal text. Our own inline markup (`#strong[…]` etc.) starts with `#` — never
+///   a trigger char — so it is left untouched.
+fn render_prose_typst(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() + 16);
+    for (i, line) in text.split('\n').enumerate() {
+        if i > 0 {
+            out.push('\n');
+        }
+        let rendered = inline_typst(line);
+        if line_starts_block_markup(rendered.trim_start()) {
+            out.push_str("#h(0pt)");
+        }
+        out.push_str(&rendered);
+    }
+    out
+}
+
+/// Whether a (leading-whitespace-trimmed) line begins with a Typst block-markup trigger.
+fn line_starts_block_markup(t: &str) -> bool {
+    let b = t.as_bytes();
+    match b.first() {
+        // `/ ` `- ` `+ ` `= ` (and multi-`=` headings): the marker char, then a space or another
+        // marker. A bare `-3` or `/x` mid-sentence never reaches here (only line starts do), and
+        // guarding it is harmless anyway.
+        Some(b'/' | b'-' | b'+' | b'=') => true,
+        // Ordered list: one or more digits then `.` or `)`.
+        Some(d) if d.is_ascii_digit() => {
+            let end = b.iter().take_while(|c| c.is_ascii_digit()).count();
+            matches!(b.get(end), Some(b'.' | b')'))
+        }
+        _ => false,
+    }
 }
 
 /// Render the whole model to one Typst document source.
@@ -109,7 +166,7 @@ fn render_node(node: &Node, depth: usize, out: &mut String) {
             }
         }
         Payload::Prose { text } => {
-            out.push_str(&inline_typst(text));
+            out.push_str(&render_prose_typst(text));
             out.push_str("\n\n");
         }
         Payload::Example { lang, source, .. } => {
@@ -156,11 +213,15 @@ fn render_node(node: &Node, depth: usize, out: &mut String) {
 
 /// Escape Typst markup metacharacters in body text. `pub(crate)` for white-box unit testing in
 /// `src/tests/typst.rs`, not a downstream API.
+///
+/// `[`/`]` are escaped too: content flows into `#strong[…]`/`#emph[…]` **content arguments**, so an
+/// unescaped `]` in the text would close the bracket early and break the `.typ`. (Inside `#raw("…")`
+/// / `#link("…")` string arguments the delimiter is a quote, handled by [`escape_str`].)
 pub(crate) fn escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for ch in s.chars() {
         match ch {
-            '#' | '$' | '*' | '_' | '`' | '<' | '>' | '@' | '\\' => {
+            '#' | '$' | '*' | '_' | '`' | '<' | '>' | '@' | '\\' | '[' | ']' => {
                 out.push('\\');
                 out.push(ch);
             }
@@ -170,7 +231,24 @@ pub(crate) fn escape(s: &str) -> String {
     out
 }
 
-/// Escape for a Typst string literal (used inside `#link("...")`).
+/// Escape for a Typst **string literal** (used inside `#link("…")` and `#raw("…")`). A Typst string
+/// cannot contain a raw newline (or other control char), so those are escaped too — otherwise a
+/// projected inline-code span that captured a newline (e.g. an unbalanced backtick across the rows of
+/// a projected pipe-table) would terminate the string early and break the whole `.typ`. Escaping
+/// `\`, `"`, and the C0 controls makes ANY content a valid single-line string literal (G2: every
+/// emitted `.typ` compiles).
 fn escape_str(s: &str) -> String {
-    s.replace('\\', "\\\\").replace('"', "\\\"")
+    let mut out = String::with_capacity(s.len() + 2);
+    for ch in s.chars() {
+        match ch {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            '\t' => out.push_str("\\t"),
+            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{{{:x}}}", c as u32)),
+            c => out.push(c),
+        }
+    }
+    out
 }

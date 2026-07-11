@@ -16,5 +16,6 @@ mod highlight;
 mod html;
 mod inline;
 mod ir;
+mod label;
 mod lib_index;
 mod typst;

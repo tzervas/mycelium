@@ -161,10 +161,16 @@ pub fn build(input: &BuildInput) -> std::io::Result<DocModel> {
 }
 
 /// Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note).
+///
+/// `semantic` (from the book manifest, via [`crate::book::resolve_manifest_chapters`]) drives the HTML
+/// sidebar's topical spine; pass `None` for the by-type-only tree.
 #[must_use]
-pub fn emit_all(model: &DocModel) -> emit::Artifacts {
+pub fn emit_all(
+    model: &DocModel,
+    semantic: Option<emit::html::SemanticNav<'_>>,
+) -> emit::Artifacts {
     let mut arts = emit::Artifacts::new();
-    for (k, v) in emit::html::render(model).files {
+    for (k, v) in emit::html::render(model, semantic).files {
         arts.put(k, v);
     }
     for (k, v) in emit::json::render(model).files {
