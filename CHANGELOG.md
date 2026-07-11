@@ -12,6 +12,48 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### test(l1): M-1055 E2 + E5 hygiene experiments — close-out (2026-07-10)
+
+Integration-tier close-out reconciling the FLAGs from PR #1415 (`claude/leaf/m1055-e2-e5-hygiene`,
+merged to `dev` 2026-07-10), a small follow-on to the M-1051/M-1055-E1 close-out below. **This
+close-out handles only the E2/E5 increment** — no other shared-file drift.
+
+- **E2 (def-site resolution) and E5 (affine soundness on the expanded L0): both PASS, but
+  additive/non-gating.** A test-only pair of sibling harnesses (`hygiene_defsite_resolution.rs`,
+  `hygiene_affine_expanded.rs`) extends the E1 capture-avoidance corpus per
+  `DN-110-8.2-hygiene-deepdive.md` §7. **Critical honesty note (a Medium finding surfaced during the
+  PR's own adversarial review pass): E2 and E5 are ADDITIVE, non-gating exploration — NOT progress
+  against M-1055's formal Definition of Done.** That DoD is **E1 + E3**, the Rank-1 go/no-go the
+  deep-dive commissions (deep-dive §9); **E3 still needs `reveal` Increment-3 (M-1051) and remains
+  unbuilt**, so the DoD stays unsatisfied regardless of this PR. `DN-110` and
+  `DN-110-8.2-hygiene-deepdive.md` stay `Accepted`, **not** `Enacted` (house rule #3) — no guarantee
+  tag is upgraded past its checked basis (VR-5).
+  - **E2 moves clause (C) def-site resolution `Declared → Empirical` for the in-scope, same-nodule
+    case only** — the cross-phylum question **OQ-H1 stays open**, unexercised by this PR.
+  - **E5 moves clause (D) affine soundness `Declared → Empirical` for the duplication upper-bound
+    property only**, via the real, landed M-919 static pass (`crate::affine::Tracker`) run on a
+    fully-substituted expanded surface program — the drop/lower-bound property is explicitly **NOT
+    validated** (that is an M-904 **runtime** concern the static pass does not enforce, per
+    `tests/affine.rs:304-312`'s own doc comment plus DN-71 §8 FLAG-4) — correcting an initial
+    task-brief assumption that a drop would statically REJECT.
+  - `cargo test -p mycelium-l1` green (503 passed, 0 failed; 7/7 hygiene tests including E1/E2/E5).
+- **`tools/github/issues.yaml` reconciled (append-only, mitigation #2).** M-1055's `landed_basis`
+  gains a dated addendum recording the E2/E5 PASS verdicts and their honest scope (above); the issue
+  stays `status:in-progress`, **not** `done`. M-1054 (the implementation epic) gains three further
+  dated design notes — OQ-H1 confirmed still open, a new E2 verbatim-splice composition-gap note, and
+  an OQ-H4 sharpening from E5's upper-bound-only finding — appended to its 2026-07-10 design-notes
+  block, the same append-only mechanism the E1 close-out used. **No new tracking issue was minted**
+  for these residuals: each is already carried as a dated M-1054 design note (the mechanism the PR's
+  own "FLAGs for the integrating parent" note points at — "for whoever picks up the follow-on
+  design/implementation work"), and no distinct tracking need beyond that was identified: OQ-H1 was
+  already an M-1054/DN-110-8.2 §10 open question, and the drop-lower-bound gap is already tracked as
+  M-904. Validated + checked for duplicate ids after edit.
+- **`docs/tero-index/` regenerated** (`just tero-index-gen`) — the `issues.yaml`/`CHANGELOG.md`
+  addenda above did change indexed content (new/moved `M-1055`/`M-1054` rows, a new changelog-entry
+  row); `scripts/checks/tero-index.sh` confirmed stale before the regen and `docs/tero-index/ is
+  current` after. The two new test files are test-only source with no `docs/Doc-Index.md` row
+  (confirmed by inspection, not assumed).
+
 ### feat(l1)/test(l1): M-1051 reveal Increment-1 + M-1055 E1 capture-avoidance PASS — integration close-out (2026-07-10)
 
 Integration-tier close-out reconciling the FLAGs from PR #1412 (M-1051 `reveal` Increment-1) and PR

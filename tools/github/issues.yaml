@@ -15188,6 +15188,28 @@ issues:
          ADR-003 content-addressed identity model repo-wide, well beyond this epic's J3 scope, and is
          flagged here as a future direction, not decided or scheduled by this note (house rule #3).
 
+      Further design notes appended 2026-07-10 from the M-1055 E2/E5 review (PR #1415, additive/
+      non-gating exploration -- append-only, house rule #3; none of this is a build or ratification
+      claim, `Declared` unless independently checked, VR-5):
+
+      4. **OQ-H1 confirmed still open (cross-phylum def-site resolution).** E2 validated def-site
+         resolution (deep-dive §4(C)) only for the in-scope, same-nodule case; the cross-phylum case
+         OQ-H1 names was not exercised and remains open. E2's PASS is not evidence toward OQ-H1's
+         resolution.
+      5. **New: E2's verbatim-splice composition gap.** E2's prototype `DefEnv::get` splices the
+         resolved def-site `Node` back into the expansion **verbatim**, without routing it back
+         through the (A) `%`-namespace freshening walk. Not an issue for the real DN-110 §4(C) design
+         (content-addressed references, not textual re-splicing), but an unexercised composition case
+         (a def-site helper binder colliding with an RHS/use-site binder spelling) the facility's
+         hygiene-witness corpus should cover once built.
+      6. **New: OQ-H4 (affine def-time vs use-time) sharpened by E5.** E5 confirms the landed M-919
+         static pass enforces only the affine **upper bound** (duplication); the **lower bound**
+         (drop-without-consume) is a documented M-904 **runtime** concern, not a static rejection
+         (`tests/affine.rs:304-312`'s own doc comment; DN-71 §8 FLAG-4). OQ-H4's "recommended:
+         use-time precise, optional def-time lint" framing should read this as **already the landed
+         posture for the upper bound**; the lower bound is out of E5's (and any static
+         affine-on-expanded-L0 pass's) reach by construction, not by an implementation gap.
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -15199,9 +15221,12 @@ issues:
       - corpus:DN-110-8.2-hygiene-deepdive
       - corpus:DN-54
       - src:crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs
+      - src:crates/mycelium-l1/src/tests/hygiene_defsite_resolution.rs
+      - src:crates/mycelium-l1/src/tests/hygiene_affine_expanded.rs
     landed_basis: >
       status:in-progress (E1 of this issue's E1+E3 DoD landed with a PASS verdict; E3 is NOT built —
-      see below; E2/E5 out of this issue's scope) — PR #1413
+      see below; E2/E5 landed as ADDITIVE, non-gating exploration — see the 2026-07-10 addendum below
+      — and are NOT progress against this issue's formal DoD) — PR #1413
       (`claude/leaf/m1055-e1-capture-avoidance`, merged to `dev` 2026-07-10) adds a test-only
       `crates/mycelium-l1/src/tests/hygiene_expr_sugar.rs` prototyping deep-dive §4 (A)+(B) (`%`-
       freshening of RHS binders + capture-safe verbatim substitution). **E1 verdict: PASS.** All 4
@@ -15228,6 +15253,38 @@ issues:
       stays design-gated pending E3 (or a maintainer-ratified disposition accepting E1-only as
       sufficient for a J3 go, which this close-out does not itself decide — house rule #3/#4, no
       self-ratification).
+
+      **Addendum (2026-07-10, this close-out — append-only, does not rewrite the E1 record above).**
+      PR #1415 (`claude/leaf/m1055-e2-e5-hygiene`, merged to `dev` 2026-07-10) adds two further
+      test-only sibling harnesses: `hygiene_defsite_resolution.rs` (E2) and `hygiene_affine_expanded.rs`
+      (E5). **Both PASS. Neither is progress against this issue's formal DoD** (E1+E3, the Rank-1
+      go/no-go for J3) — **E2/E5 are additive, non-gating exploration**; E3 still needs `reveal`
+      Increment-3 (M-1051) and remains unbuilt, so the DoD stays unsatisfied regardless of this PR.
+      DN-110 and `DN-110-8.2-hygiene-deepdive.md` stay `Accepted`, not `Enacted` (house rule #3) — no
+      guarantee tag is upgraded past its checked basis by this close-out (VR-5). What a green E2/E5
+      actually establishes:
+      - **E2 — def-site resolution: PASS for the in-scope, same-nodule case only.** Moves clause (C)
+        `Declared → Empirical` strictly for that case; the cross-phylum question **OQ-H1 stays open
+        and unexercised** (see the M-1054 addendum above). A scope caveat surfaced post-review: the
+        def-site splice in this prototype is verbatim, not routed back through the (A) freshening
+        walk — a non-issue for the real content-addressed design, an unexercised composition gap in
+        the prototype.
+      - **E5 — affine soundness on the expanded L0: PASS for the duplication upper-bound property
+        only.** Moves clause (D) `Declared → Empirical` strictly for that property, via the real,
+        landed M-919 static pass (`crate::affine::Tracker`) run on a fully-substituted expanded
+        surface program — reusing the landed checker rather than reimplementing a parallel one. The
+        drop/lower-bound property is explicitly **NOT validated**: it is a documented M-904 runtime
+        concern the static pass does not enforce (`tests/affine.rs:304-312`'s own doc comment; DN-71
+        §8 FLAG-4) — this corrects an initial task-brief assumption that dropping would REJECT
+        statically; it does not.
+      - `cargo test -p mycelium-l1` green (503 passed, 0 failed; 7/7 hygiene tests incl. E1/E2/E5).
+      No new tracking issue minted for the E2/E5 residuals (OQ-H1 cross-phylum, the E2 verbatim-splice
+      gap, the E5 drop-case scope correction): each is already carried forward as a dated design note
+      on **M-1054** (the implementation epic, above) — the same append-only mechanism the E1 close-out
+      used for OQ-H5/OQ-H1 — rather than as a separate issue, since no distinct tracking need was
+      identified beyond what M-1054's own body already carries for "whoever picks up the follow-on
+      design/implementation work" (the PR's own FLAG language). This issue stays `in-progress`, not
+      `done`.
     body: |
       Filed 2026-07-10 from the maintainer's ratification of DN-110-8.2-hygiene-deepdive.md (the
       companion §8.2 deep-dive, itself accepted as the basis for DN-110 §8.2 at this ratification).
