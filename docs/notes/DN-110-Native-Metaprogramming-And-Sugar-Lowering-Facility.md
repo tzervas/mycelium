@@ -412,6 +412,20 @@ task's own gate). **Mitigation:** §3.4 co-gates implementation on M-1051, and `
 DN-38 §5 round-trip check so the inspector is a *check*, not merely a viewer. This dependency is named, not
 buried.
 
+> **§8.4 addendum (2026-07-10, following the E1+E3 hygiene-experiment go/no-go) — append-only, does not
+> edit the §8.4 text above.** **M-1051 Increment-3** (`crates/mycelium-l1/src/reveal.rs`'s
+> `certified_roundtrip`) and the **E3 experiment** (`crates/mycelium-l1/src/tests/
+> reveal_roundtrip_e3.rs`, the companion note's own "E3 Result" addendum) are now **built and run** —
+> narrowing, but not closing, the gap this subsection names. The reveal spine moves
+> **`Declared → Empirical`, but ONLY for the L0-term-level round-trip claim on the reparseable
+> fragment** identified by the companion note's STEP-0 finding (`Const`/`Var`/`Let`(-of-those); every
+> `Op`/`Lam`/`Fix`/`FixGroup`/`Construct`/`Swap` stays out-of-contract/unbuilt for the *surface* path,
+> empirically, independent of `%`-freshening). This is **not** a blanket upgrade of "transparency is a
+> built guarantee" — the source-span `site` resolver, a `reveal` CLI, and `certified`-mode wiring into
+> the checker (M-1051 Increment-2 and beyond) remain unbuilt, and the facility itself (M-1054) has not
+> landed. See `docs/notes/DN-110-8.2-hygiene-deepdive.md`'s "E3 Result" addendum for the full,
+> narrowly-scoped record (VR-5 — no upgrade past what was actually checked).
+
 ### §8.5 The guarantee-tag-upgrade trap (VR-5)
 
 A lowering rule must **never** let its expansion claim a stronger guarantee tag than its RHS supports — e.g. a
@@ -667,6 +681,14 @@ the ratification, per house rule #3):**
 
 ## §13 Changelog
 
+- **2026-07-10 (following the E1+E3 hygiene-experiment go/no-go) — §8.4 addendum.** Appended a
+  dated addendum to §8.4 (append-only, no edit to the pre-existing §8.4 text): **M-1051
+  Increment-3** (`certified_roundtrip`) and the **E3 experiment** are now built and run (see
+  `docs/notes/DN-110-8.2-hygiene-deepdive.md`'s "E3 Result" addendum). The reveal spine moves
+  `Declared → Empirical` **narrowly** — the L0-term-level round-trip claim, scoped to the
+  reparseable fragment only — never a blanket "transparency is built" upgrade; M-1051 Increment-2,
+  a `reveal` CLI, `certified`-mode checker wiring, and the M-1054 facility itself remain unbuilt.
+  DN-110 stays `Accepted`, NOT `Enacted` (VR-5).
 - **2026-07-10** — **Ratified (maintainer, house rule #3).** Status **Draft → Accepted** (design
   ratification, **NOT Enacted** — VR-5, the facility's guarantees stay `Declared` until implementation +
   the E1/E3 experiments + `reveal`/M-1051 land). §1's role decomposition confirmed; §6's Rank-1 mechanism
