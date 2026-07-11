@@ -51,7 +51,7 @@ in-progress piece.
 - [Why this exists, and the core ideas](docs/guide/why-and-design.md)
 - [Guarantees & verification](docs/guide/guarantees-and-verification.md) — the
   `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice and the split verification regime
-- [Workspace map](docs/guide/workspace-map.md) — all 57 crates, the proof artifacts, the
+- [Workspace map](docs/guide/workspace-map.md) — all 56 crates, the proof artifacts, the
   LLM-leverage experiment
 - [How Mycelium compares](docs/guide/comparisons.md) — vs. typed systems languages, ML/array
   languages, VSA/HDC libraries, verification-oriented languages
