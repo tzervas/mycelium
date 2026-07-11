@@ -30,6 +30,7 @@
 //! `Fix` fold over the linear spine (RFC-0007 §4.8).
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use mycelium_core::{
     operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FieldTyRef,
@@ -385,7 +386,7 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         // (so the existing monomorphic differential is observably unchanged — NFR-7). The prelude/SCC
         // machinery below then runs **unchanged** over the specialized env.
         let mono_env = crate::mono::monomorphize(env, entry)?;
-        let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
+        let (mut el, binders, fd) = elab_prelude(&mono_env, entry, false)?;
         let mut stack = vec![entry.to_owned()];
         let entry_body = el.expr(&mut stack, &[], &fd.body)?;
         Ok(wrap_in_binders(binders, entry_body))
@@ -418,7 +419,7 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
 /// silent, half-lowered term (G2/VR-5).
 pub fn elaborate_direct(env: &Env, entry: &str) -> Result<Node, ElabError> {
     mycelium_stack::with_deep_stack(|| {
-        let (mut el, binders, fd) = elab_prelude(env, entry)?;
+        let (mut el, binders, fd) = elab_prelude(env, entry, false)?;
         let mut stack = vec![entry.to_owned()];
         let entry_body = el.expr(&mut stack, &[], &fd.body)?;
         Ok(wrap_in_binders(binders, entry_body))
@@ -450,7 +451,7 @@ fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError
     // M-673: monomorphize first (see [`elaborate`]); the per-hypha lowering then runs unchanged over
     // the closed monomorphic env. A colony entry is nullary monomorphic, so its name is preserved.
     let mono_env = crate::mono::monomorphize(env, entry)?;
-    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry, false)?;
     let Expr::Colony(hyphae) = &fd.body else {
         return residual(
             entry,
@@ -516,7 +517,7 @@ fn elaborate_reclaim_inner(env: &Env, entry: &str) -> Result<(Node, Node), ElabE
     // M-673: monomorphize first (see [`elaborate`]); the policy/body lowering then runs unchanged over
     // the closed monomorphic env. A reclaim entry is nullary monomorphic, so its name is preserved.
     let mono_env = crate::mono::monomorphize(env, entry)?;
-    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry, false)?;
     let Expr::Reclaim { policy, body } = &fd.body else {
         return residual(
             entry,
@@ -583,45 +584,43 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
     elaborate_lower_rule_with_args(env, rule_name, &[])
 }
 
-/// **M-1054 Stage 0 — the value-parametric matcher skeleton** (DN-110 §5-A), extending
-/// [`elaborate_lower_rule`] with an `args: &[Node]` path. One entry point: an empty `args` is
-/// exactly the pre-existing nullary rule elaboration (byte-identical — the code below is unchanged
-/// from [`elaborate_lower_rule`]'s old body for that case), and a non-empty `args` is the new,
-/// value-parametric path — matched via [`match_value_params`], then **structurally refused**.
+/// **M-1054 Stage 1 — the hygienic value-parametric expansion** (DN-110 §5-A /
+/// DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5), extending [`elaborate_lower_rule`] with an
+/// `args: &[Node]` path. One entry point: an empty `args` is exactly the pre-existing nullary rule
+/// elaboration (byte-identical — the code below is unchanged from [`elaborate_lower_rule`]'s old
+/// body for that case), and a non-empty `args` is the value-parametric path — matched via
+/// [`match_value_params`], then **hygienically expanded** by [`elaborate_value_parametric_rule`].
 ///
-/// # The Stage-0 guard (why this can never emit an unsafe expansion)
-/// A `lower` rule's declared [`crate::ast::LowerDecl::value_params`] are paired with `args` by
-/// position (arity-checked, never a silent truncate/pad — G2) — the binding a Stage-1
-/// capture-avoiding substitution pass will eventually consume. **Stage 0 stops there.** Splicing
-/// `args` into the RHS verbatim, without first routing every RHS-introduced binder through
-/// `%`-freshening (DN-110-8.2-hygiene-deepdive §4 (A)+(B); OQ-H5), would be a capture-unsafe
-/// expansion — exactly the hazard [`crate`]'s `src/tests/hygiene_expr_sugar.rs` E1 corpus exists to
-/// characterize, and this facility must not ship an unwitnessed instance of it. So: **whenever
-/// `args` is non-empty, this function unconditionally returns [`ElabError::Residual`]**, before any
-/// substitution logic runs (there is none to run — Stage 0 builds none). This is a structural
-/// property of the control flow (the only path to a `Node` result is the pre-existing nullary
-/// branch below, taken only when `args.is_empty()`), not a runtime flag a future edit could disable
-/// by mistake; `src/tests/elab.rs`'s Stage-0 guard tests exercise this directly.
+/// # The Stage 0 → Stage 1 transition (why this can now emit a capture-safe expansion)
+/// Stage 0 landed recognition + arity/type matching but unconditionally refused past that point
+/// (splicing `args` into the RHS verbatim, without first routing every RHS-introduced binder
+/// through freshening, would be a capture-unsafe expansion — exactly the hazard
+/// `src/tests/hygiene_expr_sugar.rs`'s E1 prototype exists to characterize). Stage 1 lands the
+/// hygiene machinery E1 validated on a throwaway prototype: **(A)** every binder the RHS
+/// introduces (`Let`/`Lam`/`Fix`/`FixGroup`/`Alt::Ctor`) is freshened via [`Elab::fresh`] under a
+/// **site-qualified** base (`%sugar#<rule>@<site>%tmp`, minted from a process-wide monotonic
+/// counter — [`SUGAR_EXPANSION_SITE`] — so that two separate expansion sites, even of the *same*
+/// rule, never mint colliding fresh names, per OQ-H5); **(B)** each reference to a value parameter
+/// is spliced with its matched argument `Node` verbatim (safe by (A)'s namespace disjointness — no
+/// on-the-fly renaming needed). See [`elaborate_value_parametric_rule`] for the mechanism.
 ///
 /// # Errors
 /// [`ElabError::UnknownFn`] if `rule_name` is not registered; [`ElabError::Residual`] if the rule is
 /// item-shaped (no expression-position form), if `args.len() != value_params.len()` (arity
-/// mismatch), if `args` is non-empty (the Stage-0 guard above), or — for the degenerate nullary
-/// case — if the RHS is outside the evaluation-complete fragment (unchanged from
-/// [`elaborate_lower_rule`]'s prior behavior).
+/// mismatch), or if the RHS (after value-parametric expansion, or — for the degenerate nullary
+/// case — as written) is outside the evaluation-complete fragment.
 ///
-/// **Guard-strictness asymmetry with `checkty.rs` (read before wiring the two together).**
-/// [`crate::checkty::Cx::check_sugar_call`] — the L1 check-phase recognition half of Stage 0 — is
-/// *stricter* than this function: it refuses **every** recognized sugar-rule call site, including
-/// the 0-value-param/0-arg case, because at the surface a call written `Name()` is *new* surface
-/// capability with no pre-Stage-0 precedent. This function's guard is looser by one case: a rule
-/// declaring **zero** value parameters called with **zero** `args` takes the pre-existing nullary
-/// path all the way through to `Ok` (that *is* the degenerate case [`elaborate_lower_rule`] always
-/// supported, pre-dating Stage 0). The two are not wired together in Stage 0 — nothing currently
-/// calls this function with a non-empty `args` derived from a checker-accepted call site, so the
-/// asymmetry is inert today. A Stage-1 author connecting checker-side recognition to this
-/// elaboration path must not assume the two guards coincide at `n = 0`; re-derive the composed
-/// behavior explicitly rather than relying on symmetry that was never established here.
+/// # Scope (Stage 1 only — see the M-1054 issue body for the residual gap)
+/// This function performs **(A)+(B) only**. A genuinely **free** identifier in the RHS (neither a
+/// value parameter nor an RHS-local binder) is left as a bare `Var` unresolved — **def-site
+/// resolution (C)** is Stage 2's job (OQ-H1), not attempted here. The **affine re-check (D)** over
+/// the expanded surface is Stage 3's job; this function does not run the affine tracker at all.
+/// [`crate::checkty::Cx::check_sugar_call`] (the L1 check-phase counterpart) is **unchanged** by
+/// this Stage: it still refuses every recognized sugar-rule call site — this function is reachable
+/// only by direct/test call, not yet wired into the ordinary program-elaboration pipeline
+/// (`self.app`'s call dispatch). Wiring the two together is left to whoever lands the surface
+/// grammar for `value_params` (§8.6 is still an open naming question) — re-derive the composed
+/// behavior explicitly rather than assuming it falls out of this change.
 pub fn elaborate_lower_rule_with_args(
     env: &Env,
     rule_name: &str,
@@ -648,25 +647,15 @@ pub fn elaborate_lower_rule_with_args(
             );
         }
     };
-    // M-1054 Stage 0 — the value-parametric matcher skeleton: pair each declared value parameter
-    // with its use-site argument `Node`, arity-checked. `matched` is deliberately never consumed
-    // beyond this point — see the guard immediately below.
+    // Pair each declared value parameter with its use-site argument `Node`, arity-checked (never
+    // a silent truncate/pad — G2).
     let matched = match_value_params(rule_name, &rule.value_params, args)?;
     if !matched.is_empty() {
-        // STAGE-0 GUARD (structural, not a flag — see the doc comment above). Refuse rather than
-        // splice `matched` into the RHS unfreshened; Stage 1 lands the hygiene machinery that would
-        // let this branch do real work.
-        return residual(
-            rule_name,
-            format!(
-                "`{rule_name}` was invoked with {} value argument(s) — expression-position \
-                 sugar-rule expansion is recognized and arity/type-matched (M-1054 Stage 0), but \
-                 the capture-avoiding substitution + `%`-freshening it needs (DN-110-8.2-hygiene-\
-                 deepdive §4 (A)+(B); OQ-H5) is Stage 1+ work, not built yet. Refusing rather than \
-                 emitting an unhygienic literal splice (never silent — G2).",
-                matched.len()
-            ),
-        );
+        // M-1054 Stage 1: the hygienic (A)+(B) expansion — see `elaborate_value_parametric_rule`.
+        let rhs_expr = rule
+            .expr_rhs()
+            .expect("matched the Expr arm just above — item-shaped rules returned early");
+        return elaborate_value_parametric_rule(env, rule_name, rhs_expr, &matched);
     }
     // Degenerate no-args case — identical to the pre-M-1054 nullary path (unchanged below).
     let rhs_expr = rule
@@ -700,12 +689,9 @@ pub fn elaborate_lower_rule_with_args(
     elaborate(&env2, &entry)
 }
 
-/// M-1054 Stage 0 — pair each declared value parameter with its use-site argument `Node`, by
-/// position (the binding a Stage-1 capture-avoiding substitution pass will consume). Arity-checked,
-/// never a silent truncate/pad (G2): a mismatch is an explicit [`ElabError::Residual`] naming both
-/// counts. Deliberately returns only the *pairing* — no substitution happens here or anywhere in
-/// Stage 0; see [`elaborate_lower_rule_with_args`]'s guard for why the caller can never turn this
-/// pairing into an emitted expansion.
+/// Pair each declared value parameter with its use-site argument `Node`, by position (the binding
+/// [`elaborate_value_parametric_rule`]'s (A)+(B) expansion consumes). Arity-checked, never a
+/// silent truncate/pad (G2): a mismatch is an explicit [`ElabError::Residual`] naming both counts.
 fn match_value_params<'a>(
     rule_name: &str,
     value_params: &'a [crate::ast::Param],
@@ -729,19 +715,420 @@ fn match_value_params<'a>(
         .collect())
 }
 
+/// Process-wide monotonic counter minting a distinct **expansion-site id** for every value-
+/// parametric [`elaborate_lower_rule_with_args`] call (M-1054 Stage 1; OQ-H5). Needed because that
+/// function is a free entry point with no [`Elab`] instance threaded across separate calls — so two
+/// calls (two sugar-call sites in one program, or a nested expansion where one expansion's output
+/// becomes another's argument) would each build a *fresh* `Elab` (its own `fresh` counter reset to
+/// `0`) and, freshened with only a per-call-reset counter, could mint **colliding** binder names
+/// (`"t%0"`, `"t%0"`, …) across the two expansions — the exact hazard the deep-dive §4(A)/OQ-H5
+/// warns a per-call-reset scheme reintroduces the moment two sugar invocations coexist. Site-
+/// qualifying every freshened name with this counter's value (see
+/// [`elaborate_value_parametric_rule`]) makes the two calls' namespaces disjoint regardless of
+/// whether their *internal* counters coincide.
+///
+/// **Honesty note (VR-5).** This counter is monotonic and collision-free *within one process*, not
+/// bit-reproducible across separate process runs or racing threads (`cargo test` runs tests
+/// concurrently) — two elaborations of the same program in two different runs may pick different
+/// (but each internally valid) site ids. This does not affect the expansion's *observational*
+/// semantics (alpha-equivalence — what capture-avoidance actually needs — is spelling-insensitive),
+/// but it is flagged here rather than silently assumed reproducible; an ADR-003 content-hash-
+/// stability follow-up is a residual open item if a future consumer needs a stable hash *through* an
+/// expanded sugar site (`Declared`, not decided or scheduled by this comment — house rule #3).
+static SUGAR_EXPANSION_SITE: AtomicU64 = AtomicU64::new(0);
+
+/// **M-1054 Stage 1 — the (A)+(B) hygienic value-parametric expansion** (DN-110-8.2-hygiene-
+/// deepdive §4; OQ-H5). Productionizes `src/tests/hygiene_expr_sugar.rs`'s E1 prototype
+/// (`Expander::go`) onto the real elaborator, in two passes:
+///
+/// 1. **Elaborate the RHS with each value parameter bound to its own literal surface spelling**
+///    (not a fresh name) — mirroring [`Self::elab_fn_lam`]'s parameter-scope population but keeping
+///    the bare name instead of freshening it, so a reference to a value parameter elaborates to
+///    `Node::Var(param_name)` verbatim. Because this goes through the **real** elaborator (not
+///    E1's raw-name walker), any surface-level *shadowing* of a parameter name by an RHS-local
+///    binder is already correctly resolved here: a shadowing `let`/`lambda` gets its own
+///    [`Elab::fresh`]-derived kernel name (see [`Self::app`]/[`Self::elab_fn_lam`]), so a bare
+///    `Var(param_name)` surviving to this pass's output can only be a genuine reference to the
+///    rule's own value parameter — never an accidentally-captured shadow.
+/// 2. **Walk the elaborated `Node`** ([`sugar_expand`], porting E1's `Expander::go`), freshening
+///    every RHS-introduced binder (`Let`/`Lam`/`Fix`/`FixGroup`/`Alt::Ctor`) via [`Elab::fresh`]
+///    under a site-qualified base unique to this call ([`SUGAR_EXPANSION_SITE`]) — **(A)** — and
+///    substituting each literal-spelled `Var(param_name)` leaf with its matched argument `Node`
+///    verbatim — **(B)**, safe by (A)'s namespace disjointness (no on-the-fly renaming needed).
+///
+/// **Scope (Stage 1 only).** A genuinely free RHS identifier (neither a value parameter nor an
+/// RHS-local binder) is left as a bare `Var` — def-site resolution (C) is Stage 2 (OQ-H1). No
+/// affine re-check runs here — that is Stage 3 (D). See [`elaborate_lower_rule_with_args`]'s doc
+/// comment for the full scope statement.
+fn elaborate_value_parametric_rule(
+    env: &Env,
+    rule_name: &str,
+    rhs_expr: &Expr,
+    matched: &[(&str, &Node)],
+) -> Result<Node, ElabError> {
+    elaborate_value_parametric_rule_inner(env, rule_name, rhs_expr, matched, true)
+}
+
+/// **Test-only negative control** (M-1054 Stage 1 verification): the exact same production path as
+/// [`elaborate_value_parametric_rule`] — same synthetic-entry construction, same monomorphize +
+/// `elab_prelude` + pass-1 elaboration — with (A) freshening **disabled** in pass 2 (binders keep
+/// their raw RHS spelling instead of an [`Elab::fresh`] name). This is the "what if the freshening
+/// this Stage adds were absent" witness the M-1054 Stage 1 verification calls for: a real capture
+/// bug (an RHS binder colliding with a use-site free variable of the same spelling) is observable
+/// **only** by disabling this — proving the hygienic path's test corpus is non-vacuous (it would
+/// fail without (A), not merely trivially pass). `#[cfg(test)]`-gated: this is a scratch harness,
+/// never a shipped runtime flag the production path could be silently misconfigured with — the
+/// public [`elaborate_value_parametric_rule`] always calls [`elaborate_value_parametric_rule_inner`]
+/// with `freshen_binders: true`, unconditionally, at every call site (there is exactly one).
+#[cfg(test)]
+pub(crate) fn elaborate_value_parametric_rule_disable_freshening_for_test(
+    env: &Env,
+    rule_name: &str,
+    rhs_expr: &Expr,
+    matched: &[(&str, &Node)],
+) -> Result<Node, ElabError> {
+    elaborate_value_parametric_rule_inner(env, rule_name, rhs_expr, matched, false)
+}
+
+fn elaborate_value_parametric_rule_inner(
+    env: &Env,
+    rule_name: &str,
+    rhs_expr: &Expr,
+    matched: &[(&str, &Node)],
+    freshen_binders: bool,
+) -> Result<Node, ElabError> {
+    mycelium_stack::with_deep_stack(|| {
+        // The synthetic entry name is `%`-prefixed: `%` is not a surface identifier character (the
+        // lexer forbids it — `crate::lexer::is_ident_start`/`is_ident_continue` admit only ASCII
+        // alphanumeric + `_`, re-confirmed against the current lexer at review time, 2026-07;
+        // `#`/`@` used elsewhere in this module's site-qualified fresh bases are equally
+        // surface-illegal), so this can never collide with a real fn / rule / constructor name
+        // (G2 — no silent shadowing). The RHS becomes its body verbatim; its declared signature
+        // carries the rule's own value parameters (unlike the nullary path's synthetic entry) so
+        // `elab_prelude` can validate the reachable call graph exactly as any other definition's.
+        let entry = format!("%lower-rhs%{rule_name}");
+        let value_params: Vec<crate::ast::Param> = matched
+            .iter()
+            .map(|(name, _)| crate::ast::Param {
+                name: (*name).to_owned(),
+                // The declared parameter *type* is not needed past `resolve_ty` below (elaboration
+                // does not re-check types — the checker already validated the call site); a
+                // `Binary{0}` placeholder is inert here as it is for the synthetic entry's return
+                // type below. `resolve_ty` never fails on a concrete literal width, so this cannot
+                // itself introduce a spurious `Residual`. **Review note:** this placeholder is read
+                // *only* by `resolve_ty` (to populate `scope`'s `Ty` field for re-inference sites
+                // like `if`/`match`) — it is never compared against an actual argument type (the
+                // checker, not this function, is responsible for that, and Stage 1 does not re-run
+                // it). If `resolve_ty` ever grows a stricter invariant on `Binary{0}` specifically,
+                // that would surface here as an explicit `Residual` (never silently wrong), not a
+                // masked bug — consistent with the identical placeholder already used for the
+                // nullary path's synthetic return type, unchanged by this leaf.
+                ty: crate::ast::TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(0))),
+            })
+            .collect();
+        let synth = crate::ast::FnDecl {
+            vis: crate::ast::Vis::Private,
+            thaw: false,
+            tier: None,
+            sig: crate::ast::FnSig {
+                name: entry.clone(),
+                params: vec![],
+                value_params,
+                ret: crate::ast::TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(0))),
+                effects: vec![],
+                effect_budgets: std::collections::BTreeMap::new(),
+            },
+            body: rhs_expr.clone(),
+        };
+        let mut env2 = env.clone();
+        env2.fns.insert(entry.clone(), synth);
+
+        // M-673: monomorphize first, exactly like `elaborate` does (the RHS may call a generic
+        // sibling fn) — the prelude/expr machinery below then runs unchanged over the specialized
+        // env, keeping this path's differential parity with the nullary path's own `elaborate` call.
+        let mono_env = crate::mono::monomorphize(&env2, &entry)?;
+        // `allow_value_params: true` — the one respect in which this entry differs from every other
+        // `elab_prelude` caller: it is not closed, it has the rule's value parameters in scope.
+        let (mut el, binders, fd) = elab_prelude(&mono_env, &entry, true)?;
+
+        // Pass 1 — elaborate the RHS with each value parameter bound to its own bare surface name
+        // (see the doc comment above for why this cannot mis-scope a shadowed occurrence).
+        //
+        // **Review note (not a bug, an invariant worth stating explicitly):** a value parameter
+        // pushed into `scope` here is not a "placeholder that might accidentally collide" — it *is*
+        // the RHS's own local binding, exactly like an ordinary function's own parameter list
+        // (compare `Self::elab_fn_lam`'s identical `scope.push((p.name.clone(), …))` pattern for a
+        // real `fn`'s params). So a bare `Var(name)` reference inside the RHS where `name` matches a
+        // declared value parameter **always** means that parameter, by the same lexical-scoping rule
+        // that already governs every other `fn` body in this language — there is no "accidental"
+        // case to guard against within this RHS's own scope. What Pass 2 must (and does) guard is a
+        // *different* hazard: that a value's *own* free variable, once spliced in by (B), could later
+        // be re-captured by some RHS-local binder of the same spelling — which (A)'s freshening
+        // prevents (see [`sugar_expand`]).
+        let mut scope: Vec<Binding> = Vec::with_capacity(fd.sig.value_params.len());
+        for p in &fd.sig.value_params {
+            let pty = resolve_ty(&entry, &mono_env.types, &[], &p.ty)
+                .map(|(t, _)| t)
+                .map_err(|e| ElabError::Residual {
+                    site: entry.clone(),
+                    what: format!("could not resolve `{rule_name}`'s parameter type: {e}"),
+                })?;
+            scope.push((p.name.clone(), p.name.clone(), pty));
+        }
+        let mut stack = vec![entry.clone()];
+        let body = el.expr(&mut stack, &scope, &fd.body)?;
+        let body = wrap_in_binders(binders, body);
+
+        // Pass 2 — (A) freshen every RHS-introduced binder + (B) substitute the value-parameter
+        // placeholders with their matched arguments, under a site-qualified namespace unique to
+        // this call (OQ-H5).
+        let site = SUGAR_EXPANSION_SITE.fetch_add(1, Ordering::Relaxed);
+        let base = format!("%sugar#{rule_name}@{site}%tmp");
+        let mut expand_scope: Vec<(String, String)> = Vec::new();
+        Ok(sugar_expand(
+            &mut el,
+            &base,
+            freshen_binders,
+            matched,
+            &mut expand_scope,
+            &body,
+        ))
+    })
+}
+
+/// The (A)+(B) walker behind [`elaborate_value_parametric_rule`] — a direct port of
+/// `src/tests/hygiene_expr_sugar.rs`'s E1 `Expander::go`, onto the real elaborator's
+/// [`Elab::fresh`] (site-qualified `base`) in place of E1's standalone per-call counter. A scope
+/// stack of `(original binder spelling, fresh spelling)` pairs realizes (A); a linear scan of
+/// `matched` realizes (B) — a reference to a name **shadowed** by an RHS-local binder resolves to
+/// that binder's fresh name first (innermost-first, mirroring [`crate::reveal::alpha_eq`]'s own
+/// convention), so a value parameter can never be captured by an RHS binder that happens to reuse
+/// its literal spelling. Every construct that introduces a kernel binder gets a fresh name; every
+/// other construct recurses structurally.
+///
+/// `pub(crate)` (not just `fn`) so `src/tests/facility_stage1_hygiene.rs` can unit-test this walker
+/// **directly** on hand-built `Node`s — the review-motivated closing of a real gap: the full
+/// `elaborate_lower_rule_with_args` pipeline only ever exercises the `Let` arm (no production
+/// fixture's RHS reaches a `Lam`/`Fix`/`FixGroup`/`Alt::Ctor` binder), so those arms were validated
+/// only by inheritance from E1's own prototype, never directly in this production corpus.
+#[allow(clippy::too_many_arguments)] // the (test-only) negative-control toggle adds one bool
+pub(crate) fn sugar_expand(
+    el: &mut Elab<'_>,
+    base: &str,
+    freshen_binders: bool,
+    matched: &[(&str, &Node)],
+    scope: &mut Vec<(String, String)>,
+    node: &Node,
+) -> Node {
+    // The one shared "mint this binder's replacement name" step both (A) [freshen] and the negative
+    // control [keep the raw spelling — no renaming at all, the naive/unhygienic elaborator's shape]
+    // funnel through, so every call site below stays a plain, uniform binder-processing step.
+    let mint = |el: &mut Elab<'_>, orig: &str| -> String {
+        if freshen_binders {
+            el.fresh(base)
+        } else {
+            orig.to_owned()
+        }
+    };
+    match node {
+        Node::Const(v) => Node::Const(v.clone()),
+        Node::Var(id) => {
+            if let Some((_, fresh)) = scope.iter().rev().find(|(orig, _)| orig == id) {
+                // (A): a reference to an RHS-local binder — follow it to its fresh name.
+                Node::Var(fresh.clone())
+            } else if let Some(arg) = matched
+                .iter()
+                .find_map(|(p, arg)| (*p == id.as_str()).then_some(*arg))
+            {
+                // (B): a reference to a value parameter, unshadowed — splice the use-site argument
+                // verbatim (capture-safe by (A)'s namespace disjointness).
+                arg.clone()
+            } else {
+                // A genuinely free RHS identifier (out of Stage 1's scope — that's Stage 2's def-site
+                // resolution, OQ-H1); left as-is rather than silently guessed at (G2).
+                Node::Var(id.clone())
+            }
+        }
+        Node::Let { id, bound, body } => {
+            let bound2 = sugar_expand(el, base, freshen_binders, matched, scope, bound);
+            let fresh = mint(el, id);
+            scope.push((id.clone(), fresh.clone()));
+            let body2 = sugar_expand(el, base, freshen_binders, matched, scope, body);
+            scope.pop();
+            Node::Let {
+                id: fresh,
+                bound: Box::new(bound2),
+                body: Box::new(body2),
+            }
+        }
+        Node::Op { prim, args } => Node::Op {
+            prim: prim.clone(),
+            args: args
+                .iter()
+                .map(|a| sugar_expand(el, base, freshen_binders, matched, scope, a))
+                .collect(),
+        },
+        Node::Swap {
+            src,
+            target,
+            policy,
+        } => Node::Swap {
+            src: Box::new(sugar_expand(el, base, freshen_binders, matched, scope, src)),
+            target: target.clone(),
+            policy: policy.clone(),
+        },
+        Node::Construct { ctor, args } => Node::Construct {
+            ctor: ctor.clone(),
+            args: args
+                .iter()
+                .map(|a| sugar_expand(el, base, freshen_binders, matched, scope, a))
+                .collect(),
+        },
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => Node::Match {
+            scrutinee: Box::new(sugar_expand(
+                el,
+                base,
+                freshen_binders,
+                matched,
+                scope,
+                scrutinee,
+            )),
+            alts: alts
+                .iter()
+                .map(|a| sugar_expand_alt(el, base, freshen_binders, matched, scope, a))
+                .collect(),
+            default: default
+                .as_ref()
+                .map(|d| Box::new(sugar_expand(el, base, freshen_binders, matched, scope, d))),
+        },
+        Node::Lam { param, body } => {
+            let fresh = mint(el, param);
+            scope.push((param.clone(), fresh.clone()));
+            let body2 = sugar_expand(el, base, freshen_binders, matched, scope, body);
+            scope.pop();
+            Node::Lam {
+                param: fresh,
+                body: Box::new(body2),
+            }
+        }
+        Node::App { func, arg } => Node::App {
+            func: Box::new(sugar_expand(
+                el,
+                base,
+                freshen_binders,
+                matched,
+                scope,
+                func,
+            )),
+            arg: Box::new(sugar_expand(el, base, freshen_binders, matched, scope, arg)),
+        },
+        Node::Fix { name, body } => {
+            let fresh = mint(el, name);
+            scope.push((name.clone(), fresh.clone()));
+            let body2 = sugar_expand(el, base, freshen_binders, matched, scope, body);
+            scope.pop();
+            Node::Fix {
+                name: fresh,
+                body: Box::new(body2),
+            }
+        }
+        Node::FixGroup { defs, body } => {
+            let fresh_names: Vec<String> = defs.iter().map(|(n, _)| mint(el, n)).collect();
+            for (orig, fresh) in defs.iter().map(|(n, _)| n).zip(fresh_names.iter()) {
+                scope.push((orig.clone(), fresh.clone()));
+            }
+            let defs2: Vec<(String, Box<Node>)> = defs
+                .iter()
+                .zip(fresh_names.iter())
+                .map(|((_, d), fresh)| {
+                    (
+                        fresh.clone(),
+                        Box::new(sugar_expand(el, base, freshen_binders, matched, scope, d)),
+                    )
+                })
+                .collect();
+            let body2 = sugar_expand(el, base, freshen_binders, matched, scope, body);
+            for _ in defs {
+                scope.pop();
+            }
+            Node::FixGroup {
+                defs: defs2,
+                body: Box::new(body2),
+            }
+        }
+    }
+}
+
+/// [`sugar_expand`]'s `Alt` companion (a `match` arm can itself introduce constructor-field
+/// binders) — same (A) freshening + (B) substitution discipline, ported from E1's `Expander::go_alt`.
+/// `pub(crate)` for the same direct-unit-test reason as [`sugar_expand`].
+#[allow(clippy::too_many_arguments)] // the (test-only) negative-control toggle adds one bool
+pub(crate) fn sugar_expand_alt(
+    el: &mut Elab<'_>,
+    base: &str,
+    freshen_binders: bool,
+    matched: &[(&str, &Node)],
+    scope: &mut Vec<(String, String)>,
+    alt: &Alt,
+) -> Alt {
+    let mint = |el: &mut Elab<'_>, orig: &str| -> String {
+        if freshen_binders {
+            el.fresh(base)
+        } else {
+            orig.to_owned()
+        }
+    };
+    match alt {
+        Alt::Ctor {
+            ctor,
+            binders,
+            body,
+        } => {
+            let fresh_names: Vec<String> = binders.iter().map(|b| mint(el, b)).collect();
+            for (orig, fresh) in binders.iter().zip(fresh_names.iter()) {
+                scope.push((orig.clone(), fresh.clone()));
+            }
+            let body2 = sugar_expand(el, base, freshen_binders, matched, scope, body);
+            for _ in binders {
+                scope.pop();
+            }
+            Alt::Ctor {
+                ctor: ctor.clone(),
+                binders: fresh_names,
+                body: body2,
+            }
+        }
+        Alt::Lit { value, body } => Alt::Lit {
+            value: value.clone(),
+            body: sugar_expand(el, base, freshen_binders, matched, scope, body),
+        },
+    }
+}
+
 /// Shared front-end of [`elaborate`]/[`elaborate_colony`]: validate the entry is a closed (nullary,
 /// no dynamic guarantee) definition, build the data registry, decompose the reachable call graph into
 /// callee-first recursive SCCs (Tarjan), and elaborate each SCC's recursive binder. Returns the
 /// primed [`Elab`], the callee-first binder list, and the entry's [`FnDecl`]. DRY: the recursion
 /// machinery is identical whether the entry body is sequentialized to one `Node` or split per-hypha.
+///
+/// `allow_value_params` relaxes the nullary-entry check for exactly one caller
+/// ([`elaborate_value_parametric_rule`], M-1054 Stage 1): a `lower` rule's synthetic entry is not
+/// closed, it has the rule's own value parameters in scope, so it cannot go through the ordinary
+/// closed-entry validation every other caller (`elaborate`/`elaborate_direct`/`elaborate_colony`/
+/// `elaborate_reclaim`) still requires (they all pass `false`, unchanged behavior).
 fn elab_prelude<'e>(
     env: &'e Env,
     entry: &str,
+    allow_value_params: bool,
 ) -> Result<(Elab<'e>, Vec<RecBinding>, &'e crate::ast::FnDecl), ElabError> {
     let Some(fd) = env.fns.get(entry) else {
         return Err(ElabError::UnknownFn(entry.to_owned()));
     };
-    if !fd.sig.value_params.is_empty() {
+    if !allow_value_params && !fd.sig.value_params.is_empty() {
         return residual(
             entry,
             "the entry has value parameters — v0 elaborates closed (nullary) entries; \

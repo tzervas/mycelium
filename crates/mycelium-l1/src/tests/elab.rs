@@ -426,9 +426,12 @@ fn the_generic_and_trait_residual_sites_remain_as_defensive_invariants() {
 }
 
 // -------------------------------------------------------------------------------------------
-// M-1054 Stage 0 — the value-parametric matcher skeleton + its structural guard
-// (`elaborate_lower_rule_with_args`; DN-110 §5-A). Companion to `src/tests/checkty.rs`'s
-// `check_sugar_call` recognition tests (the L1 check-phase half of Stage 0).
+// M-1054 Stage 0/1 — the value-parametric matcher (`elaborate_lower_rule_with_args`; DN-110
+// §5-A). Companion to `src/tests/checkty.rs`'s `check_sugar_call` recognition tests (the L1
+// check-phase half, unchanged by Stage 1 — see that module's own comment). The fixtures below use
+// a `rhs` that never references any value parameter, so they exercise only the *matcher* (arity/
+// dispatch), not (A)+(B) hygiene itself — the dedicated capture-avoidance corpus with real
+// parameter-referencing RHSes lives in `src/tests/facility_stage1_hygiene.rs`.
 // -------------------------------------------------------------------------------------------
 
 /// A `Binary{width}` surface `TypeRef` with no guarantee slot (the common fixture shape).
@@ -439,11 +442,11 @@ fn bin_ty(width: u32) -> TypeRef {
     }
 }
 
-/// M-1054 Stage 0 fixture: a value-parametric `lower` rule with `n` `Binary{8}` value parameters
-/// named `p0, p1, …` and the given (content-irrelevant to every test below) `rhs`. Never produced
-/// by the parser (no surface grammar for a non-empty `value_params` yet — see
-/// `LowerDecl::value_params`'s doc comment); constructed directly, white-box, per the M-1054 Stage
-/// 0 scoping.
+/// M-1054 fixture: a value-parametric `lower` rule with `n` `Binary{8}` value parameters named
+/// `p0, p1, …` and the given (content-irrelevant to every test below — none of these fixtures'
+/// `rhs`es reference a parameter) `rhs`. Never produced by the parser (no surface grammar for a
+/// non-empty `value_params` yet — see `LowerDecl::value_params`'s doc comment); constructed
+/// directly, white-box, per the M-1054 Stage 0 scoping (unchanged by Stage 1).
 fn value_parametric_rule(name: &str, n: usize, rhs: LowerRhs) -> LowerDecl {
     LowerDecl {
         name: name.to_owned(),
@@ -477,7 +480,7 @@ fn binary8_arg_nodes(n: usize) -> Vec<Node> {
         .collect()
 }
 
-/// **Regression** (M-1054 Stage 0 DoD): the pre-existing nullary entry point
+/// **Regression** (M-1054 Stage 0 DoD, still holds under Stage 1): the pre-existing nullary entry point
 /// [`elaborate_lower_rule`] must still elaborate byte-identically now that it is a thin wrapper
 /// over [`elaborate_lower_rule_with_args`] with an empty argument list.
 #[test]
@@ -498,7 +501,8 @@ fn stage0_nullary_rule_elaborates_identically_via_with_args() {
 /// A value-parametric rule invoked with the WRONG number of arguments is a never-silent arity
 /// refusal — distinguishable from every other `Residual` this function can produce (mutant
 /// witness: dropping the arity check would let `match_value_params`'s `zip` silently drop the
-/// unmatched declared parameters instead of refusing).
+/// unmatched declared parameters instead of refusing). Unchanged by Stage 1: the arity check runs
+/// before any (A)+(B) expansion is attempted.
 #[test]
 fn stage0_value_parametric_arity_mismatch_is_refused() {
     let mut e = env("nodule d;\nlower Eight = 0b0000_0001;");
@@ -517,40 +521,46 @@ fn stage0_value_parametric_arity_mismatch_is_refused() {
     );
 }
 
-/// **The Stage-0 guard.** A value-parametric rule invoked with the CORRECT arity (recognition +
-/// matching succeed) is still refused — never expanded — because the capture-avoiding
-/// substitution the expansion needs is Stage 1+ work. This is the test that proves "recognition +
-/// matcher skeleton land, but the unsafe literal expansion cannot ship": a well-formed call
-/// reaches this specific `Residual`, not `Ok`, not the arity-mismatch diagnostic, not
-/// `UnknownFn` — a mutant that deleted the guard (fell through to the nullary elaboration path
-/// unconditionally) would make this test observe `Ok` instead.
+/// **M-1054 Stage 1: a matched value-parametric call now expands.** The Stage 0 guard (a matched
+/// call was *unconditionally* refused, regardless of the RHS) is gone — Stage 1 replaces it with
+/// the real (A)+(B) hygienic expansion. This fixture's `rhs` (`Eight`'s own `0b0000_0001`
+/// constant) never references either declared parameter, so the expansion has nothing to freshen
+/// or substitute and must come out **byte-identical** to elaborating `Eight` directly — the
+/// simplest possible witness that the guard's removal did not merely swap one blanket refusal for
+/// a blanket (and unearned) accept. The dedicated capture-avoidance corpus (RHSes that *do*
+/// reference their parameters, checked against independent oracles) lives in
+/// `src/tests/facility_stage1_hygiene.rs`.
 #[test]
-fn stage0_matched_value_parametric_call_is_guarded_never_expands() {
+fn stage1_matched_value_parametric_call_now_expands() {
     let mut e = env("nodule d;\nlower Eight = 0b0000_0001;");
     let rhs = e.lower_rules["Eight"].rhs.clone();
     e.lower_rules
         .insert("Swap2".to_owned(), value_parametric_rule("Swap2", 2, rhs));
     let args = binary8_arg_nodes(2); // exactly matches the declared arity
-    let err = elaborate_lower_rule_with_args(&e, "Swap2", &args)
-        .expect_err("Stage 0 must refuse every value-parametric expansion, even a matched one");
-    let ElabError::Residual { what, .. } = &err else {
-        panic!("expected the Stage-0 gate Residual, got {err:?}");
-    };
-    assert!(
-        what.contains("Stage 0") && what.contains("Stage 1"),
-        "expected the Stage-0/Stage-1 hygiene-gate diagnostic (proving recognition + matching \
-         succeeded before the guard fired), got: {what}"
+    let via_swap2 = elaborate_lower_rule_with_args(&e, "Swap2", &args)
+        .expect("M-1054 Stage 1: a matched, arity/type-correct call must now expand, not refuse");
+    let via_eight =
+        elaborate_lower_rule(&e, "Eight").expect("the plain nullary rule elaborates too");
+    assert_eq!(
+        format!("{via_swap2:?}"),
+        format!("{via_eight:?}"),
+        "a value-parametric rule whose RHS never references its own parameters must expand to \
+         exactly the RHS's own (parameter-independent) L0 term, byte-identical to the nullary \
+         rule sharing that RHS"
     );
 }
 
 /// **Property-style sweep** (banked guard 7 — not one fixed-size example): for every arity from 0
-/// to 4, a *matched* call (`args.len() == value_params.len()`) either takes the true degenerate
-/// no-args nullary path (`n == 0`, which DOES elaborate — identical machinery to
-/// `stage0_nullary_rule_elaborates_identically_via_with_args`) or is refused by the Stage-0 gate
-/// specifically (`n >= 1`) — never `Ok`, never the arity-mismatch diagnostic, for any arity in the
+/// to 4, a *matched* call (`args.len() == value_params.len()`) now elaborates successfully — the
+/// `n == 0` case takes the true degenerate no-args nullary path (identical machinery to
+/// `stage0_nullary_rule_elaborates_identically_via_with_args`), and every `n >= 1` case expands via
+/// the M-1054 Stage 1 (A)+(B) machinery to the same parameter-independent constant (this fixture's
+/// `rhs` never references a parameter, by construction) — never a `Residual`, for any arity in the
 /// swept range.
 #[test]
-fn stage0_guard_holds_across_arities() {
+fn stage1_matched_call_expands_across_arities() {
+    let baseline = env("nodule d;\nlower Eight = 0b0000_0001;");
+    let via_eight = elaborate_lower_rule(&baseline, "Eight").expect("the baseline rule elaborates");
     for n in 0..=4usize {
         let mut e = env("nodule d;\nlower Eight = 0b0000_0001;");
         let rhs = e.lower_rules["Eight"].rhs.clone();
@@ -558,20 +568,13 @@ fn stage0_guard_holds_across_arities() {
         e.lower_rules
             .insert(rule_name.clone(), value_parametric_rule(&rule_name, n, rhs));
         let args = binary8_arg_nodes(n);
-        let result = elaborate_lower_rule_with_args(&e, &rule_name, &args);
-        if n == 0 {
-            result.unwrap_or_else(|e| {
-                panic!("[n=0] a 0-value-param rule with 0 args is the nullary path — must elaborate, got {e:?}")
-            });
-        } else {
-            let err = result.expect_err("a matched non-nullary call must still be guarded");
-            let ElabError::Residual { what, .. } = &err else {
-                panic!("[n={n}] expected the Stage-0 gate Residual, got {err:?}");
-            };
-            assert!(
-                what.contains("Stage 0"),
-                "[n={n}] expected the Stage-0 gate diagnostic, got: {what}"
-            );
-        }
+        let result = elaborate_lower_rule_with_args(&e, &rule_name, &args)
+            .unwrap_or_else(|err| panic!("[n={n}] a matched call must now expand, got {err:?}"));
+        assert_eq!(
+            format!("{result:?}"),
+            format!("{via_eight:?}"),
+            "[n={n}] a parameter-independent RHS must expand to the same L0 term regardless of \
+             its declared arity"
+        );
     }
 }
