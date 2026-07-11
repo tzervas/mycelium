@@ -12,7 +12,48 @@
 //! highlighter's per-token colours (that would need per-token `#text(fill:)` emission or a bundled
 //! theme — future work), so there is nothing to mis-colour.
 
+use crate::inline::{self, Span};
 use crate::ir::{DocModel, Node, Payload};
+
+/// Render parsed inline [`Span`]s to Typst markup: `#strong[…]`, `#emph[…]`, `#raw("…")` for inline
+/// code, and `#link("…")[…]` for **external** links only (internal/relative links render as their
+/// text — their resolved navigation is the `Xref` node, so the inline path never emits a broken PDF
+/// link to a raw `.md` path). Function forms are used throughout so code/link content with Typst
+/// metacharacters is robust (never a broken `.typ`).
+fn render_inline_typst(spans: &[Span<'_>]) -> String {
+    let mut out = String::new();
+    for span in spans {
+        match span {
+            Span::Text(t) => out.push_str(&escape(t)),
+            Span::Code(c) => out.push_str(&format!("#raw(\"{}\")", escape_str(c))),
+            Span::Strong(inner) => {
+                out.push_str("#strong[");
+                out.push_str(&render_inline_typst(inner));
+                out.push(']');
+            }
+            Span::Em(inner) => {
+                out.push_str("#emph[");
+                out.push_str(&render_inline_typst(inner));
+                out.push(']');
+            }
+            Span::Link { text, href } => {
+                if inline::is_external(href) {
+                    out.push_str(&format!("#link(\"{}\")[", escape_str(href)));
+                    out.push_str(&render_inline_typst(text));
+                    out.push(']');
+                } else {
+                    out.push_str(&render_inline_typst(text));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Parse + render inline markdown in `text` to Typst markup (the common one-shot).
+fn inline_typst(text: &str) -> String {
+    render_inline_typst(&inline::parse(text))
+}
 
 /// Render the whole model to one Typst document source.
 #[must_use]
@@ -61,14 +102,14 @@ fn render_node(node: &Node, depth: usize, out: &mut String) {
             let eq = "=".repeat(depth.clamp(2, 6));
             out.push_str(&format!(
                 "{eq} {}\n\n",
-                escape(node.title.as_deref().unwrap_or(""))
+                inline_typst(node.title.as_deref().unwrap_or(""))
             ));
             for c in &node.children {
                 render_node(c, depth + 1, out);
             }
         }
         Payload::Prose { text } => {
-            out.push_str(&escape(text));
+            out.push_str(&inline_typst(text));
             out.push_str("\n\n");
         }
         Payload::Example { lang, source, .. } => {

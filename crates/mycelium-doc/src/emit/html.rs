@@ -12,8 +12,73 @@
 
 use crate::emit::{html_escape, Artifacts};
 use crate::highlight;
+use crate::inline::{self, Span};
 use crate::ir::{DocModel, Node, Payload, SourceKind, XrefResolution};
 use crate::theme;
+
+/// Render parsed inline [`Span`]s to HTML: `<strong>`/`<em>`/`<code class="inl">`, and `<a class="x">`
+/// for **external** links only (internal/relative links render as their text — their resolved
+/// navigation is the `Xref` sibling node, so the inline path never emits a dead `.md` href). Every
+/// text/code run is HTML-escaped (never raw markup injection).
+fn render_inline_html(spans: &[Span<'_>]) -> String {
+    let mut out = String::new();
+    for span in spans {
+        match span {
+            Span::Text(t) => out.push_str(&html_escape(t)),
+            Span::Code(c) => {
+                out.push_str("<code class=\"inl\">");
+                out.push_str(&html_escape(c));
+                out.push_str("</code>");
+            }
+            Span::Strong(inner) => {
+                out.push_str("<strong>");
+                out.push_str(&render_inline_html(inner));
+                out.push_str("</strong>");
+            }
+            Span::Em(inner) => {
+                out.push_str("<em>");
+                out.push_str(&render_inline_html(inner));
+                out.push_str("</em>");
+            }
+            Span::Link { text, href } => {
+                if inline::is_external(href) {
+                    out.push_str(&format!("<a class=\"x\" href=\"{}\">", html_escape(href)));
+                    out.push_str(&render_inline_html(text));
+                    out.push_str("</a>");
+                } else {
+                    out.push_str(&render_inline_html(text));
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Render parsed inline [`Span`]s to **plain escaped text** (formatting and links stripped) — for a
+/// `<title>`, the nav sidebar, and the "on this page" ToC, where inline HTML tags would be invalid
+/// (a `<title>`) or produce nested `<a>` (a ToC/sidebar link). So a heading with `**bold**` still
+/// reads cleanly as `bold` in those places, never as literal `**bold**`.
+fn render_inline_text(spans: &[Span<'_>]) -> String {
+    let mut out = String::new();
+    for span in spans {
+        match span {
+            Span::Text(t) | Span::Code(t) => out.push_str(&html_escape(t)),
+            Span::Strong(inner) | Span::Em(inner) => out.push_str(&render_inline_text(inner)),
+            Span::Link { text, .. } => out.push_str(&render_inline_text(text)),
+        }
+    }
+    out
+}
+
+/// Parse + render inline markdown in `text` to HTML (the common one-shot for prose/cells/headings).
+fn inline_html(text: &str) -> String {
+    render_inline_html(&inline::parse(text))
+}
+
+/// Parse + render inline markdown in `text` to plain escaped text (nav labels / `<title>`).
+fn inline_text(text: &str) -> String {
+    render_inline_text(&inline::parse(text))
+}
 
 /// The corpus-family groups, in navigation order (shared by the index and the sidebar tree).
 const GROUPS: &[(SourceKind, &str)] = &[
@@ -109,7 +174,7 @@ fn page_shell(
          <script>window.MYC_BASE={base_json};</script>\n\
          {toggle_js}\n{search_js}\n\
          </body>\n</html>\n",
-        title = html_escape(title),
+        title = inline_text(title),
         css = theme::READING_CSS,
         head_init = theme::HEAD_THEME_INIT,
         skip = theme::SKIP_LINK,
@@ -170,7 +235,7 @@ fn render_sidebar(model: &DocModel, link_prefix: &str, current: Option<&str>) ->
                     prefix = link_prefix,
                     a = html_escape(&doc.anchor),
                     cur = current_attr,
-                    t = html_escape(doc_title(doc)),
+                    t = inline_text(doc_title(doc)),
                 ));
             }
         }
@@ -202,7 +267,7 @@ fn render_toc(doc: &Node) -> Option<String> {
         nav.push_str(&format!(
             "  <li><a class=\"lvl-{depth}\" href=\"#{a}\">{t}</a></li>\n",
             a = html_escape(anchor),
-            t = html_escape(label),
+            t = inline_text(label),
         ));
     }
     nav.push_str("</ul></nav>");
@@ -280,7 +345,7 @@ fn render_node(node: &Node, depth: usize, doc_anchor: &str, buf: &mut String) {
             buf.push_str(&format!(
                 "<section data-cid=\"{cid}\" id=\"{id}\">\n<h{h}>{t}{lvl}</h{h}>\n",
                 id = html_escape(&node.anchor),
-                t = html_escape(node.title.as_deref().unwrap_or("")),
+                t = inline_html(node.title.as_deref().unwrap_or("")),
             ));
             for c in &node.children {
                 render_node(c, depth + 1, doc_anchor, buf);
@@ -297,7 +362,7 @@ fn render_node(node: &Node, depth: usize, doc_anchor: &str, buf: &mut String) {
             } else {
                 buf.push_str(&format!(
                     "<p data-cid=\"{cid}\">{}</p>\n",
-                    html_escape(text)
+                    inline_html(text)
                 ));
             }
         }
@@ -404,7 +469,7 @@ pub(crate) fn render_table(text: &str, cid: &str) -> Option<String> {
     }
     let mut out = format!("<div class=\"table-wrap\"><table data-cid=\"{cid}\">\n<thead><tr>");
     for cell in &header {
-        out.push_str(&format!("<th>{}</th>", html_escape(cell)));
+        out.push_str(&format!("<th>{}</th>", inline_html(cell)));
     }
     out.push_str("</tr></thead>\n<tbody>\n");
     for line in &lines[2..] {
@@ -413,7 +478,7 @@ pub(crate) fn render_table(text: &str, cid: &str) -> Option<String> {
         }
         out.push_str("<tr>");
         for cell in split_row(line) {
-            out.push_str(&format!("<td>{}</td>", html_escape(&cell)));
+            out.push_str(&format!("<td>{}</td>", inline_html(&cell)));
         }
         out.push_str("</tr>\n");
     }

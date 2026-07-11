@@ -14,6 +14,7 @@ mod build;
 mod cache;
 mod highlight;
 mod html;
+mod inline;
 mod ir;
 mod lib_index;
 mod typst;

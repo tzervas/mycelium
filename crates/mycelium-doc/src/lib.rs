@@ -25,6 +25,7 @@ pub mod doc_lint;
 pub mod emit;
 pub mod hash;
 pub mod highlight;
+pub mod inline;
 pub mod ir;
 pub mod lib_index;
 pub mod theme;
