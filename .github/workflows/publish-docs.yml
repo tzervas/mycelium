@@ -1,11 +1,12 @@
-# Publish the wiki (from docs/wiki/) and the rustdoc API docs (to GitHub Pages).
+# Publish the wiki (from docs/wiki/) and the full docsite — the themed myc-doc corpus site plus the
+# agent code index and the rustdoc API docs — to GitHub Pages.
 #
 # Manual-dispatch only (workflow_dispatch) — Mycelium keeps CI advisory / on-demand by policy
 # (see .github/workflows/checks.yml). Nothing here runs on push.
 #
 # Requires, in repo Settings:
 #   - the **Wiki** feature enabled (for the wiki sync) and **Pages** set to "GitHub Actions"
-#     (for the rustdoc deploy);
+#     (for the docsite deploy);
 #   - **a repository secret `DOCS_PUBLISH_TOKEN`** (Settings -> Secrets and variables -> Actions) —
 #     a fine-grained PAT with *Contents: write* (covers the wiki). This is preferred because the
 #     default `GITHUB_TOKEN` cannot always push to the wiki under stricter org policies. The secret
@@ -21,8 +22,8 @@ on:
         description: "Mirror docs/wiki/ to the GitHub wiki"
         type: boolean
         default: true
-      publish_rustdoc:
-        description: "Build + deploy rustdoc to GitHub Pages"
+      publish_site:
+        description: "Build + deploy the full docsite (themed corpus + agent index + rustdoc) to GitHub Pages"
         type: boolean
         default: true
 
@@ -71,8 +72,8 @@ jobs:
           # GitHub wikis default to the `master` branch; fall back to `main` if needed.
           git_wiki push origin HEAD:master || git_wiki push origin HEAD:main
 
-  publish-rustdoc:
-    if: ${{ inputs.publish_rustdoc }}
+  publish-site:
+    if: ${{ inputs.publish_site }}
     runs-on: ubuntu-latest
     permissions:
       pages: write
@@ -83,18 +84,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Build rustdoc (workspace, no deps)
+      - name: Build the docsite (themed corpus + agent index + rustdoc)
         run: |
           set -euo pipefail
           # rust-toolchain.toml pins the MSRV; rustup installs it on first invocation.
-          cargo doc --no-deps --workspace
-          # A landing redirect to the kernel crate's docs.
-          echo '<meta http-equiv="refresh" content="0; url=mycelium_core/index.html">' \
-            > target/doc/index.html
+          # scripts/docsite.sh assembles target/docsite/ from three sources (corpus HTML via
+          # myc-doc, the committed agent index, and rustdoc), skipping any section whose tool is
+          # absent — the generated landing page reflects what actually built (never-silent, G2).
+          bash scripts/docsite.sh
+          # Guard: fail loudly if nothing was assembled, rather than deploying an empty site.
+          test -f target/docsite/index.html
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: target/doc
+          path: target/docsite
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
