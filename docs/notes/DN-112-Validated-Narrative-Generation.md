@@ -71,9 +71,9 @@ Generation is **content-addressed and deterministic**: cache key = `blake2b(fact
 seed)`. Re-running an unchanged unit returns cached prose ⇒ stable diffs and **differential regeneration**
 (only changed units re-generate). This mirrors, and composes with, the doc-IR's `DocModel::id_set()`
 differential-render cache (a source line that reflows keeps its node id, so committed prose + rendered page
-stay stable). The generated prose is committed corpus (mirroring the `docs/*-index/` pattern: a regen recipe
-+ a drift gate + `linguist-generated`), so it ships in the `git archive` release artifact like the rest of
-`docs/`.
+stay stable). The generated prose is committed corpus (mirroring the `docs/*-index/` pattern: a regen
+recipe plus a drift gate plus a `linguist-generated` mark), so it ships in the `git archive` release
+artifact like the rest of `docs/`.
 
 ## §4 Honesty tags & the human floor
 Generated prose is **always tagged `Empirical`/`Declared`, never `Proven`/`Exact`** (enforced as in
