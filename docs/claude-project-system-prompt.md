@@ -207,8 +207,8 @@ trace back to.
 4. Keep the knowledge fresh: re-upload after significant corpus changes (the same bundle feeds Google
    NotebookLM, so one export serves both).
 
-_Provenance: distilled from `CLAUDE.md` (house rules, lexicon), `CONTRIBUTING.md` (append-only + the
+*Provenance: distilled from `CLAUDE.md` (house rules, lexicon), `CONTRIBUTING.md` (append-only + the
 transparency rule), `docs/Mycelium_Project_Foundation.md` (charter, FR/NFR/VR/SC/KC), `README.md`
 (elevator + direction notes), `docs/Glossary.md` (lexicon + lattice), and ADR-032 (the
 honesty→transparency reframe). Guarantee level of this file: `Declared` (an authoring aid; the cited
-sources are ground truth)._
+sources are ground truth).*
