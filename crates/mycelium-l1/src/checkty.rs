@@ -476,28 +476,44 @@ pub(crate) fn lookup_data_home_checked<'a>(
             ),
         ));
     };
-    // `name`'s qualifier prefix is everything before the LAST `::` (home strings use `.` as their
-    // OWN internal separator — `nodule_home` — so a single `::` unambiguously splits home from
-    // bare name; see `ty_local_name`'s doc comment). An unqualified `name` has no home to compare
-    // against — the common own-type / single-nodule case, structurally unaffected.
-    if let Some((home, _)) = name.rsplit_once("::") {
-        if home != info.home {
-            return Err(CheckError::new(
-                site,
-                format!(
-                    "type-identity mismatch: `{name}` resolves, in this nodule's own type \
-                     registry, to a DIFFERENT declaration of the same bare name — `{}` is \
-                     declared in `{}`, not the expected `{home}` (a local type shadows a \
-                     foreign-home type of the same name, and this position legitimately reaches \
-                     a value of the foreign type — CRITICAL #2 / DN-112 Rank 1 residual close;\
-                     refused rather than silently checked against the wrong declaration's shape, \
-                     G2/VR-5)",
-                    info.name, info.home
-                ),
-            ));
-        }
+    if let Some(home) = data_home_mismatch(name, info) {
+        return Err(CheckError::new(
+            site,
+            data_home_mismatch_message(name, home, info),
+        ));
     }
     Ok(info)
+}
+
+/// The qualifier-home mismatch, if any: `Some(home)` iff `name` is nodule-qualified (has a `::`
+/// separator) and that qualifier `home` differs from `info`'s own declared [`DataInfo::home`] — the
+/// same-nodule-shadow-plus-legitimate-cross-nodule-reach shape [`lookup_data_home_checked`] refuses
+/// (DN-112 Rank 1 / M-1036). `name`'s qualifier prefix is everything before the LAST `::` (home
+/// strings use `.` as their OWN internal separator — `nodule_home` — so a single `::` unambiguously
+/// splits home from bare name; see [`ty_local_name`]'s doc comment). An unqualified `name` (no `::`)
+/// never mismatches — the common own-type / single-nodule surface-syntax case, structurally
+/// unaffected. Shared by [`lookup_data_home_checked`] (the checker-side pattern-normalization sites)
+/// and [`resolve_ty`]'s own `BaseType::Named` arm (the re-resolution round-trip a *qualified* name
+/// can reach via `crate::mono`'s `ty_to_source_ref`, DN-112 Rank 1 residual close, KC-3/DRY: one
+/// mismatch predicate, not two divergent copies).
+fn data_home_mismatch<'a>(name: &'a str, info: &DataInfo) -> Option<&'a str> {
+    let (home, _) = name.rsplit_once("::")?;
+    (home != info.home).then_some(home)
+}
+
+/// The shared home-mismatch [`CheckError`] message — identical wording regardless of which caller
+/// ([`lookup_data_home_checked`] or [`resolve_ty`]) detected the mismatch, so an `EXPLAIN`/audit
+/// reader sees one consistent diagnostic for this exploit class (G2 — never silent, and never two
+/// subtly-different refusal texts for the same underlying shape).
+fn data_home_mismatch_message(name: &str, home: &str, info: &DataInfo) -> String {
+    format!(
+        "type-identity mismatch: `{name}` resolves, in this nodule's own type registry, to a \
+         DIFFERENT declaration of the same bare name — `{}` is declared in `{}`, not the expected \
+         `{home}` (a local type shadows a foreign-home type of the same name, and this position \
+         legitimately reaches a value of the foreign type — CRITICAL #2 / DN-112 Rank 1 residual \
+         close; refused rather than silently checked against the wrong declaration's shape, G2/VR-5)",
+        info.name, info.home
+    )
 }
 
 /// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
@@ -880,6 +896,20 @@ pub(crate) fn resolve_ty(
                 let Some(decl) = lookup_data(types, name) else {
                     return Err(CheckError::new(site, format!("unknown type `{name}`")));
                 };
+                // M-1036 residual close (the `resolve_ty` re-inference round-trip site named in the
+                // exhaustive re-verify inventory): ordinary surface `TypeRef`s are always BARE (the
+                // parser never emits `::`), so this can only fire when `name` was re-fed in already
+                // QUALIFIED — exactly `crate::mono::ty_to_source_ref`'s round-trip. In that case the
+                // bare-local fallback above may have resolved to a DIFFERENT (locally-shadowing)
+                // declaration than `name`'s own qualifier names; refuse explicitly (G2) rather than
+                // silently stamping `qname` from the WRONG `decl.home` below (the same shape
+                // `lookup_data_home_checked` closes for the checker-side pattern sites).
+                if let Some(home) = data_home_mismatch(name, decl) {
+                    return Err(CheckError::new(
+                        site,
+                        data_home_mismatch_message(name, home, decl),
+                    ));
+                }
                 // Arity is checked — never a guess (§11.3). A type parameter cannot be applied.
                 if args.len() != decl.params.len() {
                     return Err(CheckError::new(
@@ -6180,6 +6210,32 @@ impl Cx<'_> {
     /// is the single-nodule, concrete-argument fragment (OQ-H1's own scope note), so a genuinely
     /// abstract value-parameter type is not yet reachable through this gate in practice; if that
     /// ever changes, this is the seam to revisit (FLAG, not silently widened).
+    ///
+    /// **M-1036 residual-close audit (B).** The `lookup_data(self.types, name)` call below (in the
+    /// `Ty::Data` arm) is left unguarded — audited and confirmed **not exploitable** for a
+    /// wrong-value silent *accept*, because this fn is (per this doc comment's own opening
+    /// paragraph) only ever a **cheap pre-filter TRIGGER**, OR'd in [`Self::check_sugar_call`] with
+    /// a second, fully **independent** precise signal: whether checking the *actual argument
+    /// expression* at this call site touched the real affine tracker (`self.affine.snapshot() !=
+    /// pre_arg`, computed via the ordinary — already home-check-guarded, per `resolve_ty`/
+    /// `normalize_pattern`'s M-1036 fixes — `self.check` call, never through this fn's own lookup).
+    /// The two possible mismatch directions are both harmless:
+    /// - **Over-trigger** (a wrong `d` looks *more* Substrate-shaped than the real declared type):
+    ///   the real substituted-`Expr` walk just runs unnecessarily and still decides correctly from
+    ///   the real `Expr`, never this fn's structural read.
+    /// - **Under-trigger** (a wrong `d` — e.g. a same-nodule shadow's `DataInfo` — looks *less*
+    ///   Substrate-shaped, missing a field the real declared type has): the independent
+    ///   per-argument tracker-touch signal still fires whenever the call site actually passes a
+    ///   live affine value there, since that signal is computed from the argument's own real
+    ///   checked shape, not from this fn's `d`. A trigger this fn alone would miss is exactly the
+    ///   "affine-hiding-non-affine-type" class DN-117 already designed the OR'd signal to catch
+    ///   (see the class comment above `has_affine_surface`'s definition) — so a shadow-mismatch here
+    ///   is strictly narrower than a gap the design already covers, not a new one.
+    ///
+    /// Guarantee: `Declared` (reasoned, not mechanized) — this fn's own accept/refuse authority is
+    /// itself only `Declared`/heuristic by design (it is a trigger, not the decision — see this
+    /// comment's opening paragraph); the real decision (the substituted-`Expr` walk) carries its own
+    /// separate guarantee.
     fn ty_structurally_contains_substrate(&self, ty: &Ty, visiting: &mut BTreeSet<String>) -> bool {
         match ty {
             Ty::Substrate(_) => true,

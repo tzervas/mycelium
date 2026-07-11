@@ -104,7 +104,13 @@ fn enumerate_finite_domain(
     // site — `eval.rs`'s `eval_path`/`enter_call` — stamps it from `DataInfo::name`, unqualified);
     // stay consistent so `env.types.get(ty)` (unchanged, bare-keyed) still finds it downstream.
     let local = crate::checkty::ty_local_name(name);
-    let info = crate::checkty::lookup_data(types, name)?;
+    // M-1036 residual close: home-checked lookup — a same-nodule-shadow-plus-foreign-reach mismatch
+    // is treated as "not enumerable HERE" (`None`), the same disclosed skip this fn already uses for
+    // an unregistered/fielded/uninhabited type (G2/VR-5: never guess a partial enumeration, and
+    // never silently exhaust the WRONG (shadowed) type's ctor list as `ty`'s domain — that would
+    // "empirically verify" the semilattice laws against fabricated, wrongly-shaped values and could
+    // report a meaningless pass).
+    let info = crate::checkty::lookup_data_home_checked(types, name, "check_fuse_laws").ok()?;
     if info.ctors.is_empty() || info.ctors.iter().any(|c| !c.fields.is_empty()) {
         return None;
     }

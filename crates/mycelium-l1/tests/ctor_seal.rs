@@ -655,3 +655,114 @@ fn a_wildcard_shielded_shadow_plus_foreign_field_no_longer_silently_misregisters
          got: {elab_result:?}"
     );
 }
+
+// ---------------------------------------------------------------------------------------------
+// M-1036 residual close — the FOURTH bare-name-collapse site, found in `crate::mono` by a
+// systematic re-verify of every DN-112 Rank 1 consumer. `crate::mono::emit_data` (and its
+// siblings `ctor_data_instance`/`ctor_field_tys`/`for_elem_ty`) called the plain
+// `checkty::lookup_data` unguarded — reachable purely through `monomorphize`, independent of
+// BOTH the checker's own (already home-checked) `normalize_pattern`/`resolve_ty` paths AND
+// `elab`'s own CRITICAL #2-sibling `field_spec` fix (the wildcard-shielded-shadow test above).
+// The wildcard sub-pattern (`Wrap(_)`) never triggers any pattern-position home-check (a
+// wildcard queries no `DataInfo`), so `mono`'s own consultation of the SAME bare-keyed registry
+// was the last unguarded consumer of this exact field-type reference.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn a_wildcard_shielded_shadow_no_longer_silently_monomorphizes_the_wrong_shape() {
+    // `b` imports `Something` from `a` but never imports `T` itself — `b` locally shadows `T` with
+    // an UNRELATED shape (`Binary{4}` vs `a::T`'s real `Binary{8}`). `exploit` takes its `Something`
+    // as a VALUE PARAMETER (never constructs one — this deliberately avoids `monomorphize`'s own
+    // separate, unrelated "re-derive a callee's body against the caller's own ctor namespace"
+    // requirement, which would otherwise trip on `Mk`'s own bare-name visibility before ever
+    // reaching this fn's target — the field-type-driven registry consultation) and its `match` uses
+    // a wildcard sub-pattern (`Wrap(_)`), so the CHECKER itself accepts this program (the same
+    // shape the checker/elab-level witness above exercises). The exploit surfaces only when
+    // `monomorphize` runs DIRECTLY on `b`'s own per-nodule `Env` (the same probe the
+    // `same_bare_named_types_in_different_homes_…` witness above uses): to emit `exploit`'s own
+    // parameter type `Something`, mono must also emit its `Wrap` field type `a::T` — pre-fix, this
+    // silently registered `a::T`'s mangled entry using `b`'s WRONG (locally-shadowed) `Binary{4}`
+    // shape instead of `a::T`'s real `Binary{8}` one. `id[X]` is a deliberately-unreachable generic
+    // fn, present only to force `monomorphize` off its already-monomorphic fast pass-through (which
+    // would never re-consult the registry at all, making the exploit unreachable).
+    let phy = check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub type Something = Wrap(T);\n\
+         nodule b;\n\
+         use a.Something;\n\
+         type T = Shadow(Binary{4});\n\
+         pub fn id[X](x: X) => X = x;\n\
+         pub fn exploit(s: Something) => Binary{1} = match s { Wrap(_) => 0b1 };",
+    )
+    .expect(
+        "the checker itself accepts this program — the wildcard sub-pattern never triggers a \
+         pattern-position home-check (the same shape the elab-sibling witness above exercises)",
+    );
+    let (_, b_env) = phy
+        .nodules
+        .iter()
+        .find(|(p, _)| p.0.len() == 1 && p.0[0] == "b")
+        .expect("nodule b is present");
+
+    let result = mycelium_l1::monomorphize(b_env, "exploit");
+    let err = result.expect_err(
+        "monomorphizing `b`'s own per-nodule Env directly must now REFUSE (M-1036 residual \
+         close) rather than silently emit `a::T`'s registry entry under `b`'s WRONG (shadowed) \
+         `Binary{4}` shape instead of the real `Binary{8}` one",
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains('T')
+            || msg.to_lowercase().contains("mismatch")
+            || msg.to_lowercase().contains("type"),
+        "the refusal should name the mismatched type-identity; got: {msg}"
+    );
+}
+
+#[test]
+fn the_no_shadow_control_still_monomorphizes_the_correct_shape() {
+    // Non-vacuity / non-over-restriction control: the SAME shape, minus `b`'s local shadow — `b`
+    // instead genuinely imports `T` (`use a.T;`) — must still `monomorphize` successfully, AND the
+    // emitted mangled registry entry for `a::T` must carry the REAL `Binary{8}` shape (proving the
+    // fix routes to the CORRECT declaration, not merely "refuses whenever ambiguous").
+    let phy = check_phy(
+        "phylum p\n\
+         nodule a;\n\
+         pub type T = Mk(Binary{8});\n\
+         pub type Something = Wrap(T);\n\
+         nodule b;\n\
+         use a.T;\n\
+         use a.Something;\n\
+         pub fn id[X](x: X) => X = x;\n\
+         pub fn exploit(s: Something) => Binary{1} = match s { Wrap(_) => 0b1 };",
+    )
+    .expect("checks");
+    let (_, b_env) = phy
+        .nodules
+        .iter()
+        .find(|(p, _)| p.0.len() == 1 && p.0[0] == "b")
+        .expect("nodule b is present");
+
+    let mono = mycelium_l1::monomorphize(b_env, "exploit").expect(
+        "without the local shadow, monomorphization must still succeed (no over-restriction \
+         from the M-1036 home-check)",
+    );
+    let t_entry = mono
+        .types
+        .get("a$H$T")
+        .expect("the real a::T is registered under its mangled (separator-normalized) name");
+    let mk = t_entry
+        .ctors
+        .iter()
+        .find(|c| c.name.starts_with("Mk"))
+        .expect("the Mk constructor is present");
+    assert_eq!(
+        mk.fields,
+        vec![mycelium_l1::checkty::Ty::Binary(
+            mycelium_l1::checkty::Width::Lit(8)
+        )],
+        "the emitted shape must be a::T's REAL Binary{{8}} field, never b's shadow Binary{{4}} one"
+    );
+}

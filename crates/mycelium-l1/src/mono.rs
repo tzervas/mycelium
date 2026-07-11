@@ -814,6 +814,27 @@ impl<'e> Mono<'e> {
         Ok(())
     }
 
+    /// Home-checked data-type lookup for monomorphization (M-1036 residual close — the FOURTH
+    /// bare-name-collapse site, found in a systematic re-verify of DN-112 Rank 1's own consumers).
+    /// Every `crate::mono` site that resolves a checked (possibly qualified) `Ty::Data` identity
+    /// `name` against the bare-keyed `self.src.types` registry MUST route through this instead of
+    /// the plain `checkty::lookup_data` it replaces — a same-nodule-shadow-plus-legitimate-
+    /// cross-nodule-reach mismatch refuses explicitly (G2) here, exactly the class of bug
+    /// `checkty::lookup_data_home_checked`'s own doc comment describes for the checker-side sites
+    /// (`checkty::normalize_pattern`). Without this, `name`'s bare-local fallback silently reads the
+    /// WRONG (locally-shadowed) `DataInfo`'s ctors/field-shape — reachable purely through
+    /// monomorphization (`monomorphize`/`emit_data`), never through the checker or `elab` at all, so
+    /// neither of those two prior fixes covered it. Surfaced as an [`ElabError::Residual`], never a
+    /// silent default.
+    fn lookup_data_checked<'a>(
+        &'a self,
+        site: &str,
+        name: &str,
+    ) -> Result<&'a DataInfo, ElabError> {
+        crate::checkty::lookup_data_home_checked(&self.src.types, name, site)
+            .map_err(|e| res_err(site, e))
+    }
+
     /// Specialize source data type `name` at concrete `targs` and emit the monomorphic [`DataInfo`]
     /// (empty `params`; fields rewritten to mangled-nullary `Ty::Data`). Constructor names are mangled
     /// so distinct instantiations never collide on a ctor name (the registry/`Env::ctor` key).
@@ -823,13 +844,12 @@ impl<'e> Mono<'e> {
             return Ok(());
         }
         // DN-112 Rank 1 / M-1036: `name` is a checked (possibly qualified) `Ty::Data` identity;
-        // `self.src.types` (the checked `Env`) is still keyed by bare/simple name.
-        let d = crate::checkty::lookup_data(&self.src.types, name)
-            .ok_or_else(|| ElabError::Residual {
-                site: name.to_owned(),
-                what: format!("unknown data type `{name}` during monomorphization"),
-            })?
-            .clone();
+        // `self.src.types` (the checked `Env`) is still keyed by bare/simple name. M-1036 residual
+        // close (CRITICAL — the FOURTH bare-name-collapse site): home-checked lookup, so a
+        // same-nodule-shadow-plus-foreign-reach mismatch refuses explicitly (G2) rather than
+        // silently emitting the SHADOW's ctors/field-shape under the foreign type's mangled name
+        // (see `lookup_data_checked`'s doc comment).
+        let d = self.lookup_data_checked(name, name)?.clone();
         if d.params.len() != targs.len() {
             return residual(
                 name,
@@ -1141,6 +1161,20 @@ impl<'e> Mono<'e> {
 
     /// Enqueue every generic **data** instance mentioned in a concrete `Ty` (recursing into
     /// arguments), so a type used only inside another type/field is still emitted.
+    ///
+    /// **M-1036 residual-close audit (existence-gate feeding the chain — the enumerated inventory
+    /// names this site alongside `emit_data`).** This gate intentionally stays a plain **existence**
+    /// check (`checkty::lookup_data`, not the home-checked form): it only decides whether an
+    /// [`Item::Data`] gets *queued*, never reads `DataInfo` fields itself, so there is nothing here
+    /// that could silently accept a wrong shape. Swapping in the home-checked lookup here would in
+    /// fact make things WORSE — a mismatch would then silently **skip** the enqueue, leaving the
+    /// field's already-pushed mangled reference (`emit_data`'s ctor loop pushes it unconditionally)
+    /// **dangling and unregistered**, with no explicit refusal at all. Keeping the bare existence
+    /// check instead guarantees the item is queued whenever *anything* resolves (shadow or not), so
+    /// [`Mono::run`]'s worklist drain **always** dispatches it to [`Mono::emit_data`] — which now
+    /// (M-1036 residual close) IS the home-checked, authoritative refusal point for every
+    /// [`Item::Data`], regardless of which of this fn's 5 call sites (or a direct `self.enqueue`)
+    /// produced it. One guarded closure point (KC-3/DRY), not a second, weaker copy here.
     fn enqueue_tys_in(&mut self, ty: &Ty) {
         if let Ty::Data(n, args) = ty {
             for a in args {
@@ -1148,7 +1182,8 @@ impl<'e> Mono<'e> {
             }
             // A monomorphic (nullary) data type still needs registering if it is reachable; enqueue it
             // either way (empty targs mangle to the original name, so it is byte-identical).
-            // DN-112 Rank 1 / M-1036: `n` may be qualified; `self.src.types` is bare-keyed.
+            // DN-112 Rank 1 / M-1036: `n` may be qualified; `self.src.types` is bare-keyed. Existence
+            // only — see this fn's doc comment for why the home-check belongs downstream, not here.
             if crate::checkty::lookup_data(&self.src.types, n).is_some() {
                 self.enqueue(Item::Data {
                     name: n.clone(),
@@ -1801,13 +1836,10 @@ impl<'e> Mono<'e> {
         expected: Option<&Ty>,
     ) -> Result<(String, Vec<Ty>), ElabError> {
         // DN-112 Rank 1 / M-1036: `dname` is qualified (the caller now passes the owner's qualified
-        // identity); `self.src.types` is bare-keyed.
-        let d = crate::checkty::lookup_data(&self.src.types, dname).ok_or_else(|| {
-            ElabError::Residual {
-                site: site.to_owned(),
-                what: format!("unknown data type `{dname}`"),
-            }
-        })?;
+        // identity); `self.src.types` is bare-keyed. M-1036 residual close: home-checked lookup — a
+        // same-nodule-shadow-plus-foreign-reach mismatch refuses explicitly (G2) rather than
+        // silently reading the SHADOW's `params`/arity here (see `lookup_data_checked`'s doc).
+        let d = self.lookup_data_checked(site, dname)?;
         if d.params.is_empty() {
             return Ok((dname.to_owned(), vec![]));
         }
@@ -1898,13 +1930,11 @@ impl<'e> Mono<'e> {
         cname: &str,
         targs: &[Ty],
     ) -> Result<Vec<Ty>, ElabError> {
-        // DN-112 Rank 1 / M-1036: `dname` may be qualified (a checked `Ty::Data`'s name).
-        let d = crate::checkty::lookup_data(&self.src.types, dname).ok_or_else(|| {
-            ElabError::Residual {
-                site: site.to_owned(),
-                what: format!("unknown data type `{dname}`"),
-            }
-        })?;
+        // DN-112 Rank 1 / M-1036: `dname` may be qualified (a checked `Ty::Data`'s name). M-1036
+        // residual close: home-checked lookup — a same-nodule-shadow-plus-foreign-reach mismatch
+        // refuses explicitly (G2) rather than silently reading the SHADOW's ctors/field-shape here
+        // (see `lookup_data_checked`'s doc).
+        let d = self.lookup_data_checked(site, dname)?;
         let c = d
             .ctors
             .iter()
@@ -2568,13 +2598,11 @@ impl<'e> Mono<'e> {
     /// The element type of a linear-recursive spine type `tname` at `targs` — the single non-spine
     /// field of its cons constructor, with the type arguments substituted in.
     fn for_elem_ty(&self, site: &str, tname: &str, targs: &[Ty]) -> Result<Ty, ElabError> {
-        // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name.
-        let d = crate::checkty::lookup_data(&self.src.types, tname).ok_or_else(|| {
-            ElabError::Residual {
-                site: site.to_owned(),
-                what: format!("unknown type `{tname}`"),
-            }
-        })?;
+        // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name. M-1036
+        // residual close: home-checked lookup — a same-nodule-shadow-plus-foreign-reach mismatch
+        // refuses explicitly (G2) rather than silently reading the SHADOW's ctors/field-shape as the
+        // spine's element type here (see `lookup_data_checked`'s doc).
+        let d = self.lookup_data_checked(site, tname)?;
         let subst = param_subst(&d.params, targs);
         for c in &d.ctors {
             if c.fields.is_empty() {

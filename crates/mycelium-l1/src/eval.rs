@@ -1855,6 +1855,30 @@ impl<'e> Evaluator<'e> {
     /// `Data` value, so its clone is an O(1) `Arc` refcount bump (not the O(spine) deep-copy the old
     /// `mem::take` existed to avoid); the `elem` clone is a single small element value. The spine
     /// borrow keeps the tail alive, so no E0509 by-value move-out is needed at all.
+    ///
+    /// **M-1036 residual-close audit (B) — the `self.env.types.get(ty)` below is a *plain* key
+    /// lookup (no `lookup_data`/`lookup_data_home_checked` fallback at all), confirmed safe under
+    /// the *phylum-linked-Env invariant*, not independently guarded here.** `ty` is always the
+    /// bare/local name (every `L1Value::Data` construction site stamps it from `DataInfo::name`,
+    /// unqualified — see the field comment below), so this lookup only ever needs an EXACT bare key,
+    /// never a qualified-name fallback — there is no `lookup_data`-style ambiguity to guard *inside*
+    /// this fn. The residual question is whether `self.env` itself can ever be an UN-linked,
+    /// per-nodule registry carrying a same-bare-name shadow, in which case `.get(ty)` would silently
+    /// resolve `ty` against whichever declaration happens to occupy that bare key in `self.env`,
+    /// possibly not the value's real originating type. **It cannot, for the documented/exercised
+    /// pipeline:** `Evaluator` is constructed only on an already-[`crate::mono::monomorphize`]d (or,
+    /// for a genuinely single-nodule program, trivially shadow-free) `Env` — confirmed by every
+    /// caller in this crate's own `tests/*.rs` (`Evaluator::new(&mono)`/`Evaluator::new(&env)` where
+    /// `env` came from a single-nodule `check_nodule`, never a raw per-nodule slice of a multi-nodule
+    /// [`crate::checkty::PhylumEnv`]). Post-mono, every `DataInfo` is registered under its own
+    /// globally-unique mangled key (`crate::mono::mangle_decl`, injective — DN-112 §7) and its
+    /// `DataInfo::name` **equals** that key, so there is no shadow left to collide on; a genuinely
+    /// multi-nodule program additionally passes through [`crate::checkty::PhylumEnv::link`] first,
+    /// whose own doc comment states the flat-namespace merge already refuses a real cross-nodule
+    /// bare-name collision (never silently picks a winner) — the linked-or-mono'd invariant this fn
+    /// depends on. Evaluating a raw, un-mono'd, multi-nodule per-nodule `Env` directly (bypassing
+    /// both `link` and `monomorphize`) is **outside this audited-safe scope** — not a documented or
+    /// exercised usage of this crate's public API; FLAG if a future caller ever does this.
     fn split_spine(
         &self,
         site: &str,
