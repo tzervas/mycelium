@@ -331,6 +331,26 @@ tero-index-gen:
 # after any change under lib/std/ or lib/compiler/.
 lib-index-gen:
     cargo run -q -p mycelium-doc --bin myc-doc -- lib-index --repo-root . --out docs/lib-index
+
+# Single-command regen for every committed drift-gated index/grammar artifact (docs/api-index/,
+# docs/tero-index/, docs/sugar-index/, docs/lib-index/, tools/grammar/* + its editors/vscode/
+# copy) — the automation counterpart to the individual `*-gen`/`drift-check` recipes above. Every
+# one of these generators is content-derived + stably-sorted + no-timestamp (verified diff-friendly:
+# a one-row source change regenerates a one-row artifact diff, never a full-file rewrite), so running
+# this after any corpus/API/lexer/lib change and committing the (usually empty, else minimal) delta
+# is the whole regen workflow. Deliberately NOT auto-run by a pre-commit hook (see the recipes' own
+# skip-graceful drift gates in `just check`/`check-canary` for the fail-loud alternative) — run this
+# by hand, or wire a `repo: local` pre-commit hook to it if you want regen-on-commit (tradeoff noted
+# in the generators' own docs; not unilaterally added here).
+docs-regen-all:
+    @echo "── docs-regen-all: api-index · tero-index · sugar-index · lib-index · grammar ──"
+    @just docs-index
+    @just tero-index-gen
+    @just sugar-index-gen
+    @just lib-index-gen
+    @just grammar-gen
+    @echo "── docs-regen-all: done — \`git status\`/\`git diff --stat\` to review before committing ──"
+
 # Assemble a browsable local docsite under target/docsite/ — corpus (myc-doc HTML), agent API
 # index, and rustdoc. Advisory, NOT part of `just check`. Skip-graceful: missing tools warn only.
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.
