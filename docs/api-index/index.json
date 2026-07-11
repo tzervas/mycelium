@@ -5782,7 +5782,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 48,
+      "line": 49,
       "summary": "A never-silent book-build error (a broken manifest entry, a bad manifest, an anchor collision) —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5793,7 +5793,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 60,
+      "line": 61,
       "summary": "The committed chapter manifest (`docs/book-manifest.json`) — curated order, drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5826,7 +5826,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 72,
+      "line": 73,
       "summary": "One chapter: an ordered list of explicit sources, optionally extended by drift-proof globs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6002,7 +6002,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::book",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 43,
+      "line": 44,
       "summary": "The repo-relative default location of the committed chapter manifest.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6057,7 +6057,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 301,
+      "line": 375,
       "summary": "Build every book artifact: the ToC/landing page, one page per chapter entry (prev/next nav), and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6068,7 +6068,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 22,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6145,7 +6145,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 23,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6189,7 +6189,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 24,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6255,7 +6255,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 39,
+      "line": 105,
       "summary": "Render the whole model to an HTML site: `index.html` plus one `pages/<anchor>.html` per document.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6266,7 +6266,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 50,
+      "line": 119,
       "summary": "The concatenation of every page (for the parity/legibility lints, which scan the rendered output).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6277,7 +6277,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::html",
       "file": "crates/mycelium-doc/src/emit/html.rs",
-      "line": 30,
+      "line": 96,
       "summary": "The pinned template content hash (provenance, §6) — the address of the shared template/style.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6354,7 +6354,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::emit::typst",
       "file": "crates/mycelium-doc/src/emit/typst.rs",
-      "line": 11,
+      "line": 60,
       "summary": "Render the whole model to one Typst document source.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6376,7 +6376,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 25,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6475,7 +6475,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 26,
+      "line": 29,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6574,7 +6574,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 27,
+      "line": 30,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6684,7 +6684,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/book.rs",
-      "line": 93,
+      "line": 94,
       "summary": "Load the committed manifest from `<repo_root>/docs/book-manifest.json`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -33918,7 +33918,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookError",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:48 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookError` at crates/mycelium-doc/src/book.rs:49 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookError::clone",
@@ -33954,7 +33954,7 @@
     },
     {
       "symbol": "mycelium_doc::book::BookManifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:60 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::BookManifest` at crates/mycelium-doc/src/book.rs:61 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::BookManifest::clone",
@@ -33990,7 +33990,7 @@
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec",
-      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:72 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::ChapterSpec` at crates/mycelium-doc/src/book.rs:73 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::ChapterSpec::clone",
@@ -34026,11 +34026,11 @@
     },
     {
       "symbol": "mycelium_doc::book::build_book",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:301 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build_book` at crates/mycelium-doc/src/book.rs:375 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::book::load_manifest",
-      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::load_manifest` at crates/mycelium-doc/src/book.rs:94 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::BuildInput",
