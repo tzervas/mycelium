@@ -55,11 +55,21 @@
 //!   `Op` is *unconditionally* non-reparseable, independent of `%`-freshening. Combined with
 //!   [`Node::Fix`]/[`Node::FixGroup`] (always `#fix[…]`/`#fixgroup[…]`-marked, module doc above) and
 //!   [`Node::Construct`]/[`Node::Swap`] (always `#`-marked per this ruling), the genuinely
-//!   surface-round-trippable [`Node`] fragment is narrow: [`Node::Const`] (finite scalar payloads),
-//!   [`Node::Var`], and [`Node::Let`]/[`Node::App`]/[`Node::Match`] built **only** from those —
-//!   effectively an "no-op identity-shuffle" fragment. See [`certified_roundtrip`]'s doc for the
-//!   further STEP-0 finding that even *this* fragment's `reparseable=true` flag is not sufficient
-//!   for real parser acceptance (the [`Node::Lam`] counterexample).
+//!   surface-round-trippable [`Node`] fragment is narrower still than a first read of "every marker
+//!   gap" suggests: it is **[`Node::Const`] (finite scalar payloads), [`Node::Var`], and
+//!   [`Node::Let`] built *only* from those — and no further** (an "no-op identity-shuffle" fragment).
+//!   **[`Node::App`] and [`Node::Match`] do NOT close, even `%`-free and marker-free** — this is
+//!   tested, not merely asserted, by `src/tests/reveal_roundtrip_e3.rs`'s
+//!   `app_is_honestly_reparse_failed`/`match_is_honestly_alpha_mismatch` (adversarially found in
+//!   PR #1423 review, 2026-07-11): `App` renders `reparseable = true` but re-check refuses
+//!   (`unknown function/constructor/prim`, since nothing besides `Lam`/`Fix`/`FixGroup` is callable
+//!   in the surface grammar, and those are already excluded above) — a genuine
+//!   `SurfaceOutcome::ReparseFailed`; `Match` reparses and re-elaborates, but the elaborator injects
+//!   an extra scrutinee-binding `let` (`let scrut%N = … in match scrut%N { … }`) absent from the
+//!   original, so the result is **not** `alpha_eq` to it — a genuine `SurfaceOutcome::AlphaMismatch`.
+//!   See [`certified_roundtrip`]'s doc for the further STEP-0 finding that even the `Const`/`Var`/
+//!   `Let` fragment's `reparseable=true` flag is not sufficient for real parser acceptance (the
+//!   [`Node::Lam`] counterexample).
 //!
 //! # Guarantee tags (VR-5 — no upgrade past what is checked here)
 //!
@@ -85,10 +95,12 @@
 //!   `docs/notes/DN-110-8.2-hygiene-deepdive.md` §7/§10 and `DN-110-Native-Metaprogramming-And-
 //!   Sugar-Lowering-Facility.md` §8.4 for the exact scope of the upgrade.
 //! - The **surface round-trip** ([`certified_roundtrip`]'s [`SurfaceOutcome`]): **`Empirical`**,
-//!   and **only** for the narrow no-op-identity-shuffle fragment above — the surface
-//!   `delaborate ∘ lower = id` obligation for `%`-names, or for any term containing an `Op`/`Lam`/
-//!   `Fix`/`FixGroup`/`Construct`/`Swap`, is **not** claimed and stays out-of-contract/unbuilt
-//!   (`SurfaceOutcome::OutOfContract`/`ReparseFailed`), honestly, per STEP-0's empirical finding.
+//!   and **only** for the narrow no-op-identity-shuffle fragment above (`Const`/`Var`/`Let` built
+//!   only from those) — the surface `delaborate ∘ lower = id` obligation for `%`-names, or for any
+//!   term containing an `Op`/`Lam`/`Fix`/`FixGroup`/`Construct`/`Swap`/**`App`**/**`Match`**, is
+//!   **not** claimed and stays out-of-contract/unbuilt (`SurfaceOutcome::OutOfContract`/
+//!   `ReparseFailed`/`AlphaMismatch`), honestly, per STEP-0's empirical finding (`App`/`Match`
+//!   tested directly, not merely inferred — `src/tests/reveal_roundtrip_e3.rs`).
 //!
 //! # `reelaborate` at v0 — what it actually checks, honestly
 //!
@@ -945,8 +957,11 @@ pub enum SurfaceOutcome {
     },
     /// The full surface round-trip closed: the rendered text reparsed, re-checked, re-elaborated,
     /// and the result is [`alpha_eq`] to the original `shown` term. Only ever reached for the
-    /// narrow no-op-identity-shuffle fragment identified in the module doc (`Const`/`Var`/`Let`/
-    /// `App`/`Match` built from those, with no `Op`/`Lam`/`Fix`/`FixGroup`/`Construct`/`Swap`).
+    /// narrow no-op-identity-shuffle fragment identified in the module doc — `Const`/`Var`/`Let`
+    /// built **only** from those. `App` and `Match` do **not** close this even `%`-free/marker-free
+    /// (module doc; tested by `src/tests/reveal_roundtrip_e3.rs`'s
+    /// `app_is_honestly_reparse_failed`/`match_is_honestly_alpha_mismatch`) — they land in
+    /// [`SurfaceOutcome::ReparseFailed`]/[`SurfaceOutcome::AlphaMismatch`] respectively, never here.
     Ok {
         /// The rendered text that round-tripped.
         text: String,

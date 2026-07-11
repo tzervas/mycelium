@@ -33,11 +33,16 @@
 //! (`crate::checkty::prim_kernel_name` — `bin.add`, `bit.not`, …), so [`render_surface`] routes
 //! *every* `Op` through the non-reparseable `#op[…]` marker **independent of `%`-freshening** — an
 //! **entirely `%`-free** arithmetic sugar expansion is *still* out-of-contract for the surface path
-//! (fixture `percent_free_op_based_sugar_is_out_of_contract` below demonstrates this directly). The
-//! surface path genuinely closes only over the narrow `Const`/`Var`/`Let`(-of-those) fragment
-//! (fixture `percent_free_plain_term_surface_roundtrip_closes` below) — not over any realistic
-//! hygiene-sugar expansion, which is why every hygiene-interesting fixture in this module relies on
-//! the L0-term witness, never the surface path.
+//! (fixture `percent_free_op_based_term_is_honestly_out_of_contract` below demonstrates this
+//! directly). The surface path genuinely closes only over the narrow `Const`/`Var`/`Let`(-of-those)
+//! fragment (fixture `percent_free_plain_term_surface_roundtrip_closes` below) — **`App` and
+//! `Match` do NOT close this even when `%`-free and marker-free**, test-backed by
+//! `app_is_honestly_reparse_failed` (`SurfaceOutcome::ReparseFailed` — nothing besides
+//! `Lam`/`Fix`/`FixGroup` is callable, and those are already excluded) and
+//! `match_is_honestly_alpha_mismatch` (`SurfaceOutcome::AlphaMismatch` — the elaborator injects an
+//! extra scrutinee-binding `let` the original never had) below. Not over any realistic
+//! hygiene-sugar expansion either, which is why every hygiene-interesting fixture in this module
+//! relies on the L0-term witness, never the surface path.
 //!
 //! # Test-only, not the M-1054 facility
 //!
@@ -267,6 +272,101 @@ fn percent_free_op_based_term_is_honestly_out_of_contract() {
         other => panic!(
             "an Op-containing term (even %-free) must be out-of-contract — the dotted-prim gap is \
              independent of %-freshening; got {other:?} instead"
+        ),
+    }
+}
+
+/// **Boundary fixture (adversarially found in PR #1423 review, 2026-07-11) — `App` does NOT close
+/// the surface round-trip, even `%`-free and marker-free.** `let f = 5 in f(3)` renders with
+/// `reparseable = true` (no `%`, no `#` anywhere in `"let f = 0b00000101 in f(0b00000011)"`), but
+/// the real re-check refuses: nothing besides `Lam`/`Fix`/`FixGroup` is callable in the surface
+/// grammar (`crate::checkty`'s "unknown function/constructor/prim" refusal), and all three of
+/// those are already excluded from the no-op-identity-shuffle fragment (`reveal.rs` module doc).
+/// Grounds that doc's claim: the genuinely-closing fragment is `Const`/`Var`/`Let`(-of-those)
+/// **only** — `App` is not part of it, structurally, for any closed `App`-term built solely from
+/// that fragment (there is no callable to reparse back to).
+#[test]
+fn app_is_honestly_reparse_failed() {
+    let shown = letn(
+        "f",
+        c(5),
+        Node::App {
+            func: Box::new(v("f")),
+            arg: Box::new(c(3)),
+        },
+    );
+    let verdict = certified_roundtrip(&shown, "Binary{8}");
+
+    assert_eq!(
+        verdict.l0,
+        L0Witness::Closed,
+        "the L0-term witness holds regardless of the surface outcome"
+    );
+    match &verdict.surface {
+        SurfaceOutcome::ReparseFailed { text, reason } => {
+            assert_eq!(text, "let f = 0b00000101 in f(0b00000011)");
+            assert!(
+                reason.contains("unknown function") || reason.contains("f"),
+                "expected the real re-check to refuse citing the unresolved callable `f`, got: \
+                 {reason:?}"
+            );
+        }
+        other => panic!(
+            "an App-containing term (even %-free, marker-free, reparseable=true) must fail real \
+             re-check, not close — got {other:?} instead; if this ever starts closing, the \
+             no-op-identity-shuffle fragment claim in reveal.rs's module doc must be widened, not \
+             left stale (VR-5)"
+        ),
+    }
+}
+
+/// **Boundary fixture (adversarially found in PR #1423 review, 2026-07-11) — `Match` does NOT
+/// close the surface round-trip either, even `%`-free and marker-free.** `let x = 5 in match x { 5
+/// => x, _ => x }` genuinely reparses AND re-elaborates (no refusal) — but the elaborator injects
+/// an extra scrutinee-binding `let` (`let scrut%N = … in match scrut%N { … }`) that is absent from
+/// the original hand-built term, so the re-elaborated result is structurally different and NOT
+/// `alpha_eq` to it. This is the `AlphaMismatch` case `SurfaceOutcome` exists to report honestly
+/// rather than silently treat "it reparsed" as "it round-tripped" (G2).
+#[test]
+fn match_is_honestly_alpha_mismatch() {
+    let five = Value::new(
+        Repr::Binary { width: WIDTH },
+        Payload::Bits(mycelium_core::binary::int_to_bits(5, WIDTH).expect("fits")),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed Binary{8} const");
+    let shown = letn(
+        "x",
+        c(5),
+        Node::Match {
+            scrutinee: Box::new(v("x")),
+            alts: vec![mycelium_core::Alt::Lit {
+                value: five,
+                body: v("x"),
+            }],
+            default: Some(Box::new(v("x"))),
+        },
+    );
+    let verdict = certified_roundtrip(&shown, "Binary{8}");
+
+    assert_eq!(
+        verdict.l0,
+        L0Witness::Closed,
+        "the L0-term witness holds regardless of the surface outcome"
+    );
+    match &verdict.surface {
+        SurfaceOutcome::AlphaMismatch { text } => {
+            assert_eq!(
+                text,
+                "let x = 0b00000101 in match x { 0b00000101 => x, _ => x }"
+            );
+        }
+        other => panic!(
+            "a Match-containing term (even %-free, marker-free, reparseable=true) must reparse but \
+             fail the alpha_eq check (the elaborator's own scrutinee-binding let injection), not \
+             cleanly close — got {other:?} instead; if this ever starts closing, the \
+             no-op-identity-shuffle fragment claim in reveal.rs's module doc must be widened, not \
+             left stale (VR-5)"
         ),
     }
 }
