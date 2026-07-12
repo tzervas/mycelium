@@ -215,10 +215,57 @@ else
   if cargo doc --no-deps --workspace --quiet 2>&1; then
     if [[ -d "$RUSTDOC_SRC" ]]; then
       RUSTDOC_OUT="$OUT/rustdoc"
-      # Symlink target/doc into the site (avoids copying GBs; both are gitignored).
+      # Symlink target/doc into the site (avoids copying GBs; both are gitignored). The Pages
+      # publish workflow (actions/upload-pages-artifact) tars with --dereference, so this symlink
+      # is materialized into real files in the deployed artifact — verified against the action's
+      # own docs (it dereferences symlinks + hard links precisely so a layout like this one works).
       ln -sfn "$RUSTDOC_SRC" "$RUSTDOC_OUT"
       ok "rustdoc → $RUSTDOC_OUT/ (symlink → $RUSTDOC_SRC)"
       HAS_RUSTDOC=1
+
+      # `cargo doc --workspace` (no `-p`) never emits a root target/doc/index.html — only
+      # target/doc/<crate_underscored>/index.html per crate (verified: a workspace build here
+      # produced 60+ crate dirs plus crates.js/help.html/settings.html at the root, but no
+      # index.html) — so a bare rustdoc/index.html request 404s even though the docs built fine.
+      # Never-silent fix: write a landing redirect ourselves rather than leaving that 404. Written
+      # straight into $RUSTDOC_SRC (target/doc/), which $RUSTDOC_OUT symlinks to, so it resolves
+      # both from the site (rustdoc/index.html) and from a local `cd target/doc`.
+      RUSTDOC_ENTRY_CRATE="mycelium_core"
+      if [[ -f "$RUSTDOC_SRC/$RUSTDOC_ENTRY_CRATE/index.html" ]]; then
+        : # entry crate present — the expected case.
+      else
+        # Fallback: entry crate missing (e.g. a partial/scoped doc build) — redirect to whatever
+        # crate dir actually exists rather than writing a redirect that itself 404s.
+        FALLBACK_CRATE="$(find "$RUSTDOC_SRC" -mindepth 1 -maxdepth 1 -type d -name 'mycelium_*' -print -quit)"
+        if [[ -n "$FALLBACK_CRATE" ]]; then
+          RUSTDOC_ENTRY_CRATE="$(basename "$FALLBACK_CRATE")"
+          skip "rustdoc entry crate mycelium_core/ not found — falling back to $RUSTDOC_ENTRY_CRATE/ for the landing redirect"
+        else
+          RUSTDOC_ENTRY_CRATE=""
+        fi
+      fi
+
+      if [[ -n "$RUSTDOC_ENTRY_CRATE" ]]; then
+        cat > "$RUSTDOC_SRC/index.html" <<REDIRECTEOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0; url=${RUSTDOC_ENTRY_CRATE}/index.html">
+<link rel="canonical" href="${RUSTDOC_ENTRY_CRATE}/index.html">
+<title>Mycelium — rustdoc</title>
+</head>
+<body>
+<p>Redirecting to the <a href="${RUSTDOC_ENTRY_CRATE}/index.html"><code>${RUSTDOC_ENTRY_CRATE}</code></a>
+rustdoc (Ring-0 kernel-adjacent crate — the natural entry point; see the full per-crate list at
+<a href="../lang-ref/index.html">../lang-ref/</a> or <code>crates.js</code> in this directory).</p>
+</body>
+</html>
+REDIRECTEOF
+        ok "rustdoc landing redirect → rustdoc/index.html (-> ${RUSTDOC_ENTRY_CRATE}/index.html)"
+      else
+        skip "rustdoc built but no mycelium_* crate dir found — no landing redirect written (rustdoc/index.html would 404)"
+      fi
     else
       skip "cargo doc succeeded but target/doc not found — rustdoc section skipped"
     fi
