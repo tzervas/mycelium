@@ -1,4 +1,4 @@
-// nodule: std.io
+// nodule: std.io.io
 // Byte-movement surface: abstract `Source`/`Sink` with **affine single-consumption**
 // (LR-8; spec §3 — the io half).
 //
@@ -39,7 +39,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.io;
+nodule std.io.io;
 
 // Read all remaining bytes from `src`, consuming it exactly once (LR-8).
 //

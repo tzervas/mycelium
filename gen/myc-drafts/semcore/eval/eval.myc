@@ -1,4 +1,4 @@
-// nodule: l1
+// nodule: l1.eval
 // The **L1 fuel-guarded evaluator** (RFC-0007 §4.6): a big-step environment machine mirroring
 // the M-110 reference interpreter's contract — explicit errors only, a step budget instead of a
 // termination assumption (CakeML-style clocked semantics, T3.4), and the *same* trusted
@@ -30,7 +30,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule l1;
+nodule l1.eval;
 
 // Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
 // placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).

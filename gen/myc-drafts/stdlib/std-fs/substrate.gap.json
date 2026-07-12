@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-fs/src/substrate.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "InMemHandle"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-fs/src/substrate.rs",
@@ -56,10 +58,20 @@
       "file": "crates/mycelium-std-fs/src/substrate.rs",
       "line": 65,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
-      "reason": "struct `InMemHandle` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `InMemHandle`: # [derive (Debug)]",
+      "item_name": "InMemHandle"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/substrate.rs",
+      "line": 65,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
+      "reason": "struct `InMemHandle` named field(s) `path, read, write, append, position, consumed` emitted positionally as `InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "InMemHandle"
     },
     {

@@ -2596,6 +2596,54 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
     })
 }
 
+/// **DN-34 §8.13/8.14 "D4" — inherent-impl associated-function name mangling.**
+///
+/// `crates/mycelium-l1/src/checkty.rs` (`check_registrations`, M-664) desugars every **inherent**
+/// `impl T { fn … }` block's methods to **flat top-level `Item::Fn`s, lifted verbatim** — "the
+/// `for_ty` is organizational metadata in v0 (**no qualified `T::m` call syntax yet** …); a name
+/// collision with another top-level fn is caught by the duplicate-fn check". So two different
+/// types' inherent methods sharing a short name (`Duration::from_nanos` / `MonoInstant::from_nanos`,
+/// `Task::new` / `TaskCtx::new` / `Deadlock::new`) are a **real** flat-namespace collision under
+/// Mycelium's own desugaring, not a transpiler artifact — DN-34 §8.14 deferred closing this ("D4")
+/// while the corpus had zero instances; the Phase-0 re-measure (gap-close-2) found 3.
+///
+/// The fix is a **type-qualified mangled name** — `{Type}__{method}` — deterministic (a pure
+/// function of the two already-known names), EXPLAIN-traceable (grep `Type__method` in the .myc
+/// straight back to `impl Type { fn method }` in the Rust source), and collision-free *by
+/// construction* (two distinct Rust items can never share both their enclosing inherent-impl
+/// type name and their method name — that would already be a Rust compile error). This
+/// intentionally does **not** reuse the hand-authored `lib/compiler/README.md` FLAG-ast-5
+/// single-letter-per-type constructor-prefix convention (`Nil`/`MNil`/`SNil` in
+/// `lib/std/collections.myc`) — that is a curated human choice per type, not mechanically
+/// reproducible by an automated emitter without guessing a mnemonic (VR-5).
+///
+/// **Scope — no-`self`-receiver methods only (a deliberate, documented safety boundary).**
+/// Mangling is applied **only** to inherent-impl methods with **no `self` receiver** (Rust
+/// associated functions — typically constructors: `fn new(...) -> Self`). Rust has exactly one
+/// calling convention for those — the qualified path call `Type::method(...)` — and
+/// `emit.rs`'s `visit_call` **already unconditionally gaps every qualified/associated-function
+/// call** (`Category::Other`, "no established Mycelium surface form…"), so **no currently-emitted
+/// call site anywhere in this crate ever references a no-`self` method by its bare name** —
+/// mangling the declaration cannot desync it from a call site that does not exist. A `self`-
+/// receiving method (`fn as_nanos(&self) -> …`), by contrast, **is** reachable from an emitted
+/// call site (`visit_method_call`'s generic desugar rewrites `recv.method(args)` to a **bare**
+/// `method(recv, args...)`, un-qualified) — mangling *those* declarations would require also
+/// re-deriving the identical mangled name at every such call site from the receiver's statically
+/// inferred type, which is not always resolvable and is a materially larger, separately-riskier
+/// change than this fix's scope. So `self`-receiving methods are left un-mangled here (still
+/// subject to the ordinary flat-namespace collision risk the DN-34 §8.14 "D4" residual already
+/// named) — a documented, narrower fix, not a silently partial one (G2/VR-5).
+fn mangled_inherent_fn_name(self_ty_text: &str, method_name: &str) -> String {
+    format!("{self_ty_text}__{method_name}")
+}
+
+/// Whether `sig` has a `self`/`&self`/`&mut self` receiver (an ordinary Rust *method*) as opposed
+/// to a receiver-less *associated function* (typically a constructor). Only the receiver-less case
+/// is eligible for [`mangled_inherent_fn_name`] — see that function's doc for why.
+fn has_self_receiver(sig: &Signature) -> bool {
+    sig.inputs.iter().any(|a| matches!(a, FnArg::Receiver(_)))
+}
+
 /// `impl` -> `impl_item` (trait-instance or inherent form). Unlike enum/struct/trait (which bail
 /// the whole item on the first unmappable feature), an impl block is emitted **partially**: each
 /// method is attempted independently, a failing method becomes a sub-gap rather than voiding its
@@ -2749,12 +2797,31 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                             .to_string(),
                                     );
                                 }
-                                method_bodies.push(render_fn(
-                                    &f.sig.ident.to_string(),
-                                    &sig,
-                                    &body,
-                                    &doc,
-                                ));
+                                // DN-34 §8.13/8.14 "D4": a no-`self` inherent-impl associated fn
+                                // (constructor-shaped) is mangled `Type__method` — see
+                                // `mangled_inherent_fn_name`'s doc for the full rationale (M-664's
+                                // flat-fn desugar + why only the receiver-less case is safe to
+                                // rename). EXPLAIN-traceable: recorded as a doc line on the
+                                // emitted `fn` itself, not just in this module's comments.
+                                let emitted_fn_name =
+                                    if trait_name.is_none() && !has_self_receiver(&f.sig) {
+                                        doc.push(format!(
+                                            "// Declared: renamed `{}` -> `{}__{}` (DN-34 \
+                                             §8.13/8.14 \"D4\") — Mycelium's inherent-impl \
+                                             desugar (M-664, crates/mycelium-l1/src/checkty.rs) \
+                                             lifts every method to a flat top-level fn, so a \
+                                             bare name here could collide with another type's \
+                                             same-named associated fn in this nodule.",
+                                            f.sig.ident, self_ty_text, f.sig.ident
+                                        ));
+                                        mangled_inherent_fn_name(
+                                            &self_ty_text,
+                                            &f.sig.ident.to_string(),
+                                        )
+                                    } else {
+                                        f.sig.ident.to_string()
+                                    };
+                                method_bodies.push(render_fn(&emitted_fn_name, &sig, &body, &doc));
                             }
                             Err(e) => sub_gaps.push(GapReason::new(
                                 e.category,

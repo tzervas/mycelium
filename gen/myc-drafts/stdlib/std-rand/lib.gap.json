@@ -21,7 +21,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 81,
+      "line": 87,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -31,7 +31,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 87,
+      "line": 93,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -41,7 +41,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -51,7 +51,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 129,
+      "line": 135,
       "col": 1,
       "category": "MacroInvocation",
       "rust_construct": "MacroInvocation",
@@ -61,7 +61,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 135,
+      "line": 141,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -71,7 +71,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 152,
+      "line": 158,
       "col": 1,
       "category": "Trait",
       "rust_construct": "Trait",
@@ -81,7 +81,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 169,
+      "line": 175,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -91,7 +91,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 191,
+      "line": 197,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -101,7 +101,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 212,
+      "line": 218,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -111,7 +111,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 249,
+      "line": 255,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -121,7 +121,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 271,
+      "line": 277,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -131,7 +131,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 276,
+      "line": 282,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -141,7 +141,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 299,
+      "line": 305,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -151,7 +151,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 316,
+      "line": 322,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -161,7 +161,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 336,
+      "line": 342,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -171,17 +171,17 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 369,
+      "line": 375,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
       "snippet": "# [doc = \" Draw a uniformly-distributed `i64` in the half-open range `[lo, hi)`.\"] # [doc = \"\"] # [doc = \" **Guarantee: `Declared` (unbiased rejection sampling).** The bias is bounded by the\"] # [doc = \" rejection argument: rejection sampling over a power-of-two modulus guarantees that\"] # [doc = \" any rejected sample is re-drawn, not wrapped — so the distribution over `[lo, hi)` is\"] # [doc = \" `Declared`-unbiased. The concrete bias magnitude is not fabricated here — it is owned\"] # [doc = \" by `std.numerics` (M-512, FLAG Q3).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`RandErr::EmptyRange`] if `hi <= lo` (C1 — never-silent).\"] # [doc = \"\"] # [doc = \" Returns `Ok((value, Rng'))`.\"] pub fn uniform_int (g : Rng , lo : i64 , hi : i64) -> Result < (i64 , Rng) , RandErr > { if hi <= lo { return Err (RandErr :: EmptyRange) ; } let range = (i128 :: from (hi) - i128 :: from (lo)) as u64 ; let (v , g2) = rejection_sample_u64 (g , range) ; let value = (i128 :: from (lo) + i128 :: from (v)) as i64 ; Ok ((value , g2)) }",
-      "reason": "signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5)",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
       "item_name": "uniform_int"
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 395,
+      "line": 401,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -191,7 +191,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 411,
+      "line": 417,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -201,7 +201,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 437,
+      "line": 443,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -211,7 +211,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 462,
+      "line": 468,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -221,7 +221,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 480,
+      "line": 486,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -231,7 +231,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 504,
+      "line": 510,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -241,7 +241,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 527,
+      "line": 533,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -251,7 +251,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 546,
+      "line": 552,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -261,7 +261,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 565,
+      "line": 571,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -271,7 +271,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 590,
+      "line": 596,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -281,7 +281,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 629,
+      "line": 635,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -291,7 +291,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 657,
+      "line": 663,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -301,7 +301,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 671,
+      "line": 677,
       "col": 1,
       "category": "NamedFieldDrop",
       "rust_construct": "NamedFieldDrop",
@@ -311,7 +311,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 683,
+      "line": 689,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -321,7 +321,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 691,
+      "line": 697,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -331,7 +331,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 709,
+      "line": 715,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -341,7 +341,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 726,
+      "line": 732,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -351,7 +351,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 847,
+      "line": 853,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -361,7 +361,7 @@
     },
     {
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 884,
+      "line": 890,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

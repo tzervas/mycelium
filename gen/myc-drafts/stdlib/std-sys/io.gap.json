@@ -79,7 +79,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external\"] # [doc = \" edge). The safe form for **untrusted** input: a hostile/runaway pipe cannot drive an unbounded\"] # [doc = \" allocation.\"] # [doc = \"\"] # [doc = \" Never-silent (G2): if the input would **exceed** `max` bytes, this returns\"] # [doc = \" `Err(ReadCappedError::TooLarge { cap: max })` — it never silently truncates the stream. An input\"] # [doc = \" of **exactly** `max` bytes (or fewer) succeeds and returns those bytes. OS read errors surface as\"] # [doc = \" `Err(ReadCappedError::Io(_))`.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — a thin bounded wrapper over `std::io`; no theorem and no measured bound backs the\"] # [doc = \" underlying stream semantics. The cap itself is exact by construction (the returned buffer length\"] # [doc = \" is always `<= max`), but the floor's overall guarantee stays `Declared` (VR-5).\"] pub fn read_to_end_capped (max : usize) -> Result < Vec < u8 > , ReadCappedError > { read_capped (io :: stdin () . lock () , max) }",
-      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "qualified/associated-function call `io :: stdin` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "read_to_end_capped"
     },
     {

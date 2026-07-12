@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.rc
 // Layer-2 explicit reference-counting core — DN-32 §2.2 / RFC-0027 §10.1 / MEM-2.
 //
 // Implements the **non-atomic intra-hypha RC cell** and the `rc`-probe decision tree:
@@ -70,7 +70,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.rc;
 
 // The outcome of an [`RcCell::drop_ref`] call — the rc-probe decision (RFC-0027 §10.1).
 //

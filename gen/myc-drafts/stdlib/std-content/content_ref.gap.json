@@ -61,7 +61,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl RefKind { # [doc = \" The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an\"] # [doc = \" unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).\"] fn from_prefix (prefix : & str) -> Option < RefKind > { Some (match prefix { \"value\" => RefKind :: Value , \"def\" => RefKind :: Def , \"op\" => RefKind :: Operation , \"policy\" => RefKind :: Policy , \"spore\" => RefKind :: Spore , \"other\" => RefKind :: Other , _ => return None , }) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported literal pattern kind (only bool/int literal patterns map)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported expression form `return None`",
       "item_name": "RefKind"
     },
     {

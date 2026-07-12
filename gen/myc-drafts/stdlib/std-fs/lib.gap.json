@@ -14,7 +14,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 65,
+      "line": 71,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +24,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 66,
+      "line": 72,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +34,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 67,
+      "line": 73,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +44,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 68,
+      "line": 74,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +54,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -64,7 +64,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 70,
+      "line": 76,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -74,7 +74,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 74,
+      "line": 80,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -84,7 +84,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 75,
+      "line": 81,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -94,7 +94,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 76,
+      "line": 82,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -104,7 +104,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 77,
+      "line": 83,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -114,7 +114,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 78,
+      "line": 84,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -124,7 +124,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 82,
+      "line": 88,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -134,7 +134,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 84,
+      "line": 90,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -144,7 +144,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 99,
+      "line": 105,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -154,7 +154,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -164,7 +164,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 122,
+      "line": 128,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -174,7 +174,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 131,
+      "line": 137,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -184,7 +184,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 143,
+      "line": 149,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -194,7 +194,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 342,
+      "line": 348,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

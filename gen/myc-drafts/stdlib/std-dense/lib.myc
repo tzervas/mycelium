@@ -81,11 +81,16 @@
 // Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 // [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 // A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
 // It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.dense;
 
-// The citation string for element-wise `Proven` bounds (add/sub/scale/hadamard).
-fn elementwise_citation(dtype: ScalarKind) => Bytes = match dtype { Bf16 => to_owned("two-rounding composition (1+δ₁)(1+δ₂)−1 ≤ 2^−8 + 2^−23: native f32 op then bfloat16 round-to-nearest — Higham (2002), Thm 2.2; side-conditions checked per element (Q1 finalized; M-512-checked)"), _ => to_owned("round-to-nearest relative error ≤ u = 2^−24 for IEEE binary32 — Higham (2002), Thm 2.2; side-conditions checked per element (Q1 finalized; M-512-checked)") };
+

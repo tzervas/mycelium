@@ -4,15 +4,15 @@
       "file": "crates/mycelium-std-dense/src/lib.rs",
       "total_items": 21,
       "non_test_items": 20,
-      "emitted": 1,
-      "gaps": 21,
-      "expressible_pct": 5.0,
+      "emitted": 0,
+      "gaps": 22,
+      "expressible_pct": 0.0,
       "category_counts": {
         "Impl": 5,
         "Import": 2,
         "InnerAttr": 1,
         "MultiStmtBody": 1,
-        "Other": 7,
+        "Other": 8,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -22,18 +22,43 @@
   "totals": {
     "total_items": 21,
     "non_test_items": 20,
-    "emitted": 1,
-    "gaps": 21,
-    "expressible_pct": 5.0,
+    "emitted": 0,
+    "gaps": 22,
+    "expressible_pct": 0.0,
     "category_counts": {
       "Impl": 5,
       "Import": 2,
       "InnerAttr": 1,
       "MultiStmtBody": 1,
-      "Other": 7,
+      "Other": 8,
       "PayloadVariant": 1,
       "Struct": 3,
       "TestItem": 1
     }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-dense",
+      "target_phylum": "std.dense"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.dense",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-dense/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
   }
 }

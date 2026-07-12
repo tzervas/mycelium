@@ -44,11 +44,11 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 44,
       "col": 1,
-      "category": "DeriveAttr",
-      "rust_construct": "DeriveAttr",
+      "category": "Impl",
+      "rust_construct": "Impl",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "dropped non-doc attribute(s) on method `from_static`: # [must_use]",
-      "item_name": "impl FieldPath"
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` body: Rust ownership/identity-conversion no-op method `.to_owned()` has no Mycelium free-function/prim referent (value semantics — ADR-003); desugaring it to a bare `to_owned(recv)` would fabricate an unknown prim (`unknown function/constructor/prim `to_owned`` — verified against the oracle), so it is gapped, never fake-emitted (G2/VR-5)",
+      "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
@@ -417,7 +417,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
-      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `new` signature: type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `read_n` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `read_to_end` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `new` signature: type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` body: field projection `self.substrate` on `Source` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `read_n` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `read_to_end` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
       "item_name": "Source"
     },
     {
@@ -502,7 +502,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 109,
+      "line": 115,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -512,7 +512,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 110,
+      "line": 116,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -522,7 +522,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 111,
+      "line": 117,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -532,7 +532,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 112,
+      "line": 118,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -542,7 +542,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 116,
+      "line": 122,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -552,7 +552,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 123,
+      "line": 129,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -562,7 +562,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 126,
+      "line": 132,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -572,7 +572,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 129,
+      "line": 135,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -582,7 +582,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 132,
+      "line": 138,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -592,7 +592,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 136,
+      "line": 142,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -752,8 +752,8 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 11,
-    "Impl": 13,
+    "DeriveAttr": 10,
+    "Impl": 14,
     "Import": 9,
     "InnerAttr": 1,
     "MacroInvocation": 3,
