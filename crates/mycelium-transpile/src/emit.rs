@@ -110,6 +110,16 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
+/// P4/P5 (DN-99 §8 ENB-6): [`expr_env_type`] narrowed to the **signed**-marked `Binary{N}` case
+/// (via [`signed_binary_width`]) — `Expr::Binary`'s signed-op gate (`add_s`/`sub_s`/`mul_s`/
+/// `lt_s`) and `Expr::Unary`'s `neg_s` gate read this directly. `None` for an unmarked (unsigned)
+/// `Binary{N}` entry, a non-`Binary` type, or a name absent from `env` — signedness is never
+/// guessed (VR-5); it is only ever known via [`map_signature`]'s `signed_param_names` bookkeeping
+/// reaching `env` through [`sig_type_env`]'s marker.
+fn expr_env_signed_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
+    expr_env_type(e, env).and_then(|t| signed_binary_width(&t))
+}
+
 /// If `e` is a struct-literal expression (`Ty { .. }` / `Self { .. }`) naming an **in-file struct
 /// that actually emits** (the same [`struct_layout`] resolvability gate `Expr::Struct`'s own
 /// emission arm already uses — see that arm's docs), return that struct's type name as the local's
@@ -349,13 +359,24 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
 // gap rather than a forced/fabricated emission.
 
 /// Parse a `map_type`-produced `Binary{N}` type-ref string back to its width `N`. Only matches
-/// the exact `Binary{<digits>}` shape `map_type` emits for unsigned integers — never a guess for
-/// any other text (e.g. `Bool`, a bare ident) that happens to not match.
+/// the exact `Binary{<digits>}` shape `map_type` emits for unsigned OR signed integers (`Binary`
+/// is sign-free, ADR-028 — P4/P5, DN-99 §8 ENB-6) — never a guess for any other text (e.g. `Bool`,
+/// a bare ident) that happens to not match. Deliberately returns `None` for a P4/P5 `"!s"`-marked
+/// [`TypeEnv`] entry (the trailing marker breaks the `strip_suffix('}')` match) — see
+/// [`sig_type_env`]'s doc for why that opacity is load-bearing for `Expr::Cast`, and
+/// [`signed_binary_width`] for the marker-aware counterpart.
 pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
     ty_text
         .strip_prefix("Binary{")
         .and_then(|rest| rest.strip_suffix('}'))
         .and_then(|digits| digits.parse::<u32>().ok())
+}
+
+/// P4/P5 (DN-99 §8 ENB-6): the marker-aware counterpart of [`binary_width`] — parses a
+/// [`sig_type_env`]-produced `"Binary{N}!s"` marked entry back to its width `N`. Returns `None`
+/// for an UNMARKED `Binary{N}` (unsigned) or any non-matching text; never a guess.
+fn signed_binary_width(ty_text: &str) -> Option<u32> {
+    ty_text.strip_suffix("!s").and_then(binary_width)
 }
 
 /// True iff `ty` is a bare (single-segment, no-generic) Rust float type `f32`/`f64`. Used by the
@@ -370,6 +391,26 @@ fn type_is_float(ty: &syn::Type) -> bool {
         && tp.path.segments.last().is_some_and(|s| {
             matches!(s.arguments, PathArguments::None)
                 && matches!(s.ident.to_string().as_str(), "f32" | "f64")
+        }))
+}
+
+/// True iff `ty` is a bare (single-segment, no-generic) Rust **signed**-integer-family type
+/// (`i8`/`i16`/`i32`/`i64`/`i128`/`isize`). P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028): `map_type`
+/// now maps every one of these to the SAME `Binary{N}` text as its unsigned counterpart (`Binary`
+/// is sign-free, ADR-028) — so signedness can no longer be read back off the *mapped* type text.
+/// This probe reads it off the ORIGINAL `syn::Type` instead, at the one place it is still known
+/// (a fn/method parameter's declared Rust type, in [`map_signature`]) — purely transpile-time
+/// bookkeeping that is never itself emitted into `.myc` text (mirrors [`type_is_float`]'s shape;
+/// never a guess — VR-5).
+fn type_is_signed_int(ty: &syn::Type) -> bool {
+    matches!(ty, syn::Type::Path(tp)
+    if tp.qself.is_none()
+        && tp.path.segments.last().is_some_and(|s| {
+            matches!(s.arguments, PathArguments::None)
+                && matches!(
+                    s.ident.to_string().as_str(),
+                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize"
+                )
         }))
 }
 
@@ -459,6 +500,13 @@ struct MappedSig {
     params: Vec<(String, String)>,
     ret: String,
     type_params: Vec<String>,
+    /// P4/P5 (DN-99 §8 ENB-6): the subset of `params`' names whose ORIGINAL Rust type was a
+    /// signed-integer-family type ([`type_is_signed_int`]) — the signedness bookkeeping that
+    /// `map_type`'s sign-free `Binary{N}` output can no longer carry (ADR-028). Rendering
+    /// (`render_fn`/`render_fn_sig`) never reads this field — only [`sig_type_env`] does, to build
+    /// the internal (never-emitted) [`TypeEnv`] marker `Expr::Binary`/`Expr::Unary`'s signed-gate
+    /// reads. Never includes `"self"` (a receiver's type is a struct/`Self`, never numeric).
+    signed_param_names: HashSet<String>,
 }
 
 /// Build the body's initial [`TypeEnv`] from a mapped signature's `params` — the two body-emission
@@ -468,8 +516,30 @@ struct MappedSig {
 /// `map_signature`'s doc). For a method, `self` is already present in `params` (the `FnArg::Receiver`
 /// arm of `map_signature` pushes `("self".to_string(), ty)`), so this one function covers both the
 /// free-fn and impl-method cases without a separate `self`-insertion step.
+///
+/// **P4/P5 signed marker (DN-99 §8 ENB-6):** a name in `sig.signed_param_names` gets a `"!s"`
+/// suffix appended to its stored value (e.g. `"Binary{32}!s"`) — an internal-only marker, never
+/// emitted as `.myc` text (the actual signature text is rendered straight from `sig.params` by
+/// `render_fn`/`render_fn_sig`, which never consult this env). [`signed_binary_width`] is the sole
+/// reader that understands the marker; every *other* consumer of a `TypeEnv` entry
+/// (`binary_width`, `receiver_gate_matches`, `Expr::Cast`'s `operand_width`) parses the UNMARKED
+/// `Binary{N}` shape only, so a marked entry safely fails to match them (`None`, not a wrong
+/// answer — VR-5) rather than being silently treated as an ordinary unsigned `Binary{N}`. That is
+/// deliberate for `Expr::Cast` in particular: `width_cast`'s widen is an unconditional
+/// zero-extend (DN-41 §3), which is faithful for an unsigned source but WRONG for a signed one
+/// (Rust sign-extends); opacity-by-construction is what keeps a signed-source widen an honest gap
+/// instead of a silently-wrong zero-extend.
 fn sig_type_env(sig: &MappedSig) -> TypeEnv {
-    sig.params.iter().cloned().collect()
+    sig.params
+        .iter()
+        .map(|(name, ty)| {
+            if sig.signed_param_names.contains(name) {
+                (name.clone(), format!("{ty}!s"))
+            } else {
+                (name.clone(), ty.clone())
+            }
+        })
+        .collect()
 }
 
 /// Map a fn signature's generics/params/return type. `self_ty` is `Some(name)` inside an
@@ -483,6 +553,7 @@ fn map_signature(
 ) -> Result<MappedSig, GapReason> {
     let type_params = plain_type_params(generics)?;
     let mut params = Vec::with_capacity(inputs.len());
+    let mut signed_param_names = HashSet::new();
     for arg in inputs {
         match arg {
             FnArg::Receiver(r) => {
@@ -519,6 +590,12 @@ fn map_signature(
                 // reserved-word guard must fire here, not only at use sites (PR #1207 review).
                 crate::reserved::guard_ident(&name, "fn parameter")?;
                 let ty = map_type(&pt.ty, self_ty)?;
+                // P4/P5 (DN-99 §8 ENB-6): record signedness off the ORIGINAL `syn::Type` — the
+                // one place it is still legible before `map_type` erases it onto the shared,
+                // sign-free `Binary{N}` text (ADR-028).
+                if type_is_signed_int(&pt.ty) {
+                    signed_param_names.insert(name.clone());
+                }
                 params.push((name, ty));
             }
         }
@@ -537,6 +614,7 @@ fn map_signature(
         params,
         ret,
         type_params,
+        signed_param_names,
     })
 }
 
@@ -1029,15 +1107,57 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // emission (Declared heuristic, exactly as before this deliverable).
         let both_known_binary = expr_env_binary_width(&b.left, self.env).is_some()
             && expr_env_binary_width(&b.right, self.env).is_some();
+        // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028; VERIFY-FIRST, mitigation #14 — every claim
+        // below is a *measured* `myc check` result over the built `target/debug/myc-check`, not a
+        // doc-derived guess, mirroring the Deliverable-1 probes above; see this crate's
+        // `src/tests/emit.rs` `signed_*_check_clean` live-oracle fixtures).
+        //
+        // ADR-028: `add`/`sub`/`mul`/`neg` are bit-identical for signed/unsigned two's-complement,
+        // but the kernel's OVERFLOW-CHECKED prims still split by signedness (`add_u`/`sub_u`/
+        // `mul_u` detect UNSIGNED overflow; `add_s`/`sub_s`/`mul_s`/`neg_s` detect SIGNED/two's-
+        // complement overflow — checkty.rs:8005-8040) — so a source-signed operand must route to
+        // the `_s` family to report the semantically-correct overflow. `lt`'s ordering genuinely
+        // differs by signedness (`lt` reads Binary as unsigned magnitude; `lt_s` is the signed/
+        // two's-complement order, ADR-028's `bvslt`/`bvult` split) — confirmed `lt_s(a, b)`
+        // resolves as a bare-call prim with no import, `myc check`-clean. `eq` is signedness-
+        // agnostic (bit-pattern equality) — no `eq_s` exists or is needed, so `Ne`'s EXISTING
+        // `both_known_binary`-gated composed form already applies unchanged to a signed operand
+        // too (widened below to `both_known_signed_binary` so it still fires when `expr_env_
+        // binary_width` is opaque to the `"!s"` marker — see `sig_type_env`'s doc). `Gt`'s signed
+        // form composes `eq` + `lt_s` exactly as the existing unsigned `Gt` arm composes `eq` +
+        // `lt` (same derivation, signed order). `Lt` (RFC-0032 D1's "canonical" bare glyph for
+        // unsigned `lt`) has no established bare-glyph convention for the signed case — bare
+        // `lt_s` also returns `Binary{1}`, so a signed `<` is bridged to `Bool` the same proven
+        // way `Gt`'s composition already is (confirmed empirically: a bare `a < b`/`==` embedded
+        // directly as a `Bool`-typed fn body does NOT check-clean regardless of signedness — a
+        // PRE-EXISTING, orthogonal gap this leaf does not touch; the bridged form is required).
+        //
+        // Each signed arm is gated on **both operands resolving to a KNOWN SIGNED `Binary{N}`**
+        // via `expr_env_signed_binary_width` — only a bare identifier the signature already
+        // recorded as source-signed (`type_is_signed_int`, `map_signature`) can ever resolve;
+        // never a guess (VR-5). An unresolved-signed operand (unsigned, or type unknown) falls
+        // through unchanged to the existing unsigned-gated / plain-glyph arms below — Add/Sub/Mul
+        // for an unsigned `Binary{N}` operand stay the PRE-EXISTING (already-broken, out of
+        // scope) plain-glyph form; this leaf only adds new signed-specific coverage, never
+        // regresses the unsigned path.
+        let both_known_signed_binary = expr_env_signed_binary_width(&b.left, self.env).is_some()
+            && expr_env_signed_binary_width(&b.right, self.env).is_some();
         match &b.op {
             // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
             // — left unchanged (not part of this deliverable's operand-gated rewrite).
             BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
+            BinOp::Lt(_) if both_known_signed_binary => Ok(format!(
+                "(match lt_s({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
+            )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-            BinOp::Ne(_) if both_known_binary => Ok(format!(
+            BinOp::Ne(_) if both_known_binary || both_known_signed_binary => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
             )),
             BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
+            BinOp::Gt(_) if both_known_signed_binary => Ok(format!(
+                "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt_s({lhs}, {rhs}) {{ 0b1 \
+                 => False, _ => True }} }})"
+            )),
             BinOp::Gt(_) if both_known_binary => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
@@ -1054,8 +1174,11 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             BinOp::BitXor(_) => Ok(format!("{lhs} ^ {rhs}")),
             BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
             BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
+            BinOp::Add(_) if both_known_signed_binary => Ok(format!("add_s({lhs}, {rhs})")),
             BinOp::Add(_) => Ok(format!("{lhs} + {rhs}")),
+            BinOp::Sub(_) if both_known_signed_binary => Ok(format!("sub_s({lhs}, {rhs})")),
             BinOp::Sub(_) => Ok(format!("{lhs} - {rhs}")),
+            BinOp::Mul(_) if both_known_signed_binary => Ok(format!("mul_s({lhs}, {rhs})")),
             BinOp::Mul(_) => Ok(format!("{lhs} * {rhs}")),
             BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
             BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
@@ -1078,6 +1201,14 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
     fn visit_unary(&mut self, _expr: &Expr, u: &syn::ExprUnary) -> Self::Output {
         let operand = emit_expr(&u.expr, self.self_ty, self.env)?;
         match &u.op {
+            // P4/P5 (DN-99 §8 ENB-6 / ADR-028): a source-signed `Binary{N}` operand routes to
+            // the landed `neg_s` prim (`crates/mycelium-l1/src/checkty.rs:8020`, DN-72/M-766 —
+            // confirmed `myc check`-clean against the real toolchain, this leaf's verify-first
+            // probe). Gated exactly like `Expr::Binary`'s signed arms — never a guess (VR-5); an
+            // unresolved/unsigned operand keeps the prior, unchanged bare-glyph fallback.
+            syn::UnOp::Neg(_) if expr_env_signed_binary_width(&u.expr, self.env).is_some() => {
+                Ok(format!("neg_s({operand})"))
+            }
             syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
             syn::UnOp::Not(_) => Ok(format!("!{operand}")),
             _ => Err(GapReason::new(
