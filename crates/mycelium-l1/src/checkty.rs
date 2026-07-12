@@ -1797,6 +1797,27 @@ pub(crate) fn merge_phyla_exports(mut local: Exports, phyla: &Phyla) -> Exports 
         for (qual, info) in &resolved.exports.types {
             let mut info = info.clone();
             info.home = qualify_cross_phylum(&info.home, dep_name);
+            // DN-113/M-1060 CRITICAL fix (adversarial-verification finding, 2026-07-11): a ctor
+            // field's `Ty` is a *baked* identity from the DEPENDENCY's own home-space (e.g.
+            // `Ty::Data("m::Bar", [])` for the dep's internal nodule `m`). Re-homing only
+            // `info.home` above (the type's OWN identity) and leaving `ctor.fields` untouched
+            // left every field in the dependency's bare/local namespace — if the CONSUMER
+            // happens to have its own same-named nodule/type (e.g. also `m::Bar`), the bare-name
+            // fallback in `lookup_data_home_checked` resolved the foreign field to the local type
+            // and the checker silently accepted a foreign representation (e.g. `Binary{4}`) as
+            // the consumer's own (e.g. `Binary{64}`) — the M-1036 ctor-seal collapse pattern one
+            // level up, across the phylum boundary. Fix: re-home every ctor field's `Ty::Data`
+            // identity through the exact same helper + oracle the `resolved_fn_sigs` loop below
+            // already uses (DRY — one re-homing path, not two): `qualify_ty_cross_phylum` against
+            // the dependency's OWN linked `Env::types` (the oracle that disambiguates "bare name
+            // is actually the reserved prelude home" from "bare name is a dep type whose intra-
+            // phylum home happened to be bare").
+            let dep_types = &resolved.env.types;
+            for ctor in &mut info.ctors {
+                for field in &mut ctor.fields {
+                    *field = qualify_ty_cross_phylum(field, dep_name, dep_types);
+                }
+            }
             local.types.insert(format!("{dep_name}::{qual}"), info);
         }
         for (qual, fd) in &resolved.exports.fns {
@@ -4226,6 +4247,75 @@ fn check_sig_resolves(
     Ok(())
 }
 
+/// **MED closure (2026-07-11, adversarial-verification follow-up to the CRITICAL ctor-field fix
+/// above):** a **foreign** (cross-phylum-imported) trait's method signatures are surface
+/// [`TypeRef`]s, resolved **lazily** — at `impl`-check time, in [`check_impl_methods`]'s
+/// `resolve_ty(site, types, &tr.params, &rp.ty)` — against the IMPLEMENTING phylum's OWN type
+/// registry. They are never re-homed against the trait's own declaring phylum the way a ctor field
+/// now is (the CRITICAL fix in [`merge_phyla_exports`]) or a fn-sig always was
+/// (`Exports::resolved_fn_sigs`). A concrete named type mentioned in a foreign trait's signature
+/// that is NOT one of the trait's own generic params — e.g. `trait Trt[A] { fn get(x: A) => Bar; }`
+/// where `Bar` is some concrete type in the trait's *declaring* phylum, not a param — is therefore
+/// silently re-resolved against whatever bare name the CONSUMER's own registry happens to bind:
+/// exactly the M-1036/DN-112 bare-name collapse, one level up, for a **trait signature** rather
+/// than a ctor field.
+///
+/// **Confirmed reachable in v1** by a scratch differential (`use dep::Trait; impl Trait for
+/// LocalType { .. }`, no cross-phylum `instances` merge required at all — the confusion is entirely
+/// local to [`check_impl_methods`]'s own re-resolution). This is narrower than what the CRITICAL
+/// fix's own follow-up note assumed ("gated-unreachable because v1 does not merge instances") —
+/// that assumption covered *querying* another phylum's registered instances, not *registering* a
+/// local instance of an *imported* trait, which needs no instance-merge at all.
+///
+/// The real fix is DN-113/DN-122 territory: re-home a foreign trait's sigs against its own
+/// declaring phylum, the way [`merge_phyla_exports`] now does for ctor fields — out of scope here
+/// (needs the instances-merge machinery DN-122 tracks). Until it lands, this closes the *soundness*
+/// gap the narrow, conservative way [`lookup_data_home_checked`] does for CRITICAL #2: **refuse**
+/// rather than silently re-resolve. `!trait_local` (computed in [`register_instances`], just below)
+/// is exactly "this trait is not declared anywhere in this phylum" — the only way `traits.get`
+/// could have found it is a cross-phylum import (traits are never a prelude/ambient construct, so
+/// there is no other source for a phylum-non-local hit). A trait whose signature only ever
+/// references its own params (e.g. `Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }`) carries no
+/// concrete-type reference at all and is **unaffected** — only a signature that actually names a
+/// concrete type beyond its params is refused, so this does not regress the common "impl a foreign
+/// trait for your own type" pattern the orphan rule exists to allow.
+fn foreign_trait_sig_names_a_concrete_type(tr: &TraitInfo) -> Option<&str> {
+    let params: BTreeSet<&str> = tr.params.iter().map(String::as_str).collect();
+    for sig in &tr.sigs {
+        for p in &sig.value_params {
+            if let Some(name) = typeref_names_concrete_type(&p.ty, &params) {
+                return Some(name);
+            }
+        }
+        if let Some(name) = typeref_names_concrete_type(&sig.ret, &params) {
+            return Some(name);
+        }
+    }
+    None
+}
+
+/// Recursively find a [`BaseType::Named`] in `tr` that is not one of `params` — the "concrete named
+/// type" a foreign trait signature might reference beyond its own generic parameters. `None` if
+/// `tr` is built entirely from primitives/params (the safe case).
+fn typeref_names_concrete_type<'a>(tr: &'a TypeRef, params: &BTreeSet<&str>) -> Option<&'a str> {
+    match &tr.base {
+        BaseType::Named(name, args) => {
+            if !params.contains(name.as_str()) {
+                return Some(name.as_str());
+            }
+            args.iter()
+                .find_map(|a| typeref_names_concrete_type(a, params))
+        }
+        BaseType::Seq { elem, .. } => typeref_names_concrete_type(elem, params),
+        BaseType::Fn(a, b) => typeref_names_concrete_type(a, params)
+            .or_else(|| typeref_names_concrete_type(b, params)),
+        BaseType::Tuple(elems) => elems
+            .iter()
+            .find_map(|e| typeref_names_concrete_type(e, params)),
+        _ => None,
+    }
+}
+
 /// **Impl pass — registration + coherence** (RFC-0019 §4.5; LR-2 — guarantee: `Declared`, the
 /// coherence argument is Declared-with-argument per RFC-0019, not machine-checked). For each
 /// `impl Trait<args> for T`:
@@ -4338,6 +4428,32 @@ pub(crate) fn register_instances(
                     id.trait_name, id.trait_name
                 ),
             ));
+        }
+        // MED closure (2026-07-11, adversarial-verification follow-up — see
+        // `foreign_trait_sig_names_a_concrete_type`'s doc comment for the full rationale):
+        // `!trait_local` here means `id.trait_name` resolved to a TraitInfo not declared anywhere
+        // in this phylum — i.e. a cross-phylum import. If its signature mentions any concrete
+        // named type beyond its own generic params, refuse rather than silently re-resolve that
+        // bare name against this (possibly wrong) phylum's own registry (the DN-113/DN-122
+        // residual; confirmed reachable, not yet fully re-homed).
+        if !trait_local {
+            if let Some(name) = foreign_trait_sig_names_a_concrete_type(tr) {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "`impl {} for {for_ty}` — the foreign (cross-phylum) trait `{}`'s \
+                         signature mentions a concrete type `{name}` beyond its own generic \
+                         parameter(s); a cross-phylum trait's signature is not yet re-homed \
+                         against its declaring phylum (DN-113 §7 / DN-122 residual — a bare-name \
+                         reference to `{name}` here cannot be verified against the correct \
+                         phylum's `{name}` and would risk the M-1036/DN-112 bare-name collapse one \
+                         level up; refused rather than silently resolved against a possibly-wrong \
+                         declaration, G2/VR-5). Declare a local wrapper trait instead, or await the \
+                         tracked follow-up for full cross-phylum trait-sig re-homing.",
+                        id.trait_name, tr.name
+                    ),
+                ));
+            }
         }
         // Global uniqueness — at most one instance per `(trait, head)` (RFC-0019 §4.5; ADR-003). A
         // duplicate (even at a different width on the same head — the documented stage-1 over-rejection)
