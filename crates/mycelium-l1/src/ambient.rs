@@ -954,13 +954,19 @@ fn print_object_decl(od: &ObjectDecl) -> String {
     s
 }
 
-/// Render a `use` import (specific `use a.b.Item` or glob `use a.b.*`; M-662). Re-emitting the `.*`
-/// keeps the glob distinct from a specific import on round-trip.
+/// Render a `use` import (specific `use a.b.Item` or glob `use a.b.*`; M-662) — or, with the
+/// DN-113 `::` phylum-boundary head, a cross-phylum reference (`use dep::a.b.Item`; M-1060).
+/// Re-emitting the `.*` keeps the glob distinct from a specific import, and re-emitting the `dep::`
+/// head keeps a cross-phylum reference distinct from an intra-phylum one, on round-trip.
 fn print_use(u: &UsePath) -> String {
+    let head = match &u.phylum {
+        Some(dep) => format!("{dep}::"),
+        None => String::new(),
+    };
     if u.glob {
-        format!("use {}.*\n", path_str(&u.path))
+        format!("use {head}{}.*\n", path_str(&u.path))
     } else {
-        format!("use {}\n", path_str(&u.path))
+        format!("use {head}{}\n", path_str(&u.path))
     }
 }
 
