@@ -24,7 +24,7 @@ nodule std.io.error;
 // A byte offset into the input: the **locus** of a serialization failure (C1 /
 // RFC-0013 I1). Named `none` (0) when the locus cannot be determined (e.g. the
 // first byte of a completely empty input).
-type ByteOffset = ByteOffset(Binary{64});
+pub type ByteOffset = ByteOffset(Binary{64});
 
 // A field path into a structured value, naming *where* inside a composite the
 // failure was detected (C1/RFC-0013 I1). Encoded as a `/`-separated string of
@@ -32,7 +32,7 @@ type ByteOffset = ByteOffset(Binary{64});
 //
 // This is the structural analogue of [`ByteOffset`] for grammar-structured failures
 // where the byte position is less informative than the semantic path.
-type FieldPath = FieldPath(Bytes);
+pub type FieldPath = FieldPath(Bytes);
 
 // The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).
 //
@@ -44,22 +44,22 @@ type FieldPath = FieldPath(Bytes);
 // No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.
 // The presence of a `SerError` means the entire decode is rejected; the caller
 // never receives a partially-filled `Value`.
-type SerError = Truncated(ByteOffset) | Malformed(ByteOffset, Bytes) | UnknownTag(FieldPath, Bytes) | OutOfDomain(FieldPath, Bytes) | BudgetExceeded(Bytes);
+pub type SerError = Truncated(ByteOffset) | Malformed(ByteOffset, Bytes) | UnknownTag(FieldPath, Bytes) | OutOfDomain(FieldPath, Bytes) | BudgetExceeded(Bytes);
 
 // The number of bytes successfully read before an error.
 //
 // Carried by [`IoError::UnexpectedEof`] to name *how much* was read before the
 // source was exhausted — enabling the caller to report precisely without
 // re-reading (C1/RFC-0013 I1).
-type ByteCount = ByteCount(Binary{64});
+pub type ByteCount = ByteCount(Binary{64});
 
 // The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).
 //
 // Every variant is a declared, inspectable failure mode — never a silent partial
 // read (C1) and never a hang or OOM (C6).
-type IoError = UnexpectedEof(ByteCount) | Refused(Bytes) | EffectBudget(Bytes);
+pub type IoError = UnexpectedEof(ByteCount) | Refused(Bytes) | EffectBudget(Bytes);
 
 // A combined error from [`crate::io::read_value`]: either a byte-movement failure
 // (`Io`) or a (de)serialization failure (`Ser`). The two failure modes are kept
 // distinct so the caller can handle each class separately (C3 — no black box).
-type ReadValueError = Io(IoError) | Ser(SerError);
+pub type ReadValueError = Io(IoError) | Ser(SerError);

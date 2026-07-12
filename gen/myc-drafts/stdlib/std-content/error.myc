@@ -17,4 +17,4 @@ nodule std.content.error;
 //
 // The `description` field carries a human-readable explanation of *why* the string is rejected,
 // enabling callers to surface the error without stripping information (G11 dual projection).
-type MalformedDigest = MalformedDigest(Bytes, Bytes);
+pub type MalformedDigest = MalformedDigest(Bytes, Bytes);

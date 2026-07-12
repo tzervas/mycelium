@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-l1/src/mono.rs",
   "emitted_items": [
+    "use:Width",
+    "use:ElabError",
     "mangle_ty_or_fn"
   ],
   "gaps": [
@@ -11,7 +13,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: collections :: { BTreeMap , BTreeSet } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std.collections::BTreeMap` — `std.collections` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use std.collections::BTreeSet` — `std.collections` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -21,7 +23,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: ast :: { Arm , BaseType , Expr , FnDecl , FnSig , Hypha , Literal , Param , Path , Pattern , Scalar , Sparsity , Strength , TypeRef , WidthRef , } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use ast::Arm` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::BaseType` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Expr` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::FnDecl` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::FnSig` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Hypha` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Literal` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Param` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Path` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Pattern` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Scalar` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Sparsity` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Strength` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::TypeRef` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::WidthRef` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -31,18 +33,118 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use checkty::has_var` — `has_var` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 78,
+      "line": 74,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
-      "snippet": "use crate :: elab :: ElabError ;",
-      "reason": "`use` import (single path ending `ElabError`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::infer_type` — `infer_type` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::param_subst` — `param_subst` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::resolve_ty` — `resolve_ty` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::subst_ty` — `subst_ty` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::type_head` — `type_head` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::unify` — `unify` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::CtorInfo` — `CtorInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::DataInfo` — `DataInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::Env` — `Env` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::TraitInfo` — `TraitInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { has_var , infer_type , param_subst , resolve_ty , subst_ty , type_head , unify , CtorInfo , DataInfo , Env , TraitInfo , Ty , Width , } ;",
+      "reason": "`use checkty::Ty` — `Ty` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Width"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
@@ -51,7 +153,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: totality :: { WalkDepthExceeded , MAX_WALK_DEPTH } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use totality::WalkDepthExceeded` — `totality` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use totality::MAX_WALK_DEPTH` — `totality` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {

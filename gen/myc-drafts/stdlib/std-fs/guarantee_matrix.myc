@@ -30,16 +30,16 @@
 nodule std.fs.guarantee_matrix;
 
 // Fallibility classification for an exported op.
-type Fallibility = Total | OptionFallible | ResultFallible;
+pub type Fallibility = Total | OptionFallible | ResultFallible;
 
 // Whether an op reaches the audited OS syscall floor.
-type Wild = Yes | No;
+pub type Wild = Yes | No;
 
 // Whether an op has an EXPLAIN obligation (C3).
-type Explainable = Yes | NotApplicable;
+pub type Explainable = Yes | NotApplicable;
 
 // Declared effects for an op (C6).
-type Effects = None | Io;
+pub type Effects = None | Io;
 
 // One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).
-type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Effects, Explainable, Wild);
+pub type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Effects, Explainable, Wild);

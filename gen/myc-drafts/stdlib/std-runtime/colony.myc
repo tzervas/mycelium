@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.colony_kw
 // `Colony<T,E>` and `Scope<T,E>` — structured concurrency surface (ADR-020 v0 R1).
 //
 // # Guarantee (Empirical — grounded in RT2 sequentialization + Kahn-determinism differentials)
@@ -14,7 +14,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.colony_kw;
 
 // Error type for scope exits with active tasks.
 type ScopeError = Cancelled | TasksStillRunning;

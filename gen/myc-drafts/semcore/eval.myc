@@ -32,6 +32,8 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule l1.eval;
 
+use l1.elab.ElabError;
+
 // Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
 // placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).
 type ForageError = NoCandidates;

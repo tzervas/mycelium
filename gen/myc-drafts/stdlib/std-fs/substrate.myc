@@ -30,5 +30,13 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.fs.substrate;
 
+use std.fs.error.FsErr;
+
+use std.fs.metadata.FileKind;
+use std.fs.metadata.Metadata;
+use std.fs.metadata.Permissions;
+
+use std.fs.options.OpenOptions;
+
 // An open file handle in the in-memory substrate.
-type InMemHandle = InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool);
+pub type InMemHandle = InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool);

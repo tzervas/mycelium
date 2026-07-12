@@ -7,7 +7,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: fmt ;",
-      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std::fmt` — `std` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -362,16 +362,6 @@
     },
     {
       "file": "crates/mycelium-std-io/src/io.rs",
-      "line": 39,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: IoError ;",
-      "reason": "`use` import (single path ending `IoError`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/io.rs",
       "line": 43,
       "col": 1,
       "category": "ReservedWord",
@@ -552,13 +542,13 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 129,
+      "line": 132,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
-      "snippet": "pub use error :: { ByteCount , ByteOffset , FieldPath , IoError , ReadValueError , SerError } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::deserialize` — `deserialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -567,8 +557,28 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use serialize::from_json` — `from_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::serialize` — `serialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::to_json` — `to_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -577,8 +587,68 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use io::read` — `read` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read_value` — `read_value` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::write` — `write` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Budget` — `Budget` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Sink` — `Sink` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Source` — `Source` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Substrate` — `Substrate` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -587,7 +657,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use guarantee_matrix :: MATRIX as GUARANTEE_MATRIX ;",
-      "reason": "`use` import (rename `MATRIX as GUARANTEE_MATRIX`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use guarantee_matrix::MATRIX as GUARANTEE_MATRIX` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `GUARANTEE_MATRIX` in this file's body); flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -607,7 +677,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: value :: Payload ;",
-      "reason": "`use` import (single path ending `Payload`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core.value::Payload` — `mycelium_core.value` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -617,17 +687,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: Value ;",
-      "reason": "`use` import (single path ending `Value`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 41,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: { ByteOffset , FieldPath , SerError } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::Value` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -754,7 +814,7 @@
   "category_counts": {
     "DeriveAttr": 10,
     "Impl": 14,
-    "Import": 9,
+    "Import": 15,
     "InnerAttr": 1,
     "MacroInvocation": 3,
     "ModuleDecl": 4,

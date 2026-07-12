@@ -1,4 +1,4 @@
-// nodule: l1
+// nodule: l1.fuse_kw
 // DN-58 §A (M-965; F-A1/F-A2) — the `Fuse` **prelude surface** + the **semilattice-law checker**.
 //
 // **F-A1 (prelude).** `Fuse` is now a **built-in trait** — the trait analogue of the built-in
@@ -46,6 +46,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule l1;
+nodule l1.fuse_kw;
 
-
+use l1.checkty.CheckError;

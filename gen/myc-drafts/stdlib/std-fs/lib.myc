@@ -72,4 +72,21 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.fs;
 
+use std.fs.error.ErrnoClass;
+use std.fs.error.FsErr;
 
+use std.fs.guarantee_matrix.Effects;
+use std.fs.guarantee_matrix.Explainable;
+use std.fs.guarantee_matrix.Fallibility;
+use std.fs.guarantee_matrix.MatrixRow;
+use std.fs.guarantee_matrix.Wild;
+
+use std.fs.metadata.FileKind;
+use std.fs.metadata.Metadata;
+use std.fs.metadata.Permissions;
+
+use std.fs.options.OpenOptions;
+
+use std.fs.path.Path;
+
+use std.fs.substrate.InMemHandle;

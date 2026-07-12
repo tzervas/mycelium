@@ -21,11 +21,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/lib.myc",
       "source_file": "crates/mycelium-std-fs/src/lib.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.fs.<use>`: `use std.fs.error.ErrnoClass`: no such name `std.fs.error.ErrnoClass` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 12,
-      "emitted_items": 0
+      "emitted_items": 6
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/metadata.myc",
@@ -57,18 +57,82 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/substrate.myc",
       "source_file": "crates/mycelium-std-fs/src/substrate.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.fs.substrate.<use>`: `use std.fs.error.FsErr`: no such name `std.fs.error.FsErr` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 8,
-      "emitted_items": 1
+      "emitted_items": 4
     }
   ],
   "total_non_test_items": 47,
-  "total_emitted_items": 17,
-  "total_checked_clean_items": 10,
+  "total_emitted_items": 26,
+  "total_checked_clean_items": 9,
   "class_counts": {
-    "CheckError": 2,
-    "Clean": 5
-  }
+    "CheckError": 4,
+    "Clean": 3
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.fs.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "group_read",
+        "on": null,
+        "message": "unknown function/constructor/prim `ne`"
+      },
+      {
+        "nodule": "std.fs.metadata",
+        "file": "metadata.myc",
+        "class": "CheckError",
+        "site": "group_read",
+        "on": null,
+        "message": "unknown function/constructor/prim `ne`"
+      },
+      {
+        "nodule": "std.fs.options",
+        "file": "options.myc",
+        "class": "CheckError",
+        "site": "wants_write",
+        "on": null,
+        "message": "`or` does not accept argument types [Data(\"Bool\", []), Data(\"Bool\", [])] (T-Op; RFC-0007 §4.4)"
+      },
+      {
+        "nodule": "std.fs.path",
+        "file": "path.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.substrate",
+        "file": "substrate.myc",
+        "class": "CheckError",
+        "site": "group_read",
+        "on": null,
+        "message": "unknown function/constructor/prim `ne`"
+      }
+    ],
+    "diagnostic": "unknown function/constructor/prim `ne`"
+  },
+  "total_checked_clean_items_phylum": 9
 }

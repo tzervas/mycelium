@@ -49,18 +49,23 @@ MYC_CHECK="$REPO_ROOT/target/debug/myc-check"
 TRANSPILE="$REPO_ROOT/target/debug/mycelium-transpile"
 export MYC_CHECK_CMD="$MYC_CHECK"
 
-# Wave-1 port-surface target list (E33-1 / M-1003) -- semcore SCC (per-file) + the 12 unported
-# stdlib crate src/ dirs (per-crate). Format: "<output-subdir>|<input>|<kind>". Kept as an explicit,
-# ordered list (not a glob over crates/) so the manifest's target set is exactly the
-# maintainer-confirmed wave-1 breadth (.claude/kickoffs/trx2.md) -- expanding it is M-1006's ladder,
-# not this driver's job. Every target gets its OWN output subdirectory (never a shared flat dir),
-# which is what avoids the batch-mode stem-collision hazard (12 stdlib crates all have `lib.rs`).
+# Wave-1 port-surface target list (E33-1 / M-1003) -- the semcore SCC as ONE batch-mode phylum
+# target (DN-124 §3.2/M-1079: the 5 files mutually reference each other -- checkty/elab/eval/mono/
+# fuse ARE the one l1-frontend phylum, so they are transpiled+vetted together, never as 5 isolated
+# single-file invocations that could never credit a cross-nodule `use` between them) + the 12
+# unported stdlib crate src/ dirs (per-crate, already each one real phylum boundary -- no change
+# needed for them to gain phylum-mode partial verdicts, DN-124 §3.2). Format:
+# "<output-subdir>|<input>|<kind>", where a `semcore`-kind row's <input> is a COMMA-separated file
+# list (the batch's exact member set) and a `stdlib`-kind row's <input> is a single directory (one
+# phylum already). Kept as an explicit, ordered list (not a glob over crates/) so the manifest's
+# target set is exactly the maintainer-confirmed wave-1 breadth (.claude/kickoffs/trx2.md) --
+# expanding it is M-1006's ladder, not this driver's job. Every target gets its OWN output
+# subdirectory (never a shared flat dir), which is what avoids the batch-mode stem-collision hazard
+# (12 stdlib crates all have `lib.rs`) -- and, for semcore, IS the DN-124 §6 Attack-1a boundary
+# constraint: the phylum-vet dir holds EXACTLY these 5 files, never mycelium-l1/src/'s other ~40
+# unrelated files (a "bag of unrelated files" would risk resolving a `use` a real build separates).
 TARGETS=(
-  "semcore/checkty|crates/mycelium-l1/src/checkty.rs|semcore"
-  "semcore/elab|crates/mycelium-l1/src/elab.rs|semcore"
-  "semcore/eval|crates/mycelium-l1/src/eval.rs|semcore"
-  "semcore/mono|crates/mycelium-l1/src/mono.rs|semcore"
-  "semcore/fuse|crates/mycelium-l1/src/fuse.rs|semcore"
+  "semcore|crates/mycelium-l1/src/checkty.rs,crates/mycelium-l1/src/elab.rs,crates/mycelium-l1/src/eval.rs,crates/mycelium-l1/src/mono.rs,crates/mycelium-l1/src/fuse.rs|semcore"
   "stdlib/std-conformance|crates/mycelium-std-conformance/src|stdlib"
   "stdlib/std-content|crates/mycelium-std-content/src|stdlib"
   "stdlib/std-dense|crates/mycelium-std-dense/src|stdlib"
@@ -75,15 +80,18 @@ TARGETS=(
   "stdlib/std-vsa|crates/mycelium-std-vsa/src|stdlib"
 )
 
+# Pre-DN-124 layout leftover: semcore used to write 5 NESTED per-file subdirs
+# (semcore/checkty/, semcore/elab/, ...). The new batch target writes flat into semcore/ directly --
+# clear the stale nested dirs so a re-run never leaves orphaned pre-M-1079 artifacts behind
+# (never-silent staleness, mirrors the existing per-target stale-file sweep below).
+for stale in checkty elab eval mono fuse; do
+  [[ -d "gen/myc-drafts/semcore/$stale" ]] && rm -rf "gen/myc-drafts/semcore/$stale"
+done
+
 rc=0
 for row in "${TARGETS[@]}"; do
   # shellcheck disable=SC2034  # kind is part of the row format; only manifest_gen.py needs it
   IFS='|' read -r subdir input kind <<<"$row"
-  if [[ ! -e "$input" ]]; then
-    fail "target not found: $input (subdir $subdir) -- recorded as transpile_failed in the manifest"
-    rc=1
-    continue
-  fi
   # Repo-root-relative (never absolute): the transpiler bakes the out-dir argument verbatim into
   # vet.json's `myc_file` field, so an absolute path here would embed this checkout's filesystem
   # location into a committed, diffed artifact -- non-portable and a determinism hazard of the
@@ -94,8 +102,38 @@ for row in "${TARGETS[@]}"; do
   # Clear stale artifacts from a previous run so a shrinking target set (or a stem that no longer
   # emits) never leaves an orphaned file behind (never-silent staleness).
   find "$outdir" -maxdepth 1 -type f \( -name '*.myc' -o -name '*.gap.json' -o -name 'summary.json' \
-    -o -name 'union.gap.json' -o -name 'vet.json' \) -delete
-  out="$("$TRANSPILE" --vet "$input" "$outdir" 2>&1)"
+    -o -name 'union.gap.json' -o -name 'vet.json' -o -name 'REMAP.md' \) -delete
+
+  if [[ "$kind" == "semcore" ]]; then
+    # Batch the mutually-referencing semcore files as ONE phylum (DN-124 §3.2), via the transpiler's
+    # `--files <f1,f2,...>` explicit-file-set mode (M-1079): no directory discovery, no staging --
+    # each file's REAL repo path is transpiled and recorded verbatim, so summary.json/vet.json stay
+    # deterministic and portable (a staging/scratch path would embed a random tmp name into a
+    # committed artifact every run -- a determinism hazard this driver's own "no churning" discipline
+    # forbids). `transpile_batch` installs the cross-nodule symbol table across the set (gap-close-2
+    # wave-2), and (per M-1079 Unit 2) `--files`-mode `--vet` ALSO runs phylum-mode vetting.
+    IFS=',' read -ra files <<<"$input"
+    missing=0
+    for f in "${files[@]}"; do
+      if [[ ! -e "$f" ]]; then
+        fail "target not found: $f (subdir $subdir) -- recorded as transpile_failed in the manifest"
+        missing=1
+      fi
+    done
+    if (( missing )); then
+      rc=1
+      continue
+    fi
+    out="$("$TRANSPILE" --vet --files "$input" "$outdir" 2>&1)"
+  else
+    if [[ ! -e "$input" ]]; then
+      fail "target not found: $input (subdir $subdir) -- recorded as transpile_failed in the manifest"
+      rc=1
+      continue
+    fi
+    out="$("$TRANSPILE" --vet "$input" "$outdir" 2>&1)"
+  fi
+
   vet_line="$(printf '%s\n' "$out" | grep -- '--vet over' | head -1)"
   if [[ -z "$vet_line" ]]; then
     fail "$subdir: transpile --vet produced no vet summary (hard parse failure?) -- $out"
@@ -103,6 +141,9 @@ for row in "${TARGETS[@]}"; do
     continue
   fi
   ok "$subdir: ${vet_line#mycelium-transpile: --vet }"
+  # M-A dual-report (DN-124 §4.3): surface the phylum-mode line too, when the CLI printed one.
+  phylum_line="$(printf '%s\n' "$out" | grep -- '--vet --phylum' | head -1)"
+  [[ -n "$phylum_line" ]] && ok "$subdir: ${phylum_line#mycelium-transpile: }"
 done
 
 section "assembling MANIFEST.md / manifest.json"

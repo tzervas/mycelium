@@ -1,19 +1,10 @@
 {
   "source": "crates/mycelium-std-io/src/io.rs",
   "emitted_items": [
+    "use:IoError",
     "read_all"
   ],
   "gaps": [
-    {
-      "file": "crates/mycelium-std-io/src/io.rs",
-      "line": 39,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: IoError ;",
-      "reason": "`use` import (single path ending `IoError`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
     {
       "file": "crates/mycelium-std-io/src/io.rs",
       "line": 43,

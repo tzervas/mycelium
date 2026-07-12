@@ -1,112 +1,129 @@
 {
   "files": [
     {
-      "file": "crates/mycelium-std-content/src/content_ref.rs",
-      "total_items": 8,
-      "non_test_items": 7,
-      "emitted": 2,
-      "gaps": 7,
-      "expressible_pct": 28.57142857142857,
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "total_items": 147,
+      "non_test_items": 147,
+      "emitted": 5,
+      "gaps": 147,
+      "expressible_pct": 3.4013605442176873,
       "category_counts": {
-        "DeriveAttr": 1,
-        "Impl": 3,
-        "Import": 1,
-        "Struct": 1,
-        "TestItem": 1
-      }
-    },
-    {
-      "file": "crates/mycelium-std-content/src/error.rs",
-      "total_items": 6,
-      "non_test_items": 5,
-      "emitted": 1,
-      "gaps": 7,
-      "expressible_pct": 20.0,
-      "category_counts": {
-        "DeriveAttr": 1,
-        "Impl": 3,
-        "Import": 1,
+        "Closure": 4,
+        "DeriveAttr": 4,
+        "GenericBound": 7,
+        "Impl": 15,
+        "Import": 5,
+        "MultiStmtBody": 9,
         "NamedFieldDrop": 1,
-        "TestItem": 1
+        "Other": 63,
+        "ReservedWord": 26,
+        "Struct": 13
       }
     },
     {
-      "file": "crates/mycelium-std-content/src/guarantee_matrix.rs",
-      "total_items": 5,
-      "non_test_items": 4,
-      "emitted": 3,
-      "gaps": 6,
-      "expressible_pct": 75.0,
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "total_items": 47,
+      "non_test_items": 47,
+      "emitted": 2,
+      "gaps": 48,
+      "expressible_pct": 4.25531914893617,
+      "category_counts": {
+        "Closure": 1,
+        "DeriveAttr": 1,
+        "GenericBound": 3,
+        "Impl": 3,
+        "Import": 6,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 2,
+        "Other": 22,
+        "PayloadVariant": 1,
+        "ReservedWord": 6
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/eval.rs",
+      "total_items": 42,
+      "non_test_items": 42,
+      "emitted": 4,
+      "gaps": 46,
+      "expressible_pct": 9.523809523809524,
       "category_counts": {
         "DeriveAttr": 3,
-        "NamedFieldDrop": 1,
-        "Other": 1,
-        "TestItem": 1
+        "GenericBound": 5,
+        "Impl": 12,
+        "Import": 13,
+        "NamedFieldDrop": 2,
+        "Other": 5,
+        "PayloadVariant": 1,
+        "ReservedWord": 3,
+        "Struct": 2
       }
     },
     {
-      "file": "crates/mycelium-std-content/src/lib.rs",
-      "total_items": 17,
-      "non_test_items": 12,
-      "emitted": 4,
-      "gaps": 17,
-      "expressible_pct": 33.33333333333333,
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "total_items": 47,
+      "non_test_items": 47,
+      "emitted": 3,
+      "gaps": 56,
+      "expressible_pct": 6.382978723404255,
       "category_counts": {
-        "DeriveAttr": 2,
-        "GenericBound": 1,
-        "Import": 4,
-        "InnerAttr": 1,
-        "ModuleDecl": 4,
-        "Other": 4,
-        "TestItem": 1
-      }
-    },
-    {
-      "file": "crates/mycelium-std-content/src/name_registry.rs",
-      "total_items": 4,
-      "non_test_items": 3,
-      "emitted": 0,
-      "gaps": 4,
-      "expressible_pct": 0.0,
-      "category_counts": {
+        "Closure": 1,
+        "GenericBound": 2,
         "Impl": 1,
-        "Import": 1,
-        "Struct": 1,
-        "TestItem": 1
+        "Import": 15,
+        "MultiStmtBody": 2,
+        "Other": 23,
+        "PayloadVariant": 1,
+        "ReservedWord": 5,
+        "Struct": 6
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "total_items": 10,
+      "non_test_items": 10,
+      "emitted": 1,
+      "gaps": 15,
+      "expressible_pct": 10.0,
+      "category_counts": {
+        "Import": 8,
+        "Other": 6,
+        "ReservedWord": 1
       }
     }
   ],
   "totals": {
-    "total_items": 40,
-    "non_test_items": 31,
-    "emitted": 10,
-    "gaps": 41,
-    "expressible_pct": 32.25806451612903,
+    "total_items": 293,
+    "non_test_items": 293,
+    "emitted": 15,
+    "gaps": 312,
+    "expressible_pct": 5.1194539249146755,
     "category_counts": {
-      "DeriveAttr": 7,
-      "GenericBound": 1,
-      "Impl": 7,
-      "Import": 7,
-      "InnerAttr": 1,
-      "ModuleDecl": 4,
-      "NamedFieldDrop": 2,
-      "Other": 5,
-      "Struct": 2,
-      "TestItem": 5
+      "Closure": 6,
+      "DeriveAttr": 8,
+      "GenericBound": 17,
+      "Impl": 31,
+      "Import": 47,
+      "MultiStmtBody": 14,
+      "NamedFieldDrop": 5,
+      "Other": 119,
+      "PayloadVariant": 3,
+      "ReservedWord": 41,
+      "Struct": 21
     }
   },
   "remap": {
     "phylum": {
-      "source_crate": "mycelium-std-content",
-      "target_phylum": "std.content"
+      "source_crate": "mycelium-l1",
+      "target_phylum": "l1"
     },
     "nodules": [
       {
-        "target_nodule": "std.content.content_ref",
+        "target_nodule": "l1.checkty",
         "operation": "Keep",
         "sources": [
           {
-            "rust_path": "crates/mycelium-std-content/src/content_ref.rs",
+            "rust_path": "crates/mycelium-l1/src/checkty.rs",
             "rust_span": null,
             "moved_items": []
           }
@@ -118,11 +135,11 @@
         "guarantee": "Declared"
       },
       {
-        "target_nodule": "std.content.error",
+        "target_nodule": "l1.elab",
         "operation": "Keep",
         "sources": [
           {
-            "rust_path": "crates/mycelium-std-content/src/error.rs",
+            "rust_path": "crates/mycelium-l1/src/elab.rs",
             "rust_span": null,
             "moved_items": []
           }
@@ -134,11 +151,11 @@
         "guarantee": "Declared"
       },
       {
-        "target_nodule": "std.content.guarantee_matrix",
+        "target_nodule": "l1.eval",
         "operation": "Keep",
         "sources": [
           {
-            "rust_path": "crates/mycelium-std-content/src/guarantee_matrix.rs",
+            "rust_path": "crates/mycelium-l1/src/eval.rs",
             "rust_span": null,
             "moved_items": []
           }
@@ -150,11 +167,11 @@
         "guarantee": "Declared"
       },
       {
-        "target_nodule": "std.content",
+        "target_nodule": "l1.mono",
         "operation": "Keep",
         "sources": [
           {
-            "rust_path": "crates/mycelium-std-content/src/lib.rs",
+            "rust_path": "crates/mycelium-l1/src/mono.rs",
             "rust_span": null,
             "moved_items": []
           }
@@ -166,11 +183,11 @@
         "guarantee": "Declared"
       },
       {
-        "target_nodule": "std.content.name_registry",
+        "target_nodule": "l1.fuse",
         "operation": "Keep",
         "sources": [
           {
-            "rust_path": "crates/mycelium-std-content/src/name_registry.rs",
+            "rust_path": "crates/mycelium-l1/src/fuse.rs",
             "rust_span": null,
             "moved_items": []
           }

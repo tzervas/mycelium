@@ -33,7 +33,7 @@ type SweepOrder = Fifo | Priority;
 //
 // Guarantee: **Empirical** — detection is complete for the supported channel graph
 // (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).
-type Deadlock = Deadlock(Binary{64});
+pub type Deadlock = Deadlock(Binary{64});
 
 impl Deadlock {
   // Declared: renamed `new` -> `Deadlock__new` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.

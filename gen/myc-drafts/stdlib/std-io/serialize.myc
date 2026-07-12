@@ -40,6 +40,10 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.io.serialize;
 
+use std.io.error.ByteOffset;
+use std.io.error.FieldPath;
+use std.io.error.SerError;
+
 // The two supported serialization formats (spec §3).
 //
 // Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖
@@ -53,7 +57,7 @@ nodule std.io.serialize;
 // choice of `Wire` vs `Json` is visible at every call site — there is no
 // ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016
 // §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).
-type Format = Wire | Json;
+pub type Format = Wire | Json;
 
 // Detect domain errors: a field decoded successfully but violates a value-model
 // invariant (reported by `Value::new` → `serde::de::Error::custom`).

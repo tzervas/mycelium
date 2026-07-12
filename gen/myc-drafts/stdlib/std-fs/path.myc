@@ -33,7 +33,7 @@ nodule std.fs.path;
 // # PATH SEPARATOR
 // Component separator is `/`. No implicit OS-specific normalization (no `\\` on Windows).
 // This is a conservative default pending the Q3 portability decision.
-type Path = Path(Bytes);
+pub type Path = Path(Bytes);
 
 impl Path {
   // The path as a string slice.

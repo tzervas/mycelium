@@ -77,7 +77,7 @@ nodule std.runtime.region;
 // to [`ScopeId`] for use in [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).
 //
 // Guarantee: `Exact` — monotonic, unique per allocation (atomic counter, strictly increasing).
-type ScopeNodeId = ScopeNodeId(Binary{64});
+pub type ScopeNodeId = ScopeNodeId(Binary{64});
 
 impl ScopeNodeId {
   // Allocate a fresh, unique `ScopeNodeId`.
@@ -131,4 +131,4 @@ impl RegionEpoch {
 // the sweep-order assertion (child epoch < parent epoch).
 //
 // Guarantee: `Exact` — all fields are deterministic functions of the close operation.
-type ClosedRegion = ClosedRegion(ScopeNodeId, RegionEpoch, Binary{64});
+pub type ClosedRegion = ClosedRegion(ScopeNodeId, RegionEpoch, Binary{64});

@@ -36,7 +36,7 @@ nodule l1.elab;
 
 // Why a definition could not be elaborated to L0 — always explicit, never a partial artifact
 // (RFC-0007 §4.6).
-type ElabError = Residual(Bytes, Bytes) | UnknownFn(Bytes) | DepthExceeded(Bytes, Binary{32});
+pub type ElabError = Residual(Bytes, Bytes) | UnknownFn(Bytes) | DepthExceeded(Bytes, Binary{32});
 
 // **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54
 // §4.1/§6 / M-812-cont). This is the `crate::elab` site that **reads [`Env::lower_rules`]** — the
