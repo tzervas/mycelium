@@ -1,37 +1,12 @@
 {
   "source": "crates/mycelium-std-fs/src/substrate.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:FsErr",
+    "use:FileKind,Metadata,Permissions",
+    "use:OpenOptions",
+    "InMemHandle"
+  ],
   "gaps": [
-    {
-      "file": "crates/mycelium-std-fs/src/substrate.rs",
-      "line": 28,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: FsErr ;",
-      "reason": "`use` import (single path ending `FsErr`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/substrate.rs",
-      "line": 29,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: metadata :: { FileKind , Metadata , Permissions } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/substrate.rs",
-      "line": 30,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: options :: OpenOptions ;",
-      "reason": "`use` import (single path ending `OpenOptions`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
     {
       "file": "crates/mycelium-std-fs/src/substrate.rs",
       "line": 32,
@@ -39,7 +14,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: collections :: HashMap ;",
-      "reason": "`use` import (single path ending `HashMap`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std.collections::HashMap` — `std.collections` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -56,10 +31,20 @@
       "file": "crates/mycelium-std-fs/src/substrate.rs",
       "line": 65,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
-      "reason": "struct `InMemHandle` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `InMemHandle`: # [derive (Debug)]",
+      "item_name": "InMemHandle"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/substrate.rs",
+      "line": 65,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
+      "reason": "struct `InMemHandle` named field(s) `path, read, write, append, position, consumed` emitted positionally as `InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "InMemHandle"
     },
     {

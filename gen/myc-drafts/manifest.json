@@ -1,185 +1,72 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "73f310b371e5e3272b5378f4610685a78f066144",
+  "generated_from_commit": "eb6bc0e2435266efb5d44a7576867114269660f1",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
     {
+      "file_count": 5,
       "gap_category_counts": {
-        "DeriveAttr": 3,
-        "GenericBound": 2,
-        "Impl": 12,
-        "Import": 5,
-        "MultiStmtBody": 2,
-        "NamedFieldDrop": 1,
-        "Other": 54,
-        "ReservedWord": 22,
-        "Struct": 10
+        "Closure": 6,
+        "DeriveAttr": 8,
+        "GenericBound": 17,
+        "Impl": 31,
+        "Import": 47,
+        "MultiStmtBody": 14,
+        "NamedFieldDrop": 5,
+        "Other": 119,
+        "PayloadVariant": 3,
+        "ReservedWord": 41,
+        "Struct": 21
       },
       "kind": "semcore",
       "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
-      "output_dir": "gen/myc-drafts/semcore/checkty",
+      "output_dir": "gen/myc-drafts/semcore",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "unknown function/constructor/prim `is_some`",
+        "nodule_count": 5,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-l1/src/checkty.rs",
-          "sha256": "d8dd59123bb7fde2b11eb009960da8861a161857df81f514abcdc6a942c130f2"
-        }
-      ],
-      "stats": {
-        "checked_clean_items": 3,
-        "checked_fraction_pct": 2.73,
-        "emitted_items": 3,
-        "expressible_fraction_pct": 2.73,
-        "gap_count": 111,
-        "non_test_items": 110,
-        "total_top_level_items": 110
-      },
-      "status": "ok",
-      "target": "semcore/checkty",
-      "vet_class_counts": {
-        "Clean": 1
-      },
-      "vet_diagnostic": ""
-    },
-    {
-      "gap_category_counts": {
-        "DeriveAttr": 1,
-        "GenericBound": 2,
-        "Impl": 3,
-        "Import": 5,
-        "MultiStmtBody": 4,
-        "NamedFieldDrop": 2,
-        "Other": 16,
-        "PayloadVariant": 1,
-        "ReservedWord": 6
-      },
-      "kind": "semcore",
-      "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
-      "output_dir": "gen/myc-drafts/semcore/elab",
-      "rust_sources": [
+          "sha256": "f0cf8637e68b4afe9ba420caee9791e08dca9492f83dca4415e58ac9223a205a"
+        },
         {
           "path": "crates/mycelium-l1/src/elab.rs",
-          "sha256": "e7cbe6d9e45d016178c68096052f2ae78724a4da608ed99aa94190102a5d0c58"
-        }
-      ],
-      "stats": {
-        "checked_clean_items": 1,
-        "checked_fraction_pct": 2.63,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 2.63,
-        "gap_count": 40,
-        "non_test_items": 38,
-        "total_top_level_items": 38
-      },
-      "status": "ok",
-      "target": "semcore/elab",
-      "vet_class_counts": {
-        "Clean": 1
-      },
-      "vet_diagnostic": ""
-    },
-    {
-      "gap_category_counts": {
-        "DeriveAttr": 3,
-        "GenericBound": 5,
-        "Impl": 12,
-        "Import": 11,
-        "NamedFieldDrop": 2,
-        "Other": 5,
-        "PayloadVariant": 1,
-        "ReservedWord": 3,
-        "Struct": 2
-      },
-      "kind": "semcore",
-      "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
-      "output_dir": "gen/myc-drafts/semcore/eval",
-      "rust_sources": [
+          "sha256": "8b65500dce583be318cd5a718505905e62bee7b041d249222de59406219dcd4d"
+        },
         {
           "path": "crates/mycelium-l1/src/eval.rs",
-          "sha256": "e68a85910f14dd4af7360abe89c69a5d1af2b5db9631c2e64bf3f8a9687ee0c1"
-        }
-      ],
-      "stats": {
-        "checked_clean_items": 3,
-        "checked_fraction_pct": 7.14,
-        "emitted_items": 3,
-        "expressible_fraction_pct": 7.14,
-        "gap_count": 44,
-        "non_test_items": 42,
-        "total_top_level_items": 42
-      },
-      "status": "ok",
-      "target": "semcore/eval",
-      "vet_class_counts": {
-        "Clean": 1
-      },
-      "vet_diagnostic": ""
-    },
-    {
-      "gap_category_counts": {
-        "GenericBound": 2,
-        "Impl": 1,
-        "Import": 5,
-        "MultiStmtBody": 2,
-        "Other": 23,
-        "PayloadVariant": 1,
-        "ReservedWord": 5,
-        "Struct": 6
-      },
-      "kind": "semcore",
-      "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
-      "output_dir": "gen/myc-drafts/semcore/mono",
-      "rust_sources": [
+          "sha256": "aa607886c332e832f603ea8927e05195d55631d33dd3fce681e2b8be5500701c"
+        },
         {
           "path": "crates/mycelium-l1/src/mono.rs",
-          "sha256": "c6ca09d7ca5a52122e42cbad2c78153880a6ec6458af1d80b4a945a0e8a87b7f"
-        }
-      ],
-      "stats": {
-        "checked_clean_items": 0,
-        "checked_fraction_pct": 0.0,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 2.17,
-        "gap_count": 45,
-        "non_test_items": 46,
-        "total_top_level_items": 46
-      },
-      "status": "ok",
-      "target": "semcore/mono",
-      "vet_class_counts": {
-        "CheckError": 1
-      },
-      "vet_diagnostic": "check-error: check error in `mangle_ty_or_fn`: unknown type `Ty`"
-    },
-    {
-      "gap_category_counts": {
-        "Import": 4,
-        "Other": 6
-      },
-      "kind": "semcore",
-      "note": "Destination convention (lib/compiler/README.md): this file is one of the nine mycelium-l1 semantic-core modules that hand-port into a SINGLE Mycelium nodule (compiler.semcore) for nodule-wide mutual recursion (DN-26 SCC). This transpiler emits one .myc per Rust file and does NOT perform that merge. Any emitted/gapped constructor whose name would collide with another semcore type's constructor (or a reserved word) once merged is subject to the FLAG-ast-5/FLAG-parse-2 per-type constructor-prefixing convention at hand-port time -- gapped ReservedWord items in this draft are exactly the collisions the transpiler refuses to auto-rename (VR-5/G2).",
-      "output_dir": "gen/myc-drafts/semcore/fuse",
-      "rust_sources": [
+          "sha256": "1d156d0b57ecb094516661a35dd710132a47cb8bf61f09f9d4985f0553e6b118"
+        },
         {
           "path": "crates/mycelium-l1/src/fuse.rs",
-          "sha256": "94a55fe2d3a68ac171fa43c72a8e086e01971220f34e043133aa951ccbf6aba4"
+          "sha256": "d442211fc0d8842caa475fbbcb0f5476d62bbf309bc8f5ec8830b9efe0e2e625"
         }
       ],
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 0,
-        "expressible_fraction_pct": 0.0,
-        "gap_count": 10,
-        "non_test_items": 10,
-        "total_top_level_items": 10
+        "emitted_items": 15,
+        "expressible_fraction_pct": 5.12,
+        "gap_count": 312,
+        "non_test_items": 293,
+        "total_top_level_items": 293
       },
       "status": "ok",
-      "target": "semcore/fuse",
+      "target": "semcore",
       "vet_class_counts": {
-        "Clean": 1
-      },
-      "vet_diagnostic": ""
+        "CheckError": 5
+      }
     },
     {
       "file_count": 1,
@@ -187,6 +74,15 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-conformance",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "",
+        "nodule_count": 1,
+        "ok": true,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-conformance/src/lib.rs",
@@ -214,7 +110,7 @@
         "DeriveAttr": 7,
         "GenericBound": 1,
         "Impl": 7,
-        "Import": 9,
+        "Import": 7,
         "InnerAttr": 1,
         "ModuleDecl": 4,
         "NamedFieldDrop": 2,
@@ -225,6 +121,15 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-content",
+      "phylum": {
+        "checked_clean_items_phylum": 6,
+        "checked_fraction_phylum_pct": 19.35,
+        "delta_basis_pct": 6.45,
+        "diagnostic": "unknown type `ContentHash`",
+        "nodule_count": 5,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-content/src/content_ref.rs",
@@ -240,7 +145,7 @@
         },
         {
           "path": "crates/mycelium-std-content/src/lib.rs",
-          "sha256": "3802b6b1674abd7374cf1d0f54b191b3593fafa97a665fb4e585bf7248e67236"
+          "sha256": "2c979dd7a2b33a60efae6d98aad5e74af5060e2cb6d952dc698ad98a3678ef85"
         },
         {
           "path": "crates/mycelium-std-content/src/name_registry.rs",
@@ -248,19 +153,19 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 5,
-        "checked_fraction_pct": 16.13,
-        "emitted_items": 7,
-        "expressible_fraction_pct": 22.58,
-        "gap_count": 43,
+        "checked_clean_items": 4,
+        "checked_fraction_pct": 12.9,
+        "emitted_items": 10,
+        "expressible_fraction_pct": 32.26,
+        "gap_count": 41,
         "non_test_items": 31,
         "total_top_level_items": 40
       },
       "status": "ok",
       "target": "stdlib/std-content",
       "vet_class_counts": {
-        "CheckError": 1,
-        "Clean": 4
+        "CheckError": 2,
+        "Clean": 3
       }
     },
     {
@@ -270,7 +175,7 @@
         "Import": 2,
         "InnerAttr": 1,
         "MultiStmtBody": 1,
-        "Other": 7,
+        "Other": 8,
         "PayloadVariant": 1,
         "Struct": 3,
         "TestItem": 1
@@ -278,46 +183,64 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-dense",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "",
+        "nodule_count": 1,
+        "ok": true,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-dense/src/lib.rs",
-          "sha256": "d5f4156952c1f486c0db6aaecd3b81ef6cf7195e0a6cf7d86b4b52175f11a935"
+          "sha256": "8f3191350e1c5cd31b042d059b308e8a822108c7d1269623bb53fe796b818ba1"
         }
       ],
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 1,
-        "expressible_fraction_pct": 5.0,
-        "gap_count": 21,
+        "emitted_items": 0,
+        "expressible_fraction_pct": 0.0,
+        "gap_count": 22,
         "non_test_items": 20,
         "total_top_level_items": 21
       },
       "status": "ok",
       "target": "stdlib/std-dense",
       "vet_class_counts": {
-        "CheckError": 1
+        "Clean": 1
       }
     },
     {
       "file_count": 7,
       "gap_category_counts": {
-        "DeriveAttr": 26,
+        "DeriveAttr": 28,
         "Impl": 11,
-        "Import": 12,
+        "Import": 5,
         "InnerAttr": 1,
         "MacroInvocation": 1,
         "ModuleDecl": 6,
         "MultiStmtBody": 6,
-        "NamedFieldDrop": 5,
+        "NamedFieldDrop": 20,
         "Other": 8,
-        "PayloadVariant": 2,
-        "Struct": 5,
+        "PayloadVariant": 1,
+        "Struct": 4,
         "TestItem": 7
       },
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-fs",
+      "phylum": {
+        "checked_clean_items_phylum": 9,
+        "checked_fraction_phylum_pct": 19.15,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "unknown function/constructor/prim `ne`",
+        "nodule_count": 7,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-fs/src/error.rs",
@@ -329,7 +252,7 @@
         },
         {
           "path": "crates/mycelium-std-fs/src/lib.rs",
-          "sha256": "a31e4531923865b974ec0aa02ad6bbe3b5ca55d2386ca1c3650cc5acc32ab818"
+          "sha256": "f9bf23bf88e8c9ebc1e91550baada02a3da89e7b4aa4022258a25d46cb13af1b"
         },
         {
           "path": "crates/mycelium-std-fs/src/metadata.rs",
@@ -349,27 +272,27 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 8,
-        "checked_fraction_pct": 17.02,
-        "emitted_items": 15,
-        "expressible_fraction_pct": 31.91,
-        "gap_count": 90,
+        "checked_clean_items": 9,
+        "checked_fraction_pct": 19.15,
+        "emitted_items": 26,
+        "expressible_fraction_pct": 55.32,
+        "gap_count": 98,
         "non_test_items": 47,
         "total_top_level_items": 60
       },
       "status": "ok",
       "target": "stdlib/std-fs",
       "vet_class_counts": {
-        "CheckError": 2,
-        "Clean": 5
+        "CheckError": 4,
+        "Clean": 3
       }
     },
     {
       "file_count": 5,
       "gap_category_counts": {
-        "DeriveAttr": 11,
-        "Impl": 13,
-        "Import": 9,
+        "DeriveAttr": 10,
+        "Impl": 14,
+        "Import": 15,
         "InnerAttr": 1,
         "MacroInvocation": 3,
         "ModuleDecl": 4,
@@ -383,6 +306,15 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-io",
+      "phylum": {
+        "checked_clean_items_phylum": 6,
+        "checked_fraction_phylum_pct": 10.17,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "unknown type `GuaranteeTag`",
+        "nodule_count": 5,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-io/src/error.rs",
@@ -398,7 +330,7 @@
         },
         {
           "path": "crates/mycelium-std-io/src/lib.rs",
-          "sha256": "3f95662a6af39bca665f8e108254af948d3aee1fecab57a400e0cfd0facc7e1b"
+          "sha256": "68fcad9bc2c3916b1dfe82ad86de45e987371eda2a34d6c099a2ee1958323153"
         },
         {
           "path": "crates/mycelium-std-io/src/serialize.rs",
@@ -406,11 +338,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 0,
-        "checked_fraction_pct": 0.0,
-        "emitted_items": 14,
-        "expressible_fraction_pct": 23.73,
-        "gap_count": 75,
+        "checked_clean_items": 6,
+        "checked_fraction_pct": 10.17,
+        "emitted_items": 18,
+        "expressible_fraction_pct": 30.51,
+        "gap_count": 81,
         "non_test_items": 59,
         "total_top_level_items": 68
       },
@@ -439,10 +371,19 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-numerics",
+      "phylum": {
+        "checked_clean_items_phylum": 2,
+        "checked_fraction_phylum_pct": 7.69,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "",
+        "nodule_count": 2,
+        "ok": true,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-numerics/src/lib.rs",
-          "sha256": "25125f597876c9d42eadc337ad499acc9bf1d00234cb3d7b26e1f5d498054bf9"
+          "sha256": "71ccd4abddc56f1c23610a79c752544136c2891876fa18facda6a61cfbe37cf7"
         },
         {
           "path": "crates/mycelium-std-numerics/src/matrix.rs",
@@ -473,9 +414,9 @@
         "Import": 1,
         "InnerAttr": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 7,
+        "MultiStmtBody": 8,
         "NamedFieldDrop": 1,
-        "Other": 7,
+        "Other": 6,
         "ReservedWord": 1,
         "Struct": 2,
         "TestItem": 1,
@@ -484,10 +425,19 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-rand",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "unknown function/constructor/prim `rotate_left`",
+        "nodule_count": 1,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-rand/src/lib.rs",
-          "sha256": "dd89c170b49624afa7f1a1497d88cfc430976bb2a466cd4a447b4271ba8008ad"
+          "sha256": "5ddbc6e92cc43e1a66d98b1c466115c64496ed4c71dee6e99f320f358ba7a565"
         }
       ],
       "stats": {
@@ -508,23 +458,33 @@
     {
       "file_count": 14,
       "gap_category_counts": {
-        "DeriveAttr": 23,
+        "DeriveAttr": 25,
         "GenericBound": 12,
-        "Impl": 27,
-        "Import": 28,
+        "Impl": 26,
+        "Import": 27,
         "InnerAttr": 1,
         "ModuleDecl": 13,
         "MultiStmtBody": 1,
-        "NamedFieldDrop": 3,
+        "NamedFieldDrop": 5,
         "Other": 20,
         "PayloadVariant": 3,
-        "Struct": 19,
+        "ReservedWord": 1,
+        "Struct": 17,
         "TestItem": 3,
         "Trait": 1
       },
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-runtime",
+      "phylum": {
+        "checked_clean_items_phylum": 16,
+        "checked_fraction_phylum_pct": 12.12,
+        "delta_basis_pct": 3.03,
+        "diagnostic": "duplicate function",
+        "nodule_count": 14,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-runtime/src/colony.rs",
@@ -540,7 +500,7 @@
         },
         {
           "path": "crates/mycelium-std-runtime/src/lib.rs",
-          "sha256": "c89d21302113fbffa59d5fed9beec9d5264f54ef457ef787cbc5d67245158610"
+          "sha256": "72c17fdef74bb7a8d561770d0ffb239b90c74443381d0f3b2411d1a87f6adeb4"
         },
         {
           "path": "crates/mycelium-std-runtime/src/network.rs",
@@ -584,41 +544,49 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 13,
-        "checked_fraction_pct": 9.85,
-        "emitted_items": 22,
-        "expressible_fraction_pct": 16.67,
-        "gap_count": 154,
+        "checked_clean_items": 12,
+        "checked_fraction_pct": 9.09,
+        "emitted_items": 27,
+        "expressible_fraction_pct": 20.45,
+        "gap_count": 155,
         "non_test_items": 132,
         "total_top_level_items": 148
       },
       "status": "ok",
       "target": "stdlib/std-runtime",
       "vet_class_counts": {
-        "CheckError": 2,
-        "Clean": 12
+        "CheckError": 4,
+        "Clean": 10
       }
     },
     {
       "file_count": 8,
       "gap_category_counts": {
-        "DeriveAttr": 3,
+        "DeriveAttr": 4,
         "GenericBound": 1,
         "Impl": 7,
         "Import": 7,
         "InnerAttr": 1,
         "ModuleDecl": 7,
         "MultiStmtBody": 1,
-        "NamedFieldDrop": 1,
+        "NamedFieldDrop": 2,
         "Other": 19,
         "PayloadVariant": 1,
         "ReservedWord": 1,
-        "Struct": 1,
         "TestItem": 7
       },
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-sys",
+      "phylum": {
+        "checked_clean_items_phylum": 16,
+        "checked_fraction_phylum_pct": 28.57,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "unknown type `GuaranteeTag`",
+        "nodule_count": 8,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-sys/src/fs.rs",
@@ -634,7 +602,7 @@
         },
         {
           "path": "crates/mycelium-std-sys/src/lib.rs",
-          "sha256": "aadb2d472c5b838b8f5ac297f10c06f96a137c08faf87a8ec3dd797ac83c1270"
+          "sha256": "5dbd9ee355a6928b03f9b2589087bb80134bb331d4f914915d13ac3ad8851419"
         },
         {
           "path": "crates/mycelium-std-sys/src/math.rs",
@@ -654,11 +622,11 @@
         }
       ],
       "stats": {
-        "checked_clean_items": 15,
-        "checked_fraction_pct": 26.79,
-        "emitted_items": 18,
-        "expressible_fraction_pct": 32.14,
-        "gap_count": 57,
+        "checked_clean_items": 16,
+        "checked_fraction_pct": 28.57,
+        "emitted_items": 19,
+        "expressible_fraction_pct": 33.93,
+        "gap_count": 58,
         "non_test_items": 56,
         "total_top_level_items": 70
       },
@@ -681,6 +649,15 @@
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-sys-host",
+      "phylum": {
+        "checked_clean_items_phylum": 2,
+        "checked_fraction_phylum_pct": 33.33,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "",
+        "nodule_count": 1,
+        "ok": true,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-sys-host/src/lib.rs",
@@ -705,57 +682,77 @@
     {
       "file_count": 1,
       "gap_category_counts": {
-        "DeriveAttr": 9,
+        "AssocConst": 3,
+        "Closure": 2,
+        "DeriveAttr": 19,
         "GenericBound": 2,
-        "Impl": 7,
+        "Impl": 5,
         "Import": 1,
         "InnerAttr": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 1,
-        "NamedFieldDrop": 2,
-        "Other": 12,
-        "PayloadVariant": 1,
-        "Struct": 4,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 7,
+        "Other": 14,
+        "Struct": 1,
         "TestItem": 1,
         "Trait": 1
       },
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-time",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "duplicate function",
+        "nodule_count": 1,
+        "ok": false,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-time/src/lib.rs",
-          "sha256": "30a2d0f80739a11911abdbdf7a1d0b31f1b741e625a7df08996d9806e931bbbf"
+          "sha256": "f765a3bdfe9f41e846dd502627d019683c7f23ce9704300ae7656705039275e8"
         }
       ],
       "stats": {
-        "checked_clean_items": 7,
-        "checked_fraction_pct": 18.92,
-        "emitted_items": 7,
-        "expressible_fraction_pct": 18.92,
-        "gap_count": 43,
+        "checked_clean_items": 0,
+        "checked_fraction_pct": 0.0,
+        "emitted_items": 13,
+        "expressible_fraction_pct": 35.14,
+        "gap_count": 61,
         "non_test_items": 37,
         "total_top_level_items": 38
       },
       "status": "ok",
       "target": "stdlib/std-time",
       "vet_class_counts": {
-        "Clean": 1
+        "CheckError": 1
       }
     },
     {
       "file_count": 5,
       "gap_category_counts": {
+        "Closure": 1,
         "GenericBound": 12,
         "Import": 12,
         "InnerAttr": 1,
         "ModuleDecl": 4,
-        "Other": 2,
+        "Other": 1,
         "Struct": 1
       },
       "kind": "stdlib",
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-vsa",
+      "phylum": {
+        "checked_clean_items_phylum": 0,
+        "checked_fraction_phylum_pct": 0.0,
+        "delta_basis_pct": 0.0,
+        "diagnostic": "",
+        "nodule_count": 5,
+        "ok": true,
+        "ran": true
+      },
       "rust_sources": [
         {
           "path": "crates/mycelium-std-vsa/src/encoding.rs",
@@ -763,7 +760,7 @@
         },
         {
           "path": "crates/mycelium-std-vsa/src/lib.rs",
-          "sha256": "120278096d8277b7bb151a3955cbe1d3877d702ee7027c156c2d595e8afe22ad"
+          "sha256": "edf1c44148dd9823c16212b01de020e2a1decca67109898a8fd125cf114f8cae"
         },
         {
           "path": "crates/mycelium-std-vsa/src/matrix.rs",

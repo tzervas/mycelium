@@ -56,6 +56,10 @@ mod grade;
 pub mod lexer;
 pub mod mono;
 pub mod nodule;
+/// DN-122 §13 (M-1080) — the `Ord3` prelude trait (WU-B), the MVP single-param/param-only-sig
+/// target trait for the external-trait-impl gap-class, seeded exactly like [`fuse`]'s `Fuse`
+/// (M-965). Internal to the frontend, like [`fuse`]; not part of the public surface.
+pub(crate) mod ord3;
 pub mod parse;
 /// **DN-113 Rank 1 / M-1060** — the multi-phylum dependency-graph builder: [`phyla::PhylumNode`] +
 /// [`phyla::build_phyla_graph`] resolve a named graph of phyla bottom-up into checked, linked

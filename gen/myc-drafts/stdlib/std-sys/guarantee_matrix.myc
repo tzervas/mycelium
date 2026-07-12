@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.guarantee_matrix
 // The `std-sys` syscall-floor guarantee matrix encoded as **data** (RFC-0016 §4.5; M-722/M-723).
 //
 // Every exported syscall-floor operation has exactly one row in [`MATRIX`]. Until this module
@@ -31,7 +31,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.guarantee_matrix;
 
 // Fallibility classification for an exported op (C1).
 type Fallibility = Total | Fallible;

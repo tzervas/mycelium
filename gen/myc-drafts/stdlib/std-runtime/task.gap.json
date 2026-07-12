@@ -4,7 +4,9 @@
     "TaskCtx",
     "impl TaskCtx",
     "Poll",
-    "SweepOrder"
+    "SweepOrder",
+    "Deadlock",
+    "impl Deadlock"
   ],
   "gaps": [
     {
@@ -14,7 +16,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -121,20 +123,20 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "line": 92,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
-      "reason": "struct `Deadlock` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `Deadlock`: # [derive (Debug , PartialEq , Eq)]",
       "item_name": "Deadlock"
     },
     {
       "file": "crates/mycelium-std-runtime/src/task.rs",
-      "line": 101,
+      "line": 92,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Deadlock { pub fn new (task_count : usize) -> Self { Deadlock { task_count } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
+      "reason": "struct `Deadlock` named field(s) `task_count` emitted positionally as `Deadlock(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "Deadlock"
     },
     {

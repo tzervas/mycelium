@@ -1368,6 +1368,17 @@ impl PhylumEnv {
         {
             traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
         }
+        // DN-122 §13 (M-1080; WU-B): seed the built-in `Ord3` trait the same conditional way as
+        // `Fuse` just above — present in the linked env iff some nodule actually declared an
+        // `impl Ord3[...] for ...` (never unconditionally; see `register_nodule_decls`'s Fuse doc
+        // comment for the `mono::is_already_monomorphic` fast-path rationale this mirrors).
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.traits.contains_key(crate::ord3::TRAIT_NAME))
+        {
+            traits.insert(crate::ord3::TRAIT_NAME.to_owned(), crate::ord3::prelude());
+        }
         let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
         let mut totality: BTreeMap<String, crate::totality::Totality> = BTreeMap::new();
         let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
@@ -2179,7 +2190,11 @@ fn check_phylum_inner(
             traits: regs
                 .traits
                 .keys()
-                .filter(|n| n.as_str() != crate::fuse::TRAIT_NAME)
+                // DN-122 §13 (M-1080; WU-B): exclude `Ord3` too — it is seeded once by `link`,
+                // like `Fuse`, never a per-nodule collision.
+                .filter(|n| {
+                    n.as_str() != crate::fuse::TRAIT_NAME && n.as_str() != crate::ord3::TRAIT_NAME
+                })
                 .cloned()
                 .collect(),
         });
@@ -2316,6 +2331,36 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
             "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
              lawful-merge `join` contract is already provided by the prelude; remove this \
              declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
+        ));
+    }
+    // DN-122 §13 (M-1080; WU-B): seed the built-in `Ord3` trait — the MVP's single-param,
+    // param-only-sig target trait — the exact same conditional way as `Fuse` just above (never
+    // unconditionally; same `mono::is_already_monomorphic` fast-path rationale, same FLAG residual
+    // for a hypothetical `via`-only delegation with no textual `impl Ord3[...] for ...`). Named
+    // `Ord3`, not DN-122 §13.1's own illustrative `Cmp`, to avoid colliding with the pre-existing
+    // `trait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }` generic-trait-dispatch fixture already
+    // used by `tests/{mono,mono_tag,elab,parse}.rs` (verify-first, mitigation #14 — found only by
+    // actually running the change-scoped test suite, not by re-reading the DN).
+    let ord3_used = nodule
+        .items
+        .iter()
+        .any(|item| matches!(item, Item::Impl(id) if id.trait_name == crate::ord3::TRAIT_NAME));
+    if ord3_used {
+        if traits.contains_key(crate::ord3::TRAIT_NAME) {
+            return Err(CheckError::new(
+                crate::ord3::TRAIT_NAME,
+                "cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — \
+                 its `cmp` contract is already provided by the prelude; remove this declaration \
+                 and `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly",
+            ));
+        }
+        traits.insert(crate::ord3::TRAIT_NAME.to_owned(), crate::ord3::prelude());
+    } else if traits.contains_key(crate::ord3::TRAIT_NAME) {
+        return Err(CheckError::new(
+            crate::ord3::TRAIT_NAME,
+            "cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — its \
+             `cmp` contract is already provided by the prelude; remove this declaration and \
+             `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly",
         ));
     }
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();

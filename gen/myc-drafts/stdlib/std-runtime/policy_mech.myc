@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.policy_mech
 // Mechanized `SelectionPolicy` capture and setting (M-963; DN-78 §3 B-1/B-2; the M-828
 // capture-and-set tail, decided under the 2026-07-02 delegation recorded in DN-78 §1).
 //
@@ -33,7 +33,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.policy_mech;
 
 // The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the
 // third). A [`PolicySlot`] is keyed by site so a set/select is always attributed to the site

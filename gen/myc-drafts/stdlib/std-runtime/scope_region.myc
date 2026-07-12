@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.scope_region
 // Live-executor scope/region wiring — DN-32 §2.3 / RFC-0027 §10.3 / §9 / MEM-3.
 //
 // **Purpose:** Ties a [`Region`]'s lifecycle to a single-hypha structured-concurrency scope so
@@ -67,6 +67,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.scope_region;
 
-
+use std.runtime.region.ClosedRegion;
+use std.runtime.region.ScopeNodeId;

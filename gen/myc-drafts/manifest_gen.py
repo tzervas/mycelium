@@ -21,7 +21,6 @@ import argparse
 import hashlib
 import json
 import sys
-from collections import Counter
 from pathlib import Path
 
 # Per-target notes tied to the destination-convention call-outs the epic brief asks for
@@ -63,16 +62,43 @@ def pct(numerator: int, denom: int) -> float:
     return numerator / denom * 100.0
 
 
-def gap_category_counts_from_gaps(gaps: list) -> dict:
-    c: Counter = Counter()
-    for g in gaps:
-        c[g["category"]] += 1
-    return dict(c)
+def phylum_dual_report(vet: dict, non_test_items: int, checked_fraction_pct: float) -> dict | None:
+    """Extract the DN-124 M-A dual-report block from a batch-mode `vet.json`'s additive `phylum`
+    field (Unit 2, `mycelium-transpile::vet::VetReport::with_phylum`). Returns `None` when the field
+    is absent (an older, pre-M-1079 `vet.json`, or a run where `--vet` never reached directory mode)
+    -- never fabricates a phylum result that was not actually measured (G2/VR-5).
+
+    `delta_basis_pct` is `checked_fraction_phylum_pct - checked_fraction_pct`, computed over the
+    IDENTICAL denominator both fractions already share -- labeled a **basis correction**, never
+    folded into `checked_fraction_pct` (which stays the oracle-mode number, untouched) or presented
+    as lever progress (DN-124 §4.3).
+    """
+    phylum = vet.get("phylum")
+    if phylum is None:
+        return None
+    checked_clean_phylum = vet.get("total_checked_clean_items_phylum", 0)
+    checked_fraction_phylum_pct = round(pct(checked_clean_phylum, non_test_items), 2)
+    return {
+        "ran": phylum.get("ran", False),
+        "ok": phylum.get("ok", False),
+        "checked_clean_items_phylum": checked_clean_phylum,
+        "checked_fraction_phylum_pct": checked_fraction_phylum_pct,
+        "delta_basis_pct": round(checked_fraction_phylum_pct - checked_fraction_pct, 2),
+        "diagnostic": phylum.get("diagnostic", ""),
+        "nodule_count": len(phylum.get("nodules", [])),
+    }
 
 
 def build_target_entry(
     repo_root: Path, out_root: Path, subdir: str, input_rel: str, kind: str
 ) -> dict:
+    """Every wave-1 target is now batch/directory-mode (DN-124 §3.2/M-1079: semcore's 5
+    mutually-referencing files are transpiled+vetted as ONE phylum, exactly like a stdlib crate's
+    `src/` already was) -- so `semcore` and `stdlib` read the identical `summary.json`+`vet.json`
+    artifact shape; only the annotation `note` differs by kind. `input_rel` is a single directory
+    path for `stdlib`, or a COMMA-separated list of the batch's member files for `semcore` (the
+    provenance list `rust_sources` records every member individually either way).
+    """
     outdir = out_root / subdir
     entry: dict = {
         "target": subdir,
@@ -81,67 +107,6 @@ def build_target_entry(
         "note": SEMCORE_NOTE if kind == "semcore" else STDLIB_NOTE,
     }
 
-    if kind == "semcore":
-        stem = Path(input_rel).stem
-        gap_path = outdir / f"{stem}.gap.json"
-        vet_path = outdir / "vet.json"
-        gap = load_json(gap_path)
-        vet = load_json(vet_path)
-        if gap is None or vet is None:
-            entry["status"] = "transpile_failed"
-            src_path = repo_root / input_rel
-            entry["error"] = (
-                f"expected artifacts missing under {subdir} "
-                f"(gap.json present={gap is not None}, vet.json present={vet is not None}, "
-                f"source present={src_path.exists()})"
-            )
-            # Best-effort: still record the source hash when the file exists (a transpile crash
-            # with the input present is a different, more actionable failure than a missing
-            # input) -- but never crash the manifest run over a target whose input itself is
-            # absent (the "target not found" case regenerate.sh already reported loudly).
-            entry["rust_sources"] = (
-                [{"path": input_rel, "sha256": sha256_of(src_path)}]
-                if src_path.exists()
-                else []
-            )
-            return entry
-
-        src_path = repo_root / input_rel
-        entry["rust_sources"] = [{"path": input_rel, "sha256": sha256_of(src_path)}]
-        total_items = gap["total_top_level_items"]
-        gaps_list = gap["gaps"]
-        # Denominator-excluded = the non-translatable-surface gap categories: `#[cfg(test)]`
-        # TestItem *and* bodyless `mod foo;` ModuleDecl file-linkage decls. This mirrors
-        # `gap.rs::Category::excluded_from_denominator` (M-1006 Phase-2), so the semcore single-file
-        # path computes the identical denominator the stdlib batch path already gets from
-        # summary.json's `non_test_items` (which excludes both). Before this fix the semcore path
-        # subtracted only TestItem, so a semcore file carrying a `mod foo;` would have understated its
-        # denominator vs the batch path (VR-5: only shrink by genuinely-non-surface items, never to
-        # flatter a number — and never inconsistently between the two paths).
-        excluded = sum(
-            1 for g in gaps_list if g["category"] in ("TestItem", "ModuleDecl")
-        )
-        non_test_items = total_items - excluded
-        emitted = len(gap["emitted_items"])
-        gap_count = len(gaps_list)
-        vrec = vet["records"][0] if vet["records"] else None
-        checked_clean = vet["total_checked_clean_items"]
-        entry["status"] = "ok"
-        entry["stats"] = {
-            "total_top_level_items": total_items,
-            "non_test_items": non_test_items,
-            "emitted_items": emitted,
-            "checked_clean_items": checked_clean,
-            "gap_count": gap_count,
-            "expressible_fraction_pct": round(pct(emitted, non_test_items), 2),
-            "checked_fraction_pct": round(pct(checked_clean, non_test_items), 2),
-        }
-        entry["gap_category_counts"] = gap_category_counts_from_gaps(gaps_list)
-        entry["vet_class_counts"] = vet["class_counts"]
-        entry["vet_diagnostic"] = vrec["diagnostic"] if vrec else ""
-        return entry
-
-    # kind == "stdlib": batch/directory mode.
     summary_path = outdir / "summary.json"
     vet_path = outdir / "vet.json"
     summary = load_json(summary_path)
@@ -152,7 +117,15 @@ def build_target_entry(
             f"expected artifacts missing under {subdir} "
             f"(summary.json present={summary is not None}, vet.json present={vet is not None})"
         )
-        entry["rust_sources"] = []
+        # Best-effort provenance even on failure (a transpile crash with the input present is a
+        # different, more actionable failure than a missing input) -- never crash the manifest run
+        # over one failed target (the "target not found" case regenerate.sh already reported loudly).
+        member_paths = input_rel.split(",") if kind == "semcore" else []
+        entry["rust_sources"] = [
+            {"path": p, "sha256": sha256_of(repo_root / p)}
+            for p in member_paths
+            if (repo_root / p).exists()
+        ]
         return entry
 
     rust_sources = []
@@ -165,6 +138,7 @@ def build_target_entry(
     non_test_items = totals["non_test_items"]
     emitted = totals["emitted"]
     checked_clean = vet["total_checked_clean_items"]
+    checked_fraction_pct = round(pct(checked_clean, non_test_items), 2)
     entry["status"] = "ok"
     entry["stats"] = {
         "total_top_level_items": totals["total_items"],
@@ -173,11 +147,15 @@ def build_target_entry(
         "checked_clean_items": checked_clean,
         "gap_count": totals["gaps"],
         "expressible_fraction_pct": round(pct(emitted, non_test_items), 2),
-        "checked_fraction_pct": round(pct(checked_clean, non_test_items), 2),
+        "checked_fraction_pct": checked_fraction_pct,
     }
     entry["gap_category_counts"] = totals["category_counts"]
     entry["vet_class_counts"] = vet["class_counts"]
     entry["file_count"] = len(summary["files"])
+    # DN-124 M-A dual-report: a SEPARATE block, never merged into `stats.checked_fraction_pct`
+    # (which stays the oracle-mode, per-file basis this metric has always been) -- `None` when this
+    # run's vet.json carries no phylum result to report (VR-5: never fabricated).
+    entry["phylum"] = phylum_dual_report(vet, non_test_items, checked_fraction_pct)
     return entry
 
 
@@ -208,12 +186,14 @@ def render_markdown(manifest: dict) -> str:
         f"**Union across all {len(targets)} wave-1 targets:** {total_non_test} non-test items, "
         f"{total_emitted} emitted ({pct(total_emitted, total_non_test):.1f}% expressible), "
         f"{total_checked} myc-check-clean ({pct(total_checked, total_non_test):.1f}% checked, "
-        "file-gated lower bound -- see DN-34 §8.7 for the metric's stated denominator/numerator)."
+        "file-gated lower bound -- see DN-34 §8.7 for the metric's stated denominator/numerator). "
+        "**This `checked` figure is the oracle-mode (per-file, phylum-blind) basis** -- see the "
+        "phylum-mode dual-report section below (DN-124/M-1079)."
     )
     lines.append("")
 
     lines.append(
-        "| Target | Kind | non-test items | emitted | expressible % | checked % | vet classes | status |"
+        "| Target | Kind | non-test items | emitted | expressible % | checked % (oracle) | vet classes | status |"
     )
     lines.append("|---|---|---:|---:|---:|---:|---|---|")
     for t in targets:
@@ -231,6 +211,67 @@ def render_markdown(manifest: dict) -> str:
             f"{s['expressible_fraction_pct']:.1f} | {s['checked_fraction_pct']:.1f} | {classes} | ok |"
         )
     lines.append("")
+
+    # DN-124 M-A dual-report: a SEPARATE section, never merged into the oracle-mode table above.
+    # `checked % (phylum)` is the basis-corrected metric (matches the REAL phylum boundary a build
+    # checks); `Δ_basis (pp)` is `phylum - oracle`, explicitly labeled a ONE-TIME BASIS CORRECTION
+    # (recovered false-fails), never presented as lever/transpiler progress (VR-5).
+    phylum_targets = [t for t in ok_targets if t.get("phylum") is not None]
+    lines.append("## Phylum-mode dual-report (DN-124/M-1079 -- transition-cycle basis correction)")
+    lines.append("")
+    lines.append(
+        "> `checked_fraction_phylum` measures myc-check-clean coverage against the REAL phylum a "
+        "nodule belongs to (the kernel's cross-nodule resolver), never a phylum-of-one counterfactual "
+        "-- oracle mode false-FAILs a correctly-emitted cross-nodule `use` (DN-124 §1). The `Δ_basis` "
+        "jump this run shows is a **basis correction** (recovering previously-false-failed items), "
+        "**NOT** lever/transpiler progress -- a real lever gain would show up phylum-to-phylum across "
+        "runs, never folded into this one-time delta (DN-124 §4.3, VR-5)."
+    )
+    lines.append("")
+    if phylum_targets:
+        total_checked_phylum = sum(
+            t["phylum"]["checked_clean_items_phylum"] for t in phylum_targets
+        )
+        phylum_denom = sum(t["stats"]["non_test_items"] for t in phylum_targets)
+        oracle_pct_over_phylum_denom = pct(
+            sum(t["stats"]["checked_clean_items"] for t in phylum_targets), phylum_denom
+        )
+        phylum_pct = pct(total_checked_phylum, phylum_denom)
+        lines.append(
+            f"**Union across the {len(phylum_targets)} target(s) with a phylum result:** "
+            f"{total_checked_phylum} myc-check-clean under phylum mode "
+            f"({phylum_pct:.1f}% checked_fraction_phylum) vs {oracle_pct_over_phylum_denom:.1f}% "
+            f"checked_fraction (oracle), over the SAME {phylum_denom} non-test-item denominator -- "
+            f"**Δ_basis = {phylum_pct - oracle_pct_over_phylum_denom:+.1f}pp** (basis correction)."
+        )
+        lines.append("")
+        lines.append(
+            "| Target | checked % (oracle) | checked % (phylum) | Δ_basis (pp) | phylum ok | phylum ran |"
+        )
+        lines.append("|---|---:|---:|---:|---|---|")
+        for t in phylum_targets:
+            p = t["phylum"]
+            lines.append(
+                f"| `{t['target']}` | {t['stats']['checked_fraction_pct']:.1f} | "
+                f"{p['checked_fraction_phylum_pct']:.1f} | {p['delta_basis_pct']:+.1f} | "
+                f"{p['ok']} | {p['ran']} |"
+            )
+        lines.append("")
+        not_ran = [t for t in phylum_targets if not t["phylum"]["ran"]]
+        if not_ran:
+            lines.append(
+                "**Not run this cycle (myc-check --phylum could not execute -- never counted "
+                "clean, G2):** "
+                + ", ".join(f"`{t['target']}` ({t['phylum']['diagnostic']})" for t in not_ran)
+            )
+            lines.append("")
+    else:
+        lines.append(
+            "_(No target carries a phylum-mode result this run -- every `vet.json` predates the "
+            "M-1079 dual-report wiring, or every target failed to transpile. Re-run "
+            "`bash gen/myc-drafts/regenerate.sh` to populate this section.)_"
+        )
+        lines.append("")
 
     lines.append("## Per-target gap category counts")
     lines.append("")

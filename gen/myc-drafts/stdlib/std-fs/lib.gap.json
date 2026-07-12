@@ -1,6 +1,13 @@
 {
   "source": "crates/mycelium-std-fs/src/lib.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:ErrnoClass,FsErr",
+    "use:Effects,Explainable,Fallibility,MatrixRow,Wild",
+    "use:FileKind,Metadata,Permissions",
+    "use:OpenOptions",
+    "use:Path",
+    "use:InMemHandle"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
@@ -14,7 +21,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 65,
+      "line": 71,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +31,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 66,
+      "line": 72,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +41,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 67,
+      "line": 73,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +51,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 68,
+      "line": 74,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +61,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -64,7 +71,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 70,
+      "line": 76,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -74,67 +81,27 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 74,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: { ErrnoClass , FsErr } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 75,
+      "line": 81,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use guarantee_matrix :: { Effects , Explainable , Fallibility , MatrixRow , Wild , MATRIX } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use guarantee_matrix::MATRIX` — `MATRIX` is not among sibling `guarantee_matrix`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Effects,Explainable,Fallibility,MatrixRow,Wild"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 76,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use metadata :: { FileKind , Metadata , Permissions } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 77,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use options :: OpenOptions ;",
-      "reason": "`use` import (single path ending `OpenOptions`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 78,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use path :: Path ;",
-      "reason": "`use` import (single path ending `Path`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 82,
+      "line": 88,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use substrate :: { InMemHandle , InMemoryFs } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use substrate::InMemoryFs` — `InMemoryFs` is not among sibling `substrate`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:InMemHandle"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 84,
+      "line": 90,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -144,7 +111,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 99,
+      "line": 105,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -154,7 +121,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -164,7 +131,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 122,
+      "line": 128,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -174,7 +141,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 131,
+      "line": 137,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -184,7 +151,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 143,
+      "line": 149,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -194,7 +161,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 342,
+      "line": 348,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

@@ -233,7 +233,10 @@ fn is_already_monomorphic(env: &Env) -> bool {
         && env
             .traits
             .keys()
-            .all(|name| name == crate::fuse::TRAIT_NAME)
+            // DN-122 §13 (M-1080; WU-B): `Ord3` is a second always-excludable built-in prelude
+            // trait, seeded the same conditional way as `Fuse` (see that fn's doc comment above) —
+            // a trait key present with zero instances/impls contributes nothing to specialize.
+            .all(|name| name == crate::fuse::TRAIT_NAME || name == crate::ord3::TRAIT_NAME)
         && env.instances.is_empty()
         && env.impls.is_empty()
 }

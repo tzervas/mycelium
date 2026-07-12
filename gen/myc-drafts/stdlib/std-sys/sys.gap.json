@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-sys/src/sys.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "NonUtf8Arg"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-sys/src/sys.rs",
@@ -9,7 +11,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Terminate the process with `code`. Does not return. The exit status is the caller's\"] # [doc = \" explicit choice — never a silent `0` substituted for an error path (G2): a program that wants to\"] # [doc = \" signal failure passes a non-zero `code`.\"] pub fn exit (code : i32) -> ! { std :: process :: exit (code) }",
-      "reason": "signed integer `i32` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5)",
+      "reason": "unsupported Rust type form `!`",
       "item_name": "exit"
     },
     {
@@ -26,10 +28,20 @@
       "file": "crates/mycelium-std-sys/src/sys.rs",
       "line": 44,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
-      "reason": "struct `NonUtf8Arg` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `NonUtf8Arg`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "NonUtf8Arg"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 44,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
+      "reason": "struct `NonUtf8Arg` named field(s) `index, lossy` emitted positionally as `NonUtf8Arg(Binary{64}, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "NonUtf8Arg"
     },
     {

@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.math
 // \[Declared\] Transcendental math floor. Thin wrappers over Rust `f64` intrinsics (libm).
 //
 // All functions in this module are tagged `Declared` — the platform libm floor is unaudited;
@@ -16,7 +16,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.math;
 
 // \[Declared\] `sin(x)`. Delegates to Rust `f64::sin` (platform libm). Precision unaudited (M-541).
 fn sin(x: Float) => Float = sin(x);

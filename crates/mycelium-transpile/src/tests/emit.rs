@@ -828,6 +828,47 @@ fn cases() -> Vec<Case> {
                 category: Category::MultiStmtBody,
             },
         },
+        // T-A1 (DN-122 §13.2 WU-A; positive control): a single-param, param-only-sig foreign-trait
+        // impl of the registered `Ord3` prelude trait (`mvp_prelude_trait_shape`) — receiverless
+        // methods, every value-param `Self`, a primitive return — synthesizes the `[<SelfTy>]`
+        // Mycelium trait-argument the Rust source itself never spells (see `emit_impl`'s MVP block).
+        // `binop_operand_gated_forms_check_clean`-style live-oracle coverage of the SAME shape
+        // (that it actually `myc check`s clean) is below, `mvp_cmp_emit_check_agreement`.
+        Case {
+            name: "mvp_cmp_eligible_synthesizes_trait_arg",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self, b: Self) -> u8 { a } }",
+            expect: Expect::Emitted {
+                item: "impl Ord3[Binary{8}] for Binary{8}",
+                contains: "impl Ord3[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{8} = a;\n};",
+            },
+        },
+        // T-A2 (negative/honest-gap control): `Widen` is two-type/`Self`-receiver-needing (DN-122
+        // §13.1's own adversarial narrowing) — it is emitted EXACTLY as before WU-A (no bracket
+        // synthesis, no fabricated trait/`Self` body), still an honest `myc check`-time residual
+        // (M-876/M-1076), never silently "fixed" by the MVP recognizer. Mirrors the pre-existing
+        // `widen_binary_emits_width_cast_not_fabricated_from` assertion, pinned here specifically
+        // against MVP-bracket leakage.
+        Case {
+            name: "mvp_widen_unaffected_by_mvp_recognizer",
+            rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect: Expect::Emitted {
+                item: "impl Widen[Binary{16}] for Binary{8}",
+                contains: "impl Widen[Binary{16}] for Binary{8} {",
+            },
+        },
+        // T-A3 half 1 (emit<->check agreement, the transpile-time half): a `Ord3`-named impl whose
+        // `cmp` method has a `self` RECEIVER (the exact shape `Widen`/`MycEq`/etc. all use) is
+        // correctly recognized as INELIGIBLE (`has_self_receiver` excludes it) — emitted unchanged,
+        // no `[<SelfTy>]` bracket. The live-oracle half (that the real checker ALSO refuses this
+        // shape, confirming the exclusion was not overcautious) is `mvp_cmp_emit_check_agreement`.
+        Case {
+            name: "mvp_cmp_self_receiver_excluded_no_bracket",
+            rust: "impl Ord3 for u8 { fn cmp(self, other: Self) -> u8 { self } }",
+            expect: Expect::Emitted {
+                item: "impl Ord3 for Binary{8}",
+                contains: "impl Ord3 for Binary{8} {",
+            },
+        },
     ]
 }
 
@@ -1595,6 +1636,114 @@ fn shadow_and_pattern_bound_fixes_fall_back_to_known_gap_not_wrong_prim_call() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// **DN-34 §8.13/8.14 "D4" — the live-oracle proof for inherent-impl no-`self` associated-fn
+/// mangling.** Two different tuple-struct types each declare a same-named, receiver-less
+/// constructor (`Foo::new`/`Bar::new`) in ONE nodule — exactly the shape that regressed the
+/// gap-close-2 Phase-0 re-measure (`Duration::from_nanos`/`MonoInstant::from_nanos`,
+/// `Task::new`/`TaskCtx::new`/`Deadlock::new`). Before the fix both emit a bare `fn new(...)`,
+/// which `mycelium-l1`'s M-664 inherent-impl desugar lifts to the SAME flat top-level name —
+/// `myc check` real-oracle-verified `duplicate function`. After the fix each is mangled
+/// `{Type}__new`, so the combined nodule is myc-check **Clean**. Skips gracefully (never fails)
+/// when `myc-check` is not built.
+#[test]
+fn inherent_impl_no_self_name_collision_is_mangled_and_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    // A parameterized constructor (never a bare literal — a bare integer literal has no
+    // representation family in v0 with no `default paradigm` in scope, orthogonal to what this
+    // test is proving).
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                pub struct Bar(u32);\n\
+                impl Bar {\n\
+                    pub fn new(x: u32) -> Self { Bar(x) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the two-`new` fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo")
+            && report.emitted_items.iter().any(|n| n == "impl Bar"),
+        "both impl blocks must emit (mangling must not turn either into a gap): {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        myc.contains("Foo__new"),
+        "expected the mangled name `Foo__new` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("Bar__new"),
+        "expected the mangled name `Bar__new` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("fn new("),
+        "the bare, colliding name `fn new(` must never be emitted once mangling applies, got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-inherent-mangle-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the mangled two-`new` nodule must check CLEAN with the real myc-check oracle (a \
+         `duplicate function` here would mean the mangling regressed) — emitted:\n{myc}\n\
+         diagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A `self`-receiving inherent-impl method is deliberately **not** mangled (see
+/// `emit::mangled_inherent_fn_name`'s doc for the full scope rationale — mangling those would also
+/// require rewriting every `visit_method_call` call site to the identical mangled name, a larger,
+/// separately-scoped change). Pins that boundary: `as_ref`-shaped same-named `self`-methods across
+/// two types stay bare (so a caller's un-qualified `.method()` desugar still resolves) — the
+/// residual flat-namespace collision risk for that case is real and undocumented-away, not silently
+/// "fixed" by this narrower change (VR-5: no overclaiming).
+#[test]
+fn self_receiving_inherent_method_is_left_unmangled() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn get(&self) -> u32 { self.0 }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the self-method fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo"),
+        "impl Foo must emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn get(") && !myc.contains("Foo__get"),
+        "a `self`-receiving method must keep its bare name (never mangled), got:\n{myc}"
+    );
+}
+
 // --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
 //
 // Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are
@@ -1707,4 +1856,115 @@ fn expr_cast_fidelity() {
             ),
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl live-oracle proof (T-A1/T-A2/T-A3).
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// **T-A1 (positive control) + T-A3 (emit<->check agreement), against the REAL toolchain.** The
+/// fixture-corpus cases above (`mvp_cmp_eligible_synthesizes_trait_arg`,
+/// `mvp_widen_unaffected_by_mvp_recognizer`, `mvp_cmp_self_receiver_excluded_no_bracket`) prove the
+/// emitted *text*; this proves the emitter's eligibility judgment agrees with what `myc check`
+/// actually accepts — never a `[<SelfTy>]` bracket for a shape the checker would refuse, and never
+/// a missed bracket for a shape that would otherwise check clean. Skips gracefully (never fails)
+/// when `myc-check` is not built, exactly like `src/tests/vet.rs`'s live-oracle tests.
+#[test]
+fn mvp_cmp_emit_check_agreement() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: DN-122/M-1080 MVP live oracle test skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`). The \
+             fixture-corpus text assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    struct AgreementCase {
+        name: &'static str,
+        rust: &'static str,
+        /// Whether the emitted `.myc` carries the MVP-synthesized `[<SelfTy>]` bracket for `Ord3`.
+        expect_bracket: bool,
+        /// Whether the real `myc-check` oracle accepts the emitted file clean.
+        expect_clean: bool,
+    }
+    let cases = [
+        // T-A1: single-param, param-only-sig, receiverless — MVP-eligible, checks clean.
+        AgreementCase {
+            name: "eligible_cmp",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self, b: Self) -> u8 { a } }",
+            expect_bracket: true,
+            expect_clean: true,
+        },
+        // T-A2: `Widen` (two-type/`Self`-receiver-needing) — unaffected by the MVP recognizer,
+        // stays an honest `myc check`-time residual (M-876/M-1076), exactly as before WU-A.
+        AgreementCase {
+            name: "widen_stays_a_residual",
+            rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+        // T-A3: `self`-receiver `Ord3` impl — correctly excluded (no bracket); the checker refuses
+        // it too (`cmp_used` still seeds the prelude trait since the impl NAMES `Ord3`, so the
+        // checker's own arity/shape enforcement — not an "unknown trait" gap — is what fires here;
+        // either way, never a silent accept).
+        AgreementCase {
+            name: "self_receiver_excluded_and_checker_agrees",
+            rust: "impl Ord3 for u8 { fn cmp(self, other: Self) -> u8 { self } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+        // T-A3: wrong arity (`Ord3::cmp` takes exactly 2 params in the prelude) — excluded, and the
+        // checker's `register_instances` arity guard refuses it too.
+        AgreementCase {
+            name: "wrong_arity_excluded_and_checker_agrees",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self) -> u8 { a } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+    ];
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-mvp-cmp-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    for (i, case) in cases.iter().enumerate() {
+        let (myc, report) = transpile_source(case.rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("case `{}` failed to parse/transpile: {e}", case.name));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case `{}` failed to emit at all: gaps={:?}",
+            case.name,
+            report.gaps
+        );
+        let has_bracket = myc.contains("Ord3[Binary{8}] for Binary{8}");
+        assert_eq!(
+            has_bracket, case.expect_bracket,
+            "case `{}`: MVP-bracket presence mismatch; emitted:\n{myc}",
+            case.name
+        );
+
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        let is_clean = rec.class == crate::vet::VetClass::Clean;
+        assert_eq!(
+            is_clean, case.expect_clean,
+            "case `{}`: emit<->check agreement violated — emitter's bracket judgment ({}) must \
+             agree with the real checker's verdict; diagnostic={:?}\nemitted:\n{myc}",
+            case.name, case.expect_bracket, rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
 }

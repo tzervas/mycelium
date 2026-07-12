@@ -156,14 +156,21 @@ fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
 }
 
 /// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
-/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission) and the
-/// **struct layouts** (drives field-projection / struct-literal desugaring). Both are file-scoped
-/// analyses of the parsed items. `None` (direct `emit_*` unit tests / non-opted-in callers) disables
-/// both — a named-field record then emits unconditionally, and a `self.<field>` projection gaps for
-/// want of layout info.
+/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission), the
+/// **struct layouts** (drives field-projection / struct-literal desugaring), and — gap-close-2's
+/// Import lever (DN-34 §8.19/§8.20) — the batch-scoped **cross-nodule symbol table** plus this
+/// file's own **pub-needed set** (names at least one sibling file in the batch resolved a `use`
+/// against, so this file must emit them `pub` for the referencing `use` to be the checker-accepted
+/// form — DN-113/M-1060's own `pub`-gated `resolve_imports`; see `symtab.rs` module docs). All are
+/// file/batch-scoped analyses computed before the item loop runs. `None` (direct `emit_*` unit
+/// tests / non-opted-in callers, and every *single-file* transpile) disables all of them — a
+/// named-field record then emits unconditionally, a `self.<field>` projection gaps for want of
+/// layout info, and no item is ever marked `pub` (byte-identical to pre-symtab behavior).
 struct EmitCtx {
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    symtab: crate::symtab::SymbolTable,
+    pub_needed: HashSet<String>,
 }
 
 thread_local! {
@@ -178,16 +185,20 @@ thread_local! {
 
 /// Install the per-file emit context for the duration of `f`, then clear it (RAII-free — the
 /// transpiler never unwinds across this boundary in practice; the budget thread-local in `gap.rs`
-/// takes the same shape). Used by `transpile::transpile_source`.
+/// takes the same shape). Used by `transpile::transpile_source_with_ctx`.
 pub(crate) fn with_emit_ctx<R>(
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    symtab: crate::symtab::SymbolTable,
+    pub_needed: HashSet<String>,
     f: impl FnOnce() -> R,
 ) -> R {
     EMIT_CTX.with(|c| {
         *c.borrow_mut() = Some(EmitCtx {
             resolvable,
             layouts,
+            symtab,
+            pub_needed,
         })
     });
     let r = f();
@@ -214,6 +225,36 @@ fn struct_layout(name: &str) -> Option<StructLayout> {
         None => None,
         Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
         Some(_) => None,
+    })
+}
+
+/// The gap-close-2 cross-nodule `pub`-propagation gate: `"pub "` when `name` is in this file's
+/// pub-needed set (at least one sibling in the batch resolved a `use` against it — see [`EmitCtx`]
+/// docs), else `""`. Context off ⇒ always `""` (byte-identical to pre-symtab emission).
+pub(crate) fn pub_prefix(name: &str) -> &'static str {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) if ctx.pub_needed.contains(name) => "pub ",
+        _ => "",
+    })
+}
+
+/// Resolve `name` in the batch sibling named by `module_key` (dot-joined Rust module-path
+/// segments) against the installed cross-nodule symbol table (see [`EmitCtx`] docs). `None` when
+/// the context is off (single-file mode — no batch, no siblings) or the lookup misses.
+pub(crate) fn cross_nodule_resolve(module_key: &str, name: &str) -> Option<String> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) => ctx.symtab.resolve(module_key, name).map(str::to_owned),
+    })
+}
+
+/// Is `module_key` a batch sibling at all (regardless of whether a particular name resolves)? Used
+/// by `transpile::dispatch_use` to word an honest "not a batch sibling" vs "sibling gapped this
+/// name" reason. `false` when the context is off.
+pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.symtab.has_module(module_key),
     })
 }
 
@@ -618,7 +659,7 @@ fn map_signature(
     })
 }
 
-fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String]) -> String {
+fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String], pub_prefix: &str) -> String {
     let params_str = sig
         .params
         .iter()
@@ -636,7 +677,7 @@ fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String]) -> String 
         out.push('\n');
     }
     out.push_str(&format!(
-        "fn {name}{type_params_text}({params_str}) => {} = {body};",
+        "{pub_prefix}fn {name}{type_params_text}({params_str}) => {} = {body};",
         sig.ret
     ));
     out
@@ -2338,7 +2379,8 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
         myc.push('\n');
     }
     myc.push_str(&format!(
-        "type {}{} = {};",
+        "{}type {}{} = {};",
+        pub_prefix(&item.ident.to_string()),
         item.ident,
         params_text,
         ctors.join(" | ")
@@ -2444,7 +2486,13 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
-    myc.push_str(&format!("type {}{} = {};", item.ident, params_text, ctor));
+    myc.push_str(&format!(
+        "{}type {}{} = {};",
+        pub_prefix(&item.ident.to_string()),
+        item.ident,
+        params_text,
+        ctor
+    ));
     Ok(Emitted {
         name: item.ident.to_string(),
         myc,
@@ -2470,11 +2518,13 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
             ),
         ));
     }
+    let name = item.sig.ident.to_string();
     let myc = render_fn(
-        &item.sig.ident.to_string(),
+        &name,
         &sig,
         &body,
         &doc_lines(&item.attrs),
+        pub_prefix(&name),
     );
     Ok(Emitted {
         name: item.sig.ident.to_string(),
@@ -2586,14 +2636,220 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
         .collect::<Vec<_>>()
         .join("\n");
     myc.push_str(&format!(
-        "trait {}{} {{\n{}\n}};",
-        item.ident, params_text, sig_lines
+        "{}trait {}{} {{\n{}\n}};",
+        pub_prefix(&item.ident.to_string()),
+        item.ident,
+        params_text,
+        sig_lines
     ));
     Ok(Emitted {
         name: item.ident.to_string(),
         myc,
         sub_gaps: Vec::new(),
     })
+}
+
+/// **DN-34 §8.13/8.14 "D4" — inherent-impl associated-function name mangling.**
+///
+/// `crates/mycelium-l1/src/checkty.rs` (`check_registrations`, M-664) desugars every **inherent**
+/// `impl T { fn … }` block's methods to **flat top-level `Item::Fn`s, lifted verbatim** — "the
+/// `for_ty` is organizational metadata in v0 (**no qualified `T::m` call syntax yet** …); a name
+/// collision with another top-level fn is caught by the duplicate-fn check". So two different
+/// types' inherent methods sharing a short name (`Duration::from_nanos` / `MonoInstant::from_nanos`,
+/// `Task::new` / `TaskCtx::new` / `Deadlock::new`) are a **real** flat-namespace collision under
+/// Mycelium's own desugaring, not a transpiler artifact — DN-34 §8.14 deferred closing this ("D4")
+/// while the corpus had zero instances; the Phase-0 re-measure (gap-close-2) found 3.
+///
+/// The fix is a **type-qualified mangled name** — `{Type}__{method}` — deterministic (a pure
+/// function of the two already-known names), EXPLAIN-traceable (grep `Type__method` in the .myc
+/// straight back to `impl Type { fn method }` in the Rust source), and collision-free *by
+/// construction* (two distinct Rust items can never share both their enclosing inherent-impl
+/// type name and their method name — that would already be a Rust compile error). This
+/// intentionally does **not** reuse the hand-authored `lib/compiler/README.md` FLAG-ast-5
+/// single-letter-per-type constructor-prefix convention (`Nil`/`MNil`/`SNil` in
+/// `lib/std/collections.myc`) — that is a curated human choice per type, not mechanically
+/// reproducible by an automated emitter without guessing a mnemonic (VR-5).
+///
+/// **Scope — no-`self`-receiver methods only (a deliberate, documented safety boundary).**
+/// Mangling is applied **only** to inherent-impl methods with **no `self` receiver** (Rust
+/// associated functions — typically constructors: `fn new(...) -> Self`). Rust has exactly one
+/// calling convention for those — the qualified path call `Type::method(...)` — and
+/// `emit.rs`'s `visit_call` **already unconditionally gaps every qualified/associated-function
+/// call** (`Category::Other`, "no established Mycelium surface form…"), so **no currently-emitted
+/// call site anywhere in this crate ever references a no-`self` method by its bare name** —
+/// mangling the declaration cannot desync it from a call site that does not exist. A `self`-
+/// receiving method (`fn as_nanos(&self) -> …`), by contrast, **is** reachable from an emitted
+/// call site (`visit_method_call`'s generic desugar rewrites `recv.method(args)` to a **bare**
+/// `method(recv, args...)`, un-qualified) — mangling *those* declarations would require also
+/// re-deriving the identical mangled name at every such call site from the receiver's statically
+/// inferred type, which is not always resolvable and is a materially larger, separately-riskier
+/// change than this fix's scope. So `self`-receiving methods are left un-mangled here (still
+/// subject to the ordinary flat-namespace collision risk the DN-34 §8.14 "D4" residual already
+/// named) — a documented, narrower fix, not a silently partial one (G2/VR-5).
+fn mangled_inherent_fn_name(self_ty_text: &str, method_name: &str) -> String {
+    format!("{self_ty_text}__{method_name}")
+}
+
+/// Whether `sig` has a `self`/`&self`/`&mut self` receiver (an ordinary Rust *method*) as opposed
+/// to a receiver-less *associated function* (typically a constructor). Only the receiver-less case
+/// is eligible for [`mangled_inherent_fn_name`] — see that function's doc for why.
+fn has_self_receiver(sig: &Signature) -> bool {
+    sig.inputs.iter().any(|a| matches!(a, FnArg::Receiver(_)))
+}
+
+// ---- DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl rule-swap ----------------------------
+//
+// **Verify-first (mitigation #14): there is no "synthetic-trait-def" code path in this crate to
+// retire.** DN-34 §8.8 records that a per-file *fabricated* `trait Widen { … }` was tried and
+// FAILED (`unknown Self` / arg mismatch / identity fork) — but that attempt was never committed
+// here; `emit_impl` has always emitted a trait-impl's methods without ever emitting (or attempting
+// to emit) a companion trait declaration for a foreign trait. So there is nothing to delete; this
+// increment only ADDS the MVP-recognition path below (a smallest-auditable-step reading of "retire
+// the failed synthetic-trait-def path for this class" — VR-5, stated rather than silently assumed).
+//
+// **What this actually changes.** Per DN-122's ratified OQ-6 (§13.2 WU-B): the MVP's target traits
+// are **prelude-seeded** (`crates/mycelium-l1/src/ord3.rs`, mirroring `Fuse`/M-965) — ambiently
+// available in every checked phylum, so an eligible impl needs **no `use` at all** (exactly how
+// `impl Fuse[T] for T` already needs none; DN-122 §13.1: "the transpiler emits the impl against the
+// ambient prelude trait — zero new checker work"). `emit_impl`'s per-method emission loop is
+// unchanged either way (it already resolves `Self`/the impl's own type correctly, and already
+// naturally supports the receiverless, param-typed methods this MVP class uses); this recognizer's
+// only two jobs are: (1) tell an MVP-eligible impl apart from every other trait-impl shape, so (2)
+// the emitted `impl` line carries the trait's Mycelium type argument (`[<SelfTy>]`) that Rust's own
+// zero-explicit-arg `impl Ord3 for T` source never spells out (Mycelium's stage-1 trait model has no
+// implicit `Self` slot — RFC-0019 §4.1 — the `T`-for-`T` idiom `Fuse` already established). A shape
+// that does NOT match a registered prelude trait is left **entirely unchanged** — still emitted
+// exactly as before WU-A landed (an honest, never-fabricated `myc check`-time residual tracked by
+// M-876/M-1076, e.g. every `Widen`/`Narrow`/`MycEq`/`MycOrd`/`MycPartialOrd` impl in the corpus,
+// all of which are `Self`-receiver-based and so are correctly excluded below).
+
+/// One prelude trait's checked shape, mirroring its `crates/mycelium-l1/src/<name>.rs` hand-built
+/// [`TraitInfo`](../../mycelium_l1/checkty/struct.TraitInfo.html) **exactly** — this is the emitter's
+/// half of the T-A3 "emit iff check would accept" agreement (`tests/vet.rs`'s live-oracle probes the
+/// other half). Every field here must match the seeded trait 1:1; a mismatch would either wrongly
+/// refuse an eligible impl (safe — falls to the honest, unchanged path) or, far worse, wrongly emit
+/// a `use`-free `impl` the checker then refuses (never allowed to happen — the shared-case-table unit
+/// test in `src/tests/emit.rs` pins agreement against the real registry, not a re-typed copy).
+struct PreludeTraitShape {
+    /// The trait's name — identical on both the Rust source side and the Mycelium prelude side (the
+    /// MVP recognizes a foreign trait **by name**; it never renames/reinterprets a differently-named
+    /// Rust trait as a prelude one — that would be exactly the kind of guess VR-5 forbids).
+    name: &'static str,
+    /// Every method the trait requires, in the prelude `TraitInfo`'s own declared order (the impl's
+    /// method SET must match exactly — no fewer, no more, per RFC-0019 §4.5's impl-method-set check;
+    /// order itself is not significant here, only names/arity/shape are).
+    methods: &'static [PreludeMethodShape],
+}
+
+/// One method's MVP-recognized shape: receiverless, every value parameter typed either `Self` or the
+/// impl's own concrete `for`-type (the single-param, `T`-for-`T` idiom every prelude trait in this
+/// registry uses — mirrors `Fuse::join(a: T, b: T) => T`), and a return type that maps to exactly
+/// `ret` (a primitive repr text, e.g. `"Binary{8}"` for `Ord3::cmp` — never `Self`, in this v0
+/// registry; a prelude trait whose method RETURNS `Self` is not yet a registered shape, YAGNI until
+/// one is needed).
+struct PreludeMethodShape {
+    name: &'static str,
+    /// Value-parameter count; every parameter must be `Self`/the impl's own type (never a second,
+    /// unrelated concrete type — that would be exactly the M-1076 residual, not this MVP).
+    arity: usize,
+    /// The exact [`map_type`]-produced return-type text a matching method must have.
+    ret: &'static str,
+}
+
+/// The MVP's registered prelude traits (DN-122 §13.2 WU-B) — kept intentionally tiny (KISS/YAGNI):
+/// exactly the `Ord3` witness DN-122 §13.1's shape (with the `Binary{8}` width deviation `crates/mycelium-l1/src/ord3.rs` documents; `Ord3[A] { fn cmp(a: A, b: A) => Binary{8};
+/// }`). Growing this registry (a new prelude trait) is always a **paired** change with
+/// `crates/mycelium-l1/src/<name>.rs` — never one side alone (that would silently desync emit from
+/// check, exactly what T-A3 exists to catch).
+const MVP_PRELUDE_TRAITS: &[PreludeTraitShape] = &[PreludeTraitShape {
+    name: "Ord3",
+    methods: &[PreludeMethodShape {
+        name: "cmp",
+        arity: 2,
+        ret: "Binary{8}",
+    }],
+}];
+
+/// Does `ty` (an original, unmapped `syn::Type`) spell `Self`, or literally the same tokens as
+/// `self_ty` (the impl's own `syn::Type`)? The two Rust idioms a receiverless method in an `impl
+/// Trait for ConcreteType` block can use for "the type this impl is for" — never a guess at a THIRD,
+/// unrelated type (VR-5).
+fn type_is_self_or_impl_ty(ty: &syn::Type, self_ty: &syn::Type) -> bool {
+    if let syn::Type::Path(tp) = ty {
+        if tp.qself.is_none() && tp.path.is_ident("Self") {
+            return true;
+        }
+    }
+    tokens_to_string(ty) == tokens_to_string(self_ty)
+}
+
+/// Is `item` an **MVP-eligible foreign-trait impl** (DN-122 §13.1: single-parameter, param-only-sig)
+/// matching a [`MVP_PRELUDE_TRAITS`] entry by name? `Some(shape)` iff: (i) the impl has no explicit
+/// trait type-argument (`trait_targs.is_empty()` — the Rust-side idiom for a trait whose sole
+/// Mycelium parameter is the impl's own `Self`, mirroring `Fuse`'s `impl Fuse[T] for T`); (ii) the
+/// impl's method SET matches the registered shape exactly (same names, same count — RFC-0019 §4.5);
+/// (iii) every method is **receiverless** (`has_self_receiver` false — the exact test that correctly
+/// EXCLUDES `Widen`/`Narrow`/`MycEq`/`MycOrd`/`MycPartialOrd`, every one of which takes a `self`/
+/// `&self` receiver, per DN-122 §13.1's adversarial narrowing, §13.3 finding 3); (iv) every value
+/// parameter is `Self`/the impl's own type ([`type_is_self_or_impl_ty`]); (v) the return type maps
+/// (via [`map_type`]) to exactly the registered primitive text. Any mismatch returns `None` — the
+/// impl then falls through to the ordinary, unchanged emission path (never a partial/guessed match).
+fn mvp_prelude_trait_shape<'a>(
+    trait_name: &str,
+    trait_targs: &[String],
+    self_ty: &syn::Type,
+    self_ty_text: &str,
+    items: &[ImplItem],
+) -> Option<&'a PreludeTraitShape> {
+    if !trait_targs.is_empty() {
+        return None;
+    }
+    let shape = MVP_PRELUDE_TRAITS.iter().find(|s| s.name == trait_name)?;
+    let methods: Vec<&syn::ImplItemFn> = items
+        .iter()
+        .filter_map(|ii| match ii {
+            ImplItem::Fn(f) => Some(f),
+            _ => None,
+        })
+        .collect();
+    if methods.len() != shape.methods.len() {
+        return None;
+    }
+    for expected in shape.methods {
+        let f = methods.iter().find(|f| f.sig.ident == expected.name)?;
+        if has_self_receiver(&f.sig) {
+            return None;
+        }
+        if !f.sig.generics.params.is_empty() {
+            return None;
+        }
+        let value_params: Vec<&syn::PatType> = f
+            .sig
+            .inputs
+            .iter()
+            .map(|a| match a {
+                FnArg::Typed(pt) => Some(pt),
+                FnArg::Receiver(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        if value_params.len() != expected.arity {
+            return None;
+        }
+        if !value_params
+            .iter()
+            .all(|pt| type_is_self_or_impl_ty(&pt.ty, self_ty))
+        {
+            return None;
+        }
+        let ReturnType::Type(_, ret_ty) = &f.sig.output else {
+            return None;
+        };
+        let mapped_ret = map_type(ret_ty, Some(self_ty_text)).ok()?;
+        if mapped_ret != expected.ret {
+            return None;
+        }
+    }
+    Some(shape)
 }
 
 /// `impl` -> `impl_item` (trait-instance or inherent form). Unlike enum/struct/trait (which bail
@@ -2663,6 +2919,21 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
     } else {
         (None, Vec::new())
     };
+
+    // DN-122 §13 (M-1080; WU-A) — the MVP-prelude-trait recognizer (see the module doc block just
+    // above `emit_impl`). `None` for every non-eligible shape (including every impl with no trait
+    // at all, or any impl whose trait name isn't registered) — the rest of this function's emission
+    // logic is completely unchanged by that case, exactly the "leave it as an honest, unfabricated
+    // residual" DN-122 §13.2 calls for.
+    let mvp_shape = trait_name.as_deref().and_then(|name| {
+        mvp_prelude_trait_shape(
+            name,
+            &trait_targs,
+            &item.self_ty,
+            &self_ty_text,
+            &item.items,
+        )
+    });
 
     let mut sub_gaps = Vec::new();
     let mut method_bodies = Vec::new();
@@ -2749,11 +3020,41 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                             .to_string(),
                                     );
                                 }
+                                // DN-34 §8.13/8.14 "D4": a no-`self` inherent-impl associated fn
+                                // (constructor-shaped) is mangled `Type__method` — see
+                                // `mangled_inherent_fn_name`'s doc for the full rationale (M-664's
+                                // flat-fn desugar + why only the receiver-less case is safe to
+                                // rename). EXPLAIN-traceable: recorded as a doc line on the
+                                // emitted `fn` itself, not just in this module's comments.
+                                let emitted_fn_name =
+                                    if trait_name.is_none() && !has_self_receiver(&f.sig) {
+                                        doc.push(format!(
+                                            "// Declared: renamed `{}` -> `{}__{}` (DN-34 \
+                                             §8.13/8.14 \"D4\") — Mycelium's inherent-impl \
+                                             desugar (M-664, crates/mycelium-l1/src/checkty.rs) \
+                                             lifts every method to a flat top-level fn, so a \
+                                             bare name here could collide with another type's \
+                                             same-named associated fn in this nodule.",
+                                            f.sig.ident, self_ty_text, f.sig.ident
+                                        ));
+                                        mangled_inherent_fn_name(
+                                            &self_ty_text,
+                                            &f.sig.ident.to_string(),
+                                        )
+                                    } else {
+                                        f.sig.ident.to_string()
+                                    };
+                                // Lifted inherent-impl methods are never a cross-nodule `use`
+                                // target in the corpus's own Rust source shape (Rust imports a
+                                // free fn by name via `use`, never an inherent method that way —
+                                // `Type::method(...)` is a qualified call, not an import), so the
+                                // pub-needed gate never applies here — always `""`.
                                 method_bodies.push(render_fn(
-                                    &f.sig.ident.to_string(),
+                                    &emitted_fn_name,
                                     &sig,
                                     &body,
                                     &doc,
+                                    "",
                                 ));
                             }
                             Err(e) => sub_gaps.push(GapReason::new(
@@ -2829,8 +3130,27 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
+    if mvp_shape.is_some() {
+        // DN-122 §13 (M-1080; WU-A) — EXPLAIN-traceable provenance (G2: never a silent swap): this
+        // impl matched a registered MVP prelude-trait shape, so it needs no `use` (the trait is
+        // ambiently seeded — `crates/mycelium-l1/src/ord3.rs`, mirroring `Fuse`/M-965) and the
+        // Mycelium-side type argument below is SYNTHESIZED from the impl's own `Self`, not read off
+        // the Rust source (which, for this trait shape, never spells one).
+        myc.push_str(
+            "// Declared: DN-122 §13 / M-1080 MVP — foreign-trait impl of a prelude-seeded, \
+             single-param, param-only-sig trait; the `[<SelfTy>]` argument below is synthesized \
+             (Rust's own zero-explicit-arg `impl Trait for T` never spells it — Mycelium's stage-1 \
+             trait model has no implicit `Self` slot, RFC-0019 §4.1).\n",
+        );
+    }
     let name = if let Some(trait_name) = trait_name {
-        let targs_text = if trait_targs.is_empty() {
+        let targs_text = if let Some(_shape) = mvp_shape {
+            // The MVP `T`-for-`T` idiom (mirrors `Fuse`): the trait's sole Mycelium parameter IS
+            // the impl's own `Self`, regardless of whether Rust's source carried an explicit
+            // `<...>` (this registry only ever matches the zero-explicit-arg case — see
+            // `mvp_prelude_trait_shape`'s `trait_targs.is_empty()` guard).
+            format!("[{self_ty_text}]")
+        } else if trait_targs.is_empty() {
             String::new()
         } else {
             format!("[{}]", trait_targs.join(", "))

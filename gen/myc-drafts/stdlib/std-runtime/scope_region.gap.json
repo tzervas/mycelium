@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-runtime/src/scope_region.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:ClosedRegion,ScopeNodeId"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-runtime/src/scope_region.rs",
@@ -9,7 +11,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -19,7 +21,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: reclamation :: ReclamationSink ;",
-      "reason": "`use` import (single path ending `ReclamationSink`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use reclamation::ReclamationSink` — `ReclamationSink` is not among sibling `reclamation`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -29,8 +31,8 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: region :: { ClosedRegion , Region , ScopeNodeId } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use region::Region` — `Region` is not among sibling `region`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:ClosedRegion,ScopeNodeId"
     },
     {
       "file": "crates/mycelium-std-runtime/src/scope_region.rs",
@@ -59,7 +61,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl RegionScope { # [doc = \" Open a new scope guard, allocating a fresh [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — allocates a unique [`ScopeNodeId`] via the monotonic counter.\"] # [must_use] pub fn enter () -> Self { RegionScope { region : Region :: new () , } } # [doc = \" Defer a value for scope-exit reclamation.\"] # [doc = \"\"] # [doc = \" Delegates to [`Region::defer`]. The value's content identity is pushed to the deferred\"] # [doc = \" list; at [`RegionScope::close`] a `ScopeExit` record is emitted for it.\"] # [doc = \"\"] # [doc = \" Calling `defer` after `close` is impossible by type (consuming close destructs `self`).\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::defer`; the entry is pushed exactly once.\"] pub fn defer (& mut self , value_meta_hash : ContentHash) { self . region . defer (value_meta_hash) ; } # [doc = \" Number of values currently deferred in this scope.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `Region::deferred_count`.\"] # [must_use] pub fn deferred_count (& self) -> usize { self . region . deferred_count () } # [doc = \" The unique identity of this scope's underlying [`Region`].\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to `region.id`; unique monotonic allocation.\"] # [must_use] pub fn id (& self) -> ScopeNodeId { self . region . id } # [doc = \" Close this scope guard, emitting all deferred reclamation records and returning the\"] # [doc = \" [`ClosedRegion`] summary.\"] # [doc = \"\"] # [doc = \" This is a **consuming** method — `self` is destructed, making double-close a compile-time\"] # [doc = \" type error. After `close` returns, the sink has received one `ScopeExit` record per\"] # [doc = \" deferred entry.\"] # [doc = \"\"] # [doc = \" Guarantee: `Exact` — delegates to [`Region::close`]; one `ScopeExit` record per deferred\"] # [doc = \" entry, emitted unconditionally (enforced-by-construction).\"] pub fn close (mut self , sink : & mut dyn ReclamationSink) -> ClosedRegion { self . region . close (sink) } }",
-      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `enter` body: struct literal `RegionScope { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `id` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`); impl method `close` signature: `& mut dyn ReclamationSink` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `enter` body: struct literal `RegionScope { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `defer` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `deferred_count` body: field projection `self.region` on `RegionScope` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `id` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`); impl method `close` signature: `& mut dyn ReclamationSink` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
       "item_name": "RegionScope"
     }
   ],

@@ -1,4 +1,4 @@
-// nodule: std.fs
+// nodule: std.fs.options
 // `OpenOptions` — explicit, declared open intent (C1/G2 — never a silent default).
 //
 // Every field defaults to `false`. Opening an absent path without `create` is `Err(NotFound)`,
@@ -10,7 +10,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.fs;
+nodule std.fs.options;
 
 // Declared open intent for `open` (spec §3).
 //
@@ -29,14 +29,15 @@ nodule std.fs;
 // - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).
 // - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).
 // - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).
-type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
+pub type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
 
 impl OpenOptions {
   // All-false options: pure open (no create, no truncate, no write).
   //
   // This is the **only** constructor. Every flag must be explicitly enabled by the caller;
   // there is no convenience constructor that secretly enables a subset of flags.
-  fn new() => OpenOptions = OpenOptions(False, False, False, False, False, False);
+  // Declared: renamed `new` -> `OpenOptions__new` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn OpenOptions__new() => OpenOptions = OpenOptions(False, False, False, False, False, False);
   // Whether this intent requests any write capability (write or append).
   fn wants_write(self: OpenOptions) => Bool = (match self { OpenOptions(_, p1, _, _, _, _) => p1 }) || (match self { OpenOptions(_, _, p2, _, _, _) => p2 });
 };

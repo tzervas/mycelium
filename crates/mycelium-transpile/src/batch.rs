@@ -9,9 +9,12 @@
 
 use crate::gap::{Gap, GapReport};
 use crate::remap::{build_remap_manifest, RemapManifest};
-use crate::transpile::transpile_file;
+use crate::symtab::{self, SymbolTable};
+use crate::transpile::{
+    derive_module_segments, derive_nodule_path, transpile_file, transpile_file_with_ctx,
+};
 use serde::Serialize;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -143,20 +146,112 @@ pub struct FileResult {
 /// [`FileResult`] per file that parses. A file that fails to parse/read (a hard `syn` failure,
 /// distinct from a per-item gap) is **not** silently skipped — its path/error is returned
 /// separately so the caller can report it (never-silent, G2).
+///
+/// **Gap-close-2 (DN-34 §8.19/§8.20) — the batch-scoped cross-nodule `Import` resolution.** This is
+/// a **three-pass** driver, all internal (the public signature/contract is unchanged from before
+/// this lever landed):
+/// 1. **Baseline pass** — transpile every file exactly as [`transpile_file`] always has (no
+///    cross-nodule resolution), which is also the source of each file's actually-**emitted**
+///    item-name set — the only names a sibling's `use` may ever resolve to (a name that merely
+///    exists in the Rust source but itself gapped is never a valid target; VR-5/G2).
+/// 2. **Symbol-table build + a light `use`-only scan** — [`build_symbol_table`] indexes every
+///    file's emitted names under its derived Rust module path; [`scan_pub_needed`] then walks every
+///    file's `use` items (a cheap re-parse, no full re-dispatch) to find which sibling names at
+///    least one OTHER file in the batch actually resolves against — the `pub`-propagation input the
+///    final pass needs (DN-113/M-1060's `resolve_imports` only accepts a `pub` cross-nodule name;
+///    emitting a resolved `use` against a non-`pub` sibling item would be the exact "plausible but
+///    wrong" emission VR-5/G2 forbid).
+/// 3. **Final pass** — re-transpile every file via [`transpile_file_with_ctx`] with the symbol
+///    table and this file's own pub-needed set installed, so `use crate::<mod>::Item` resolves
+///    against a genuine in-batch sibling and the referenced item is emitted `pub`.
+///
+/// A single-file batch (or one whose files carry no in-batch cross-referencing `use`) degenerates
+/// to byte-identical output vs. the pre-lever driver (no sibling ⇒ nothing resolves).
 pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, String)>) {
-    let mut results = Vec::with_capacity(files.len());
+    let mut pass1: Vec<(PathBuf, GapReport)> = Vec::with_capacity(files.len());
     let mut failures = Vec::new();
     for path in files {
         match transpile_file(path) {
+            Ok((_myc, report)) => pass1.push((path.clone(), report)),
+            Err(e) => failures.push((path.clone(), e)),
+        }
+    }
+    if pass1.is_empty() {
+        return (Vec::new(), failures);
+    }
+
+    let symtab = build_symbol_table(&pass1);
+    let pub_needed = scan_pub_needed(&pass1, &symtab);
+
+    let mut results = Vec::with_capacity(pass1.len());
+    for (path, _baseline_report) in &pass1 {
+        let module_key = SymbolTable::module_key(&derive_module_segments(path));
+        let needed = pub_needed.get(&module_key).cloned().unwrap_or_default();
+        match transpile_file_with_ctx(path, &symtab, &needed) {
             Ok((myc, report)) => results.push(FileResult {
                 path: path.clone(),
                 myc,
                 report,
             }),
+            // The baseline pass already confirmed this file reads + parses; a failure here would
+            // mean the file changed on disk mid-run — never silently dropped either way (G2).
             Err(e) => failures.push((path.clone(), e)),
         }
     }
     (results, failures)
+}
+
+/// Build the batch-wide cross-nodule [`SymbolTable`] from every file's baseline-pass
+/// [`GapReport`] (see [`transpile_batch`] step 2).
+fn build_symbol_table(pass1: &[(PathBuf, GapReport)]) -> SymbolTable {
+    let mut table = SymbolTable::new();
+    for (path, report) in pass1 {
+        let module_key = SymbolTable::module_key(&derive_module_segments(path));
+        let nodule_path = derive_nodule_path(path);
+        let emitted: HashSet<String> = report.emitted_items.iter().cloned().collect();
+        table.insert(module_key, nodule_path, emitted);
+    }
+    table
+}
+
+/// Light `use`-only scan (see [`transpile_batch`] step 2): for every file in the batch, walk its
+/// `Item::Use`s, resolve each candidate leaf against `symtab`, and accumulate — keyed by the
+/// **target** sibling's own module key — every item name at least one file in the batch actually
+/// resolves a `use` against. A file that fails to re-read/re-parse here (should not happen; the
+/// baseline pass already succeeded) is simply skipped for this scan — never a hard failure, since a
+/// missed pub-propagation opportunity degrades to the pre-lever "stays gapped" behavior, not to an
+/// incorrect emission (VR-5: conservative on failure, never a guess).
+fn scan_pub_needed(
+    pass1: &[(PathBuf, GapReport)],
+    symtab: &SymbolTable,
+) -> BTreeMap<String, HashSet<String>> {
+    let mut needed: BTreeMap<String, HashSet<String>> = BTreeMap::new();
+    for (path, _report) in pass1 {
+        let Ok(source) = fs::read_to_string(path) else {
+            continue;
+        };
+        let Ok(parsed) = syn::parse_file(&source) else {
+            continue;
+        };
+        for item in &parsed.items {
+            let syn::Item::Use(u) = item else {
+                continue;
+            };
+            let Some(candidates) = symtab::use_candidates(&u.tree) else {
+                continue;
+            };
+            for c in &candidates {
+                let symtab::CandidateKind::Name(name) = &c.kind else {
+                    continue;
+                };
+                let module_key = SymbolTable::module_key(&c.module_segs);
+                if symtab.resolve(&module_key, name).is_some() {
+                    needed.entry(module_key).or_default().insert(name.clone());
+                }
+            }
+        }
+    }
+    needed
 }
 
 /// Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.

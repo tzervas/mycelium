@@ -1,4 +1,4 @@
-// nodule: std.content
+// nodule: std.content.guarantee_matrix
 // The `std.content` guarantee matrix encoded as **data** (RFC-0016 §4.5; spec §4).
 //
 // Every exported operation has one row in [`MATRIX`]. The matrix is the load-bearing C2
@@ -29,7 +29,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.content;
+nodule std.content.guarantee_matrix;
 
 // Fallibility classification for an exported op.
 type Fallibility = Total | Fallible;

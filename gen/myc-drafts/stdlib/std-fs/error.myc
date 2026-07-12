@@ -1,4 +1,4 @@
-// nodule: std.fs
+// nodule: std.fs.error
 // `FsErr` — the explicit, traceable filesystem error type (C1/G2).
 //
 // Every path, permission, or IO failure is an instance of this type carrying:
@@ -15,11 +15,28 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.fs;
+nodule std.fs.error;
 
 // The classified OS errno — never a bare raw code (C3: no opaque error codes).
 //
 // This is the RFC-0013 "errno-class" column in the diagnostic record. Each variant
 // maps a POSIX errno *class* to a typed value; the raw OS code is preserved in the
 // `Os` variant of `FsErr` for tooling, but is *never* the primary identifier.
-type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
+pub type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
+
+// The explicit, traceable filesystem error (RFC-0013 diagnostic record).
+//
+// Every `FsErr` carries:
+// - **`path`** — the path that was attempted (for the caller to surface; G11)
+// - **`errno_class`** — the classified errno, never a bare code (C3)
+// - **`why`** — a human-readable one-liner explaining the refusal (G11)
+//
+// For `UseAfterConsume` the `path` is the handle's original path (if known) and the
+// errno_class is absent (the violation is caught above the OS floor — no syscall ran).
+//
+// # C1 — never-silent
+// A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant
+// names the failing operation and the cause. The `Os` variant preserves the raw
+// errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*
+// identifier that a caller pattern-matches on.
+pub type FsErr = NotFound(Bytes, Bytes) | PermDenied(Bytes, Bytes) | AlreadyExists(Bytes, Bytes) | NotADirectory(Bytes, Bytes) | IsADirectory(Bytes, Bytes) | NotEmpty(Bytes, Bytes) | DiskFull(Bytes, Bytes) | CrossDevice(Bytes, Bytes, Bytes) | WouldBlock(Bytes, Bytes) | Interrupted(Bytes, Bytes) | Loop(Bytes, Bytes) | UseAfterConsume(Bytes, Bytes) | InvalidOptions(Bytes, Bytes) | Os(Bytes, ErrnoClass, Binary{32}, Bytes);
