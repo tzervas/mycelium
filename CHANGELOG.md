@@ -12,6 +12,63 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn): DN-123 records/named-fields surface lever (P2) — design + ranked recommendation (2026-07-11)
+
+- **DN-123 (Draft)** — `docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`. Works DN-121's P2
+  lever (records / named-field surface, Struct 80/10%) forward to a ranked recommendation; enacts and
+  ratifies nothing (house rule #3, append-only — the maintainer ratifies).
+- **Verify-first correction (mitigation #14).** Records are **already substantially supported at the
+  `checked_fraction` level**: the transpiler carries a field-name↔index map (`StructLayout`), already
+  desugars Rust struct literals / field-projection / struct-update to positional `Data`, and emits
+  named-field structs positionally with names **recorded** as a never-silent `NamedFieldDrop` sub-gap
+  (`crates/mycelium-transpile/src/emit.rs`). The blocker is an unmapped field TYPE, not named-fieldness;
+  the genuine residual is **faithfulness** (dropped names) plus the **self-hosted `.myc` surface**
+  (the DN-119 L3-G1 struct-pattern grammar gap).
+- **Ranked recommendation.** Option A — a **mechanically-lowering sugar** over positional `Ctor`/`Data`
+  plus the name↔index map (per DN-106's ratified GP1/GP2 — the gap-closure default is the sugar, not a
+  kernel primitive); Option C (sugar plus inert `field_names` metadata) as a YAGNI-gated faithfulness
+  upgrade; Option B (first-class named-field kernel variant) **rejected** (KC-3, value-semantic
+  positional design). Identity stays positional/structural (ADR-003) — names never in the hash.
+- **Adversarial open questions** OQ-1..5: content-addressed identity vs field ORDER (canonicalize-to-
+  declaration-order) and NAMES (off the hash); cross-phylum name metadata (DN-112/DN-113/M-1060);
+  functional-update spread affine treatment (M-919); struct-pattern exhaustiveness plus DN-104 seal.
+- Also appends the DN-123 `docs/Doc-Index.md` row. `Empirical` where read against dev tip `46006994`;
+  `Declared` for the proposed design (VR-5). FLAGged for integration close-out: DN-99 register Struct
+  rows, DN-119 exclusion-row annotation, M-876 `doc_refs` → DN-123 (integration/orchestrator-owned).
+
+### docs(notes): file DN-119/120/121/122 (Draft) + DN-32/33 → DN-35 §5 forward cross-refs (2026-07-11)
+
+Four Draft Design Notes filed for maintainer ratification, part of the ongoing gap-close-run wave
+(design-phase; docs are the product):
+
+- **DN-119** — L3 Comprehensive Surface Expressibility: Scoping, Reframe, and Phased Plan. Scopes the
+  "implement L3 comprehensively" directive: the L3 grammar is substantially complete already
+  (register-lag corrections to DN-99); isolates the genuine ~7-class grammar residual from the bulk of
+  the gap mass that is misattributed to L3 (actually kernel/runtime/transpiler work) and from the
+  deliberate-exclusion set (`&mut`, unbounded `loop`, shared mutability, silent casts) that must not
+  get L3 grammar. Recommends reframing "full native capability" and a lane-tagged phased plan.
+- **DN-120** — Content-Addressed Identity vs. Temporary-Copy Mutation: Solved-by-Design (Verdict). A
+  verdict note (no new mechanism — mitigation #14) closing ADR-003's disclosed residual: DN-35 §5 is
+  already the content-address-coherence answer (rc==1 reuse gate, weak-intern evict-or-copy). Corrects
+  the landed/open boundary against the tree — the rc==1 detection gate is landed and `Exact`
+  (`mycelium-std-runtime/src/rc.rs`); the reuse-write itself stays `Declared`, tracked as DN-35's own
+  E12 Increment 3. Distinguishes this from the unrelated DN-109 §6.1/D7 `&mut`-aliasing problem
+  (DN-118's lane).
+- **DN-121** — The Type-Vocabulary Lever: Scoping the Dominant `checked_fraction` Class. Scopes the
+  ~40% type-coverage gap class; corrects "missing kernel type-vocabulary" to "type-reference closure
+  on the existing kernel" — most of the class closes via std ADTs + idiom, not a new kernel `Ty`
+  variant. Phased, leverage-ranked build plan; flags the outstanding Phase-0 re-measure.
+- **DN-122** — External-Trait Impls Across the Home Boundary. Recommends a foreign-trait-import
+  mechanism (closure-extended coherence on DN-112 home-qualified identity, reusing DN-113's
+  cross-phylum `use`) for the M-876 external-trait-impl gap (DN-121's top lever, ~15%/119 gaps); zero
+  L0/kernel/runtime change. Explicitly downstream of DN-112/DN-113 (both Accepted-not-Enacted).
+
+All four are **Draft**, pending maintainer ratification (house rule #3, append-only); none edits
+`crates/**`, `lib/**`, or `issues.yaml`. Added forward cross-reference notes (append-only, no
+normative text changed) at **DN-32 §2.2** and **DN-33 §6** pointing to **DN-35 §5** (the
+content-address-coherence answer) and **DN-120** (the verdict). `Doc-Index.md` rows added for all
+four notes.
+
 ### fix(l1): M-1036 ctor-seal capability-gate closure — nodule-qualified type identity (DN-112 Rank 1) (2026-07-11)
 
 `claude/leaf/m1036-ctor-seal` (5 cycles of self-verification; 4 soundness holes found and closed

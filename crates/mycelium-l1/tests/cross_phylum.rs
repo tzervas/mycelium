@@ -285,6 +285,173 @@ fn same_named_types_used_independently_across_the_phylum_boundary_both_still_che
 }
 
 // ---------------------------------------------------------------------------------------------
+// CRITICAL fix (adversarial-verification finding, 2026-07-11): `merge_phyla_exports` re-homes an
+// imported type's OWN identity (`DataInfo::home`) but, pre-fix, left every ctor field's baked
+// `Ty::Data` identity in the DEPENDENCY's own (un-rehomed) home-space. A ctor field naming a
+// dependency-internal nodule (e.g. `Ty::Data("m::Bar", [])`) collided with a same-named nodule in
+// the CONSUMER — the M-1036 ctor-seal/type-identity collapse one level up, across the phylum
+// boundary. Fixed by re-homing every ctor field through `qualify_ty_cross_phylum` against the
+// dependency's own linked `Env::types` (the exact helper + oracle the `resolved_fn_sigs` loop
+// already used — DRY, one re-homing path).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn exploit_ctor_field_width_collapse_is_now_refused() {
+    // `dep`'s nodule `m` declares `Bar` (home `m`, `Binary{4}`) and a wrapper `BoxP = MkP(Bar)`
+    // whose field is baked as `Ty::Data("m::Bar", [])` at the dependency's OWN registration.
+    // The CONSUMER also has its own nodule `m`, with its OWN, differently-shaped `Bar`
+    // (`Binary{64}`) — same bare identity string `"m::Bar"` pre-fix, so the un-rehomed field
+    // collided with the consumer's local `Bar` (home `m` == home `m`, no mismatch detected).
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub type BoxP = MkP(Bar);",
+        10,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let err = check_with_err(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{64});\n\
+         use pp::m.BoxP;\n\
+         pub fn exploit(x: BoxP) => Binary{64} = match x { MkP(MkBar(v)) => v };",
+        &phyla,
+    );
+    // Post-fix, the wrapper's field carries the correctly-re-homed identity `pp::m::Bar` — which
+    // the consumer's own `m::Bar` does NOT satisfy, so the nested `MkBar(v)` sub-pattern is a
+    // genuine, explicit DN-112 home-mismatch refusal (never a silent bare-name collapse — G2).
+    // Pre-fix, this same program type-checked (Ok) — a `Binary{4}` dependency value silently
+    // accepted as the consumer's own `Binary{64}` `Bar`.
+    assert!(
+        err.contains("pp::m::Bar"),
+        "the foreign ctor field must resolve to the re-homed `pp::m::Bar` identity, not collapse \
+         onto the consumer's local `m::Bar` (CRITICAL fix, DN-113/M-1060 extension of DN-112 Rank \
+         1 across the phylum boundary); got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control for the CRITICAL fix: a benign single-dep consumer
+/// that imports BOTH the wrapper type AND its field type explicitly, and never shadows either name
+/// locally, must still type-check — the re-homing fix must not turn a legitimate cross-phylum flow
+/// into a false refusal. Pre-fix, this same program actually **failed** — an unrelated internal
+/// error (`data type m::Bar is not registered`), because the un-rehomed field identity `m::Bar`
+/// never matched anything the consumer had registered under the correctly-rehomed bare key `Bar`
+/// (home `pp::m`).
+#[test]
+fn legit_import_wrapper_and_field_type_checks_after_the_fix() {
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub type BoxP = MkP(Bar);",
+        11,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let penv = check_with(
+        "phylum p\nnodule use_it;\n\
+         use pp::m.BoxP;\nuse pp::m.Bar;\n\
+         pub fn go(x: BoxP) => BoxP = match x { MkP(b) => MkP(b) };",
+        &phyla,
+    )
+    .expect(
+        "importing both the wrapper and its field type, with no local shadow, must type-check \
+         after the ctor-field re-homing fix (the false-reject twin of the CRITICAL exploit)",
+    );
+    let env = penv
+        .nodule(&mycelium_l1::ast::Path(vec!["use_it".to_owned()]))
+        .expect("nodule present");
+    assert!(env.fn_decl("go").is_some(), "the consumer's own fn checked");
+    // The field is correctly re-homed to the dependency's own qualified identity.
+    let box_p = env
+        .types
+        .get("BoxP")
+        .expect("the imported wrapper type is registered");
+    assert_eq!(
+        box_p.ctors[0].fields[0],
+        mycelium_l1::checkty::Ty::Data("pp::m::Bar".to_owned(), vec![]),
+        "the wrapper's field must carry the re-homed `pp::m::Bar` identity, not the dependency's \
+         un-rehomed bare `m::Bar`"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// MED closure (2026-07-11, adversarial-verification follow-up): a foreign trait's signature naming
+// a concrete type beyond its own params is NOT yet re-homed against its declaring phylum (unlike
+// ctor fields, now fixed above, and fn sigs, always re-homed) — confirmed reachable via a plain
+// `use dep::Trait; impl Trait for LocalType { .. }` (no cross-phylum `instances` merge needed at
+// all). Refused explicitly (see `foreign_trait_sig_names_a_concrete_type`'s doc comment) rather
+// than silently re-resolved against the wrong phylum's registry.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn implementing_a_foreign_trait_whose_signature_names_a_concrete_type_is_refused() {
+    // `pp::m::Trt`'s `get` returns the DEPENDENCY's own concrete `Bar` (not a trait param). The
+    // consumer ALSO has its own, differently-shaped `Bar` and tries to satisfy `Trt` for a local
+    // type — pre-fix this silently type-checked (the impl's own `Bar` resolved against the
+    // CONSUMER's registry, not the dependency's), exactly the same bare-name collapse class the
+    // CRITICAL ctor-field fix closes, one level up for a trait signature.
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub trait Trt[A] { fn get(x: A) => Bar; };",
+        200,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             pub type Local = MkL(Binary{{8}});\n\
+             use pp::m.Trt;\n\
+             impl Trt[Binary{{8}}] for Local {{ fn get(x: Binary{{8}}) => Bar = \
+             MkBar({sixty_four_zero_bits}); }};"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "a foreign trait signature naming a concrete type beyond its own params must be refused \
+         (MED closure, DN-113 §7 / DN-122 residual) rather than silently re-resolved against the \
+         consumer's own (wrong) registry; got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control: a foreign trait whose signature references ONLY its
+/// own generic params (no concrete type beyond them — the common, legitimate "impl a foreign trait
+/// for your own type" pattern the orphan rule exists to allow) is entirely UNAFFECTED by the MED
+/// closure above and still type-checks.
+#[test]
+fn implementing_a_foreign_generic_only_trait_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub trait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };",
+        201,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule use_it;\n\
+         pub type Local = MkL(Binary{8});\n\
+         use pp::m.Cmp;\n\
+         impl Cmp[Local] for Local { fn cmp(a: Local, b: Local) => Binary{2} = 0b00; };",
+        &phyla,
+    )
+    .expect(
+        "a foreign trait whose signature references only its own generic params carries no \
+         concrete-type reference at all, so the MED closure must not over-restrict it",
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
 // DN-113 §9.3: the acyclic-phyla precondition, enforced by `phyla::build_phyla_graph`.
 // ---------------------------------------------------------------------------------------------
 
@@ -393,4 +560,300 @@ fn a_resolved_dependencys_linked_env_matches_the_plain_check_and_link_path() {
         resolved_fns, plain_fns,
         "the SAME linker (`PhylumEnv::link`) produced both — no parallel resolver"
     );
+}
+
+// ---------------------------------------------------------------------------------------------
+// HOLES A / A2 / B closure (M-1060 fix-cycle-3, 2026-07-11 — a completeness adversarial-sweep
+// finding, the 3rd fix cycle on the same root class): the two already-landed fixes above (the
+// CRITICAL ctor-field re-homing and the MED `register_instances` `impl`-registration guard) left
+// two SIBLING consumption sites of the same un-re-homed foreign surface `TypeRef`s ungated:
+//
+// - HOLE A/A2: `check_trait_method_call` resolves a foreign trait's method sig via
+//   `resolve_ty(self.site, self.types, trait_vars, …)` when the trait is called through a generic
+//   **bound** (`fn wrap[T: Trt](x: T) => …`) — `require_instance`'s bound-discharge branch needs no
+//   registered instance at all, so the register-time guard (which only runs at `impl`
+//   registration) never fires for this path. HOLE A = a concrete type in RETURN position; HOLE A2 =
+//   a concrete type in a VALUE-PARAM position.
+// - HOLE B: `check_app`/`check_app_generic_fn` prefer the re-homed `resolved_fn_sigs` baked entry,
+//   but FALL BACK to `resolve_ty(self.site, self.types, …, &pm.ty)` (the CALLER's own registry) when
+//   the baked entry is absent — which happens whenever the callee's OWN declaring nodule imports
+//   the referenced type from a sibling nodule (`resolve_fn_sig`'s disclosed best-effort scope).
+//
+// All three are closed the same narrow, sound way as the MED fix: a **never-silent refusal**, not
+// a general re-homing (DN-113 §7 / DN-122 tracks the general fix — re-homing every foreign
+// trait/fn signature TypeRef against its OWN declaring phylum, mirroring the ctor-field CRITICAL
+// fix). The refusal fires ONLY when the callee is genuinely **cross-phylum**
+// (`NoduleImports::cross_phylum_traits`/`cross_phylum_fns` — never intra-phylum, since a same-phylum
+// sibling's signature is safe to resolve against `self.types`, M-1036 already giving every
+// intra-phylum type a qualified, unambiguous identity there) AND its signature actually names a
+// concrete type beyond its own generic parameters (`foreign_trait_sig_names_a_concrete_type` /
+// `foreign_fn_sig_names_a_concrete_type` — reused from/sharing the MED fix's helper, not forked).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn exploit_a_foreign_trait_method_call_through_a_bound_collapsing_the_return_type_is_now_refused() {
+    // `pp::m::Trt`'s `get` returns the DEPENDENCY's own concrete `Bar` (Binary{4}), not a trait
+    // param. The consumer calls `get` through a generic BOUND (`T: Trt`) — never registering any
+    // `impl`, so the MED `register_instances` guard's call site is never reached at all. Pre-fix,
+    // `wrap`'s declared return type `Bar` (the CONSUMER's own, Binary{64}) silently satisfied the
+    // foreign `get`'s Binary{4} return — a genuine width/identity collapse across the phylum
+    // boundary.
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub trait Trt[A] { fn get(x: A) => Bar; };",
+        210,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let err = check_with_err(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{64});\n\
+         use pp::m.Trt;\n\
+         pub fn wrap[T: Trt](x: T) => Bar = get(x);",
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "a foreign trait method called through a generic bound must be refused when the trait's \
+         signature names a concrete type (HOLE A) beyond its own generic params — never-silently \
+         re-resolved against the consumer's own (wrong) `Bar`; got: {err}"
+    );
+}
+
+#[test]
+fn exploit_a2_foreign_trait_method_call_through_a_bound_collapsing_a_value_param_is_now_refused() {
+    // Same shape as HOLE A, but the concrete foreign type is in a VALUE-PARAMETER position rather
+    // than the return type — a distinct call site inside `check_trait_method_call` (the
+    // `sig.value_params` loop vs the `sig.ret` resolution), so both must be independently closed.
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub trait Trt[A] { fn put(a: A, b: Bar) => A; };",
+        211,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let err = check_with_err(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{64});\n\
+         use pp::m.Trt;\n\
+         pub fn wrap[T: Trt](x: T, y: Bar) => T = put(x, y);",
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "a foreign trait method called through a generic bound must be refused when the trait's \
+         signature names a concrete type (HOLE A2) in a VALUE-PARAMETER position beyond its own \
+         generic params; got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control for HOLE A/A2: a foreign trait called through a bound
+/// whose signature references ONLY its own generic param (no concrete type at all — the common,
+/// legitimate pattern) is entirely UNAFFECTED.
+#[test]
+fn foreign_generic_only_trait_method_call_through_a_bound_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub trait Trt[A] { fn f(a: A) => A; };",
+        212,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule use_it;\n\
+         use pp::m.Trt;\n\
+         pub fn wrap[T: Trt](x: T) => T = f(x);",
+        &phyla,
+    )
+    .expect(
+        "a foreign trait method called through a bound, whose signature references only its own \
+         generic param, carries no concrete-type reference at all, so the HOLE A/A2 closure must \
+         not over-restrict it",
+    );
+}
+
+/// Non-vacuity / non-over-restriction control: a purely intra-phylum (same-phylum, no `deps` at
+/// all) trait, whose signature names a concrete type (co-located in its own declaring nodule — a
+/// trait's signature must resolve against its OWN nodule's registered types at declaration time,
+/// `register_traits`/`check_sig_resolves`, before any cross-nodule import is even resolved; a trait
+/// referencing a *sibling*-nodule-imported type is illegal regardless of this fix), called through
+/// a bound from a SIBLING nodule, must be entirely unaffected — the HOLE A/A2 guard only ever fires
+/// for `NoduleImports::cross_phylum_traits`, which is always empty absent any dependency (never
+/// over-refuses the ordinary M-662 multi-nodule pattern). Same shape as the HOLE A exploit fixture
+/// above, minus being imported cross-phylum — the exact "same shape, minus the violation" control
+/// this file's own house style uses throughout.
+#[test]
+fn local_same_phylum_trait_method_call_through_a_bound_is_unaffected_by_the_hole_a_a2_closure() {
+    check_with(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub trait Trt[A] { fn get(x: A) => Bar; };\n\
+         nodule consumer;\nuse m.Trt;\nuse m.Bar;\n\
+         pub fn wrap[T: Trt](x: T) => Bar = get(x);",
+        &Phyla::default(),
+    )
+    .expect(
+        "a purely intra-phylum trait-method call through a bound, whose signature names a \
+         concrete type declared in the trait's own nodule, must be entirely unaffected by the \
+         HOLE A/A2 closure",
+    );
+}
+
+#[test]
+fn exploit_b_unbaked_foreign_monomorphic_fn_signature_falls_back_to_consumer_registry_is_now_refused(
+) {
+    // `pp::api::use_bar`'s OWN declaring nodule (`api`) imports `Bar` from a SIBLING nodule
+    // (`types`) — `resolve_fn_sig` only resolves against `api`'s own registered types, so this
+    // signature fails to bake (`resolved_fn_sigs` absent for `use_bar`). Pre-fix, `check_app`'s
+    // fallback re-resolved the bare name `Bar` against the CONSUMER's own (differently-shaped)
+    // `Bar` — a genuine width collapse across the phylum boundary, for a MONOMORPHIC (non-generic)
+    // foreign fn.
+    let dep = resolved(
+        "phylum d\nnodule types;\npub type Bar = MkBar(Binary{4});\n\
+         nodule api;\nuse types.Bar;\n\
+         pub fn use_bar(x: Bar) => Binary{4} = match x { MkBar(v) => v };",
+        213,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             use pp::api.use_bar;\n\
+             pub fn exploit() => Binary{{4}} = use_bar(MkBar({sixty_four_zero_bits}));"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "an un-bakeable cross-phylum fn's signature must be refused, never re-resolved against the \
+         consumer's own registry, when it names a concrete type (HOLE B); got: {err}"
+    );
+}
+
+#[test]
+fn exploit_b_variant_unbaked_foreign_generic_fn_signature_is_also_refused() {
+    // The generic-callee twin of the exploit above — exercises `check_app_generic_fn`'s own
+    // unbaked-signature fallback (a distinct call site from `check_app`'s monomorphic path).
+    let dep = resolved(
+        "phylum d\nnodule types;\npub type Bar = MkBar(Binary{4});\n\
+         nodule api;\nuse types.Bar;\n\
+         pub fn use_bar_generic[T](x: T, y: Bar) => T = x;",
+        214,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             use pp::api.use_bar_generic;\n\
+             pub fn exploit() => Binary{{8}} = \
+             use_bar_generic(0b0000_0000, MkBar({sixty_four_zero_bits}));"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "the generic-callee twin of HOLE B (`check_app_generic_fn`'s own unbaked-signature \
+         fallback) must also be refused when the foreign fn's signature names a concrete type \
+         unrelated to its own generic param; got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control (i): a foreign fn whose signature IS baked
+/// (`resolved_fn_sigs` present, since its own declaring nodule declares `Bar` directly with no
+/// cross-nodule import needed to bake it) must go through the clean re-homed path — entirely
+/// unaffected by the HOLE B closure (the guard only ever fires when `baked` is absent).
+#[test]
+fn bakeable_foreign_fn_call_still_type_checks_unaffected_by_the_hole_b_closure() {
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub fn use_bar(x: Bar) => Binary{4} = match x { MkBar(v) => v };",
+        215,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule use_it;\n\
+         use pp::m.use_bar;\nuse pp::m.Bar;\n\
+         pub fn go(x: Bar) => Binary{4} = use_bar(x);",
+        &phyla,
+    )
+    .expect(
+        "a foreign fn whose signature is baked at its own declaring nodule must go through the \
+         re-homed path unaffected by the HOLE B closure",
+    );
+}
+
+/// Non-vacuity / non-over-restriction control (ii): a foreign fn whose signature is generic-only /
+/// primitive-only (no concrete Data type name to collapse) must still type-check. **Structural
+/// guarantee, not just an empirical witness:** `resolve_fn_sig` fails to bake a signature ONLY when
+/// it references a concrete named type not found in the declaring nodule's own registry (its
+/// `# Errors` doc comment) — a signature built entirely from primitives/generic params never hits
+/// that failure, so it is ALWAYS baked and never even reaches the HOLE B guard's `baked.is_none()`
+/// gate. This test exercises that (always-baked) path end-to-end as the integration-level
+/// confirmation of the structural argument.
+#[test]
+fn foreign_generic_and_primitive_only_fn_signature_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub fn id_prim[T](x: T, y: Binary{8}) => T = x;",
+        216,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule use_it;\n\
+         use pp::m.id_prim;\n\
+         pub fn go() => Binary{4} = id_prim(0b0000, 0b0000_0001);",
+        &phyla,
+    )
+    .expect(
+        "a foreign fn whose signature is generic/primitive-only carries no concrete-type \
+         reference at all, so the HOLE B closure must not over-restrict it",
+    );
+}
+
+/// Non-vacuity / non-over-restriction control (iii): a purely intra-phylum (same-phylum, no `deps`
+/// at all) fn call, genuinely UNBAKED (its declaring nodule imports the referenced type from a
+/// sibling nodule — the exact pre-existing DN-112 disclosed-residual shape), must be completely
+/// unaffected by the HOLE B closure — the guard only ever fires for
+/// `NoduleImports::cross_phylum_fns`, which is always empty absent any dependency.
+#[test]
+fn local_same_phylum_unbaked_fn_call_is_unaffected_by_the_hole_b_closure() {
+    let penv = check_with(
+        "phylum p\nnodule types;\npub type Bar = MkBar(Binary{4});\n\
+         nodule api;\nuse types.Bar;\n\
+         pub fn use_bar(x: Bar) => Binary{4} = match x { MkBar(v) => v };\n\
+         nodule consumer;\nuse api.use_bar;\nuse types.Bar;\n\
+         pub fn go(x: Bar) => Binary{4} = use_bar(x);",
+        &Phyla::default(),
+    )
+    .expect(
+        "a purely intra-phylum (same-phylum, no `deps`) unbaked fn call must be completely \
+         unaffected by the HOLE B closure",
+    );
+    let env = penv
+        .nodule(&mycelium_l1::ast::Path(vec!["consumer".to_owned()]))
+        .expect("nodule present");
+    assert!(env.fn_decl("go").is_some(), "the consumer's own fn checked");
 }
