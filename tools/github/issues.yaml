@@ -9348,8 +9348,16 @@ issues:
       - corpus:DN-34
       - "corpus:DN-122#132-disjoint-implementation-work-units-against-the-real-tree-property-tests"
       - corpus:DN-123
+      - corpus:DN-121
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
     body: |
+      **Append-only note (2026-07-12, gap-close-2 integration close-out — doc_refs split).** M-876's
+      three sub-scopes now each point at their own design note: external-trait impls → **DN-122**
+      (Accepted); records/named-fields → **DN-123** (Accepted); bounded generics → **DN-121 §5 P3**
+      (`docs/notes/DN-121-Kernel-Type-Vocabulary-Lever-Scoping.md`, the bounded-`Ty::Var` lever,
+      `needs-design` — the fourth sub-scope, trait Self-bodies, has no dedicated DN yet and stays
+      tracked only by this issue's own body). This does not close any part of M-876.
+
       **Append-only note (2026-07-12, DN-122 ratification close-out).** DN-122 (Accepted,
       `docs/notes/DN-122-External-Trait-Impls-Across-The-Home-Boundary.md` SS13.2) names the
       `Self`-in-trait-signature grammar gap (the two-type `Widen`-class witness, WU-C) as this
@@ -14149,9 +14157,12 @@ issues:
     doc_refs:
       - corpus:DN-99
       - corpus:ADR-028
+      - corpus:DN-121
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
-      From DN-99 §8 ENB-6 (Draft backlog). Closes register rows #45 (platform-width + char, partial),
+      From DN-99 §8 ENB-6 (Draft backlog). Cross-referenced 2026-07-12 at the gap-close-2 integration
+      close-out: DN-121 §5 P5 (`docs/notes/DN-121-Kernel-Type-Vocabulary-Lever-Scoping.md`) scopes this
+      same usize/isize/char idiom lever, ranked build-ready. Closes register rows #45 (platform-width + char, partial),
       #26 (signed-int-type) and #44 (signed-integer-first-class-type) — the signed sub-questions
       collapse in. Prefer the canonicalized `Binary{N}` mapping (accepted-idiom, no kernel change) for
       `usize`/`uN`; route `char` through the Bytes/std.text bridge; escalate to a platform-abstract width
@@ -14329,8 +14340,11 @@ issues:
       - corpus:DN-99
       - corpus:DN-34
       - corpus:RFC-0031
+      - corpus:DN-121
     body: |
-      From DN-99 §8 ENB-11 (Draft backlog). Idiom-close (docs, NONE semcore-lane collision — no M-1013
+      From DN-99 §8 ENB-11 (Draft backlog). Cross-referenced 2026-07-12 at the gap-close-2 integration
+      close-out: DN-121 §5 P4 (`docs/notes/DN-121-Kernel-Type-Vocabulary-Lever-Scoping.md`) scopes the
+      signed-int idiom lever this issue's ENB-11 idiom-ratification closes. Idiom-close (docs, NONE semcore-lane collision — no M-1013
       coordination). Closes the idiom arm of register row #70 (format-string mini-language) and the #26
       signed idiom. Record, once, in the RFC-0031 port guide: the Display-composition recipe (hand-compose
       over Bytes) and the signed sign-magnitude idiom. The residual float `{:.2e}` precision prim is NOT
@@ -16583,6 +16597,11 @@ issues:
       - A differential witnesses round-trip name preservation before any `Empirical` upgrade past
         the sugar's `Declared` design status (VR-5).
 
+      **Append-only note (2026-07-12, gap-close-2 integration close-out).** DN-123 ratified
+      **Accepted** (delegated ratification) — this issue's DoD item 1 ("DN-123 ratified Draft ->
+      Accepted") is now satisfied; the build precondition is cleared. The sugar implementation (Option
+      A over positional `Ctor`/`Data`) itself remains unbuilt; `status:todo` unchanged.
+
   - id: M-1079
     title: "M-1079 -- vet-harness phylum visibility: partial PhylumReport verdicts + phylum-mode --vet wiring + dual-report measurement basis (DN-124)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -16692,3 +16711,170 @@ issues:
         single-param-vs-two-type split (OQ-7) before the leverage tag moves off `Declared` (VR-5).
       - WU-C (foreign-sig re-homing = M-1076; `Self`-in-trait-sig = M-876) stays explicitly out of
         this issue's scope -- tracked separately, not built here.
+
+  - id: M-1081
+    title: "M-1081 -- transpiler &mut self / &mut T value-threading lowering: by-value receiver/param + call-site rebind, uniqueness-gated, differential-witnessed (DN-125)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1079]
+    doc_refs:
+      - corpus:DN-125
+      - src:crates/mycelium-transpile/src/emit.rs:559
+      - src:crates/mycelium-transpile/src/map.rs:344
+    body: |
+      Filed 2026-07-12 at the DN-125 ratification close-out (mitigation #1 -- verified M-1081 free
+      before minting; M-1080 was highest). DN-125 (Accepted 2026-07-12,
+      `docs/notes/DN-125-Native-In-Place-Mutation-Through-A-Reference-Value-Threading.md`) ratified
+      Mycelium's native answer to the problem Rust `&mut self`/`&mut T` solves (in-place mutation of a
+      value through a reference, the dominant DN-34 SS8.22 `Impl`-class gap): the runtime *mechanism*
+      is answered-by-design (value-threading over the already-ratified DN-33 static uniqueness
+      analysis, DN-35 SS5 `rc==1` in-place reuse, and DN-120 identity coherence, zero kernel/L0/
+      runtime growth); the transpiler *application* -- mechanically lowering a `&mut self` method plus
+      rewriting its call sites -- is genuinely open and un-owned before this DN. Today `&mut self`
+      hard-gaps at `emit.rs:559` ("no correspondence") and `&mut T` hard-gaps at `map.rs:344`; this
+      issue tracks building the lowering DN-125 SS5 specifies. Depends on **M-1079** (the DN-124
+      phylum-mode vet harness) so the lowering's `checked_fraction` payoff is measurable across the
+      cross-nodule call sites it rewrites.
+
+      User stories (DN-125 SS10):
+      - As a port author, I want `fn f(&mut self, a)` and its call sites to port mechanically to a
+        value-threaded `f(self, a) -> Self` plus a call-site rebind, so that the dominant `Impl`-class
+        method-body gap closes without hand-rewriting to positional/functional form.
+      - As a Mycelium developer, I want the `EXPLAIN` ladder to show whether a rebind reused storage
+        in place (statically unique / `rc==1` runtime) or copied (shared), so that the mapping's cost
+        is never a silent surprise (G2).
+      - As a maintainer, I want an unprovable-unique/aliased receiver or an interior-`&mut`-returning
+        method (`get_mut`/`iter_mut`/`IndexMut`) to be FLAGGED never-silently rather than emitted as a
+        possibly-divergent rebind, so that the mapping never fabricates a mutation it cannot prove
+        correct (DN-109 D7 / VR-5).
+
+      Definition of Done (DN-125 SS5/SS6/SS9.11, restated as this issue's build gate):
+      - `emit::map_signature`'s `FnArg::Receiver` arm (`emit.rs:559`) lowers `&mut self` to a by-value
+        `self: Self` param plus a widened return type (`Self` or `(Self, R)`); `&mut T` params
+        (`map.rs:344`) lower analogously (S1/S2, DN-125 SS5.1).
+      - Call-site rewrite (DN-125 SS5.2): `x.f(a)` -> `x = f(x, a)`; `let r = x.f(a)` ->
+        `(x, r) = f(x, a)`; `g(&mut y)` -> `y = g(y)`; a S3 `&mut` chain threads sequentially.
+      - The uniqueness gate fires never-silently (DN-125 SS6.1): value-threading emits only where
+        uniqueness holds (a documented borrowck-valid-input precondition, or a DN-33 Mycelium-side
+        proof on the emitted rebind); otherwise a `Category::Other` FLAG names the unprovable receiver
+        rather than emitting a possibly-divergent rebind.
+      - Interior-`&mut`-returning methods (`get_mut`/`iter_mut`/`IndexMut`, DN-125 SS6.2) are excluded
+        from value-threading and FLAGGED (Approximation/Interop-Bridge), never fabricated as a value
+        form.
+      - `Drop::drop(&mut self)` (DN-125 SS4 Rank 1) is routed to the reclamation lane, not
+        value-threaded.
+      - A differential witness (an emitted value-threaded method plus call site that `myc check`
+        -cleans and matches the source Rust behavior on a fixture) exists before any `Empirical`
+        upgrade past the mapping's `Declared` design status (VR-5); the mapping is correct-with-a-copy
+        at first land and becomes zero-copy only as DN-33's static analysis and DN-35 SS5's
+        reuse-write land (E12 Increment 3, desktop-held) -- that later landing does not gate this
+        issue's own correctness DoD.
+
+  - id: M-1082
+    title: "M-1082 -- Display / int-to-string generic-Display kernel prim + write!/format! value-returning lowering (unblocks 26/30 &mut Formatter Impl gaps)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
+    epic: E28-1
+    depends_on: [M-875]
+    doc_refs:
+      - "corpus:DN-34#822-the-114-impl-gap-class-root-cause-breakdown-every-avenue-probed-is-design-heavy-cross-leaf-owned-or-zero-yield-gap-close-2-method-body-impl-lever-leaf-empirical"
+      - src:crates/mycelium-core/src/prim.rs
+    body: |
+      Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1082 free
+      before minting; M-1081 was highest), tracking the language-completeness gap inventory's row #3
+      (`docs/planning/language-completeness-gap-inventory.md`). DN-34 SS8.22 (2026-07-12,
+      `Empirical`, `grep`-confirmed) found the single largest clean `Impl`-class bucket (30 pure gaps)
+      is not a `&mut Formatter` signature gap but the co-located `write!`/`format!` macro invocation,
+      and that **26 of those 30 bodies interpolate something other than a literal `Bytes` value** --
+      so fixing only the `&mut Formatter` receiver signature (itself folded into M-1081's value-
+      threading lowering, since `Display::fmt(&mut self, ...)` is a `&mut self` method) yields **zero**
+      `checked_fraction` movement without this kernel prim. `crates/mycelium-core/src/prim.rs` has
+      **no** int-to-string / generic-Display prim today (`grep`-empty).
+
+      This design is coupled to, and does not duplicate, **M-875** (the `write!`/`format!` macro
+      expand-first pass, `needs-design`) -- M-875 handles the macro-expansion half; this issue is the
+      **kernel-prim** half a full fix additionally needs (a value-returning Display-as-`Bytes` rewrite
+      plus a prim for non-`Bytes` interpolation, e.g. `{n}`/a bound value). Both are design-gated;
+      neither self-ratifies here.
+
+      User stories:
+      - As a port author, I want `write!(f, "{}", n)` inside a `Display`/`fmt` body to lower to a
+        value-returning `Bytes`-concatenation expression, so that Display impls -- the majority
+        remaining clean-Impl bucket -- port mechanically instead of hard-gapping.
+      - As a kernel reviewer, I want any new prim scoped to int-to-string / generic-Display rendering
+        only, so that the small auditable kernel (KC-3) grows by the minimum needed, not a general
+        `format!`-macro engine.
+
+      Definition of Done:
+      - A Draft DN deciding: (a) the M-875 macro expand-first pass scope, and (b) the kernel prim's
+        shape (an `int -> Bytes` prim at minimum; whether a general non-`Bytes`-interpolation prim is
+        needed) -- append-only, honest tags, or an explicit deferral with rationale (M-876-style).
+      - Design only; no build in this issue. Ratification is the maintainer's (house rule #3).
+
+  - id: M-1083
+    title: "M-1083 -- design: native Default / Error prelude-trait decision (ReservedWord `default` collisions + empty `impl Error` gaps)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    epic: E28-1
+    doc_refs:
+      - "corpus:DN-34#822-the-114-impl-gap-class-root-cause-breakdown-every-avenue-probed-is-design-heavy-cross-leaf-owned-or-zero-yield-gap-close-2-method-body-impl-lever-leaf-empirical"
+      - corpus:language-completeness-gap-inventory
+    body: |
+      Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1083 free
+      before minting; M-1082 was highest), tracking the language-completeness gap inventory's SS6
+      finding #4 (`docs/planning/language-completeness-gap-inventory.md`) and DN-34 SS8.22 finding 3.
+      No native `Default`/`Error` prelude trait exists today; 14 `ReservedWord` (`default`) collisions
+      plus 12 empty `impl Error` gaps hit this same wall. This is a small but real design question,
+      distinct from the DN-122 external-trait-impl mechanism (which resolves *how* a foreign-trait impl
+      checks, not *whether* Mycelium has its own native `Default`/`Error` prelude trait).
+
+      User stories:
+      - As a port author, I want `impl Default for T` / `impl Error for T` to have a native prelude
+        target (or an explicit, honest decision that they do not), so that the `default` keyword
+        collision and the empty-impl gap class have a scoped resolution rather than an open wall.
+
+      Definition of Done:
+      - A Draft DN deciding whether Mycelium gains native `Default`/`Error` prelude traits (and if so,
+        their minimal shape, DN-122-MVP-style, or explicit deferral with rationale). Design only, no
+        build in this issue; ratification is the maintainer's (house rule #3).
+
+  - id: M-1084
+    title: "M-1084 -- Import gap-class lever: net-close cross-nodule/cross-phylum resolution (beyond the wave-2 symtab reclassification)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
+    epic: E28-1
+    depends_on: [M-1079]
+    doc_refs:
+      - corpus:language-completeness-gap-inventory
+      - src:crates/mycelium-transpile/src/symtab.rs
+      - src:crates/mycelium-transpile/src/vet.rs
+    body: |
+      Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1084 free
+      before minting; M-1083 was highest) -- the Import-lever M-id both DN-124 (M-1079's own body) and
+      PR #1521's landing FLAGged as still-unminted. PR #1521 (merged to `dev`, commit `eb6bc0e2`,
+      branch `claude/leaf/gc2-imp1b-harness-build`) already landed the wave-2 cross-nodule symbol table
+      (`crates/mycelium-transpile/src/symtab.rs`, 180 lines) plus its batch/emit wiring -- this issue
+      tracks the still-open residual that PR's own body named: the symtab today **more precisely
+      classifies** cross-nodule constructs rather than **net-closing** them (measured: phylum-mode
+      `checked_fraction` 57/768 after vs. 59/768 before on the honest basis -- a -2 net regression
+      alongside the Import gap-count moving 118 -> 130 as classification sharpens; `std-fs` resolves
+      12 -> 5, `std-io` newly-detects 9 -> 15). Depends on **M-1079** (already landed alongside the
+      symtab in the same PR) for the phylum-mode measurement basis this issue's own re-measure needs.
+
+      User stories:
+      - As a port-lever author, I want the cross-nodule symbol table to *resolve* more references than
+        it *reclassifies*, so that the Import gap class is a shrinking, not merely a more-precisely-
+        labeled, share of the corpus.
+      - As a maintainer reading the SS8 series, I want the -2-clean regression traced to its root
+        cause (a genuinely harder resolution case, or a fixable symtab gap) before it is folded into a
+        headline `checked_fraction` figure, so that the honest basis-vs-lever distinction DN-124
+        established is not blurred by this lever's own follow-up work (VR-5).
+
+      Definition of Done (per PR #1521's own tracked-follow-ups):
+      - The -2-net-clean regression (phylum-mode, 59 -> 57) is traced to a root cause and either fixed
+        or recorded as a genuine (non-regression) reclassification with its basis shown.
+      - The Import lever nets a *positive* `checked_fraction` movement on the phylum-mode basis
+        (resolves more references than it reclassifies), re-measured under M-1079's harness.
+      - `std-fs`/`std-io` per-target deltas from PR #1521 are re-verified against the fix, not assumed
+        stable.

@@ -66,8 +66,8 @@ robust in *ranking* across both corpus runs, ±1–2 pts in share):
 | ReservedWord | ~5% | idiom (prefix-rename) — mostly `Default`/`default` collisions (§8.22 finding 3) |
 | ModuleDecl | ~4% | distinct class now; runtime cross-nodule exec (M-982/M-1024) |
 
-**DN-99 register tally (`Empirical`):** of 92 enumerated surface gaps, **66 are already closed** (16 landed
-+ 50 sanctioned idiom), **10 need only transpiler work**, and **16 carry a genuine language/runtime
+**DN-99 register tally (`Empirical`):** of 92 enumerated surface gaps, **66 are already closed** (16 landed +
+50 sanctioned idiom), **10 need only transpiler work**, and **16 carry a genuine language/runtime
 residual** (4 `open` + 12 `partial`). The drive-hard worklist below is the *language* residual, re-scored
 against decisions that have landed since DN-99 was written.
 
@@ -102,8 +102,8 @@ target may be committed before it** (VR-5).
 
 **Row-1 caveat (the sharp correction, `Empirical`, §8.22 2026-07-12).** DN-122 closes the external-trait
 **definition** shape (`impl ForeignTrait for T`). But re-derived from the committed `*.gap.json`, the
-corpus's ~113 `Impl` gaps are dominated by **method-BODY** failures — `&mut self` (row 2), `&mut Formatter`
-+ `write!` (row 3), no native `Default`/`Error` prelude trait, qualified-call mangling (confirmed
+corpus's ~113 `Impl` gaps are dominated by **method-BODY** failures — `&mut self` (row 2), `&mut Formatter` +
+`write!` (row 3), no native `Default`/`Error` prelude trait, qualified-call mangling (confirmed
 zero-yield) — **not** the def-shape DN-122 solves. So DN-122's real leverage on *this* corpus is
 `Declared` and awaits the phylum-mode re-measure; its headline "~15% / 119 gaps" (DN-121) is the *old*
 corpus's Impl-class count, not the current method-body reality.

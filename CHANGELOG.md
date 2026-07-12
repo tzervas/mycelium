@@ -12,6 +12,65 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(planning): language-completeness gap inventory — the drive-hard worklist (Draft, 2026-07-12)
+
+`docs/planning/language-completeness-gap-inventory.md` (Draft, living register) synthesizes and
+re-derives the current, prioritized **language**-completeness gap inventory for full native
+expressibility of Rust (Python carry-forward flagged), grounded against `origin/dev` `fa53dc46` plus
+the committed draft corpus and the DN-124 phylum-mode baseline. It re-derives the gap-class
+distribution against the current tree (mitigation #14) and corrects nine stale figures/rankings in
+the prior analyses — the "Other/type-coverage" class shrank from a claimed 40% to ~23–24%,
+external-trait impls moved from "needs-design" to **DN-122-Accepted**, `?`/transcendentals are
+landed/superseded, and **`&mut self`/`&mut T` is un-owned** (not DN-118, which scopes only
+closure-capture mutation) — the single largest unsolved language residual. It surfaces four
+new/under-weighted gaps (DeriveAttr now ~11–12% of gap mass; the missing Display/int→string kernel
+prim blocking 26/30 `&mut Formatter` bodies; `ModuleDecl` as its own class; no native `Default`/
+`Error` prelude trait), classifies every gap by the ratified DN-111 native-translation taxonomy, and
+splits the 17-row residual into build-now (a ratified design exists) vs design-first (needs a Draft
+DN) sets. Recommends, does not ratify (house rule #3); every figure `Empirical`/`Declared` at its
+basis (VR-5).
+
+### docs(dn-125): ratify native `&mut self`/`&mut T` in-place-mutation note — value-threading (Accepted, 2026-07-12)
+
+**DN-125** (`docs/notes/DN-125-Native-In-Place-Mutation-Through-A-Reference-Value-Threading.md`)
+moves **Draft to Accepted** under explicit maintainer delegation to the orchestrator ("ratify based
+on objective reasoning and the project's needs/intents, keep to core principles, report results").
+Scopes Mycelium's native answer to the problem Rust `&mut self`/`&mut T` solves — the dominant
+DN-34 §8.22 `Impl`-class gap — separating a settled question from an open one (mitigation #14): the
+runtime **mechanism** is **ANSWERED-BY-DESIGN** (value-threading — take the receiver/argument by
+value, return the mutated value, rebind at the call site — zero-copy via the already-ratified DN-33
+static uniqueness analysis, DN-35 §5 `rc==1` in-place reuse, and DN-120 identity coherence), while
+the transpiler **application** (mechanically lowering a `&mut self` method plus rewriting its call
+sites) is genuinely open and un-owned before this note (`&mut self` hard-gaps at `emit.rs:559`,
+`&mut T` at `map.rs:344`). Ratifies **Rank 1 — Alt A (value-threading)** over a kernel `&mut`/place
+type (Alt B, rejected — reintroduces the aliased-mutation borrow-checking Mycelium deliberately
+excludes) and an interior-mutability cell (Alt C, retained only as a narrow Interop-Bridge fallback).
+Adversarial stress-test **HELD** for the non-aliased, value-returning shape (re-entrancy is *more*
+robust than `&mut`; identity coherence closed by DN-120), **NARROWED** to two never-silent FLAG
+boundaries: unprovable-unique/aliased receivers (routed to a borrowck precondition or a DN-33
+Mycelium-side proof) and interior-`&mut`-returning methods (`get_mut`/`iter_mut`/`IndexMut`, routed
+to Approximation/Interop-Bridge). **Accepted, not Enacted** (house rule #3) — the lowering stays
+`Declared`/unbuilt, correct-with-a-copy when built, zero-copy only as DN-33/DN-35 §5 land. Minted
+**M-1081** (transpiler value-threading lowering build; `depends_on: [M-1079]`).
+
+### docs(dn-123): ratify records/named-fields surface-lever note — sugar-over-positional (Accepted, 2026-07-12)
+
+**DN-123** (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`) moves **Draft to Accepted**
+under the same maintainer delegation. Ratifies **Option A** — a mechanically-lowering sugar over the
+existing positional `Ctor`/`Data` machinery plus the transpiler's field-name↔index map
+(`StructLayout`), per DN-106's ratified General Principle 2 (gap-closure default = sugar, not a
+kernel primitive) and General Principle 1 (surface-sugar transparency) — with **Option C** (an inert
+`field_names` type-registry metadata field) as a YAGNI-gated faithfulness upgrade and **Option B**
+(a first-class named-field kernel variant) recorded rejected (DN-106 fork B, KC-3). Accepts the
+verify-first correction: records already emit positionally and check-clean whenever field *types*
+map — the genuine residual is **faithfulness** (the `NamedFieldDrop` sub-gap) plus the **self-hosted
+`.myc` surface** (DN-119 L3-G1), not a new expressibility gap. §7's OQ-1 (canonicalize literal field
+order to declaration order; names off the content-address hash) and OQ-3 (functional-update spread
+affine treatment) are accepted as build preconditions; OQ-2 (cross-phylum name metadata) as a
+coordination dependency on DN-113/M-1060. **Accepted, not Enacted** (house rule #3) — the sugar
+stays `Declared`/unbuilt. **M-1078** (already minted 2026-07-11) tracks the residual build; this
+ratification clears its DoD precondition (DN-123 ratified).
+
 ### docs(dn-124): ratify vet-harness phylum-visibility and measurement-basis note (Accepted, 2026-07-12)
 
 **DN-124** (`docs/notes/DN-124-Vet-Harness-Phylum-Visibility-And-Measurement-Basis.md`) moves

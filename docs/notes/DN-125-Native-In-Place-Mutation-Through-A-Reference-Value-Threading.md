@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-125 |
-| **Status** | **Draft** (2026-07-12). A design-reasoner scoping + recommendation note — it **enacts nothing**, **ratifies nothing**, **builds nothing**, and **moves no other doc's status** (house rule #3, append-only). It does not edit `crates/**`, `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (integration-owned; FLAGGED in §10). The maintainer ratifies Draft→Accepted (§9 Definition of Done). |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — the maintainer authorized the orchestrator to "ratify based on objective reasoning and the project's needs/intents, keep to core principles, report results"; mirrors the DN-115/117/118/122/124 precedent). Was **Draft** (2026-07-12, same day). **Accepted, not Enacted** (house rule #3) — it **builds nothing** yet; the value-threading lowering (§5) stays `Declared`/unbuilt until the FLAGGED build issue (§10, minted **M-1081**) lands and is differential-witnessed. This note still does not edit `crates/**`; the integration close-out applies `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` per §10 (recorded there, append-only). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | The native **mechanism** is **ANSWERED-BY-DESIGN**: value-threading (`fn f(&mut self)` → `f(self) -> Self`, call-site rebind `x.f()` → `x = f(x)`) is zero-copy via the already-ratified **DN-33** static uniqueness analysis, **DN-35 §5** `rc==1` in-place reuse, and **DN-120** identity coherence — so the genuinely **new** decision content this DN adds is the transpiler lowering (§5) plus the two adversarial narrowings (§6), not a re-litigation of the settled runtime design (§2's mechanism/application split, mitigation #14). **Rank-1 sound**: Alt A (value-threading) dominates the §4 objective function — value-semantics preserved (ADR-003), **KC-3** zero kernel/L0/runtime growth, never-silent on the aliased case. **Adversarially HELD** (§6) with two never-silent FLAG boundaries: (i) unprovable-uniqueness/aliasing routes to a borrowck precondition or a DN-33 uniqueness-proof on the emitted Mycelium, never a possibly-divergent rebind (§6.1); (ii) interior-`&mut`-return methods (`get_mut`/`iter_mut`/`IndexMut`) route to Approximation/Interop-Bridge, never a fabricated value-threaded form (§6.2). **Correct-with-a-copy when built; zero-copy as DN-33's static analysis and DN-35 §5's reuse-write land** (§5.3 — the honest landed-vs-`Declared` boundary is preserved, not upgraded past its basis). Carries forward to Python with a strictly greater aliasing-analysis burden, same mechanism (§8). Ratified on the merits under maintainer delegation — the orchestrator reasoned the recommendation through and decided to ratify; this note's own reasoning (§1–§8) is not re-litigated, only executed and recorded (VR-5: assent is a claim too, tagged here at the basis actually checked). |
 | **Decides** | *Recommends, for ratification:* Mycelium's **native solution** to the problem Rust `&mut self`/`&mut T` solves — *in-place mutation of a value through a reference* — is **value-threading**: take the receiver/argument **by value**, return the mutated value, and rewrite the call site to **rebind** (`x = f(x, …)`). Under the hood, DN-33 static uniqueness + DN-35 §5 `rc==1` in-place reuse reclaim the storage so the value-threaded form is zero-copy; identity coherence is closed by DN-120. **Verdict on the crux question (§2):** the native *mechanism* is **answered-by-design** (value semantics + uniqueness + `rc==1` reuse are already ratified); the native *transpiler application* — mechanically lowering a `&mut self` method + rewriting its call sites — is **genuinely open** (no DN scopes it; DN-118 explicitly excludes the method receiver; the transpiler today flat-**gaps** `&mut self`/`&mut T` as "no correspondence"). This DN scopes that application and draws the honest landed-vs-`Declared` boundary. |
 | **Feeds** | DN-34 §8.22 (the dominant `Impl`-class gap this addresses); the `mycelium-transpile` `&mut` lowering (new work, M-id FLAGGED §10); DN-118 (the closure-capture `FnMut` lane — the *sibling* problem this note draws the boundary with); DN-119 (removes `&mut` from the "deliberate-exclusion, do-NOT-add-grammar" set on the corrected understanding that the *problem* has a native answer even though the *`&mut` surface* stays excluded). |
 | **Grounds on** | ADR-003 (content-addressed value identity, value semantics, no reference types); RFC-0001 §4.6 (value identity = content hash); DN-32 §2.2 (three-layer memory; Layer-2 `rc==1` reuse); DN-33 (Layer-1 static uniqueness analysis — permits in-place mutation of a *provably-unique* value); DN-35 §5 (the reuse-vs-content-address side-condition: reuse at `rc==1`, weak intern table, evict-or-copy); DN-120 (the identity-coherence residual: SOLVED-BY-DESIGN, `rc==1` detection landed `Exact`, reuse-write `Declared`); DN-109 §3 D7 (the `&mut`-aliasing VR-5 trap); DN-110/DN-111 (native-translation taxonomy: Native Equivalent / Idiomatic Remapping / Approximation / Interop Bridge); DN-118 §5 (the closure-capture `FnMut`/`&mut` boundary — the sibling, not this, problem); DN-119 (the deliberate-exclusion set); M-919 (affine/linearity tracker). House rules #1 (transparency), #2 (never-silent), #3 (append-only), #4 (grounded, no sycophancy), #5 (KISS/YAGNI/KC-3), VR-5, G2. |
@@ -333,6 +334,16 @@ Status stays **Draft** until 7–11 are ratified.
 - **DN-118** §5: append-only forward pointer — the method-receiver value-threading DN-118 excluded is
   scoped by DN-125 (sibling lanes: DN-118 = closure captures, DN-125 = method/param receivers).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-125 row added at status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1081** minted for the transpiler value-threading lowering build
+(`depends_on: [M-1079]` — the DN-124 phylum-mode vet harness, needed so the lowering's
+`checked_fraction` payoff is measurable across cross-nodule call sites, mirroring the M-1080
+precedent); `doc_refs: corpus:DN-125, src:crates/mycelium-transpile/src/emit.rs:559,
+src:crates/mycelium-transpile/src/map.rs:344`. DN-119/DN-118 forward-pointer rows are FLAGGED for a
+follow-up append-only edit (not applied in this close-out — no normative text of either note changes;
+tracked so the reconciliation isn't lost).
+
 ## §11 Grounding
 
 - **ADR-003** (`docs/Mycelium_Project_Foundation.md:365-370`) — content-addressed identity; value
@@ -401,3 +412,20 @@ Status stays **Draft** until 7–11 are ratified.
   semantics permit the aliased mutation Rust forbids). Authored the DN only — no edit to `issues.yaml`,
   `CHANGELOG.md`, `Doc-Index.md`, or any `crates/**` (integration-owned; FLAGGED §10). Append-only; status
   advances only by maintainer ratification (house rule #3).
+- 2026-07-12 — **Accepted.** Ratified by the maintainer's explicit delegation to the orchestrator
+  ("ratify based on objective reasoning and the project's needs/intents, keep to core principles,
+  report results"; mirrors the DN-115/117/118/122/124 precedent). Ratifies **Rank 1 — Alt A
+  (value-threading)** as Mycelium's native answer to the problem `&mut self`/`&mut T` solves, with the
+  §4 classification split (read-only `&self` = landed Native Equivalent; mutating `&mut self`/`&mut T`
+  non-aliased = Idiomatic Remapping = the new transpiler work; `Drop` = reclamation lane; interior-`&mut`
+  -return = flagged residual) and the §6 adversarial narrowings as the ratified boundary (value-threading
+  fires only where uniqueness holds — source precondition or DN-33 Mycelium-side proof — and FLAGS
+  never-silently otherwise; does not cover interior-`&mut`-returning methods). Basis recorded verbatim in
+  the header table's "Ratification basis" row: the mechanism is answered-by-design (DN-33/DN-35 §5/
+  DN-120, zero kernel growth, KC-3), Rank-1 sound against the §4 objective function, adversarially HELD
+  with the two never-silent FLAG boundaries, correct-with-a-copy today and zero-copy as DN-33/DN-35
+  land, and carries to Python with a strictly greater aliasing burden. **Accepted, not Enacted** (house
+  rule #3) — the lowering (§5) is unbuilt; every tag stays `Declared` until implemented and
+  differential-witnessed. Minted **M-1081** (transpiler `&mut self`/`&mut T` value-threading lowering)
+  this close-out, `depends_on: [M-1079]` (DN-124 phylum-mode vet harness, for measurable
+  `checked_fraction` credit on the cross-nodule call sites the lowering rewrites).
