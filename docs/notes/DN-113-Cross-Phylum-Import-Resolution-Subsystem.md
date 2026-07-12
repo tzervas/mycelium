@@ -224,6 +224,31 @@ each gain a phylum-qualifier on their key space; the merge/precedence/never-sile
 
 ---
 
+## §7.1 v1-limitation disclosure (added 2026-07-11, integration close-out — append-only)
+
+**Grounded against the four M-1060 fix-cycle commits landed on this note's basis** (PR 1503, PR 1506,
+PR 1508, PR 1511 — `9a03f988`, `a282104a`, `343276e2`; mitigation #14, checked against the merged tree,
+not asserted): the v1 mechanism as *implemented* left a class of never-silent gaps beyond what §7's design
+prose alone would suggest, all closed during the M-1060 leaf's own adversarial-verification cycles
+before this integration close-out. Recorded here, append-only, as the honest v1-limitation boundary
+(VR-5 — this narrows no prior claim, it discloses the checked basis those claims now rest on):
+
+> The checked-and-linked v1 mechanism closes the cross-phylum bare-name type-identity collapse at every
+> reachable CALL position (`check_app` / `check_app_generic_fn` / `check_trait_method_call`) and at the
+> fn-as-first-class-VALUE position (`check_path`), verified by an exhaustive carrier×position enumeration
+> to be the complete reachable set for this class; a cross-phylum trait-method call through a generic
+> bound, or a cross-phylum fn call/value-ref whose signature could not be baked against its declaring
+> phylum, is conservatively REFUSED (never-silent) whenever that signature names a concrete type beyond
+> its own generic parameters — pending the general fix of re-homing every foreign trait/fn signature
+> `TypeRef` against its declaring phylum (tracked **M-1076** / DN-113 §7 / DN-122).
+
+This is a v1-scope disclosure, not a design change: §7's layering-over-`PhylumEnv::link` decision stands
+unmodified; the four sites above are where that layering's re-homing was completed (ctor fields, then
+the three signature-position holes this note records). M-1060's own `status:done` landed-basis entry in
+`tools/github/issues.yaml` cross-references this section.
+
+---
+
 ## §8 The v1 / deferred boundary (KC-3 — the small-kernel line)
 
 **v1 (what "get it working" is):**
@@ -461,6 +486,12 @@ asserted without basis.
 
 ## Changelog (this note)
 
+- **2026-07-11 — v1-limitation disclosure added (§7.1, append-only, integration close-out).** M-1060's
+  four fix cycles (PRs #1503/#1506/#1508/#1511) closed the cross-phylum bare-name type-identity collapse
+  at every reachable call/value-ref position via narrow never-silent refusals; §7.1 records the checked
+  boundary and points the general re-homing fix at **M-1076** (new, this close-out). Status stays
+  **Accepted** (design, unmodified) — this is a disclosure of the implementation's checked basis, not a
+  design change (VR-5, mitigation #14).
 - **2026-07-10 (later same day) — Ratified (maintainer-delegated, orchestrator-selected on the merits,
   house rule #3).** Status **Draft → Accepted** (v1 design ratification, **NOT Enacted** — VR-5,
   guarantees stay `Declared` until M-1060 implements and differential-witnesses the design). Accepts:

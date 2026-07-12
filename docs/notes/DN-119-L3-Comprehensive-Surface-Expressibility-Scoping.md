@@ -129,6 +129,16 @@ dominant gap mass is L3 concrete-grammar work. So a wave titled "implement L3 co
 if taken literally, spend its effort on the ~7 classes of §3 (near-zero vet impact) while the real
 levers sit in the kernel/runtime and transpiler lanes it does not name.
 
+> **Append-only annotation (2026-07-11, integration close-out — supersedes nothing, corrects nothing in
+> the row above, only adds a forward pointer).** The "named-field record **type** surface" row's
+> "deliberate exclusion" (line 119, citing DN-106 at Draft) was **re-scoped** by **DN-106's own
+> ratification** (Accepted 2026-07-11): DN-106's ratified General Principle 2 (gap-closure default = the
+> mechanically-lowering sugar, not a kernel primitive) brings the named-field **surface** back into scope
+> as **sugar over the existing positional `Ctor`/`Data` machinery** — the *kernel-primitive* record type
+> (Option B in the design below) stays rejected, unchanged from this row's original finding. See
+> **DN-123** (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`) for the full design this
+> re-scoping enables, and its own FLAG-4 which requested this annotation.
+
 ---
 
 ## §5 The deliberate-exclusion set — L3 must NOT grow grammar for these (the adversarial core)
@@ -330,6 +340,10 @@ guess with no grounding — declined (house rule #4 / G2).
 
 ## §12 Changelog
 
+- **2026-07-11 (later same day) — Append-only annotation (§4, integration close-out).** The
+  named-field-record-type-surface "deliberate exclusion" row is annotated (not rewritten) noting
+  DN-106's ratification re-scoped the sugar surface into scope; points to **DN-123**. DN-119 itself
+  stays **Draft** — this is a cross-reference note only, not a ratification (house rule #3).
 - **2026-07-11** — DN-119 created (**Draft**). Scoped the "comprehensive L3 surface" directive:
   verified the L3 grammar is substantially complete (register-lag corrections for `?`/or-pattern/seal,
   §2); isolated the genuine ~7-class L3-grammar residual (§3) from the downstream/kernel/runtime/
