@@ -12,6 +12,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(gates): flag pre-existing `just check-canary` drift on `dev` from PR #1521 (2026-07-12)
+
+Running `just check-canary` (leaf→`dev` gate) during the gap-close-2 integration close-out surfaced
+three pre-existing failures on `dev`'s own tip, unrelated to this close-out's docs/`issues.yaml`-only
+diff (verified: `git diff` of the affected files against this PR's branch is empty) — left by the
+earlier landing of PR #1521 (the DN-124 phylum-mode harness + wave-2 symtab): a stale
+`mycelium-transpile` public-API baseline (`api` gate), an unformatted
+`gen/myc-drafts/manifest_gen.py` (`format` gate), and the pre-existing `sugar-index` self-test
+citation drift. Flagged plainly (never-silent, G2) rather than silently bundled into this
+docs-scoped PR; tracked as **M-1085**.
+
 ### docs(planning): language-completeness gap inventory — the drive-hard worklist (Draft, 2026-07-12)
 
 `docs/planning/language-completeness-gap-inventory.md` (Draft, living register) synthesizes and

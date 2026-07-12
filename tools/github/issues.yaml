@@ -16878,3 +16878,48 @@ issues:
         (resolves more references than it reclassifies), re-measured under M-1079's harness.
       - `std-fs`/`std-io` per-target deltas from PR #1521 are re-verified against the fix, not assumed
         stable.
+
+  - id: M-1085
+    title: "M-1085 -- dev-trunk just check-canary drift from PR #1521: mycelium-transpile public-api baseline + manifest_gen.py format"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:todo]
+    epic: E28-1
+    doc_refs:
+      - src:crates/mycelium-transpile/src/vet.rs
+      - src:gen/myc-drafts/manifest_gen.py
+    body: |
+      Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1085
+      free before minting; M-1084 was highest). `just check-canary` (run against `dev` tip
+      `fa53dc46` -- verified via `git diff fa53dc46 HEAD -- crates/mycelium-transpile/
+      gen/myc-drafts/manifest_gen.py crates/mycelium-l1/src/token.rs tools/grammar/sugar.yaml`
+      being byte-for-byte empty on this PR's own branch, i.e. these findings are NOT caused by this
+      PR's docs/issues.yaml-only diff) surfaces three pre-existing gate failures left by PR #1521's
+      landing (`eb6bc0e2`, the DN-124 phylum-mode harness + wave-2 symtab):
+      1. **`api` gate** -- the committed `docs/spec/api/*.txt` public-API baseline for
+         `mycelium-transpile` is stale against PR #1521's new public surface
+         (`vet::PhylumVetSummary`, `vet::PhylumNodule`, `VetReport::phylum`/`with_phylum`,
+         `vet::phylum_checked_clean_items`, `MycChecker::vet_phylum`) -- `cargo public-api` reports
+         these as undeclared additions.
+      2. **`format` gate** -- `gen/myc-drafts/manifest_gen.py` (touched by PR #1521) is not
+         `ruff format`-clean (`just fmt` would reformat it).
+      3. **`sugar-index` gate** -- the committed `tools/grammar/sugar.yaml`'s self-test fails its own
+         citation cross-check against `crates/mycelium-l1/src/token.rs` (stale line-number
+         citations) -- pre-existing, not traced to a specific landing in this close-out, flagged
+         rather than guessed at (G2).
+
+      This means **`dev`'s own tip already fails `just check-canary`** independent of this PR --
+      worth surfacing plainly (never-silent, G2) rather than silently absorbing an unrelated fix
+      into a docs-scoped PR (DN-65 closely-scoped-PR discipline) or leaving it unflagged.
+
+      User stories:
+      - As a contributor branching from `dev`, I want `just check-canary` to be green at the tip I
+        branch from, so that a failure I see is attributable to my own change, not inherited drift.
+      - As a maintainer, I want a public-API surface addition to update its committed baseline in the
+        same PR that adds it, so that the `api` gate stays a meaningful signal.
+
+      Definition of Done:
+      - `docs/spec/api/mycelium-transpile.txt` (or the correct baseline file) regenerated to include
+        PR #1521's new public items; `just fmt` run on `gen/myc-drafts/manifest_gen.py`; the
+        sugar-index self-test failure traced and fixed or re-scoped as its own issue if it proves
+        unrelated to token.rs line drift from this same window.
+      - `just check-canary` green on `dev` post-fix.
