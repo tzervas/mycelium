@@ -6,19 +6,23 @@
 | **Status** | **Draft** (2026-07-11). A design-reasoner DN working the **M-876** external-trait-impl gap forward to a ranked recommendation for maintainer ratification. It decides the **native mechanism for `impl Trait for Type` where the trait and/or the type is declared in another nodule/phylum** — the single biggest zero-hand-port unlock (DN-121 scoping: ~15% of the gap mass / 119 gaps; "emits-but-fails-check, poisons whole file"). **Recommends, does not ratify** (house rule #3 — the maintainer ratifies; status advances only by their decision). |
 | **Decides (proposes, for ratification)** | (1) the **native mechanism** — a *foreign-trait import* that brings an external trait's signature into a phylum as a **home-qualified foreign declaration** (not a local re-declaration), against which `impl ForeignTrait for LocalType` checks and monomorphizes (§4, ranked); (2) the **coherence/orphan analogue** — extend the existing phylum-wide orphan rule + `CoherenceView` to the **import closure**, judged on **home-qualified identity** (§5, §7); (3) the **build split** — a checker-first change with a mono-dispatch fast-follow and a transpiler-rule swap, **zero L0/kernel/runtime** (§6); (4) the **semcore-serial vs disjoint** phasing (§8); (5) the **honest tag boundary** — the ~15% leverage is `Declared` until the Phase-0/Phase-4 re-measure (§9, DN-121's VR-5 boundary). |
 | **Feeds** | M-876 (external-trait-impl / trait-Self-body surface — this note is its design gate); DN-121 (kernel-type-vocabulary scoping — P1 lever); DN-34 §8.8 (the transpiler `Widen`-class residue + the FAILED synthetic trait-def; delta-L3 ledger row 89); DN-99 register rows 27/28 (dyn-trait / APIT). |
-| **Depends on (load-bearing, both Accepted-not-Enacted)** | **DN-112** (nodule-qualified type identity — the home model this note's coherence key rests on; impl M-1036, 0 % wired); **DN-113** (cross-phylum import resolution + **acyclic phylum DAG / cycle-refusal §9.3** — the soundness pillar and the import substrate; impl M-1060, 0 % wired). **This note is downstream of both — they must land before external-trait impls can be built or witnessed (§8, §10).** |
+| **Depends on (load-bearing — BOTH NOW LANDED, re-verified 2026-07-12 `Empirical @dev b36ebdbe`)** | **DN-112** (nodule-qualified type identity — the home model this note's coherence key rests on; impl **M-1036 `status: done`, landed 2026-07-11** — `type_head`/`qualify_type_name` home-qualified, `checkty.rs:296`); **DN-113** (cross-phylum import resolution + **acyclic phylum DAG / cycle-refusal §9.3** — the soundness pillar and the import substrate; impl **M-1060 `status: done`, landed 2026-07-11**, incl. a 3-cycle adversarial-verification HOLE A/A2/B closure, `checkty.rs:1562`/`4307`/`7759`). **The substrate this note planned as its checker "Phase 1" now EXISTS — so the ground moved since Draft-1 (mitigation #14): the common `impl ForeignTrait for LocalType` already checks clean today, and the residual narrowed to a single, already-tracked follow-up (M-1076) plus a transpiler rule-swap. See §13.** |
 | **Grounds on** | RFC-0019 (Enacted — traits, dictionary-free static resolution, phylum-wide orphan rule + global uniqueness + reject-overlap, KC-3 node budget unchanged); DN-55 (static specialization — polymorphism = **zero kernel primitives**, monomorphizes away; the one ADR-033 dynamic-dispatch escape does not apply here); DN-112 (home-qualified identity); DN-113 (acyclic import closure); KC-3 (small kernel — check-time + mono only); G2 (never-silent — undefined/ambiguous/orphan = explicit `CheckError`); VR-5 (no tag upgraded past its basis); KISS/YAGNI (reuse the two ratified pillars, add no new coherence philosophy). |
 | **Date** | July 11, 2026 |
 | **Author** | design-reasoner (Opus). Owns only this note. |
 | **Task** | M-876 — external-trait-impl surface (the P1 `checked_fraction` lever, DN-121). |
 
 > **Grounding + honesty (house rule #4 / VR-5 / G2).** This is a **design recommendation**, not a
-> decision (house rule #3). `Empirical` claims are read against the tree at `integration@b36f0ef4`
-> and cite `file:line`; the recommended mechanism, the coherence-closure extension, and the leverage
-> figure are `Declared` until implemented + differential-witnessed. **No sycophancy:** §4 ranks three
-> real alternatives (plus the failed synthetic precedent) on merit; §9 argues *against* the Rank-1
-> recommendation — the whole-closure-coherence-vs-separate-compilation tension is a genuine hard edge
-> that could reasonably narrow v1 to a prelude-scoped subset, and it is surfaced, not glossed.
+> decision (house rule #3). `Empirical` claims are re-read against the tree at **`dev@b36ebdbe`**
+> (2026-07-12 re-verification — §13) and cite `file:line`; the still-unbuilt pieces (the transpiler
+> rule-swap, the M-1076 sig-re-homing, the `Self`-in-trait-sig grammar) are `Declared` until
+> implemented + differential-witnessed. The fresh Phase-0 re-measure (2026-07-12, `Empirical`) ranks
+> the Impl/external-trait gap class at **114 gaps / 12.4 %** (was 119 / ~15 % at Draft-1). **No
+> sycophancy:** §4 ranks three real alternatives (plus the failed synthetic precedent) on merit;
+> §9/§13 argue *against* the original Draft-1 build framing — since **M-1060 already landed the
+> checker substrate**, the honest v1 is a **transpiler-rule-swap + prelude-scoped subset**, far
+> smaller than Draft-1's "checker Phase 1", and the whole-closure-coherence-vs-separate-compilation
+> tension is narrower than Draft-1 feared. §13 is the build-ready spec that supersedes §8's stale plan.
 
 ---
 
@@ -37,34 +41,57 @@ file — DOWNSTREAM (LANGUAGE), no impl-of-external-trait / trait Self-body surf
 witness is `mycelium-std-cmp`: 10 `impl Widen for …` blocks each fail with **`impl` for an undefined
 external trait** (DN-34 §8 lines 297/336/351).
 
-**What is already landed (do not re-decide — mitigation #14):**
+**What is already landed (do not re-decide — mitigation #14; re-verified `Empirical @dev b36ebdbe`
+2026-07-12). NOTE: the M-1060 landing closed most of Draft-1's planned "Phase 1" — see §13 for the
+narrowed residual.**
 
 - **`impl Trait for Type` surface + dictionary-free static resolution + coherence** are **Enacted**
   (RFC-0019; `crates/mycelium-l1/src/{checkty.rs,mono.rs,elab.rs}`). Same-nodule and *intra-phylum*
   cross-nodule impls check and monomorphize today.
-- **The orphan rule is already phylum-wide** (M-662): an `impl` is legal iff its trait **or** its
-  `for`-type head is declared in *some* nodule of the phylum, or the type is a primitive repr
-  (`checkty.rs:3449`–`3451`; the pub-blind `CoherenceView`, `checkty.rs:1588`).
+- **The orphan rule is already phylum-wide, pub-blind, on home-qualified identity** (M-662 + M-1036):
+  `register_instances` admits `impl T for Ty` iff `T` is declared in *some* nodule of the phylum **or**
+  `Ty`'s head is (or `Ty` is a primitive repr) — `checkty.rs:4480`–`4511`; the pub-blind
+  `CoherenceView`, `checkty.rs:2231`–`2237`. `type_local` compares `ty_local_name(n)` so the qualified
+  identity does not defeat the locality test (`checkty.rs:4485`).
+- **Cross-phylum trait *import* is WIRED (M-1060, done 2026-07-11).** `use dep.Trait` resolves through
+  the DN-113 manifest DAG + hash-checked link and merges the **one** foreign `TraitInfo` into the
+  consumer's `Exports` under a `"{dep}::…"` phylum-qualifier key (`::` is not a legal Mycelium ident
+  char, so it can never collide with an intra-phylum `.`-joined name; `checkty.rs:1606`–`1633`). It is
+  **not re-minted** — it references the declaring home. The current binding's cross-phylum origin is
+  tracked in `NoduleImports::cross_phylum_traits` (`checkty.rs:1584`), re-homed in lockstep at every
+  `insert_export` so an intra-phylum shadow clears the marker.
+- **The foreign-trait-sig *soundness guard* is landed** (M-1060 fix-cycle-3, HOLE A/A2/B). A foreign
+  trait whose signature names a **concrete type beyond its own generic params** is refused
+  never-silently at all three sites — register-time (`register_instances`, `checkty.rs:4519`),
+  method-call (`check_trait_method_call`, `checkty.rs:7774`), and bound-discharge — via the shared
+  `foreign_trait_sig_names_a_concrete_type` recognizer (`checkty.rs:4339`), because re-resolving that
+  bare name against the *consumer's* registry would reopen "the M-1036/DN-112 bare-name collapse one
+  level up."
 - **Polymorphism costs zero kernel primitives** — static specialization erases everything before L0
-  (DN-55 §3; `mono.rs` "turns a checked generic-and-trait `Env` into a closed, monomorphic `Env` …
-  No `mycelium-core` change").
-- **Type identity is now home-qualified** (DN-112, Accepted): `Ty::Data` carries the declaring
-  nodule's home; `type_head` (the coherence key) is qualified with it (`checkty.rs:296`).
+  (DN-55 §3; `mono.rs` "turns a checked generic-and-trait `Env` into a closed, monomorphic `Env`").
 
-**The genuine gap** is therefore *not* "traits" and *not* a new coherence philosophy. It is precisely
-the **cross-home boundary**:
+**The genuine RESIDUAL gap** (post-M-1060) is therefore *not* "traits", *not* "no way to name a
+foreign trait" (that landed), and *not* a new coherence philosophy. It is three narrow, disjoint items:
 
-1. **No way to name a foreign trait.** The `CoherenceView` is built from the nodules *physically in
-   the phylum* (`checkty.rs:1588`–`1600`); it contains no imported/dependency-phylum trait. So `Widen`
-   — declared in another phylum — is an **undefined trait** at the impl site. There is no
-   `use widen_phylum.Widen` that registers a *foreign* trait signature to `impl` against.
-2. **Trait Self-bodies are unsupported** (M-876; ledger row 73). A foreign trait's signatures use
-   `Self`; the checker does not yet resolve `Self` in trait method signatures — the direct cause of
-   the failed synthetic attempt (§2).
-3. **Cross-phylum instance dispatch is unwired.** Mono resolves a trait-method call only via a
-   *resolved instance* in the merged `Env` (`mono.rs:212`, `:891`). Instances imported across a
-   phylum boundary are not in that `Env` today (DN-113 is 0 % wired) — an *independently* open
-   dispatch gap that this note's Phase 2 must close, not assume closed.
+1. **The transpiler still emits the FAILED synthetic def / leaves the trait undefined.** `myc check`
+   on the emitted `impl Widen[...] for Binary{...}` fails **`impl` for unknown trait `Widen`**
+   (`crates/mycelium-transpile/src/tests/vet.rs:69`) — because the emission carries **no `use`** to
+   import the trait. This is the single change that moves `checked_fraction`, and it is **disjoint
+   from semcore** (§13.1). *(This is what makes the 12.4 % still "open" even though the checker admits
+   the pattern.)*
+2. **`Self`-in-trait-signature is a grammar gap (M-876 sub-gap).** Mycelium has **no implicit `self`**
+   (`ast.rs:227`) and the single-param-trait convention spells the self-type as the trait's own param
+   (`Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }`; lexicon `T: Cmp ≡ T: Cmp<T>`). A **two-type** trait
+   like `Widen[To]` (From→To) needs to name the *implementing* type in `fn widen(this: Self) => To`,
+   and the grammar has **no slot** for it — `emit_trait` bails honestly (`emit.rs:2489`). So the
+   `Widen`-two-type sub-class is **not** free from M-1060; single-param traits (`Cmp`/`Eq`/`Fuse`-shape)
+   **are** (§13.2).
+3. **The concrete-type-in-foreign-sig re-homing is deferred to M-1076.** A foreign trait/fn signature
+   that names a concrete type beyond its params is *correctly refused* today (soundness held), but not
+   yet *admitted* by re-homing the sig against its declaring phylum — the DN-113 §7 / DN-122 general
+   fix, **already minted as M-1076** (`status: todo`, `depends_on: [M-1060]`). Runtime cross-phylum
+   **dispatch** (mono/eval executing a boundary-crossing call) is separately deferred (DN-113 §8) — but
+   it does **not** affect `checked_fraction`, which measures `myc check` only.
 
 ## §2 Why the synthetic trait-def attempt FAILED (recorded — do not repeat)
 
@@ -242,8 +269,15 @@ that. Newtype-derived waivers remain rejected (RFC-0019 Q-coherence — needs ro
 
 ## §8 Phased build plan + semcore-vs-disjoint split
 
-**Ordering is gated by DN-112 (M-1036) and DN-113 (M-1060) landing first — both are Accepted, 0 %
-wired. External-trait impls cannot be built or witnessed before their substrate exists.**
+> **SUPERSEDED by §13 (2026-07-12).** This section was written at Draft-1 when DN-112/DN-113 were "0 %
+> wired". **Both landed 2026-07-11** (M-1036 + M-1060), which collapsed Draft-1's "Phase 1 (checker)"
+> into *already-done*. §13 is the re-verified, build-ready plan — a **transpiler rule-swap + optional
+> prelude-trait seeding**, no new serial-semcore checker phase for the single-param class. Kept below
+> for lineage (append-only); read §13 for the current work-units.
+
+**[Draft-1, superseded] Ordering is gated by DN-112 (M-1036) and DN-113 (M-1060) landing first — both
+are Accepted, 0 % wired. External-trait impls cannot be built or witnessed before their substrate
+exists.**
 
 - **Phase 0 — re-measure (VR-5 boundary, DN-121).** Establish the *current* `checked_fraction` on the
   `Widen`-class corpus (`mycelium-std-cmp` plus the 119-gap set) and **empirically confirm** the
@@ -307,8 +341,14 @@ prelude-scoped subset is the honest fallback ordering if DN-113 is not yet Enact
 
 ## §10 Definition of Done (what "Accepted" requires of the maintainer)
 
-Ratifying this note = accepting the **mechanism** (Alt 1, or the prelude-scoped subset as v1 MVP per
-OQ-1); the implementation (M-876) must then satisfy:
+> **Read §13 first (2026-07-12).** Since M-1060 landed, DoD items 1–3 below are **already witnessed**
+> for the single-param param-only class (the landed `register_instances` + `foreign_trait_sig…` guard);
+> items 4–7 (closure coherence, acyclicity, re-homing, mono dispatch) are the **M-1076 residual**, not
+> the MVP. The MVP's own DoD is §13.2's WU-A/WU-B property tests (T-A1..T-B2) + §13.3's re-measure.
+
+Ratifying this note = accepting the **mechanism** (the §13 build-ready MVP — single-param param-only
+foreign-trait impls via a transpiler rule-swap, prelude-scoped first — with M-876/M-1076 as the named
+residual); the implementation must then satisfy:
 
 1. **Foreign-trait reference.** `use phylum.Trait` (or Alt 2's hash-checked re-statement) registers
    the **one home-qualified** `TraitInfo` — never a re-minted local trait (the §2.3 fork is a tested
@@ -339,11 +379,12 @@ OQ-1); the implementation (M-876) must then satisfy:
 
 ## §11 Open questions (FLAGGED — never guessed, G2/VR-5)
 
-- **OQ-1 (v1 scope, for the maintainer).** Full Alt 1 (cross-phylum, gated on DN-113 Enacted) vs the
-  **prelude-scoped subset MVP** (closure = {this phylum, `@prelude`}, buildable before DN-113)?
-  §9's dependency-substrate argument is a genuine reason to ship the subset first. This note
-  recommends Alt 1 as the target with the subset as the honest first increment — a real fork, stated
-  on merits.
+- **OQ-1 (v1 scope, for the maintainer) — ANSWERED in §13 (2026-07-12).** Since DN-113/M-1060 landed,
+  the fork is no longer "full Alt-1 vs prelude-subset gated on DN-113"; DN-113 is done. The build-ready
+  v1 (§13.1) is the **single-param, param-only-sig** foreign-trait-impl class (prelude-scoped first),
+  which the landed checker already admits — a **transpiler rule-swap** (WU-A), not a new checker phase.
+  The `Widen`-two-type witness and the concrete-sig class are the **M-876 + M-1076 residual**. The
+  maintainer's remaining choice is OQ-6 (prelude-seed vs std-phylum-declare the target traits).
 - **OQ-2 (surface).** Is a *trait* `use` in DN-113's cross-phylum import scope, or must it be added
   (or fall to Alt 2's `foreign trait` hash-checked form)? Confirm against DN-113's resolved surface
   before Phase 3.
@@ -387,6 +428,174 @@ OQ-1); the implementation (M-876) must then satisfy:
   instance-required dispatch) — static resolution requires a resolved instance in the merged `Env`;
   cross-phylum instances unwired. Grounds §1.3, §6.
 - **House rules:** KC-3, G2, VR-5, KISS/YAGNI, house rules #2/#3/#4.
+- **`crates/mycelium-l1/src/checkty.rs`** (re-read 2026-07-12 `@dev b36ebdbe`, `Empirical`) —
+  `type_head`/`qualify_type_name` (`:296`); `NoduleImports::cross_phylum_traits`/`cross_phylum_fns`
+  (`:1584`); the DN-113/M-1060 subsystem doc (`:1606`–`:1633`); the `foreign_trait_sig_names_a_concrete_type`
+  recognizer plus the MED-closure doc that preserves "impl a foreign trait for your own type"
+  (`:4307`–`:4344`); `register_instances` orphan rule and foreign-sig guard (`:4460`–`:4536`); `check_impl_methods`
+  Self-free receiver model (`:4620`–`:4694`); `check_trait_method_call` HOLE A/A2 guard (`:7711`–`:7789`);
+  prelude/`Fuse` seeding (`:1358`–`:1369`, `PRELUDE_HOME` `:350`). Grounds §1, §5, §9, §13.
+- **`crates/mycelium-transpile/src/{emit.rs,vet.rs,tests/vet.rs}`** (read 2026-07-12, `Empirical`) —
+  `emit_trait` bails on a `Self`-binding method ("grammar has no slot", `emit.rs:2489`); the impl
+  emitter renders `impl {trait}[{targs}] for {self_ty}` with **no `use`** (`emit.rs:2841`); the current
+  `myc check` failure is `impl` for unknown trait `Widen` (`tests/vet.rs:69`). Grounds §1, §13.1.
+- **`crates/mycelium-l1/src/ast.rs:227`** — "no implicit `self` in v0; the receiver is an explicit
+  typed parameter." Grounds the §13.2 `Self`-in-trait-sig gap.
+- **`tools/github/issues.yaml`** (read 2026-07-12) — M-1036 `status: done` (`:14008`); M-1060
+  `status: done` (`:15839`); **M-1076** `status: todo`, `depends_on: [M-1060]` — "full cross-phylum
+  trait/fn signature re-homing (close DN-113 §7 / DN-122's general fix)" (`:16440`). Grounds the
+  precondition-landed correction + the residual issue mapping.
+
+---
+
+## §13 Build-ready MVP — re-verified post-M-1060 (2026-07-12, `Empirical @dev b36ebdbe`)
+
+**This section supersedes §8's stale plan.** Since M-1036 + M-1060 landed (2026-07-11), the checker
+substrate Draft-1 planned as a serial-semcore "Phase 1" **already exists**. The build-ready v1 is
+therefore far smaller than Draft-1 assumed, and it is honest about which sub-class it closes.
+
+### §13.1 The tightened OQ-1 MVP — what CHECKS, what REFUSES, the soundness argument
+
+**Scope (OQ-1 answered).** v1 = the **single-parameter, param-only-signature foreign-trait-impl**
+class — a **prelude-scoped subset** as the first increment, generalizing to any acyclic dependency
+closure with **no further checker work** because M-1060 already imports cross-phylum traits.
+
+**What the checker ADMITS today (no new checker code for this class — `Empirical`, confirmed by
+`register_instances` + the MED-closure doc `checkty.rs:4335`–`4338`):**
+
+- `impl ForeignTrait[targs] for LocalType` where `ForeignTrait` is a **single-parameter** trait
+  (`tr.params.len() == 1`, RFC-0019 stage-1) whose method signatures reference **only** the trait's
+  own generic param(s) and primitive reprs — e.g. `Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }`,
+  `Eq`, `Fuse[T] { fn join(a: T, b: T) => T; }`. The orphan rule admits it because `LocalType`'s head
+  is home-local; the foreign-sig guard does **not** fire (no concrete type beyond the param). This is
+  the majority of the 114-gap class *by trait shape* — every "impl a foreign comparison/equality/join
+  trait for my own type" case.
+- `impl LocalTrait for ForeignType` symmetrically (trait home-local; the imported foreign type's head
+  is a legal instance head).
+- **Prelude-scoped variant** (the honest first increment): when `ForeignTrait` is a **prelude** trait
+  (uniform reserved home `<prelude>`, seeded once per phylum like `Fuse` at `checkty.rs:1358`–`1369`),
+  the coherence closure is exactly `{this phylum, <prelude>}` — **no cross-phylum import, no manifest
+  DAG, no diamond, no separate-compilation tension** (the prelude is one uniform home, DN-112 §9). The
+  transpiler emits the impl against the ambient prelude trait; zero new checker work.
+
+**What the MVP REFUSES — never-silent (G2), leaving an honest transpiler gap, NOT a fabrication:**
+
+1. **Foreign trait whose sig names a concrete type beyond its params** → refused by the landed
+   `foreign_trait_sig_names_a_concrete_type` guard (`checkty.rs:4519`/`7774`). Admitting it needs the
+   sig re-homing = **M-1076** (todo). *Honest gap, not the MVP.*
+2. **Two-type / `Self`-needing traits (the canonical `Widen[To]` witness itself).** `Widen` maps
+   From→To; the receiver must name the *implementing* type via `Self`, which the grammar has no slot
+   for (`emit.rs:2489`) — the **M-876 `Self`-in-trait-sig sub-gap**. So the *canonical witness*
+   `mycelium-std-cmp::Widen` is **in the residual, not the MVP** (stated plainly — the MVP closes the
+   single-param majority, the re-measure quantifies the split; see the OQ below). The transpiler keeps
+   emitting the honest gap for `Widen` until M-876 lands.
+3. **Orphan `impl ForeignTrait for ForeignType`** (neither head home-local) → landed orphan refusal
+   (`checkty.rs:4501`). Correct and unchanged.
+4. **Overlapping/duplicate `(trait, type_head)`** → landed coherence refusal (`checkty.rs:4542`).
+
+**Soundness argument (one paragraph — `Declared`-with-argument, matching RFC-0019's coherence tag; not
+machine-checked).** The MVP adds **no new carrier and no new position** to the cross-home
+bare-name-collapse surface that M-1060 already verified. That surface is `{carrier} × {position}` =
+`{ctor field, fn signature, trait-method signature} × {register-time, call-time/bound-discharge}`, and
+M-1060's fix-cycle-3 closed all of it: ctor fields are **re-homed** (`merge_phyla_exports`/
+`qualify_ty_cross_phylum`), fn sigs are **baked-or-refused** (HOLE B, `foreign_fn_sig_names_a_concrete_type`),
+trait-method sigs are **refused** at register-time (HOLE A) and bound-discharge (HOLE A2)
+(`foreign_trait_sig_names_a_concrete_type`) — the same identity discipline M-1036 hardened intra-phylum,
+extended one level up. The MVP admits **exactly the complement** of what that guard refuses (param-only
+sigs, which carry **no** foreign concrete-type reference to collapse), so it cannot reopen a bare-name
+collapse *by construction* — the guard is the invariant, the MVP lives strictly inside it. Global
+uniqueness across the closure holds by the same §5 argument, now standing on **landed** substrate:
+DN-112 home-qualified `type_head` keeps `(Cmp, a::T)` and `(Cmp, b::T)` distinct pairs, and DN-113's
+**acyclic phylum DAG** (`§9.3`, landed in M-1060) forbids the two-legal-authors non-confluence hole
+(for two phyla to each legally impl the same pair, each must name the other's head, i.e. a cycle — refused).
+
+### §13.2 Disjoint implementation work-units (against the real tree) + property tests
+
+Three disjoint units; **none is a serial-semcore checker phase for the MVP class** (that's why this is
+now cheap). Sizes are `Declared` estimates.
+
+- **WU-A — Transpiler rule-swap (DISJOINT from semcore; the one that moves `checked_fraction`).**
+  In `crates/mycelium-transpile/src/emit.rs`, replace the "emit `impl Trait[...] for T` with no trait
+  in scope" behavior (and retire the FAILED synthetic-def path, §2) with: **emit a `use
+  <trait-home>.<Trait>` import** ahead of the impl **iff** (i) the trait is single-parameter and (ii)
+  its signature is param-only (`foreign_trait_sig_names_a_concrete_type`-clean — mirror the checker's
+  own recognizer so emit and check agree). Otherwise **emit the honest gap** (record a `GapReason`,
+  do not fabricate a def). Then re-run the M-1006 ladder and **re-measure `checked_fraction`** (§13.3).
+  - *Property tests (`crates/mycelium-transpile/src/tests/`):* **(T-A1 positive control)** a
+    single-param param-only foreign-trait impl (`impl Cmp for <LocalType>`) emits **with** the `use`
+    and `myc check`s **clean** (upgrades `tests/vet.rs:69`'s current "unknown trait" expectation for
+    that shape). **(T-A2 negative control / honest-gap)** a two-type `Widen` impl still emits a
+    recorded gap (no fabricated `Self` body) — the `Widen` gap of `tests/vet.rs` stays red-but-honest.
+    **(T-A3 emit↔check agreement)** the emitter's param-only predicate matches the checker's
+    `foreign_trait_sig_names_a_concrete_type` on a shared case table (so emit never ships a `use` for
+    a shape the checker will refuse).
+- **WU-B — Target-trait availability (DISJOINT; small).** The imported traits must EXIST as Mycelium
+  declarations for the `use`/prelude reference to resolve. Either **declare** the single-param
+  conversion/comparison traits in an importable std phylum, **or** (prelude-scoped variant) **seed**
+  them into the prelude alongside `Fuse` (`checkty.rs:1358`–`1369`) so `impl PreludeTrait for LocalType`
+  needs no `use` at all. Choice is OQ-6 (prelude-seed vs std-phylum-declare).
+  - *Property tests:* **(T-B1)** a prelude-seeded single-param trait is visible in every nodule's
+    `traits` without an import and an `impl` of it for a local type checks clean; **(T-B2)** a
+    std-phylum-declared trait resolves via `use` through the M-1060 `"{dep}::…"` key and checks clean.
+- **WU-C — (RESIDUAL, NOT MVP) Foreign-sig re-homing = M-1076 + `Self`-in-trait-sig = M-876.** Tracked
+  separately; unblocks the `Widen`-two-type class and the concrete-type-in-sig class. Listed here only
+  to draw the MVP boundary. **`Declared` / out of v1 scope.**
+  - *Property tests it will need (spec'd for M-1076/M-876, not built here):* **(T-C1 coherence-soundness
+    / diamond)** two phyla each attempting the same `(ForeignTrait, ForeignType)` pair is refused, and
+    two distinct home-qualified pairs both check without false overlap, verified over the **full
+    closure**; **(T-C2 acyclicity precondition)** a cyclic-phyla fixture refuses (DN-113 §9.3) before
+    any coherence claim; **(T-C3 re-homing positive)** once a foreign sig is re-homed against its
+    declaring phylum, `impl Widen[To] for LocalType` checks clean and `Self` resolves to the `for`-type;
+    **(T-C4 mono cross-phylum dispatch)** a differential that the resolved instance body direct-calls
+    and agrees across L1-eval / L0-interp / AOT (DN-113 §8 runtime dual).
+
+**The DN-113 deferred-separate-compilation tension (Draft-1 §9), re-assessed.** The MVP **sidesteps**
+it: the prelude-scoped closure is `{this phylum, <prelude>}` — a single uniform home, so "whole-closure
+coherence" is trivially satisfied (there is no transitive closure to be partial about). The general
+cross-phylum case still requires whole-closure checking (Draft-1 §9 condition i), but that is M-1076's
+concern, and M-1060 already checks each dependency phylum once via the whole-graph `build_phyla_graph`
+(not separate compilation), so the closure is whole by construction in v1's linking model.
+
+### §13.3 What I adversarially attacked (VR-5 / house rule #4) and the result
+
+1. **Can the MVP reopen the bare-name collapse across the home boundary?** *Attacked:* a foreign
+   single-param trait whose sig sneaks a concrete foreign type (`Cmp[A] { fn cmp(a: A, b: A) => Bar; }`
+   where `Bar` is foreign). *Result: HELD.* The landed `foreign_trait_sig_names_a_concrete_type` guard
+   refuses it at register-time **and** call-time **and** bound-discharge — I traced all three sites
+   (`checkty.rs:4519`, `:7774`, and the HOLE-A2 bound-discharge path). The MVP's param-only predicate
+   is the guard's complement, so the MVP cannot admit this shape.
+2. **Diamond trait import — two intermediates each impl the same foreign pair.** *Result: HELD for the
+   MVP, correctly deferred for the general case.* Prelude-scoped closure has no diamond (one uniform
+   home). The general diamond needs whole-closure coherence — that is M-1076 (T-C1), out of MVP scope,
+   and flagged, not glossed.
+3. **`Self`/two-type traits slipping in as "single-param".** *Result: NARROWED (hole-found-and-fixed
+   in the spec).* My first cut of the MVP said "single-param foreign trait impls check clean." That is
+   **false for `Widen`** — the canonical witness is two-type and needs `Self`, which is a grammar gap
+   (`emit.rs:2489`), so it is **not** single-param-expressible. I narrowed the MVP to *single-param
+   **AND** param-only-sig*, moved `Widen` explicitly into the M-876/M-1076 residual, and added T-A2/T-A3
+   so the emitter cannot ship a `use` for a shape the checker refuses. This is the sharpest correction
+   to Draft-1's framing: the top *named* witness is not in the MVP; the MVP is the single-param *majority*.
+4. **Cross-phylum trait method via a generic bound (the M-1060 Hole-A/A2 class).** *Result: HELD.*
+   That is exactly HOLE A2, already closed — a bound-discharged call to a cross-phylum trait whose sig
+   names a concrete type is refused (`checkty.rs:7759`–`7789`). The MVP adds no new dispatch path.
+
+**Net verdict: the recommendation SURVIVES, with one honest narrowing** — v1 is the *single-param,
+param-only-sig* foreign-trait-impl class (prelude-scoped first), a **transpiler rule-swap (WU-A) +
+target-trait availability (WU-B)**, riding entirely on landed M-1060 checker soundness. The
+`Widen`-two-type witness and the concrete-sig class are the **M-876 + M-1076 residual**, refused
+never-silently until they land. **The design is build-ready for the MVP; it is NOT a claim that the
+full 12.4 % closes in v1** — the Phase-0 re-measure must report the single-param-vs-two-type split
+before the leverage tag moves off `Declared` (VR-5).
+
+**Open question raised by the re-verification:**
+
+- **OQ-6 (target-trait availability).** Prelude-seed the single-param conversion/comparison traits
+  (like `Fuse`) vs declare them in an importable std phylum? Prelude-seed is the smallest MVP (no
+  `use` emission, no manifest); std-phylum-declare exercises the real M-1060 import path. **Flagged
+  for the maintainer** — a real fork on merit, not guessed.
+- **OQ-7 (single-param vs two-type split of the 114 gaps).** Unknown from the corpus without the
+  re-measure. The MVP's leverage depends on it; the Phase-0 re-measure (WU-A) must report it. **I do
+  not know this number** — stated plainly (VR-5), not estimated.
 
 ---
 
@@ -395,3 +604,4 @@ OQ-1); the implementation (M-876) must then satisfy:
 | Date | Status | Note |
 |---|---|---|
 | 2026-07-11 | **Draft** | DN-122 created. A design-reasoner DN working M-876 (external-trait impls — the P1 `checked_fraction` lever, DN-121 ~15 %/119 gaps) forward to a ranked recommendation. Recommends **Alt 1 — foreign-trait import plus closure-extended coherence on home-qualified identity** (Rank 1; Alt 2 hash-checked re-statement second, Alt 3 structural rejected; the synthetic local trait-def is the recorded FAILED precedent, §2). Coherence soundness = phylum-wide orphan rule extended to the import closure, sound **conditioned on** DN-113's acyclic phylum DAG (§9.3) plus DN-112 home identity (§5). Checker-first plus mono fast-follow plus transpiler rule-swap; **zero L0/kernel/runtime** (DN-55). Downstream of DN-112 (M-1036) and DN-113 (M-1060) — both must land first (§8). Sharpest stress-test: whole-closure coherence vs. deferred separate compilation, and the prelude-scoped subset as the honest v1 MVP if DN-113 slips (§9, OQ-1). Leverage figure `Declared` until the Phase-0/Phase-4 re-measure (§9/§10). Grounded against `integration@b36f0ef4`. **Recommends, does not ratify** (house rule #3). Authored the DN only — no edit to `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (integration-owned; FLAGGED up). |
+| 2026-07-12 | **Draft** | Advanced toward ratification-ready. **Verify-first re-read against `dev@b36ebdbe` (mitigation #14) found the ground had moved: DN-112/M-1036 and DN-113/M-1060 BOTH landed 2026-07-11** — so Draft-1's "0 % wired / must land first" premise is corrected in the header, banner, and §1. **M-1060 already landed the checker substrate** Draft-1 planned as a serial-semcore "Phase 1": the common `impl ForeignTrait for LocalType` (single-param, param-only sig) **checks clean today** (`register_instances` + the MED-closure preserving that pattern, `checkty.rs:4335`), and the only unsound shapes are **refused never-silently** by the landed `foreign_trait_sig_names_a_concrete_type` guard (HOLE A/A2/B, `checkty.rs:4339`/`4519`/`7774`). New **§13 (build-ready MVP)** supersedes §8's stale plan: v1 = the **single-param param-only foreign-trait-impl class (prelude-scoped first)** via a **transpiler rule-swap (WU-A) + target-trait availability (WU-B)** — no new checker phase; the concrete-sig re-homing = **M-1076** (already minted, todo) and the `Widen`-two-type/`Self`-in-sig case = **M-876** are the named residual (WU-C). Soundness argument re-grounded on the **landed** `{carrier}×{position}` surface M-1060 verified (the MVP is the guard's complement — cannot reopen a bare-name collapse by construction). Adversarial stress-test (§13.3) **narrowed** the MVP: the canonical `Widen` witness is two-type/`Self`-needing (`emit.rs:2489` grammar gap), so it is **in the residual, not the MVP** — the MVP closes the single-param majority; the Phase-0 re-measure must report the split (OQ-7). Fresh Phase-0 figure 114 gaps / 12.4 %. New OQ-6 (prelude-seed vs std-phylum-declare) / OQ-7 (single-param split) flagged. Property tests spec'd per WU (T-A1..T-C4). **Still Draft — recommends, does not ratify** (house rule #3). Re-verified `Empirical` claims cite `file:line @dev b36ebdbe`; unbuilt pieces stay `Declared` (VR-5). Authored the DN only; `issues.yaml`/`CHANGELOG.md`/`Doc-Index.md` FLAGGED up, not edited. |
