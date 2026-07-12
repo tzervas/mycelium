@@ -524,13 +524,13 @@
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
-      "snippet": "impl PhylumEnv { # [doc = \" The single nodule's [`Env`] when this is a phylum-of-one, else `None`. The bridge\"] # [doc = \" [`check_nodule`] uses to keep its single-`Env` return type (M-662).\"] # [must_use] pub fn single (& self) -> Option < & Env > { match self . nodules . as_slice () { [(_ , env)] => Some (env) , _ => None , } } # [doc = \" The checked [`Env`] of the nodule whose path equals `path`, if present.\"] # [must_use] pub fn nodule (& self , path : & Path) -> Option < & Env > { self . nodules . iter () . find (| (p , _) | p == path) . map (| (_ , e) | e) } # [doc = \" **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations\"] # [doc = \" into **one** [`Env`] so the downstream pipeline ([`crate::elab`] / [`crate::mono`] /\"] # [doc = \" [`crate::eval`], all of which consume a single `&Env`) can **execute a `use`d symbol across\"] # [doc = \" nodules** — the runtime dual of the check-time cross-nodule resolution (`resolve_imports`,\"] # [doc = \" M-662). This is the \\\"give the evaluator a phylum-wide view\\\" close that retires the\"] # [doc = \" local-mirror sidestep (DN-99 register row #41; ADR-045 unfrozen posture).\"] # [doc = \"\"] # [doc = \" **What it reuses (DRY, KC-3 — no new L0 node):** the check pass already resolved every `use`\"] # [doc = \" against the phylum-wide export table and refused unknown/private/ambiguous imports; those\"] # [doc = \" checks stand. `link` reuses that verified structure by merging **each name from its home\"] # [doc = \" nodule's checked `Env`** — the authoritative, ambient-resolved declaration — keyed by simple\"] # [doc = \" name. (An *imported* copy in a consumer nodule's `Env` is a less-resolved clone of the home\"] # [doc = \" decl; `link` never merges those, so the linked env is *strictly more correct* than running a\"] # [doc = \" consumer nodule's per-nodule `Env` directly — which is why a phylum, including a phylum-of-one,\"] # [doc = \" should be run through `link`.)\"] # [doc = \"\"] # [doc = \" **Flat-namespace v0 (never-silent boundary, G2/VR-5).** The merge is a **flat phylum\"] # [doc = \" namespace**: exactly one declaration per simple name across the whole phylum. This runs the\"] # [doc = \" common shape — a shared-type/helper nodule plus consumers with distinct names (the stdlib\"] # [doc = \" porter's user story) — and the *transitive* case a per-nodule `Env` cannot (a `pub` fn whose\"] # [doc = \" body calls its home nodule's **private** helper now resolves, because the helper is linked in\"] # [doc = \" from its home nodule). A **cross-nodule simple-name collision** (two nodules each declaring the\"] # [doc = \" same fn/type/trait name) is an **explicit [`CheckError`]**, never a silent winner — the\"] # [doc = \" qualified-name / per-frame home-nodule scoping that would *disambiguate* a collision (rather\"] # [doc = \" than refuse it) is the flagged design residual (M-982 follow-up; needs the ratifying DN).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" A never-silent [`CheckError`] on any cross-nodule collision the flat namespace cannot represent\"] # [doc = \" (a duplicate simple name across nodules, or — defensively — a duplicate coherence-keyed\"] # [doc = \" instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have\"] # [doc = \" refused).\"] pub fn link (& self) -> Result < Env , CheckError > { let mut types : BTreeMap < String , DataInfo > = BTreeMap :: new () ; let p = prelude () ; types . insert (p . name . clone () , p) ; let mut traits : BTreeMap < String , TraitInfo > = BTreeMap :: new () ; if self . nodules . iter () . any (| (_ , e) | e . traits . contains_key (crate :: fuse :: TRAIT_NAME)) { traits . insert (crate :: fuse :: TRAIT_NAME . to_owned () , crate :: fuse :: prelude ()) ; } let mut fns : BTreeMap < String , FnDecl > = BTreeMap :: new () ; let mut totality : BTreeMap < String , crate :: totality :: Totality > = BTreeMap :: new () ; let mut instances : BTreeMap < (String , String) , InstanceInfo > = BTreeMap :: new () ; let mut impls : BTreeMap < (String , String) , Vec < FnDecl > > = BTreeMap :: new () ; let mut lower_rules : BTreeMap < String , LowerDecl > = BTreeMap :: new () ; let mut derived_provenance : BTreeMap < (String , String) , (String , String) > = BTreeMap :: new () ; let mut via_provenance : BTreeMap < (String , String) , (u32 , String) > = BTreeMap :: new () ; let collide = | kind : & str , name : & str | { CheckError :: new (name , format ! (\"cross-nodule name collision: `{name}` ({kind}) is declared by more than one \\\n                     nodule of this phylum — the v0 runtime link is a flat phylum namespace (one \\\n                     declaration per simple name; M-1024). Rename one, or await the qualified \\\n                     per-nodule scoping that disambiguates a collision (M-982 — never a silent \\\n                     winner, G2)\") ,) } ; for ((_path , env) , own) in self . nodules . iter () . zip (self . own . iter ()) { for name in & own . types { if types . contains_key (name) { return Err (collide (\"type\" , name)) ; } if let Some (info) = env . types . get (name) { types . insert (name . clone () , info . clone ()) ; } } for name in & own . traits { if traits . contains_key (name) { return Err (collide (\"trait\" , name)) ; } if let Some (info) = env . traits . get (name) { traits . insert (name . clone () , info . clone ()) ; } } for name in & own . fns { if fns . contains_key (name) { return Err (collide (\"fn\" , name)) ; } if let Some (fd) = env . fns . get (name) { fns . insert (name . clone () , fd . clone ()) ; } if let Some (t) = env . totality . get (name) { totality . insert (name . clone () , * t) ; } } for (k , v) in & env . instances { if instances . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"instance\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (k , v) in & env . impls { if impls . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (name , v) in & env . lower_rules { if lower_rules . insert (name . clone () , v . clone ()) . is_some () { return Err (collide (\"lower rule\" , name)) ; } } for (k , v) in & env . derived_provenance { if derived_provenance . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"derived impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (k , v) in & env . via_provenance { if via_provenance . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"via impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } } Ok (Env { types , fns , totality , traits , instances , impls , lower_rules , derived_provenance , via_provenance , }) } }",
+      "snippet": "impl PhylumEnv { # [doc = \" The single nodule's [`Env`] when this is a phylum-of-one, else `None`. The bridge\"] # [doc = \" [`check_nodule`] uses to keep its single-`Env` return type (M-662).\"] # [must_use] pub fn single (& self) -> Option < & Env > { match self . nodules . as_slice () { [(_ , env)] => Some (env) , _ => None , } } # [doc = \" The checked [`Env`] of the nodule whose path equals `path`, if present.\"] # [must_use] pub fn nodule (& self , path : & Path) -> Option < & Env > { self . nodules . iter () . find (| (p , _) | p == path) . map (| (_ , e) | e) } # [doc = \" **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations\"] # [doc = \" into **one** [`Env`] so the downstream pipeline ([`crate::elab`] / [`crate::mono`] /\"] # [doc = \" [`crate::eval`], all of which consume a single `&Env`) can **execute a `use`d symbol across\"] # [doc = \" nodules** — the runtime dual of the check-time cross-nodule resolution (`resolve_imports`,\"] # [doc = \" M-662). This is the \\\"give the evaluator a phylum-wide view\\\" close that retires the\"] # [doc = \" local-mirror sidestep (DN-99 register row #41; ADR-045 unfrozen posture).\"] # [doc = \"\"] # [doc = \" **What it reuses (DRY, KC-3 — no new L0 node):** the check pass already resolved every `use`\"] # [doc = \" against the phylum-wide export table and refused unknown/private/ambiguous imports; those\"] # [doc = \" checks stand. `link` reuses that verified structure by merging **each name from its home\"] # [doc = \" nodule's checked `Env`** — the authoritative, ambient-resolved declaration — keyed by simple\"] # [doc = \" name. (An *imported* copy in a consumer nodule's `Env` is a less-resolved clone of the home\"] # [doc = \" decl; `link` never merges those, so the linked env is *strictly more correct* than running a\"] # [doc = \" consumer nodule's per-nodule `Env` directly — which is why a phylum, including a phylum-of-one,\"] # [doc = \" should be run through `link`.)\"] # [doc = \"\"] # [doc = \" **Flat-namespace v0 (never-silent boundary, G2/VR-5).** The merge is a **flat phylum\"] # [doc = \" namespace**: exactly one declaration per simple name across the whole phylum. This runs the\"] # [doc = \" common shape — a shared-type/helper nodule plus consumers with distinct names (the stdlib\"] # [doc = \" porter's user story) — and the *transitive* case a per-nodule `Env` cannot (a `pub` fn whose\"] # [doc = \" body calls its home nodule's **private** helper now resolves, because the helper is linked in\"] # [doc = \" from its home nodule). A **cross-nodule simple-name collision** (two nodules each declaring the\"] # [doc = \" same fn/type/trait name) is an **explicit [`CheckError`]**, never a silent winner — the\"] # [doc = \" qualified-name / per-frame home-nodule scoping that would *disambiguate* a collision (rather\"] # [doc = \" than refuse it) is the flagged design residual (M-982 follow-up; needs the ratifying DN).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" A never-silent [`CheckError`] on any cross-nodule collision the flat namespace cannot represent\"] # [doc = \" (a duplicate simple name across nodules, or — defensively — a duplicate coherence-keyed\"] # [doc = \" instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have\"] # [doc = \" refused).\"] pub fn link (& self) -> Result < Env , CheckError > { let mut types : BTreeMap < String , DataInfo > = BTreeMap :: new () ; let p = prelude () ; types . insert (p . name . clone () , p) ; let mut traits : BTreeMap < String , TraitInfo > = BTreeMap :: new () ; if self . nodules . iter () . any (| (_ , e) | e . traits . contains_key (crate :: fuse :: TRAIT_NAME)) { traits . insert (crate :: fuse :: TRAIT_NAME . to_owned () , crate :: fuse :: prelude ()) ; } if self . nodules . iter () . any (| (_ , e) | e . traits . contains_key (crate :: ord3 :: TRAIT_NAME)) { traits . insert (crate :: ord3 :: TRAIT_NAME . to_owned () , crate :: ord3 :: prelude ()) ; } let mut fns : BTreeMap < String , FnDecl > = BTreeMap :: new () ; let mut totality : BTreeMap < String , crate :: totality :: Totality > = BTreeMap :: new () ; let mut instances : BTreeMap < (String , String) , InstanceInfo > = BTreeMap :: new () ; let mut impls : BTreeMap < (String , String) , Vec < FnDecl > > = BTreeMap :: new () ; let mut lower_rules : BTreeMap < String , LowerDecl > = BTreeMap :: new () ; let mut derived_provenance : BTreeMap < (String , String) , (String , String) > = BTreeMap :: new () ; let mut via_provenance : BTreeMap < (String , String) , (u32 , String) > = BTreeMap :: new () ; let collide = | kind : & str , name : & str | { CheckError :: new (name , format ! (\"cross-nodule name collision: `{name}` ({kind}) is declared by more than one \\\n                     nodule of this phylum — the v0 runtime link is a flat phylum namespace (one \\\n                     declaration per simple name; M-1024). Rename one, or await the qualified \\\n                     per-nodule scoping that disambiguates a collision (M-982 — never a silent \\\n                     winner, G2)\") ,) } ; for ((_path , env) , own) in self . nodules . iter () . zip (self . own . iter ()) { for name in & own . types { if types . contains_key (name) { return Err (collide (\"type\" , name)) ; } if let Some (info) = env . types . get (name) { types . insert (name . clone () , info . clone ()) ; } } for name in & own . traits { if traits . contains_key (name) { return Err (collide (\"trait\" , name)) ; } if let Some (info) = env . traits . get (name) { traits . insert (name . clone () , info . clone ()) ; } } for name in & own . fns { if fns . contains_key (name) { return Err (collide (\"fn\" , name)) ; } if let Some (fd) = env . fns . get (name) { fns . insert (name . clone () , fd . clone ()) ; } if let Some (t) = env . totality . get (name) { totality . insert (name . clone () , * t) ; } } for (k , v) in & env . instances { if instances . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"instance\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (k , v) in & env . impls { if impls . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (name , v) in & env . lower_rules { if lower_rules . insert (name . clone () , v . clone ()) . is_some () { return Err (collide (\"lower rule\" , name)) ; } } for (k , v) in & env . derived_provenance { if derived_provenance . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"derived impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } for (k , v) in & env . via_provenance { if via_provenance . insert (k . clone () , v . clone ()) . is_some () { return Err (collide (\"via impl\" , & format ! (\"{}:{}\" , k . 0 , k . 1))) ; } } } Ok (Env { types , fns , totality , traits , instances , impls , lower_rules , derived_provenance , via_provenance , }) } }",
       "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `single` body: Rust ownership/identity-conversion no-op method `.as_slice()` has no Mycelium free-function/prim referent (value semantics — ADR-003); desugaring it to a bare `as_slice(recv)` would fabricate an unknown prim (`unknown function/constructor/prim `as_slice`` — verified against the oracle), so it is gapped, never fake-emitted (G2/VR-5); impl method `nodule`: impl method name `nodule` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `link` body: `let` binding uses an unsupported pattern (only simple `let x = e;` is supported)",
       "item_name": "PhylumEnv"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1470,
+      "line": 1481,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -540,7 +540,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1509,
+      "line": 1520,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -550,7 +550,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1588,
+      "line": 1599,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -560,7 +560,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1635,
+      "line": 1646,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -570,7 +570,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1660,
+      "line": 1671,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -580,7 +580,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1693,
+      "line": 1704,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -590,7 +590,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1703,
+      "line": 1714,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -600,7 +600,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1738,
+      "line": 1749,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -610,7 +610,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1760,
+      "line": 1771,
       "col": 1,
       "category": "Closure",
       "rust_construct": "Closure",
@@ -620,7 +620,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1805,
+      "line": 1816,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -630,7 +630,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1875,
+      "line": 1886,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -640,7 +640,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1891,
+      "line": 1902,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -650,7 +650,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1916,
+      "line": 1927,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -660,7 +660,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1926,
+      "line": 1937,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -670,7 +670,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1939,
+      "line": 1950,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -680,7 +680,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1951,
+      "line": 1962,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -690,17 +690,17 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1967,
+      "line": 1978,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "fn check_phylum_inner (phylum : & Phylum , deps : & Phyla , matured_scope : bool ,) -> Result < (PhylumEnv , Exports) , CheckError > { let resolved : Vec < Nodule > = phylum . nodules . iter () . map (crate :: ambient :: resolve) . collect :: < Result < _ , _ > > () ? ; let mut via_objects_per_nodule : Vec < Vec < ObjectDecl > > = Vec :: with_capacity (resolved . len ()) ; let mut resolved_expanded : Vec < Nodule > = Vec :: with_capacity (resolved . len ()) ; for n in resolved { if ! n . items . iter () . any (| i | matches ! (i , Item :: Object (_) | Item :: InherentImpl (_))) { via_objects_per_nodule . push (vec ! []) ; resolved_expanded . push (n) ; continue ; } let mut items = Vec :: with_capacity (n . items . len ()) ; let mut via_objs : Vec < ObjectDecl > = Vec :: new () ; for item in n . items { match item { Item :: Object (od) => { if ! od . via_decls . is_empty () { via_objs . push (od . clone ()) ; } items . extend (desugar_object_structural (& od)) ; } Item :: InherentImpl (id) => { if let Some (dup) = first_duplicate (& id . params) { return Err (CheckError :: new (\"impl\" , format ! (\"duplicate type parameter `{dup}` in an impl-level slot \\\n                                 `impl[…]` (DN-103 / M-1026; never silent — G2)\") ,)) ; } let impl_tps : Vec < TypeParam > = id . params . iter () . map (| name | TypeParam { name : name . clone () , kind : ParamKind :: Type , bounds : Vec :: new () , }) . collect () ; for mut m in id . methods { if ! impl_tps . is_empty () { let mut params = impl_tps . clone () ; params . extend (m . sig . params) ; m . sig . params = params ; } items . push (Item :: Fn (m)) ; } } other => items . push (other) , } } via_objects_per_nodule . push (via_objs) ; resolved_expanded . push (Nodule { path : n . path , std_sys : n . std_sys , items , }) ; } let resolved = resolved_expanded ; let mut per_nodule_regs : Vec < NoduleRegs > = Vec :: with_capacity (resolved . len ()) ; let mut exports = Exports :: default () ; let mut coherence = CoherenceView :: default () ; for nodule in & resolved { let regs = register_nodule_decls (nodule) ? ; let qual = | name : & str | qualify (& nodule . path , name) ; for (name , info) in & regs . types { exports . declared . insert (qual (name) , info_is_pub_type (nodule , name)) ; if info_is_pub_type (nodule , name) { exports . types . insert (qual (name) , info . clone ()) ; let sealed : BTreeSet < String > = nodule . items . iter () . filter_map (| it | match it { Item :: Type (td) if & td . name == name => Some (td) , _ => None , }) . flat_map (| td | td . ctors . iter ()) . filter (| c | c . sealed) . map (| c | c . name . clone ()) . collect () ; if ! sealed . is_empty () { exports . sealed_ctors . insert (qual (name) , sealed) ; } } } for (name , fd) in & regs . fns { exports . declared . insert (qual (name) , fd . vis . is_pub ()) ; if fd . vis . is_pub () { exports . fns . insert (qual (name) , fd . clone ()) ; if let Ok (resolved) = resolve_fn_sig (& regs . types , & fd . sig) { exports . resolved_fn_sigs . insert (qual (name) , resolved) ; } } } for (name , info) in & regs . traits { exports . declared . insert (qual (name) , info_is_pub_trait (nodule , name)) ; if info_is_pub_trait (nodule , name) { exports . traits . insert (qual (name) , info . clone ()) ; } } for name in regs . traits . keys () { coherence . traits . insert (name . clone ()) ; } for name in regs . types . keys () { if name != \"Bool\" { coherence . types . insert (name . clone ()) ; } } per_nodule_regs . push (regs) ; } let exports = merge_phyla_exports (exports , deps) ; let mut out = Vec :: with_capacity (resolved . len ()) ; let mut own = Vec :: with_capacity (resolved . len ()) ; for (i , (nodule , regs)) in resolved . iter () . zip (per_nodule_regs) . enumerate () { own . push (OwnDecls { types : regs . types . keys () . filter (| n | n . as_str () != \"Bool\") . cloned () . collect () , fns : regs . fns . keys () . cloned () . collect () , traits : regs . traits . keys () . filter (| n | n . as_str () != crate :: fuse :: TRAIT_NAME) . cloned () . collect () , }) ; let imports = resolve_imports (nodule , & exports , deps) ? ; let via_objects = & via_objects_per_nodule [i] ; let env = check_nodule_with (nodule , regs , & imports , & coherence , matured_scope , via_objects ,) ? ; out . push ((nodule . path . clone () , env)) ; } Ok ((PhylumEnv { nodules : out , own } , exports)) }",
+      "snippet": "fn check_phylum_inner (phylum : & Phylum , deps : & Phyla , matured_scope : bool ,) -> Result < (PhylumEnv , Exports) , CheckError > { let resolved : Vec < Nodule > = phylum . nodules . iter () . map (crate :: ambient :: resolve) . collect :: < Result < _ , _ > > () ? ; let mut via_objects_per_nodule : Vec < Vec < ObjectDecl > > = Vec :: with_capacity (resolved . len ()) ; let mut resolved_expanded : Vec < Nodule > = Vec :: with_capacity (resolved . len ()) ; for n in resolved { if ! n . items . iter () . any (| i | matches ! (i , Item :: Object (_) | Item :: InherentImpl (_))) { via_objects_per_nodule . push (vec ! []) ; resolved_expanded . push (n) ; continue ; } let mut items = Vec :: with_capacity (n . items . len ()) ; let mut via_objs : Vec < ObjectDecl > = Vec :: new () ; for item in n . items { match item { Item :: Object (od) => { if ! od . via_decls . is_empty () { via_objs . push (od . clone ()) ; } items . extend (desugar_object_structural (& od)) ; } Item :: InherentImpl (id) => { if let Some (dup) = first_duplicate (& id . params) { return Err (CheckError :: new (\"impl\" , format ! (\"duplicate type parameter `{dup}` in an impl-level slot \\\n                                 `impl[…]` (DN-103 / M-1026; never silent — G2)\") ,)) ; } let impl_tps : Vec < TypeParam > = id . params . iter () . map (| name | TypeParam { name : name . clone () , kind : ParamKind :: Type , bounds : Vec :: new () , }) . collect () ; for mut m in id . methods { if ! impl_tps . is_empty () { let mut params = impl_tps . clone () ; params . extend (m . sig . params) ; m . sig . params = params ; } items . push (Item :: Fn (m)) ; } } other => items . push (other) , } } via_objects_per_nodule . push (via_objs) ; resolved_expanded . push (Nodule { path : n . path , std_sys : n . std_sys , items , }) ; } let resolved = resolved_expanded ; let mut per_nodule_regs : Vec < NoduleRegs > = Vec :: with_capacity (resolved . len ()) ; let mut exports = Exports :: default () ; let mut coherence = CoherenceView :: default () ; for nodule in & resolved { let regs = register_nodule_decls (nodule) ? ; let qual = | name : & str | qualify (& nodule . path , name) ; for (name , info) in & regs . types { exports . declared . insert (qual (name) , info_is_pub_type (nodule , name)) ; if info_is_pub_type (nodule , name) { exports . types . insert (qual (name) , info . clone ()) ; let sealed : BTreeSet < String > = nodule . items . iter () . filter_map (| it | match it { Item :: Type (td) if & td . name == name => Some (td) , _ => None , }) . flat_map (| td | td . ctors . iter ()) . filter (| c | c . sealed) . map (| c | c . name . clone ()) . collect () ; if ! sealed . is_empty () { exports . sealed_ctors . insert (qual (name) , sealed) ; } } } for (name , fd) in & regs . fns { exports . declared . insert (qual (name) , fd . vis . is_pub ()) ; if fd . vis . is_pub () { exports . fns . insert (qual (name) , fd . clone ()) ; if let Ok (resolved) = resolve_fn_sig (& regs . types , & fd . sig) { exports . resolved_fn_sigs . insert (qual (name) , resolved) ; } } } for (name , info) in & regs . traits { exports . declared . insert (qual (name) , info_is_pub_trait (nodule , name)) ; if info_is_pub_trait (nodule , name) { exports . traits . insert (qual (name) , info . clone ()) ; } } for name in regs . traits . keys () { coherence . traits . insert (name . clone ()) ; } for name in regs . types . keys () { if name != \"Bool\" { coherence . types . insert (name . clone ()) ; } } per_nodule_regs . push (regs) ; } let exports = merge_phyla_exports (exports , deps) ; let mut out = Vec :: with_capacity (resolved . len ()) ; let mut own = Vec :: with_capacity (resolved . len ()) ; for (i , (nodule , regs)) in resolved . iter () . zip (per_nodule_regs) . enumerate () { own . push (OwnDecls { types : regs . types . keys () . filter (| n | n . as_str () != \"Bool\") . cloned () . collect () , fns : regs . fns . keys () . cloned () . collect () , traits : regs . traits . keys () . filter (| n | { n . as_str () != crate :: fuse :: TRAIT_NAME && n . as_str () != crate :: ord3 :: TRAIT_NAME }) . cloned () . collect () , }) ; let imports = resolve_imports (nodule , & exports , deps) ? ; let via_objects = & via_objects_per_nodule [i] ; let env = check_nodule_with (nodule , regs , & imports , & coherence , matured_scope , via_objects ,) ? ; out . push ((nodule . path . clone () , env)) ; } Ok ((PhylumEnv { nodules : out , own } , exports)) }",
       "reason": "fn parameter `phylum` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "check_phylum_inner"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2203,
+      "line": 2218,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -710,7 +710,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2213,
+      "line": 2228,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -720,7 +720,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2223,
+      "line": 2238,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -730,7 +730,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2231,
+      "line": 2246,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -740,7 +740,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2244,
+      "line": 2259,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -750,17 +750,17 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2260,
+      "line": 2275,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
-      "snippet": "# [doc = \" Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and\"] # [doc = \" function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the\"] # [doc = \" single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build\"] # [doc = \" its cross-nodule views before checking any body). Bodies and instances are **not** handled here\"] # [doc = \" (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included\"] # [doc = \" so intra-nodule resolution is unchanged.\"] # [doc = \"\"] # [doc = \" Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).\"] pub (crate) fn register_nodule_decls (nodule : & Nodule) -> Result < NoduleRegs , CheckError > { let mut types = BTreeMap :: new () ; let p = prelude () ; types . insert (p . name . clone () , p) ; register_types (& mut types , nodule) ? ; let mut traits = register_traits (& types , nodule) ? ; let fuse_used = nodule . items . iter () . any (| item | matches ! (item , Item :: Impl (id) if id . trait_name == crate :: fuse :: TRAIT_NAME)) ; if fuse_used { if traits . contains_key (crate :: fuse :: TRAIT_NAME) { return Err (CheckError :: new (crate :: fuse :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \\\n                 lawful-merge `join` contract is already provided by the prelude; remove this \\\n                 declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly\" ,)) ; } traits . insert (crate :: fuse :: TRAIT_NAME . to_owned () , crate :: fuse :: prelude ()) ; } else if traits . contains_key (crate :: fuse :: TRAIT_NAME) { return Err (CheckError :: new (crate :: fuse :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \\\n             lawful-merge `join` contract is already provided by the prelude; remove this \\\n             declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly\" ,)) ; } let mut fns : BTreeMap < String , FnDecl > = BTreeMap :: new () ; for item in & nodule . items { if let Item :: Fn (fd) = item { if let Some (dup) = first_duplicate (& fd . sig . param_names ()) { return Err (CheckError :: new (& fd . sig . name , format ! (\"duplicate type parameter `{dup}` in `{}`\" , fd . sig . name) ,)) ; } if fns . insert (fd . sig . name . clone () , fd . clone ()) . is_some () { return Err (CheckError :: new (& fd . sig . name , \"duplicate function\")) ; } } } Ok (NoduleRegs { types , fns , traits }) }",
+      "snippet": "# [doc = \" Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and\"] # [doc = \" function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the\"] # [doc = \" single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build\"] # [doc = \" its cross-nodule views before checking any body). Bodies and instances are **not** handled here\"] # [doc = \" (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included\"] # [doc = \" so intra-nodule resolution is unchanged.\"] # [doc = \"\"] # [doc = \" Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).\"] pub (crate) fn register_nodule_decls (nodule : & Nodule) -> Result < NoduleRegs , CheckError > { let mut types = BTreeMap :: new () ; let p = prelude () ; types . insert (p . name . clone () , p) ; register_types (& mut types , nodule) ? ; let mut traits = register_traits (& types , nodule) ? ; let fuse_used = nodule . items . iter () . any (| item | matches ! (item , Item :: Impl (id) if id . trait_name == crate :: fuse :: TRAIT_NAME)) ; if fuse_used { if traits . contains_key (crate :: fuse :: TRAIT_NAME) { return Err (CheckError :: new (crate :: fuse :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \\\n                 lawful-merge `join` contract is already provided by the prelude; remove this \\\n                 declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly\" ,)) ; } traits . insert (crate :: fuse :: TRAIT_NAME . to_owned () , crate :: fuse :: prelude ()) ; } else if traits . contains_key (crate :: fuse :: TRAIT_NAME) { return Err (CheckError :: new (crate :: fuse :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \\\n             lawful-merge `join` contract is already provided by the prelude; remove this \\\n             declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly\" ,)) ; } let ord3_used = nodule . items . iter () . any (| item | matches ! (item , Item :: Impl (id) if id . trait_name == crate :: ord3 :: TRAIT_NAME)) ; if ord3_used { if traits . contains_key (crate :: ord3 :: TRAIT_NAME) { return Err (CheckError :: new (crate :: ord3 :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — \\\n                 its `cmp` contract is already provided by the prelude; remove this declaration \\\n                 and `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly\" ,)) ; } traits . insert (crate :: ord3 :: TRAIT_NAME . to_owned () , crate :: ord3 :: prelude ()) ; } else if traits . contains_key (crate :: ord3 :: TRAIT_NAME) { return Err (CheckError :: new (crate :: ord3 :: TRAIT_NAME , \"cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — its \\\n             `cmp` contract is already provided by the prelude; remove this declaration and \\\n             `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly\" ,)) ; } let mut fns : BTreeMap < String , FnDecl > = BTreeMap :: new () ; for item in & nodule . items { if let Item :: Fn (fd) = item { if let Some (dup) = first_duplicate (& fd . sig . param_names ()) { return Err (CheckError :: new (& fd . sig . name , format ! (\"duplicate type parameter `{dup}` in `{}`\" , fd . sig . name) ,)) ; } if fns . insert (fd . sig . name . clone () , fd . clone ()) . is_some () { return Err (CheckError :: new (& fd . sig . name , \"duplicate function\")) ; } } } Ok (NoduleRegs { types , fns , traits }) }",
       "reason": "fn parameter `nodule` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "register_nodule_decls"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2338,
+      "line": 2383,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -770,7 +770,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2588,
+      "line": 2633,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -780,7 +780,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2593,
+      "line": 2638,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -790,7 +790,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2605,
+      "line": 2650,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -800,7 +800,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2612,
+      "line": 2657,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -810,7 +810,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2654,
+      "line": 2699,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -820,7 +820,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2667,
+      "line": 2712,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -830,7 +830,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2676,
+      "line": 2721,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -840,7 +840,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2687,
+      "line": 2732,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -850,7 +850,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2729,
+      "line": 2774,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -860,7 +860,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2737,
+      "line": 2782,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -870,7 +870,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2794,
+      "line": 2839,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -880,7 +880,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2827,
+      "line": 2872,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -890,7 +890,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2993,
+      "line": 3038,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -900,7 +900,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3343,
+      "line": 3388,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -910,7 +910,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3415,
+      "line": 3460,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -920,7 +920,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3482,
+      "line": 3527,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -930,7 +930,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3574,
+      "line": 3619,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -940,7 +940,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3589,
+      "line": 3634,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -950,7 +950,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3628,
+      "line": 3673,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -960,7 +960,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3691,
+      "line": 3736,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -970,7 +970,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3712,
+      "line": 3757,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -980,7 +980,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3833,
+      "line": 3878,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -990,7 +990,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3869,
+      "line": 3914,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1000,7 +1000,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3901,
+      "line": 3946,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1010,7 +1010,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4027,
+      "line": 4072,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1020,7 +1020,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4069,
+      "line": 4114,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -1030,7 +1030,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4080,
+      "line": 4125,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1040,7 +1040,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4160,
+      "line": 4205,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1050,7 +1050,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4166,
+      "line": 4211,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1060,7 +1060,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4209,
+      "line": 4254,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1070,7 +1070,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4216,
+      "line": 4261,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1080,7 +1080,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4291,
+      "line": 4336,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1090,7 +1090,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4307,
+      "line": 4352,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -1100,7 +1100,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4346,
+      "line": 4391,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -1110,7 +1110,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4364,
+      "line": 4409,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -1120,7 +1120,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4377,
+      "line": 4422,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -1130,7 +1130,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4399,
+      "line": 4444,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1140,7 +1140,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4568,
+      "line": 4613,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1150,7 +1150,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4614,
+      "line": 4659,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1160,7 +1160,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4746,
+      "line": 4791,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1170,7 +1170,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4800,
+      "line": 4845,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1180,7 +1180,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4856,
+      "line": 4901,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -1190,7 +1190,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4869,
+      "line": 4914,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -1200,7 +1200,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4877,
+      "line": 4922,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -1210,7 +1210,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4948,
+      "line": 4993,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1220,7 +1220,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4994,
+      "line": 5039,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -1230,7 +1230,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9448,
+      "line": 9493,
       "col": 1,
       "category": "Closure",
       "rust_construct": "Closure",
@@ -1240,7 +1240,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9501,
+      "line": 9546,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1250,7 +1250,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9649,
+      "line": 9694,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1260,7 +1260,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9703,
+      "line": 9748,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1270,7 +1270,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9723,
+      "line": 9768,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1280,7 +1280,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9739,
+      "line": 9784,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1290,7 +1290,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9765,
+      "line": 9810,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1300,7 +1300,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9796,
+      "line": 9841,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1310,7 +1310,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9809,
+      "line": 9854,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1320,7 +1320,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9872,
+      "line": 9917,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1330,7 +1330,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9880,
+      "line": 9925,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1340,7 +1340,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9909,
+      "line": 9954,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1350,7 +1350,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9923,
+      "line": 9968,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1360,7 +1360,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9931,
+      "line": 9976,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -1370,7 +1370,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9950,
+      "line": 9995,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -1380,7 +1380,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9982,
+      "line": 10027,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1390,7 +1390,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 9997,
+      "line": 10042,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1400,7 +1400,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10010,
+      "line": 10055,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1410,7 +1410,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10011,
+      "line": 10056,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1420,7 +1420,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10013,
+      "line": 10058,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1430,7 +1430,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10043,
+      "line": 10088,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -1440,7 +1440,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10072,
+      "line": 10117,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -1450,7 +1450,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10117,
+      "line": 10162,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1460,7 +1460,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10154,
+      "line": 10199,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -1470,7 +1470,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10169,
+      "line": 10214,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
