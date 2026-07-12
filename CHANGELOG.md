@@ -12,6 +12,39 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(notes): file DN-119/120/121/122 (Draft) + DN-32/33 → DN-35 §5 forward cross-refs (2026-07-11)
+
+Four Draft Design Notes filed for maintainer ratification, part of the ongoing gap-close-run wave
+(design-phase; docs are the product):
+
+- **DN-119** — L3 Comprehensive Surface Expressibility: Scoping, Reframe, and Phased Plan. Scopes the
+  "implement L3 comprehensively" directive: the L3 grammar is substantially complete already
+  (register-lag corrections to DN-99); isolates the genuine ~7-class grammar residual from the bulk of
+  the gap mass that is misattributed to L3 (actually kernel/runtime/transpiler work) and from the
+  deliberate-exclusion set (`&mut`, unbounded `loop`, shared mutability, silent casts) that must not
+  get L3 grammar. Recommends reframing "full native capability" and a lane-tagged phased plan.
+- **DN-120** — Content-Addressed Identity vs. Temporary-Copy Mutation: Solved-by-Design (Verdict). A
+  verdict note (no new mechanism — mitigation #14) closing ADR-003's disclosed residual: DN-35 §5 is
+  already the content-address-coherence answer (rc==1 reuse gate, weak-intern evict-or-copy). Corrects
+  the landed/open boundary against the tree — the rc==1 detection gate is landed and `Exact`
+  (`mycelium-std-runtime/src/rc.rs`); the reuse-write itself stays `Declared`, tracked as DN-35's own
+  E12 Increment 3. Distinguishes this from the unrelated DN-109 §6.1/D7 `&mut`-aliasing problem
+  (DN-118's lane).
+- **DN-121** — The Type-Vocabulary Lever: Scoping the Dominant `checked_fraction` Class. Scopes the
+  ~40% type-coverage gap class; corrects "missing kernel type-vocabulary" to "type-reference closure
+  on the existing kernel" — most of the class closes via std ADTs + idiom, not a new kernel `Ty`
+  variant. Phased, leverage-ranked build plan; flags the outstanding Phase-0 re-measure.
+- **DN-122** — External-Trait Impls Across the Home Boundary. Recommends a foreign-trait-import
+  mechanism (closure-extended coherence on DN-112 home-qualified identity, reusing DN-113's
+  cross-phylum `use`) for the M-876 external-trait-impl gap (DN-121's top lever, ~15%/119 gaps); zero
+  L0/kernel/runtime change. Explicitly downstream of DN-112/DN-113 (both Accepted-not-Enacted).
+
+All four are **Draft**, pending maintainer ratification (house rule #3, append-only); none edits
+`crates/**`, `lib/**`, or `issues.yaml`. Added forward cross-reference notes (append-only, no
+normative text changed) at **DN-32 §2.2** and **DN-33 §6** pointing to **DN-35 §5** (the
+content-address-coherence answer) and **DN-120** (the verdict). `Doc-Index.md` rows added for all
+four notes.
+
 ### fix(l1): M-1036 ctor-seal capability-gate closure — nodule-qualified type identity (DN-112 Rank 1) (2026-07-11)
 
 `claude/leaf/m1036-ctor-seal` (5 cycles of self-verification; 4 soundness holes found and closed
