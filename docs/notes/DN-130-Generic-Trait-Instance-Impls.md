@@ -4,10 +4,10 @@
 |---|---|
 | **Note** | DN-130 |
 | **Status** | **Draft** (2026-07-12). A design-reasoner note working the **impl-generics** cluster gap forward to a **ranked recommendation for maintainer ratification** (house rule #3 — this note enacts nothing, ratifies nothing, and moves no other doc's status). Tags are `Empirical` where read against the tree at `dev@fa53dc46` with a `file:line` cite, `Declared` for any design not yet built or ratified (VR-5). |
-| **Verify-first reframing (mitigation #14 — the register lags the code)** | The naive framing — "impl-level generics is an open L3 grammar residual (DN-119 §3 L3-G4 / DN-99 register row #63)" — is **substantially superseded**. **DN-103 (Accepted 2026-07-11)** designed and landed the impl-level type-parameter slot for the **inherent** form: `impl[T] Foo[T] { … }` parses (`parse.rs:1220`), rides `InherentImplDecl.params` (`ast.rs:231`), and desugars at Phase-0 by prepending the impl's params to each lifted method so monomorphization reuses the existing fn-generics path (`checkty.rs:2053`; witnessed `tests/mono.rs:268`). **The genuine open residual is the one form DN-103 explicitly deferred (its §6 / §3 Fork 2): the generic _trait-instance_ impl `impl[T] Trait for Foo[T]`.** This note designs *only* that residual; it does not re-decide DN-103 (append-only). |
+| **Verify-first reframing (mitigation #14 — the register lags the code)** | The naive framing — "impl-level generics is an open L3 grammar residual (DN-119 §3 L3-G4 / DN-99 register row #63)" — is **substantially superseded**. **DN-103 (Accepted 2026-07-11)** designed and landed the impl-level type-parameter slot for the **inherent** form: `impl[T] Foo[T] { … }` parses (`parse.rs:1220`), rides `InherentImplDecl.params` (`ast.rs:231`), and desugars at Phase-0 by prepending the impl's params to each lifted method so monomorphization reuses the existing fn-generics path (`checkty.rs:2053`; witnessed `tests/check.rs:1493`, `generic_inherent_method_monomorphizes_across_two_type_args`). **The genuine open residual is the one form DN-103 explicitly deferred (its §6 / §3 Fork 2): the generic _trait-instance_ impl `impl[T] Trait for Foo[T]`.** This note designs *only* that residual; it does not re-decide DN-103 (append-only). |
 | **Decides (proposes, for ratification)** | (1) the **native mechanism** — a *parametric instance head* on a trait-instance impl, `impl[T] Trait for Foo[T] { … }`, checked and monomorphized as a **family of concrete instances**, one per reachable `T`, reusing the landed dictionary-free static resolution (RFC-0019 / M-673 / DN-55) with **zero new L0/kernel node**; (2) the **coherence extension** — the RFC-0019 §4.5 orphan rule + global uniqueness + reject-overlap re-stated over **parametric** instance heads (the overlap check becomes unification of two parametric heads; the orphan rule keys on the head's type-constructor and the free variables), reusing DN-122's home-qualified `CoherenceView`; (3) the **v1 scope restriction** — *single-parameter, structurally-covering, non-overlapping* parametric heads only (the head `Foo[T]` binds each impl param exactly once as a direct type-constructor argument); everything richer (multi-param overlap resolution, blanket `impl[T] Trait for T`, negative reasoning, higher-kinded) is a never-silent refusal (G2), tracked as a residual (§8); (4) the **build split** — a checker-first change (coherence + a per-instantiation dictionary synthesis at mono) with the transpiler emit-arm as a fast-follow, **no runtime/L0 growth**. It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (integration-owned — FLAGGED up). |
 | **Feeds** | DN-103 §6 (the deferred generic-trait-instance residual this note picks up); DN-119 §3 L3-G4 (impl-generics — the inherent half closed by DN-103, this is the remaining half); DN-99 register row #63 (generic-parameterized-impl-block) + row #27/#90 (dyn/auto-trait); M-876 (surface completeness for transpilation); M-1026/ENB-3 (the DN-103 increment this extends). |
-| **Depends on** | RFC-0019 (Enacted — traits, dictionary-passing/monomorphization, coherence = orphan + global uniqueness + reject-overlap, KC-3 node budget unchanged); **DN-103** (Accepted — the inherent-impl generic slot + the Phase-0 desugar-prepend vehicle); **DN-122** (Accepted — home-qualified coherence closure + `CoherenceView` over the import closure, the coherence substrate this note extends to parametric heads); DN-55 (static specialization = zero kernel primitives); DN-112/DN-113 (home-qualified identity + acyclic import closure, both landed — M-1036/M-1060). |
+| **Depends on** | RFC-0019 (Enacted — traits, dictionary-passing/monomorphization, coherence = orphan + global uniqueness + reject-overlap, KC-3 node budget unchanged); **DN-103** (Accepted — the inherent-impl generic slot + the Phase-0 desugar-prepend vehicle); **DN-122** (Accepted, but **implementation unbuilt** — its home-qualified `CoherenceView` extension is tracked as **M-1080** (`status: todo`, `depends_on: [M-1060, M-1079]`); the *landed* `CoherenceView` today (`checkty.rs:2252`) is phylum-wide/pub-blind, not home-qualified, so DN-130's coherence work has a real **landing-order dependency** on M-1080, or must build the home-qualification itself — VR-5, Accepted-but-unbuilt is not a landed reuse); DN-55 (static specialization = zero kernel primitives); DN-112/DN-113 (home-qualified identity + acyclic import closure, both landed — M-1036/M-1060, whose `type_head`/`qualify_type_name` primitives DN-130 does reuse). |
 | **Grounds on** | KC-3 (small kernel — check-time + mono only, no new L0 node); DRY (reuse the DN-103 desugar vehicle + the M-673 monomorphizer + the DN-122 `CoherenceView`); G2 (never-silent — an orphan / overlap / out-of-scope head each prints the fix); VR-5 (no tag upgraded past its basis — every mechanism here is `Declared` until built + differential-witnessed); KISS/YAGNI (single-parameter covering heads over a full overlapping-instance solver). |
 | **Date** | July 12, 2026 |
 | **Author** | design-reasoner (Opus). Owns only this note. |
@@ -29,7 +29,7 @@ against `dev@fa53dc46`:
 
 | Form | State today | Evidence (`file:line` @ fa53dc46) |
 |---|---|---|
-| `impl[T] Foo[T] { … }` (inherent, generic) | **LANDED + Accepted (DN-103)** | `parse.rs:1220` parses the slot; `ast.rs:231` `InherentImplDecl.params`; `checkty.rs:2053` desugar-prepend; `tests/mono.rs:268` two-specialization witness |
+| `impl[T] Foo[T] { … }` (inherent, generic) | **LANDED + Accepted (DN-103)** | `parse.rs:1220` parses the slot; `ast.rs:231` `InherentImplDecl.params`; `checkty.rs:2053` desugar-prepend; `tests/check.rs:1493` two-specialization witness (`generic_inherent_method_monomorphizes_across_two_type_args`) |
 | `impl Foo[T] { … }` (inherent, `[T]` as head arg — no slot) | LANDED (M-664) | `parse.rs:1264` inherent branch |
 | **`impl[T] Trait for Foo[T] { … }` (generic trait instance)** | **REFUSED / deferred** | `parse.rs:1234`–`1243` never-silent refusal, deferring "generic trait-instance coherence (DN-103 §3 / RFC-0019 §4.5)" |
 
@@ -101,9 +101,13 @@ overlapping instances rejected. A parametric head `Foo[T]` makes three of these 
 3. **Orphan rule over the constructor.** The orphan rule (RFC-0019 §4.5, extended to the home boundary by
    DN-122) keys on "the impl is in the home of the trait, or the home of the type." For a parametric head
    the relevant home is `Foo`'s declaration home (the type-constructor), which is exactly what DN-112's
-   `type_head`/`qualify_type_name` already computes (`checkty.rs:296`, landed M-1036). **So the coherence
-   substrate DN-130 needs already exists** — DN-122's `CoherenceView` over home-qualified identity extends
-   to parametric heads by keying on the constructor head instead of the applied type.
+   `type_head`/`qualify_type_name` already computes (`checkty.rs:296`, landed M-1036). **The landed
+   primitives are reusable, but the home-qualified coherence substrate itself is not yet built — this is
+   a real landing-order dependency, not a landed reuse (VR-5).** The currently-landed `CoherenceView`
+   (`checkty.rs:2252`) is phylum-wide and pub-blind (`traits`/`types: BTreeSet<String>`), not
+   home-qualified. The home-qualified extension DN-130 needs is DN-122's own **unbuilt** MVP, tracked as
+   **M-1080** (`status: todo`, `depends_on: [M-1060, M-1079]`) — DN-130's coherence implementation needs
+   M-1080 to land first, or must build the home-qualification itself.
 
 **Soundness boundary (VR-5).** Like RFC-0019 §4.5 and DN-122, the coherence result here is
 **`Declared`-with-argument**, not machine-checked. Ratification does not upgrade that tag; a future
@@ -120,7 +124,7 @@ form does, one step earlier in resolution:
    `InstanceDecl` for `Foo[C]` on demand (α-substitution over the method bodies; the same substitution the
    generic-fn monomorphizer already performs, M-673).
 2. That concrete instance monomorphizes to a mangled specialization (`m$Trait$Foo$C`) with **no reachable
-   type variable** — the M-673 closure invariant, the same one `tests/mono.rs:268` asserts for
+   type variable** — the M-673 closure invariant, the same one `tests/mono.rs:222` asserts for
    `cmp$Cmp$Binary8`.
 3. Two call sites at two type args emit two specializations; identity fragmentation is *recorded, not
    hidden* (the DN-55 / M-673 discipline). `EXPLAIN` shows the parametric impl and the chosen instantiation
@@ -238,8 +242,9 @@ scope, (b) coherence keyed on the type-constructor head reusing DN-122's `Cohere
 - **Mono** — per-reachable-instantiation `InstanceDecl` synthesis (α-substitution, M-673); the closure
   invariant (`no_reachable_var`) holds on the emitted specializations.
 - **Witnesses** — an accept (`impl[T] Trait for Foo[T]` used at two type args → two specializations, mirror
-  of `tests/mono.rs:268`); the rejects of §7 (overlap, blanket, nested, HKT, bounded-parametric); a DN-26
-  Rust↔`.myc` differential at the layer each implements.
+  of `tests/check.rs:1493`, `generic_inherent_method_monomorphizes_across_two_type_args`); the rejects of §7
+  (overlap, blanket, nested, HKT, bounded-parametric); a DN-26 Rust↔`.myc` differential at the layer each
+  implements.
 - **Transpiler** — the emit arm turns a Rust `impl<T> Trait for Foo<T>` into the parametric `.myc` form;
   `checked_fraction` (not `expressible_fraction`) is the number that moves (DN-124 phylum-mode basis).
 - **Guarantee** — `Declared` until built; `Empirical` once the conformance + differential witnesses above
@@ -255,3 +260,21 @@ scope, (b) coherence keyed on the type-constructor head reusing DN-122's `Cohere
   `dev@fa53dc46` (`Empirical` cites); the proposed mechanism is `Declared` (unbuilt). Authored the READ +
   this DN only — no edit to `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (integration-owned; FLAGGED
   up). Append-only; status advances only by maintainer ratification (house rule #3).
+- **2026-07-12** — grounding/readiness fixes ahead of ratification (Draft stays Draft; append-only, no
+  design change). (1) Corrected **four** mis-citations of `tests/mono.rs:268` (the "Verify-first
+  reframing" row, the §1 table, and the §10 DoD "Witnesses" bullet each cited it as the impl-generics
+  two-specialization witness — that line is inside `two_widths_emit_two_distinct_specializations`, which
+  asserts `first_or$Binary8`/`first_or$Binary4`, not impl-generics; corrected to
+  `tests/check.rs:1493`/`generic_inherent_method_monomorphizes_across_two_type_args`, the real ENB-3
+  two-specialization witness). The §5 closure-invariant cite for `cmp$Cmp$Binary8` was correct in intent
+  but pointed 46 lines off; corrected to `tests/mono.rs:222`
+  (`a_trait_method_call_resolves_statically_with_an_explain_record`). All four corrected citations were
+  re-verified against `dev@fa53dc46` before writing. (2) Tightened §4 point 3 and the "Depends on" line,
+  which read as if DN-130 reuses a **landed** home-qualified `CoherenceView`. It does not: the
+  currently-landed `CoherenceView` (`checkty.rs:2252`) is phylum-wide/pub-blind
+  (`traits`/`types: BTreeSet<String>`), not home-qualified; the home-qualified extension is DN-122's own
+  **unbuilt** MVP (**M-1080**, `status: todo`, `depends_on: [M-1060, M-1079]`). Restated honestly: DN-130's
+  coherence implementation has a real **landing-order dependency** on M-1080 (or must build the
+  home-qualification itself); it does reuse the *landed* `type_head`/`qualify_type_name` primitives
+  (M-1036), not an already-built home-qualified coherence view (VR-5 — Accepted-but-unbuilt is not a
+  landed reuse). No mechanism, scope, or recommendation changed.
