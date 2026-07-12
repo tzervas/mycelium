@@ -51,7 +51,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for MalformedDigest { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"malformed content address {:?}: {}\" , self . input , self . description) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "MalformedDigest"
     },
     {

@@ -97,7 +97,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for Width { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { Width :: Lit (n) => write ! (f , \"{n}\") , Width :: Var (v) => write ! (f , \"{v}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "Width"
     },
     {
@@ -117,7 +117,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for Ty { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { Ty :: Binary (n) => write ! (f , \"Binary{{{n}}}\") , Ty :: Ternary (m) => write ! (f , \"Ternary{{{m}}}\") , Ty :: Dense (d , s) => write ! (f , \"Dense{{{d}, {s:?}}}\") , Ty :: Data (n , args) if args . is_empty () => write ! (f , \"{n}\") , Ty :: Data (n , args) => { write ! (f , \"{n}<\") ? ; for (i , a) in args . iter () . enumerate () { if i > 0 { write ! (f , \", \") ? ; } write ! (f , \"{a}\") ? ; } write ! (f , \">\") } Ty :: Substrate (t) => write ! (f , \"Substrate{{{t}}}\") , Ty :: Vsa { model , dim , sparsity , } => match sparsity { Sparsity :: Dense => write ! (f , \"VSA{{{model}, {dim}, Dense}}\") , Sparsity :: Sparse (k) => write ! (f , \"VSA{{{model}, {dim}, Sparse{{{k}}}}}\") , } , Ty :: Seq (elem , n) => write ! (f , \"Seq{{{elem}, {n}}}\") , Ty :: Bytes => write ! (f , \"Bytes\") , Ty :: Float => write ! (f , \"Float\") , Ty :: Var (v) => write ! (f , \"{v}\") , Ty :: Fn (a , r) if matches ! (a . as_ref () , Ty :: Fn (_ , _)) => write ! (f , \"({a}) => {r}\") , Ty :: Fn (a , r) => write ! (f , \"{a} => {r}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "Ty"
     },
     {
@@ -157,7 +157,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { write ! (f , \"check error in `{}`: {}\" , self . site , self . message) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "CheckError"
     },
     {
@@ -347,7 +347,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" One-sided **unification** of a declared type (which may contain [`Ty::Var`] parameters) against a\"] # [doc = \" concrete `actual` type, accumulating the parameter substitution `s` (RFC-0007 §11.3). Used to\"] # [doc = \" **infer** a generic function's type arguments from its call-site argument types, and a constructor's\"] # [doc = \" from its field arguments. A parameter is bound at most once; a second, conflicting binding is an\"] # [doc = \" explicit mismatch (never a silent re-coercion — G2/VR-5). No `Swap` is ever inserted: a\"] # [doc = \" representation-level disagreement (`Binary{8}` vs `Binary{16}`) is an explicit error, not a\"] # [doc = \" conversion (S1).\"] pub (crate) fn unify (site : & str , decl : & Ty , actual : & Ty , s : & mut BTreeMap < String , Ty > ,) -> Result < () , CheckError > { match (decl , actual) { (Ty :: Var (v) , _) => match s . get (v) { Some (bound) if bound != actual => Err (CheckError :: new (site , format ! (\"type parameter `{v}` would have to be both {bound} and {actual} — \\\n                     an ambiguous instantiation, not a guess (RFC-0007 §11.3)\") ,)) , _ => { s . insert (v . clone () , actual . clone ()) ; Ok (()) } } , (_ , Ty :: Var (_)) if decl == actual => Ok (()) , (Ty :: Data (n1 , a1) , Ty :: Data (n2 , a2)) if n1 == n2 && a1 . len () == a2 . len () => { for (d , a) in a1 . iter () . zip (a2) { unify (site , d , a , s) ? ; } Ok (()) } (Ty :: Fn (a1 , r1) , Ty :: Fn (a2 , r2)) => { unify (site , a1 , a2 , s) ? ; unify (site , r1 , r2 , s) } (Ty :: Seq (e1 , n1) , Ty :: Seq (e2 , n2)) if n1 == n2 => unify (site , e1 , e2 , s) , (Ty :: Binary (Width :: Var (v)) , Ty :: Binary (Width :: Lit (n))) | (Ty :: Ternary (Width :: Var (v)) , Ty :: Ternary (Width :: Lit (n))) => { let carrier = Ty :: Binary (Width :: Lit (* n)) ; match s . get (v) { Some (bound) if * bound != carrier => { let prior = match bound { Ty :: Binary (w) => w . to_string () , other => other . to_string () , } ; Err (CheckError :: new (site , format ! (\"width parameter `{v}` would have to be both {prior} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)\") ,)) } _ => { s . insert (v . clone () , carrier) ; Ok (()) } } } (Ty :: Binary (Width :: Var (v1)) , Ty :: Binary (Width :: Var (v2))) | (Ty :: Ternary (Width :: Var (v1)) , Ty :: Ternary (Width :: Var (v2))) => { let carrier = Ty :: Binary (Width :: Var (v2 . clone ())) ; match s . get (v1) { Some (bound) if * bound != carrier => Err (CheckError :: new (site , format ! (\"width parameter `{v1}` would have to be both {bound} and the abstract width \\\n                         `{v2}` — an undetermined width, not a coercion (DN-42 §4 / VR-5)\") ,)) , _ => { s . insert (v1 . clone () , carrier) ; Ok (()) } } } _ if decl == actual => Ok (()) , _ => Err (CheckError :: new (site , format ! (\"cannot match {decl} against {actual} (RFC-0007 §11.3 — never a silent swap)\") ,)) , } }",
-      "reason": "`& mut BTreeMap < String , Ty >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "unify"
     },
     {
@@ -457,7 +457,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn collect_tuple_arities_typeref (tr : & TypeRef , out : & mut std :: collections :: BTreeSet < usize >) { use crate :: ast :: BaseType ; match & tr . base { BaseType :: Tuple (elems) => { out . insert (elems . len ()) ; for e in elems { collect_tuple_arities_typeref (e , out) ; } } BaseType :: Seq { elem , .. } => collect_tuple_arities_typeref (elem , out) , BaseType :: Named (_ , args) => { for a in args { collect_tuple_arities_typeref (a , out) ; } } BaseType :: Fn (a , b) => { collect_tuple_arities_typeref (a , out) ; collect_tuple_arities_typeref (b , out) ; } _ => { } } }",
-      "reason": "`& mut std :: collections :: BTreeSet < usize >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified type path `std :: collections :: BTreeSet < usize >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "collect_tuple_arities_typeref"
     },
     {
@@ -477,7 +477,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic\"] # [doc = \" `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is\"] # [doc = \" constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.\"] fn collect_tuple_arities_pattern (p : & Pattern , out : & mut std :: collections :: BTreeSet < usize >) { match p { Pattern :: Tuple (subs) => { out . insert (subs . len ()) ; for sub in subs { collect_tuple_arities_pattern (sub , out) ; } } Pattern :: Ctor (_ , subs) => { for sub in subs { collect_tuple_arities_pattern (sub , out) ; } } Pattern :: Or (alts) => { for alt in alts { collect_tuple_arities_pattern (alt , out) ; } } Pattern :: Wildcard | Pattern :: Lit (_) | Pattern :: Ident (_) => { } } }",
-      "reason": "`& mut std :: collections :: BTreeSet < usize >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified type path `std :: collections :: BTreeSet < usize >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "collect_tuple_arities_pattern"
     },
     {
@@ -797,7 +797,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Insert the export `qual` (a `pub` type/fn/trait) into the per-nodule imports under `simple`.\"] # [doc = \" Exactly one of the three export tables holds `qual` (a name is one kind); insert from whichever.\"] fn insert_export (imp : & mut NoduleImports , exports : & Exports , qual : & str , simple : & str) { let is_cross_phylum = qual . contains (\"::\") ; if let Some (info) = exports . types . get (qual) { imp . types . insert (simple . to_owned () , info . clone ()) ; if let Some (sealed) = exports . sealed_ctors . get (qual) { imp . sealed . extend (sealed . iter () . cloned ()) ; } } if let Some (fd) = exports . fns . get (qual) { imp . fns . insert (simple . to_owned () , fd . clone ()) ; if let Some (resolved) = exports . resolved_fn_sigs . get (qual) { imp . resolved_fn_sigs . insert (simple . to_owned () , resolved . clone ()) ; } if is_cross_phylum { imp . cross_phylum_fns . insert (simple . to_owned ()) ; } else { imp . cross_phylum_fns . remove (simple) ; } } if let Some (info) = exports . traits . get (qual) { imp . traits . insert (simple . to_owned () , info . clone ()) ; if is_cross_phylum { imp . cross_phylum_traits . insert (simple . to_owned ()) ; } else { imp . cross_phylum_traits . remove (simple) ; } } }",
-      "reason": "`& mut NoduleImports` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method body statement is neither a `let`, a supported `self.<field>`/`*<param>` re-assignment, nor (in tail position) the method's own return value — value-threading deliberately refuses any shape outside a flat re-assignment sequence rather than risk an unsound rebind (DN-125 §6.1, never-silent G2/VR-5)",
       "item_name": "insert_export"
     },
     {
@@ -807,7 +807,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Remove any import binding for `simple` across all three tables (used when a glob-vs-glob collision\"] # [doc = \" demotes a tentatively-bound name to `ambiguous`).\"] fn remove_import (imp : & mut NoduleImports , simple : & str) { imp . types . remove (simple) ; imp . fns . remove (simple) ; imp . traits . remove (simple) ; imp . resolved_fn_sigs . remove (simple) ; imp . cross_phylum_traits . remove (simple) ; imp . cross_phylum_fns . remove (simple) ; }",
-      "reason": "`& mut NoduleImports` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method body statement is neither a `let`, a supported `self.<field>`/`*<param>` re-assignment, nor (in tail position) the method's own return value — value-threading deliberately refuses any shape outside a flat re-assignment sequence rather than risk an unsound rebind (DN-125 §6.1, never-silent G2/VR-5)",
       "item_name": "remove_import"
     },
     {
@@ -854,10 +854,10 @@
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 2782,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Register a (resolved) nodule's **data declarations** into `types` (Pass 1; RFC-0007 §11): a shell\"] # [doc = \" per type first (so recursive field references resolve), then its constructors. Duplicate type\"] # [doc = \" parameters / duplicate type names are explicit refusals. Extracted (M-662) so the phylum can build\"] # [doc = \" its registries once and reuse them; behavior is byte-identical to the inlined Pass 1.\"] pub (crate) fn register_types (types : & mut BTreeMap < String , DataInfo > , nodule : & Nodule ,) -> Result < () , CheckError > { for arity in collect_tuple_arities (nodule) { let tname = tuple_type_name (arity) ; types . entry (tname) . or_insert_with (| | synthetic_tuple_data (arity)) ; } for item in & nodule . items { if let Item :: Type (td) = item { if let Some (dup) = first_duplicate (& td . params) { return Err (CheckError :: new (& td . name , format ! (\"duplicate type parameter `{dup}` in `{}`\" , td . name) ,)) ; } if types . contains_key (& td . name) { return Err (CheckError :: new (& td . name , \"duplicate type declaration\")) ; } types . insert (td . name . clone () , DataInfo { name : td . name . clone () , home : nodule_home (& nodule . path) , params : td . params . clone () , ctors : vec ! [] , } ,) ; } } for item in & nodule . items { if let Item :: Type (td) = item { let ctors = resolve_ctors (types , td) ? ; types . get_mut (& td . name) . expect (\"registered above\") . ctors = ctors ; } } Ok (()) }",
-      "reason": "`& mut BTreeMap < String , DataInfo >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "fn parameter `nodule` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "register_types"
     },
     {
@@ -937,7 +937,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Collect every identifier a surface [`Pattern`] binds, appending to `out` (M-1054 Stage 1b's\"] # [doc = \" Stage-2 free-identifier gate, [`Cx::rhs_first_free_id`]). Mirrors the constructor-arm binding\"] # [doc = \" shape the real decision-tree compiler (`crate::decision`) and elaborator already use — every\"] # [doc = \" `Pattern::Ident`/`Ctor`/`Tuple` field becomes a binder in the arm body's scope; `Wildcard`/`Lit`\"] # [doc = \" bind nothing. `Or`'s alternatives are collected from **every** branch (a union, not just the\"] # [doc = \" first) — conservative rather than relying on the \\\"every alternative binds the same identifier\"] # [doc = \" set\\\" invariant holding at this point in the pipeline (that invariant is itself validated later,\"] # [doc = \" downstream, by `check_match`/`normalize_pattern` — see that function's own doc comment — not yet\"] # [doc = \" by the time this Stage 1b gate runs over the raw surface tree).\"] fn collect_pattern_binders (pat : & Pattern , out : & mut Vec < String >) { match pat { Pattern :: Wildcard | Pattern :: Lit (_) => { } Pattern :: Ident (name) => out . push (name . clone ()) , Pattern :: Ctor (_ , fields) | Pattern :: Tuple (fields) => { for f in fields { collect_pattern_binders (f , out) ; } } Pattern :: Or (alts) => { for a in alts { collect_pattern_binders (a , out) ; } } } }",
-      "reason": "`& mut Vec < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method's tail expression is neither a threaded-binding field/whole-value re-assignment nor (with the method's original return type already `()`/self-chain, and either multiple threaded bindings or one already assigned) an extra value — value-threading only supports a flat sequence of `self.<field> = ..`/`*<param> = ..` re-assignments plus, when the source return type is non-unit, one trailing value expression (DN-125 §5, conservative scope per §6.1)",
       "item_name": "collect_pattern_binders"
     },
     {
@@ -1187,7 +1187,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Stage3Fresh { fn mint (& mut self) -> String { let n = self . 0 ; self . 0 += 1 ; format ! (\"%stage3-subst%{n}\") } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `mint` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `mint` body: unsupported expression form `format ! (\"%stage3-subst%{n}\")`",
       "item_name": "Stage3Fresh"
     },
     {
@@ -1247,27 +1247,27 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-infer an expression's type against a checked [`Env`] (the elaborator needs the scrutinee type\"] # [doc = \" to lower a `match`, and a `let`-bound's type to track its scope — RFC-0011). The program is\"] # [doc = \" already checked, so this recomputes a type the checker validated; it does not re-litigate errors.\"] pub (crate) fn infer_type (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { let no_imports = NoduleImports :: default () ; let cx = Cx { site : \"<elaborate>\" , types : & env . types , fns : & env . fns , traits : & env . traits , instances : & env . instances , imports : & no_imports , lower_rules : & env . lower_rules , tyvars : & [] , bounds : & [] , std_sys : true , depth : Cell :: new (0) , affine : Tracker :: inert () , # [cfg (test)] stage3_sabotage_skip_substitution : false , } ; cx . infer (scope , e) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified/associated-function call `NoduleImports :: default` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "infer_type"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 9748,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" **Test-only** twin of [`infer_type`] with an **active** affine tracker\"] # [doc = \" ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.\"] # [doc = \" a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate\"] # [doc = \" [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare\"] # [doc = \" call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no\"] # [doc = \" `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`\"] # [doc = \" tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`\"] # [doc = \" interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the\"] # [doc = \" per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a\"] # [doc = \" real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry\"] # [doc = \" point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).\"] # [cfg (test)] pub (crate) fn infer_type_with_active_affine (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { infer_type_with_active_affine_inner (env , scope , e , false) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "dropped non-doc attribute(s) on fn `infer_type_with_active_affine`: # [cfg (test)]",
       "item_name": "infer_type_with_active_affine"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 9768,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,\"] # [doc = \" DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`\"] # [doc = \" runs its Stage-3 walk over the **unsubstituted** RHS (see\"] # [doc = \" `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating \\\"the substituted-`Expr`\"] # [doc = \" splice never happened,\\\" to prove that splice is load-bearing: a fixture that must genuinely\"] # [doc = \" REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**\"] # [doc = \" here.\"] # [cfg (test)] pub (crate) fn infer_type_with_active_affine_sabotaged (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { infer_type_with_active_affine_inner (env , scope , e , true) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "dropped non-doc attribute(s) on fn `infer_type_with_active_affine_sabotaged`: # [cfg (test)]",
       "item_name": "infer_type_with_active_affine_sabotaged"
     },
     {
@@ -1277,7 +1277,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [cfg (test)] fn infer_type_with_active_affine_inner (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr , sabotage : bool ,) -> Result < Ty , CheckError > { let no_imports = NoduleImports :: default () ; let cx = Cx { site : \"<test:active-affine>\" , types : & env . types , fns : & env . fns , traits : & env . traits , instances : & env . instances , imports : & no_imports , lower_rules : & env . lower_rules , tyvars : & [] , bounds : & [] , std_sys : true , depth : Cell :: new (0) , affine : Tracker :: seeded (scope) , stage3_sabotage_skip_substitution : sabotage , } ; cx . infer (scope , e) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified/associated-function call `NoduleImports :: default` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "infer_type_with_active_affine_inner"
     },
     {
@@ -1567,7 +1567,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for ElabError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { ElabError :: Residual { site , what } => write ! (f , \"`{site}` is outside the evaluation-complete fragment (RFC-0007 §4.6): {what} — \\\n                 run it on the L1 evaluator\") , ElabError :: UnknownFn (name) => write ! (f , \"no function `{name}` in the checked nodule\") , ElabError :: DepthExceeded { site , limit } => write ! (f , \"`{site}`: AST nesting exceeds the call-graph analysis's own recursion-depth budget \\\n                 ({limit}) — an explicit budget (banked guard 4; M-674), refused cleanly rather than \\\n                 overflowing the host stack\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ElabError"
     },
     {
@@ -1764,20 +1764,20 @@
       "file": "crates/mycelium-l1/src/elab.rs",
       "line": 908,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
       "snippet": "# [doc = \" The (A)+(B) walker behind [`elaborate_value_parametric_rule`] — a direct port of\"] # [doc = \" `src/tests/hygiene_expr_sugar.rs`'s E1 `Expander::go`, onto the real elaborator's\"] # [doc = \" [`Elab::fresh`] (site-qualified `base`) in place of E1's standalone per-call counter. A scope\"] # [doc = \" stack of `(original binder spelling, fresh spelling)` pairs realizes (A); a linear scan of\"] # [doc = \" `matched` realizes (B) — a reference to a name **shadowed** by an RHS-local binder resolves to\"] # [doc = \" that binder's fresh name first (innermost-first, mirroring [`crate::reveal::alpha_eq`]'s own\"] # [doc = \" convention), so a value parameter can never be captured by an RHS binder that happens to reuse\"] # [doc = \" its literal spelling. Every construct that introduces a kernel binder gets a fresh name; every\"] # [doc = \" other construct recurses structurally.\"] # [doc = \"\"] # [doc = \" `pub(crate)` (not just `fn`) so `src/tests/facility_stage1_hygiene.rs` can unit-test this walker\"] # [doc = \" **directly** on hand-built `Node`s — the review-motivated closing of a real gap: the full\"] # [doc = \" `elaborate_lower_rule_with_args` pipeline only ever exercises the `Let` arm (no production\"] # [doc = \" fixture's RHS reaches a `Lam`/`Fix`/`FixGroup`/`Alt::Ctor` binder), so those arms were validated\"] # [doc = \" only by inheritance from E1's own prototype, never directly in this production corpus.\"] # [allow (clippy :: too_many_arguments)] pub (crate) fn sugar_expand (el : & mut Elab < '_ > , base : & str , freshen_binders : bool , matched : & [(& str , & Node)] , scope : & mut Vec < (String , String) > , node : & Node ,) -> Node { let mint = | el : & mut Elab < '_ > , orig : & str | -> String { if freshen_binders { el . fresh (base) } else { orig . to_owned () } } ; match node { Node :: Const (v) => Node :: Const (v . clone ()) , Node :: Var (id) => { if let Some ((_ , fresh)) = scope . iter () . rev () . find (| (orig , _) | orig == id) { Node :: Var (fresh . clone ()) } else if let Some (arg) = matched . iter () . find_map (| (p , arg) | (* p == id . as_str ()) . then_some (* arg)) { arg . clone () } else { Node :: Var (id . clone ()) } } Node :: Let { id , bound , body } => { let bound2 = sugar_expand (el , base , freshen_binders , matched , scope , bound) ; let fresh = mint (el , id) ; scope . push ((id . clone () , fresh . clone ())) ; let body2 = sugar_expand (el , base , freshen_binders , matched , scope , body) ; scope . pop () ; Node :: Let { id : fresh , bound : Box :: new (bound2) , body : Box :: new (body2) , } } Node :: Op { prim , args } => Node :: Op { prim : prim . clone () , args : args . iter () . map (| a | sugar_expand (el , base , freshen_binders , matched , scope , a)) . collect () , } , Node :: Swap { src , target , policy , } => Node :: Swap { src : Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , src)) , target : target . clone () , policy : policy . clone () , } , Node :: Construct { ctor , args } => Node :: Construct { ctor : ctor . clone () , args : args . iter () . map (| a | sugar_expand (el , base , freshen_binders , matched , scope , a)) . collect () , } , Node :: Match { scrutinee , alts , default , } => Node :: Match { scrutinee : Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , scrutinee ,)) , alts : alts . iter () . map (| a | sugar_expand_alt (el , base , freshen_binders , matched , scope , a)) . collect () , default : default . as_ref () . map (| d | Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , d))) , } , Node :: Lam { param , body } => { let fresh = mint (el , param) ; scope . push ((param . clone () , fresh . clone ())) ; let body2 = sugar_expand (el , base , freshen_binders , matched , scope , body) ; scope . pop () ; Node :: Lam { param : fresh , body : Box :: new (body2) , } } Node :: App { func , arg } => Node :: App { func : Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , func ,)) , arg : Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , arg)) , } , Node :: Fix { name , body } => { let fresh = mint (el , name) ; scope . push ((name . clone () , fresh . clone ())) ; let body2 = sugar_expand (el , base , freshen_binders , matched , scope , body) ; scope . pop () ; Node :: Fix { name : fresh , body : Box :: new (body2) , } } Node :: FixGroup { defs , body } => { let fresh_names : Vec < String > = defs . iter () . map (| (n , _) | mint (el , n)) . collect () ; for (orig , fresh) in defs . iter () . map (| (n , _) | n) . zip (fresh_names . iter ()) { scope . push ((orig . clone () , fresh . clone ())) ; } let defs2 : Vec < (String , Box < Node >) > = defs . iter () . zip (fresh_names . iter ()) . map (| ((_ , d) , fresh) | { (fresh . clone () , Box :: new (sugar_expand (el , base , freshen_binders , matched , scope , d)) ,) }) . collect () ; let body2 = sugar_expand (el , base , freshen_binders , matched , scope , body) ; for _ in defs { scope . pop () ; } Node :: FixGroup { defs : defs2 , body : Box :: new (body2) , } } } }",
-      "reason": "`& mut Elab < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "generic type path `Elab < '_ >` — type argument `'_` is not a type (lifetime / const-generic / associated-type binding-or-constraint); `type_args` admits only type_refs, so left an explicit gap (VR-5)",
       "item_name": "sugar_expand"
     },
     {
       "file": "crates/mycelium-l1/src/elab.rs",
       "line": 1075,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "GenericBound",
+      "rust_construct": "GenericBound",
       "snippet": "# [doc = \" [`sugar_expand`]'s `Alt` companion (a `match` arm can itself introduce constructor-field\"] # [doc = \" binders) — same (A) freshening + (B) substitution discipline, ported from E1's `Expander::go_alt`.\"] # [doc = \" `pub(crate)` for the same direct-unit-test reason as [`sugar_expand`].\"] # [allow (clippy :: too_many_arguments)] pub (crate) fn sugar_expand_alt (el : & mut Elab < '_ > , base : & str , freshen_binders : bool , matched : & [(& str , & Node)] , scope : & mut Vec < (String , String) > , alt : & Alt ,) -> Alt { let mint = | el : & mut Elab < '_ > , orig : & str | -> String { if freshen_binders { el . fresh (base) } else { orig . to_owned () } } ; match alt { Alt :: Ctor { ctor , binders , body , } => { let fresh_names : Vec < String > = binders . iter () . map (| b | mint (el , b)) . collect () ; for (orig , fresh) in binders . iter () . zip (fresh_names . iter ()) { scope . push ((orig . clone () , fresh . clone ())) ; } let body2 = sugar_expand (el , base , freshen_binders , matched , scope , body) ; for _ in binders { scope . pop () ; } Alt :: Ctor { ctor : ctor . clone () , binders : fresh_names , body : body2 , } } Alt :: Lit { value , body } => Alt :: Lit { value : value . clone () , body : sugar_expand (el , base , freshen_binders , matched , scope , body) , } , } }",
-      "reason": "`& mut Elab < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "generic type path `Elab < '_ >` — type argument `'_` is not a type (lifetime / const-generic / associated-type binding-or-constraint); `type_args` admits only type_refs, so left an explicit gap (VR-5)",
       "item_name": "sugar_expand_alt"
     },
     {
@@ -1837,7 +1837,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn collect_calls (site : & str , e : & Expr , out : & mut BTreeSet < String >) -> Result < () , ElabError > { crate :: totality :: walk_expr (e , & mut | x | { if let Expr :: Path (p) = x { if p . 0 . len () == 1 { out . insert (p . 0 [0] . clone ()) ; } } }) . map_err (| e | ElabError :: DepthExceeded { site : site . to_owned () , limit : e . limit , }) }",
-      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "collect_calls"
     },
     {
@@ -2097,7 +2097,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "# [doc = \" **Iterative `Drop` (RFC-0041 §4.5; M-994 fix (b)).** A derived recursive `Drop` walks\"] # [doc = \" `Data.fields` on the host stack — a deep value SIGABRTs *on destruction* (RFC-0041 §1's\"] # [doc = \" recursive-`Drop` stack bomb). This dismantles the value over an explicit heap worklist: each\"] # [doc = \" uniquely-owned `Data`'s fields are moved out (leaving an empty `Vec`) before the node itself\"] # [doc = \" drops, so no node's `Drop` ever recurses.\"] # [doc = \"\"] # [doc = \" **`Arc` sharing (M-994 fix (b)).** `Data.fields` is now `Arc<Vec<L1Value>>`, so a node's spine can\"] # [doc = \" be shared. The dismantle only descends into a node whose `Arc` we are the **last** owner of\"] # [doc = \" ([`Arc::get_mut`] returns `Some` iff `strong_count == 1` and there are no weaks — and this\"] # [doc = \" evaluator never creates a `Weak`): a still-shared subtree is left intact and drops in O(1) (a\"] # [doc = \" refcount decrement) when its owner goes. This keeps the O(1)-host-stack SIGABRT-safety for any\"] # [doc = \" depth *and* respects sharing — a shared tail is never wrongly torn down.\"] # [doc = \"\"] # [doc = \" **Allocation (honest scope).** The worklist buffer is seeded by *stealing* the (uniquely-owned)\"] # [doc = \" root's existing `fields` `Vec` (`mem::take` through `Arc::get_mut` — no new allocation for the\"] # [doc = \" buffer itself); it may grow while draining a wide subtree. A non-`Data`, an empty `Data`, or a\"] # [doc = \" still-shared `Data` allocates nothing and returns immediately.\"] impl Drop for L1Value { fn drop (& mut self) { let L1Value :: Data { fields , .. } = self else { return ; } ; debug_assert_eq ! (Arc :: weak_count (fields) , 0 , \"L1Value::Data.fields must have no Weak refs, else iterative Drop degrades to recursive \\\n             drop-glue (deep-spine SIGABRT hazard; RFC-0041 §6)\") ; let Some (root_fields) = Arc :: get_mut (fields) else { return ; } ; if root_fields . is_empty () { return ; } let mut stack : Vec < L1Value > = mem :: take (root_fields) ; while let Some (mut v) = stack . pop () { if let L1Value :: Data { fields , .. } = & mut v { if let Some (child_fields) = Arc :: get_mut (fields) { stack . append (child_fields) ; } } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `drop` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `drop` body: `let` binding uses an unsupported pattern (only simple `let x = e;` is supported)",
       "item_name": "L1Value"
     },
     {
@@ -2157,7 +2157,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for ForageError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { ForageError :: NoCandidates => write ! (f , \"`@forage` has no placement candidates (DN-63 §3.5 FLAG-14): the worker- \\\n                 availability bitmask is all-zero — an explicit refusal, never a silent placement\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ForageError"
     },
     {
@@ -2187,7 +2187,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for L1Error { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { L1Error :: FuelExhausted => write ! (f , \"evaluation exceeded its step budget\") , L1Error :: DepthExceeded { limit } => write ! (f , \"evaluation exceeded its recursion-depth budget ({limit}) — explicit by design \\\n                 (raise with `Evaluator::with_depth`; the host stack is not the limit)\") , L1Error :: Kernel (e) => write ! (f , \"kernel refusal: {e}\") , L1Error :: GuaranteeTooWeak { site , asserted , actual , } => write ! (f , \"in `{site}`: asserted `@ {asserted:?}` but the value's tag is {actual:?} — an \\\n                 annotation may only weaken (VR-5)\") , L1Error :: Unsupported { site , what } => write ! (f , \"in `{site}`: {what}\") , L1Error :: Stuck { site , why } => write ! (f , \"in `{site}`: stuck — {why} (the typechecker should have refused this program)\") , L1Error :: EffectBudget (e) => write ! (f , \"{e}\") , L1Error :: Forage (e) => write ! (f , \"{e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "L1Error"
     },
     {
@@ -2337,7 +2337,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl TcoTrace { # [doc = \" The ring-buffer capacity: the number of most-recent elisions retained for the actionable\"] # [doc = \" trace. Bounded so a deep tail chain cannot grow the trace without limit (§4.6 tco32).\"] pub const RING_CAP : usize = 32 ; # [doc = \" Record one elided tail frame for `callee`: bump the totals and push onto the bounded ring.\"] fn record (& mut self , callee : & str) { self . total_elided = self . total_elided . saturating_add (1) ; let iteration = { let c = self . per_callee . entry (callee . to_owned ()) . or_insert (0) ; * c = c . saturating_add (1) ; * c } ; if self . recent . len () == Self :: RING_CAP { self . recent . pop_front () ; } self . recent . push_back (TcoElision { callee : callee . to_owned () , iteration , }) ; } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated const `RING_CAP`; impl method `record` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated const `RING_CAP`; impl method `record` body: field assignment `self.total_elided = ..` on `TcoTrace` — not an in-file single-ctor struct that emits (no constructor to rebuild)",
       "item_name": "TcoTrace"
     },
     {
@@ -2757,7 +2757,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" RFC-0024 §4A.3 (M-704): the **free-variable walk** for closure capture analysis. Collects the\"] # [doc = \" single-segment `Expr::Path` names occurring in `e` that are **not** bound by an enclosing binder\"] # [doc = \" *within* `e` (`Let`, `Match` arm patterns, `For`, inner `Lambda` params) — appended to `out` in\"] # [doc = \" **first-occurrence order** (a total deterministic order — §4A.3 / G2), each once (`seen` dedups).\"] # [doc = \" `bound` carries the names currently in scope inside `e` (seeded with the lambda's own parameter\"] # [doc = \" by the caller); a name in `bound` is local, not free. Whether a *free* name is actually\"] # [doc = \" *captured* (a local of the enclosing scope) vs. a top-level reference is decided by the caller\"] # [doc = \" against the enclosing scope (`rewrite_lambda`).\"] # [doc = \"\"] # [doc = \" This is a pure structural walk — never silent, never a guess (G2): every binder the AST exposes\"] # [doc = \" is respected, so `freevars` is invariant under α-renaming of bound variables (the §4A.9 property).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866,\"] # [doc = \" mirroring the totality/checker/elaborator `M-674` discipline — see [`free_vars_at`]) — a clean,\"] # [doc = \" explicit refusal rather than a host-stack overflow on a pathologically-nested `e` (G2).\"] pub (crate) fn free_vars (e : & Expr , bound : & mut BTreeSet < String > , seen : & mut BTreeSet < String > , out : & mut Vec < String > ,) -> Result < () , WalkDepthExceeded > { free_vars_at (e , bound , seen , out , 0) }",
-      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "free_vars"
     },
     {
@@ -2767,7 +2767,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The depth-tracked worker behind [`free_vars`] (M-866): `depth` counts the live nesting of this\"] # [doc = \" traversal's own recursive descent (not any semantic property of `e`), charged on entry and\"] # [doc = \" checked against [`MAX_WALK_DEPTH`] before any further recursion — mirrors\"] # [doc = \" [`crate::totality::walk_expr_at`]'s M-674 discipline (same budget, same reified-counter\"] # [doc = \" mechanism, DRY): rather than rely on the host call stack (a resource, not a semantic limit) to\"] # [doc = \" bound the walk, the pass carries this explicit budget and refuses past it with a clean\"] # [doc = \" [`WalkDepthExceeded`], never a host-stack overflow.\"] fn free_vars_at (e : & Expr , bound : & mut BTreeSet < String > , seen : & mut BTreeSet < String > , out : & mut Vec < String > , depth : u32 ,) -> Result < () , WalkDepthExceeded > { let depth = depth + 1 ; if depth > MAX_WALK_DEPTH { return Err (WalkDepthExceeded { limit : MAX_WALK_DEPTH , }) ; } match e { Expr :: Path (p) => { if p . 0 . len () == 1 { let n = & p . 0 [0] ; if ! bound . contains (n) && seen . insert (n . clone ()) { out . push (n . clone ()) ; } } } Expr :: Lit (Literal :: List (elems)) => { for el in elems { free_vars_at (el , bound , seen , out , depth) ? ; } } Expr :: Lit (_) => { } Expr :: Let { name , bound : b , body , .. } => { free_vars_at (b , bound , seen , out , depth) ? ; let was = bound . insert (name . clone ()) ; free_vars_at (body , bound , seen , out , depth) ? ; if was { bound . remove (name) ; } } Expr :: If { cond , conseq , alt } => { free_vars_at (cond , bound , seen , out , depth) ? ; free_vars_at (conseq , bound , seen , out , depth) ? ; free_vars_at (alt , bound , seen , out , depth) ? ; } Expr :: Match { scrutinee , arms } => { free_vars_at (scrutinee , bound , seen , out , depth) ? ; for arm in arms { let mut added : Vec < String > = Vec :: new () ; pattern_binders (& arm . pattern , bound , & mut added) ? ; free_vars_at (& arm . body , bound , seen , out , depth) ? ; for n in added { bound . remove (& n) ; } } } Expr :: For { x , xs , acc , init , body , } => { free_vars_at (xs , bound , seen , out , depth) ? ; free_vars_at (init , bound , seen , out , depth) ? ; let ax = bound . insert (x . clone ()) ; let aacc = bound . insert (acc . clone ()) ; free_vars_at (body , bound , seen , out , depth) ? ; if aacc { bound . remove (acc) ; } if ax { bound . remove (x) ; } } Expr :: Swap { value , .. } => free_vars_at (value , bound , seen , out , depth) ? , Expr :: WithParadigm { body , .. } => free_vars_at (body , bound , seen , out , depth) ? , Expr :: Wild (b) | Expr :: Spore (b) | Expr :: Consume (b) | Expr :: Wrapping (b) | Expr :: Try (b) => { free_vars_at (b , bound , seen , out , depth) ? ; } Expr :: Colony (hyphae) => { for h in hyphae { free_vars_at (& h . body , bound , seen , out , depth) ? ; } } Expr :: Lambda { params , body } => { let mut added : Vec < String > = Vec :: new () ; for p in params { if bound . insert (p . name . clone ()) { added . push (p . name . clone ()) ; } } free_vars_at (body , bound , seen , out , depth) ? ; for n in added { bound . remove (& n) ; } } Expr :: App { head , args } => { free_vars_at (head , bound , seen , out , depth) ? ; for a in args { free_vars_at (a , bound , seen , out , depth) ? ; } } Expr :: Fuse { left , right } => { free_vars_at (left , bound , seen , out , depth) ? ; free_vars_at (right , bound , seen , out , depth) ? ; } Expr :: Reclaim { policy , body } => { free_vars_at (policy , bound , seen , out , depth) ? ; free_vars_at (body , bound , seen , out , depth) ? ; } Expr :: Ascribe (inner , _) => free_vars_at (inner , bound , seen , out , depth) ? , Expr :: TupleLit (elems) => { for el in elems { free_vars_at (el , bound , seen , out , depth) ? ; } } } Ok (()) }",
-      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "free_vars_at"
     },
     {
@@ -2777,7 +2777,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Collect a pattern's binders into `bound` (inserting each newly-bound name), recording the\"] # [doc = \" newly-added names in `added` so the caller can pop them after the arm body. A `Pattern::Ident` is\"] # [doc = \" a binder; a `Pattern::Ctor` recurses into sub-patterns; `Wildcard`/`Lit` bind nothing. (A nullary\"] # [doc = \" constructor written as a bare `Ident` is conservatively treated as a binder here — over-binding\"] # [doc = \" only ever *removes* a name from the capture set, never adds a spurious capture, so it is safe for\"] # [doc = \" the free-variable analysis; the real ctor/binder distinction is the checker's, already done.)\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" [`WalkDepthExceeded`] once this traversal's own recursion exceeds [`MAX_WALK_DEPTH`] (M-866) — a\"] # [doc = \" clean, explicit refusal rather than a host-stack overflow on a pathologically-nested pattern.\"] # [doc = \" Mirrors [`crate::totality::pattern_binders`]'s own M-674 depth-budget discipline (same value,\"] # [doc = \" same reified-counter mechanism, DRY) — the two walk distinct pass concerns (free-variable capture\"] # [doc = \" here vs. structural-descent binder tracking there) so the code is not literally shared, but the\"] # [doc = \" budget and refusal shape are kept identical for one crate-wide \\\"AST pass depth\\\" guarantee.\"] fn pattern_binders (pat : & Pattern , bound : & mut BTreeSet < String > , added : & mut Vec < String > ,) -> Result < () , WalkDepthExceeded > { pattern_binders_at (pat , bound , added , 0) }",
-      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "pattern_binders"
     },
     {
@@ -2787,7 +2787,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" The depth-tracked worker behind [`pattern_binders`] (M-866) — see [`free_vars_at`] for the\"] # [doc = \" shared discipline this mirrors.\"] fn pattern_binders_at (pat : & Pattern , bound : & mut BTreeSet < String > , added : & mut Vec < String > , depth : u32 ,) -> Result < () , WalkDepthExceeded > { let depth = depth + 1 ; if depth > MAX_WALK_DEPTH { return Err (WalkDepthExceeded { limit : MAX_WALK_DEPTH , }) ; } match pat { Pattern :: Wildcard | Pattern :: Lit (_) => { } Pattern :: Ident (n) => { if bound . insert (n . clone ()) { added . push (n . clone ()) ; } } Pattern :: Ctor (_ , subs) => { for s in subs { pattern_binders_at (s , bound , added , depth) ? ; } } Pattern :: Tuple (subs) => { for s in subs { pattern_binders_at (s , bound , added , depth) ? ; } } Pattern :: Or (_) => panic ! (\"internal: Pattern::Or reached mono::pattern_binders — or-patterns must be \\\n             desugared by the checker before any downstream pass \\\n             (invariant violation — report this)\") , } Ok (()) }",
-      "reason": "`& mut BTreeSet < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "pattern_binders_at"
     },
     {
@@ -2847,7 +2847,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" One-sided unification (the checker's [`crate::checkty::unify`]) surfacing its failure as a\"] # [doc = \" residual. Binds the abstract `decl`'s type-vars from the concrete `actual`.\"] fn unify_into (site : & str , decl : & Ty , actual : & Ty , s : & mut BTreeMap < String , Ty > ,) -> Result < () , ElabError > { unify (site , decl , actual , s) . map_err (| e | res_err (site , e)) }",
-      "reason": "`& mut BTreeMap < String , Ty >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "unify_into"
     },
     {
@@ -3123,15 +3123,15 @@
   ],
   "category_counts": {
     "Closure": 6,
-    "DeriveAttr": 8,
-    "GenericBound": 17,
+    "DeriveAttr": 10,
+    "GenericBound": 19,
     "Impl": 31,
     "Import": 47,
     "MultiStmtBody": 14,
     "NamedFieldDrop": 5,
-    "Other": 119,
+    "Other": 114,
     "PayloadVariant": 3,
-    "ReservedWord": 41,
+    "ReservedWord": 42,
     "Struct": 21
   }
 }

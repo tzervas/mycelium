@@ -1,6 +1,6 @@
 {
   "epic": "E33-1",
-  "generated_from_commit": "eb6bc0e2435266efb5d44a7576867114269660f1",
+  "generated_from_commit": "0298810903e008b27d12384e5d41ad17ffeca9d2",
   "kickoff": "trx2",
   "schema_version": 1,
   "targets": [
@@ -8,15 +8,15 @@
       "file_count": 5,
       "gap_category_counts": {
         "Closure": 6,
-        "DeriveAttr": 8,
-        "GenericBound": 17,
+        "DeriveAttr": 10,
+        "GenericBound": 19,
         "Impl": 31,
         "Import": 47,
         "MultiStmtBody": 14,
         "NamedFieldDrop": 5,
-        "Other": 119,
+        "Other": 114,
         "PayloadVariant": 3,
-        "ReservedWord": 41,
+        "ReservedWord": 42,
         "Struct": 21
       },
       "kind": "semcore",
@@ -26,7 +26,7 @@
         "checked_clean_items_phylum": 0,
         "checked_fraction_phylum_pct": 0.0,
         "delta_basis_pct": 0.0,
-        "diagnostic": "unknown function/constructor/prim `is_some`",
+        "diagnostic": "unknown type `Env`",
         "nodule_count": 5,
         "ok": false,
         "ran": true
@@ -56,8 +56,8 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 15,
-        "expressible_fraction_pct": 5.12,
+        "emitted_items": 17,
+        "expressible_fraction_pct": 5.8,
         "gap_count": 312,
         "non_test_items": 293,
         "total_top_level_items": 293
@@ -460,13 +460,13 @@
       "gap_category_counts": {
         "DeriveAttr": 25,
         "GenericBound": 12,
-        "Impl": 26,
+        "Impl": 25,
         "Import": 27,
         "InnerAttr": 1,
         "ModuleDecl": 13,
         "MultiStmtBody": 1,
         "NamedFieldDrop": 5,
-        "Other": 20,
+        "Other": 19,
         "PayloadVariant": 3,
         "ReservedWord": 1,
         "Struct": 17,
@@ -477,9 +477,9 @@
       "note": "Standalone phylum draft -- no cross-file nodule-merge convention applies (unlike the semcore SCC). Each emitted .myc file stands as its own draft nodule candidate.",
       "output_dir": "gen/myc-drafts/stdlib/std-runtime",
       "phylum": {
-        "checked_clean_items_phylum": 16,
-        "checked_fraction_phylum_pct": 12.12,
-        "delta_basis_pct": 3.03,
+        "checked_clean_items_phylum": 12,
+        "checked_fraction_phylum_pct": 9.09,
+        "delta_basis_pct": 0.0,
         "diagnostic": "duplicate function",
         "nodule_count": 14,
         "ok": false,
@@ -546,9 +546,9 @@
       "stats": {
         "checked_clean_items": 12,
         "checked_fraction_pct": 9.09,
-        "emitted_items": 27,
-        "expressible_fraction_pct": 20.45,
-        "gap_count": 155,
+        "emitted_items": 28,
+        "expressible_fraction_pct": 21.21,
+        "gap_count": 153,
         "non_test_items": 132,
         "total_top_level_items": 148
       },
@@ -686,13 +686,13 @@
         "Closure": 2,
         "DeriveAttr": 19,
         "GenericBound": 2,
-        "Impl": 5,
+        "Impl": 4,
         "Import": 1,
         "InnerAttr": 1,
         "MacroInvocation": 1,
         "MultiStmtBody": 3,
         "NamedFieldDrop": 7,
-        "Other": 14,
+        "Other": 16,
         "Struct": 1,
         "TestItem": 1,
         "Trait": 1
@@ -718,9 +718,9 @@
       "stats": {
         "checked_clean_items": 0,
         "checked_fraction_pct": 0.0,
-        "emitted_items": 13,
-        "expressible_fraction_pct": 35.14,
-        "gap_count": 61,
+        "emitted_items": 14,
+        "expressible_fraction_pct": 37.84,
+        "gap_count": 62,
         "non_test_items": 37,
         "total_top_level_items": 38
       },

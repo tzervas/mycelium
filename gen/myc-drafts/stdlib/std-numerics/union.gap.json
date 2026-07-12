@@ -107,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for NumErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { NumErr :: BadEps => write ! (f , \"eps is negative or non-finite (out-of-range ε)\") , NumErr :: BadDelta => { write ! (f , \"delta is not in [0,1] or non-finite (out-of-range δ)\") } NumErr :: NoRule => write ! (f , \"no sound ε propagation rule for this op/configuration (refuse, never fabricate)\") , NumErr :: NormMismatch => { write ! (f , \"input norms disagree — cannot combine without norm-coercion rule\") } NumErr :: Overflow => write ! (f , \"composed ε overflowed to non-finite — refused (not a vacuous bound)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "NumErr"
     },
     {
@@ -137,7 +137,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CheckErr :: Rejected { recomputed , claimed , } => write ! (f , \"claimed ε={claimed:.2e} is tighter than the re-derivation {recomputed:.2e} \\\n                 (rejected — not a silent pass)\") , CheckErr :: Malformed => write ! (f , \"certificate is ill-formed (malformed)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "CheckErr"
     },
     {

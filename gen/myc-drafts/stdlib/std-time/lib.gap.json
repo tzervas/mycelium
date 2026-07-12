@@ -13,7 +13,8 @@
     "LogicalInstant",
     "impl LogicalInstant",
     "SystemClock",
-    "ManualClock"
+    "ManualClock",
+    "impl ManualClock"
   ],
   "gaps": [
     {
@@ -73,7 +74,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for TimeErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { TimeErr :: Overflow => write ! (f , \"time arithmetic overflow (C1 — never wrap/clamp)\") , TimeErr :: ClockUnavailable { reason } => { write ! (f , \"clock unavailable: {reason}\") } TimeErr :: NonMonotonic { earlier_ns , later_ns , } => write ! (f , \"wall-clock backward jump (non-monotonic): \\\n                 later_ns={later_ns} < earlier_ns={earlier_ns} \\\n                 (C1 — never a silent zero/negative span)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "TimeErr"
     },
     {
@@ -540,11 +541,21 @@
       "file": "crates/mycelium-std-time/src/lib.rs",
       "line": 698,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
+      "category": "Other",
+      "rust_construct": "Other",
       "snippet": "impl ManualClock { # [doc = \" Set the MONOTONIC clock value returned by `mono_now`.\"] pub fn set_mono (& mut self , instant : MonoInstant) { self . mono = instant ; } # [doc = \" Set the WALL-CLOCK value returned by `wall_now`.\"] pub fn set_wall (& mut self , instant : WallInstant) { self . wall = instant ; } # [doc = \" Set the LOGICAL tick returned by `logical_now`.\"] pub fn set_logical (& mut self , instant : LogicalInstant) { self . logical = instant ; } # [doc = \" Advance the MONOTONIC clock by `delta_ns` nanoseconds (for tests that simulate time\"] # [doc = \" passing without an actual sleep). Saturates at `u64::MAX`.\"] pub fn advance_mono (& mut self , delta_ns : u64) { self . mono = MonoInstant :: from_nanos (self . mono . as_nanos () . saturating_add (delta_ns)) ; } # [doc = \" Advance the LOGICAL clock by one tick (for tests that simulate a runtime step).\"] pub fn step_logical (& mut self) { self . logical = LogicalInstant :: from_tick (self . logical . as_tick () . saturating_add (1)) ; } }",
-      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `set_mono` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `set_wall` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `set_logical` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `advance_mono` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `step_logical` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
-      "item_name": "ManualClock"
+      "reason": "impl method `advance_mono` body: qualified/associated-function call `MonoInstant :: from_nanos` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "impl ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 698,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ManualClock { # [doc = \" Set the MONOTONIC clock value returned by `mono_now`.\"] pub fn set_mono (& mut self , instant : MonoInstant) { self . mono = instant ; } # [doc = \" Set the WALL-CLOCK value returned by `wall_now`.\"] pub fn set_wall (& mut self , instant : WallInstant) { self . wall = instant ; } # [doc = \" Set the LOGICAL tick returned by `logical_now`.\"] pub fn set_logical (& mut self , instant : LogicalInstant) { self . logical = instant ; } # [doc = \" Advance the MONOTONIC clock by `delta_ns` nanoseconds (for tests that simulate time\"] # [doc = \" passing without an actual sleep). Saturates at `u64::MAX`.\"] pub fn advance_mono (& mut self , delta_ns : u64) { self . mono = MonoInstant :: from_nanos (self . mono . as_nanos () . saturating_add (delta_ns)) ; } # [doc = \" Advance the LOGICAL clock by one tick (for tests that simulate a runtime step).\"] pub fn step_logical (& mut self) { self . logical = LogicalInstant :: from_tick (self . logical . as_tick () . saturating_add (1)) ; } }",
+      "reason": "impl method `step_logical` body: qualified/associated-function call `LogicalInstant :: from_tick` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
+      "item_name": "impl ManualClock"
     },
     {
       "file": "crates/mycelium-std-time/src/lib.rs",

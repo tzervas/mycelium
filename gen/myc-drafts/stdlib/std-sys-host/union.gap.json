@@ -47,7 +47,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl EntropySource for OsEntropy { fn fill_bytes (& mut self , buf : & mut [u8]) -> Result < EntropyEffect , RandErr > { mycelium_std_sys :: rand :: fill_bytes (buf) . map (| () | EntropyEffect) . map_err (| _ | RandErr :: EntropyUnavailable) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fill_bytes` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fill_bytes` signature: unsupported Rust type form `[u8]`",
       "item_name": "OsEntropy"
     },
     {

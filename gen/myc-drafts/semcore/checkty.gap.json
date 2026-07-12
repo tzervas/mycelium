@@ -5,6 +5,8 @@
     "CheckError",
     "EffectSource",
     "Stage3Fresh",
+    "infer_type_with_active_affine",
+    "infer_type_with_active_affine_sabotaged",
     "prim_name_is_recognized"
   ],
   "gaps": [
@@ -105,7 +107,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for Width { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { Width :: Lit (n) => write ! (f , \"{n}\") , Width :: Var (v) => write ! (f , \"{v}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "Width"
     },
     {
@@ -125,7 +127,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for Ty { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { Ty :: Binary (n) => write ! (f , \"Binary{{{n}}}\") , Ty :: Ternary (m) => write ! (f , \"Ternary{{{m}}}\") , Ty :: Dense (d , s) => write ! (f , \"Dense{{{d}, {s:?}}}\") , Ty :: Data (n , args) if args . is_empty () => write ! (f , \"{n}\") , Ty :: Data (n , args) => { write ! (f , \"{n}<\") ? ; for (i , a) in args . iter () . enumerate () { if i > 0 { write ! (f , \", \") ? ; } write ! (f , \"{a}\") ? ; } write ! (f , \">\") } Ty :: Substrate (t) => write ! (f , \"Substrate{{{t}}}\") , Ty :: Vsa { model , dim , sparsity , } => match sparsity { Sparsity :: Dense => write ! (f , \"VSA{{{model}, {dim}, Dense}}\") , Sparsity :: Sparse (k) => write ! (f , \"VSA{{{model}, {dim}, Sparse{{{k}}}}}\") , } , Ty :: Seq (elem , n) => write ! (f , \"Seq{{{elem}, {n}}}\") , Ty :: Bytes => write ! (f , \"Bytes\") , Ty :: Float => write ! (f , \"Float\") , Ty :: Var (v) => write ! (f , \"{v}\") , Ty :: Fn (a , r) if matches ! (a . as_ref () , Ty :: Fn (_ , _)) => write ! (f , \"({a}) => {r}\") , Ty :: Fn (a , r) => write ! (f , \"{a} => {r}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "Ty"
     },
     {
@@ -165,7 +167,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckError { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { write ! (f , \"check error in `{}`: {}\" , self . site , self . message) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "CheckError"
     },
     {
@@ -355,7 +357,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" One-sided **unification** of a declared type (which may contain [`Ty::Var`] parameters) against a\"] # [doc = \" concrete `actual` type, accumulating the parameter substitution `s` (RFC-0007 §11.3). Used to\"] # [doc = \" **infer** a generic function's type arguments from its call-site argument types, and a constructor's\"] # [doc = \" from its field arguments. A parameter is bound at most once; a second, conflicting binding is an\"] # [doc = \" explicit mismatch (never a silent re-coercion — G2/VR-5). No `Swap` is ever inserted: a\"] # [doc = \" representation-level disagreement (`Binary{8}` vs `Binary{16}`) is an explicit error, not a\"] # [doc = \" conversion (S1).\"] pub (crate) fn unify (site : & str , decl : & Ty , actual : & Ty , s : & mut BTreeMap < String , Ty > ,) -> Result < () , CheckError > { match (decl , actual) { (Ty :: Var (v) , _) => match s . get (v) { Some (bound) if bound != actual => Err (CheckError :: new (site , format ! (\"type parameter `{v}` would have to be both {bound} and {actual} — \\\n                     an ambiguous instantiation, not a guess (RFC-0007 §11.3)\") ,)) , _ => { s . insert (v . clone () , actual . clone ()) ; Ok (()) } } , (_ , Ty :: Var (_)) if decl == actual => Ok (()) , (Ty :: Data (n1 , a1) , Ty :: Data (n2 , a2)) if n1 == n2 && a1 . len () == a2 . len () => { for (d , a) in a1 . iter () . zip (a2) { unify (site , d , a , s) ? ; } Ok (()) } (Ty :: Fn (a1 , r1) , Ty :: Fn (a2 , r2)) => { unify (site , a1 , a2 , s) ? ; unify (site , r1 , r2 , s) } (Ty :: Seq (e1 , n1) , Ty :: Seq (e2 , n2)) if n1 == n2 => unify (site , e1 , e2 , s) , (Ty :: Binary (Width :: Var (v)) , Ty :: Binary (Width :: Lit (n))) | (Ty :: Ternary (Width :: Var (v)) , Ty :: Ternary (Width :: Lit (n))) => { let carrier = Ty :: Binary (Width :: Lit (* n)) ; match s . get (v) { Some (bound) if * bound != carrier => { let prior = match bound { Ty :: Binary (w) => w . to_string () , other => other . to_string () , } ; Err (CheckError :: new (site , format ! (\"width parameter `{v}` would have to be both {prior} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)\") ,)) } _ => { s . insert (v . clone () , carrier) ; Ok (()) } } } (Ty :: Binary (Width :: Var (v1)) , Ty :: Binary (Width :: Var (v2))) | (Ty :: Ternary (Width :: Var (v1)) , Ty :: Ternary (Width :: Var (v2))) => { let carrier = Ty :: Binary (Width :: Var (v2 . clone ())) ; match s . get (v1) { Some (bound) if * bound != carrier => Err (CheckError :: new (site , format ! (\"width parameter `{v1}` would have to be both {bound} and the abstract width \\\n                         `{v2}` — an undetermined width, not a coercion (DN-42 §4 / VR-5)\") ,)) , _ => { s . insert (v1 . clone () , carrier) ; Ok (()) } } } _ if decl == actual => Ok (()) , _ => Err (CheckError :: new (site , format ! (\"cannot match {decl} against {actual} (RFC-0007 §11.3 — never a silent swap)\") ,)) , } }",
-      "reason": "`& mut BTreeMap < String , Ty >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unit type `()` has no representable value in this grammar fragment",
       "item_name": "unify"
     },
     {
@@ -465,7 +467,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn collect_tuple_arities_typeref (tr : & TypeRef , out : & mut std :: collections :: BTreeSet < usize >) { use crate :: ast :: BaseType ; match & tr . base { BaseType :: Tuple (elems) => { out . insert (elems . len ()) ; for e in elems { collect_tuple_arities_typeref (e , out) ; } } BaseType :: Seq { elem , .. } => collect_tuple_arities_typeref (elem , out) , BaseType :: Named (_ , args) => { for a in args { collect_tuple_arities_typeref (a , out) ; } } BaseType :: Fn (a , b) => { collect_tuple_arities_typeref (a , out) ; collect_tuple_arities_typeref (b , out) ; } _ => { } } }",
-      "reason": "`& mut std :: collections :: BTreeSet < usize >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified type path `std :: collections :: BTreeSet < usize >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "collect_tuple_arities_typeref"
     },
     {
@@ -485,7 +487,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic\"] # [doc = \" `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is\"] # [doc = \" constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.\"] fn collect_tuple_arities_pattern (p : & Pattern , out : & mut std :: collections :: BTreeSet < usize >) { match p { Pattern :: Tuple (subs) => { out . insert (subs . len ()) ; for sub in subs { collect_tuple_arities_pattern (sub , out) ; } } Pattern :: Ctor (_ , subs) => { for sub in subs { collect_tuple_arities_pattern (sub , out) ; } } Pattern :: Or (alts) => { for alt in alts { collect_tuple_arities_pattern (alt , out) ; } } Pattern :: Wildcard | Pattern :: Lit (_) | Pattern :: Ident (_) => { } } }",
-      "reason": "`& mut std :: collections :: BTreeSet < usize >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified type path `std :: collections :: BTreeSet < usize >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "collect_tuple_arities_pattern"
     },
     {
@@ -805,7 +807,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Insert the export `qual` (a `pub` type/fn/trait) into the per-nodule imports under `simple`.\"] # [doc = \" Exactly one of the three export tables holds `qual` (a name is one kind); insert from whichever.\"] fn insert_export (imp : & mut NoduleImports , exports : & Exports , qual : & str , simple : & str) { let is_cross_phylum = qual . contains (\"::\") ; if let Some (info) = exports . types . get (qual) { imp . types . insert (simple . to_owned () , info . clone ()) ; if let Some (sealed) = exports . sealed_ctors . get (qual) { imp . sealed . extend (sealed . iter () . cloned ()) ; } } if let Some (fd) = exports . fns . get (qual) { imp . fns . insert (simple . to_owned () , fd . clone ()) ; if let Some (resolved) = exports . resolved_fn_sigs . get (qual) { imp . resolved_fn_sigs . insert (simple . to_owned () , resolved . clone ()) ; } if is_cross_phylum { imp . cross_phylum_fns . insert (simple . to_owned ()) ; } else { imp . cross_phylum_fns . remove (simple) ; } } if let Some (info) = exports . traits . get (qual) { imp . traits . insert (simple . to_owned () , info . clone ()) ; if is_cross_phylum { imp . cross_phylum_traits . insert (simple . to_owned ()) ; } else { imp . cross_phylum_traits . remove (simple) ; } } }",
-      "reason": "`& mut NoduleImports` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method body statement is neither a `let`, a supported `self.<field>`/`*<param>` re-assignment, nor (in tail position) the method's own return value — value-threading deliberately refuses any shape outside a flat re-assignment sequence rather than risk an unsound rebind (DN-125 §6.1, never-silent G2/VR-5)",
       "item_name": "insert_export"
     },
     {
@@ -815,7 +817,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Remove any import binding for `simple` across all three tables (used when a glob-vs-glob collision\"] # [doc = \" demotes a tentatively-bound name to `ambiguous`).\"] fn remove_import (imp : & mut NoduleImports , simple : & str) { imp . types . remove (simple) ; imp . fns . remove (simple) ; imp . traits . remove (simple) ; imp . resolved_fn_sigs . remove (simple) ; imp . cross_phylum_traits . remove (simple) ; imp . cross_phylum_fns . remove (simple) ; }",
-      "reason": "`& mut NoduleImports` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method body statement is neither a `let`, a supported `self.<field>`/`*<param>` re-assignment, nor (in tail position) the method's own return value — value-threading deliberately refuses any shape outside a flat re-assignment sequence rather than risk an unsound rebind (DN-125 §6.1, never-silent G2/VR-5)",
       "item_name": "remove_import"
     },
     {
@@ -862,10 +864,10 @@
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 2782,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
       "snippet": "# [doc = \" Register a (resolved) nodule's **data declarations** into `types` (Pass 1; RFC-0007 §11): a shell\"] # [doc = \" per type first (so recursive field references resolve), then its constructors. Duplicate type\"] # [doc = \" parameters / duplicate type names are explicit refusals. Extracted (M-662) so the phylum can build\"] # [doc = \" its registries once and reuse them; behavior is byte-identical to the inlined Pass 1.\"] pub (crate) fn register_types (types : & mut BTreeMap < String , DataInfo > , nodule : & Nodule ,) -> Result < () , CheckError > { for arity in collect_tuple_arities (nodule) { let tname = tuple_type_name (arity) ; types . entry (tname) . or_insert_with (| | synthetic_tuple_data (arity)) ; } for item in & nodule . items { if let Item :: Type (td) = item { if let Some (dup) = first_duplicate (& td . params) { return Err (CheckError :: new (& td . name , format ! (\"duplicate type parameter `{dup}` in `{}`\" , td . name) ,)) ; } if types . contains_key (& td . name) { return Err (CheckError :: new (& td . name , \"duplicate type declaration\")) ; } types . insert (td . name . clone () , DataInfo { name : td . name . clone () , home : nodule_home (& nodule . path) , params : td . params . clone () , ctors : vec ! [] , } ,) ; } } for item in & nodule . items { if let Item :: Type (td) = item { let ctors = resolve_ctors (types , td) ? ; types . get_mut (& td . name) . expect (\"registered above\") . ctors = ctors ; } } Ok (()) }",
-      "reason": "`& mut BTreeMap < String , DataInfo >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "fn parameter `nodule` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "register_types"
     },
     {
@@ -945,7 +947,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Collect every identifier a surface [`Pattern`] binds, appending to `out` (M-1054 Stage 1b's\"] # [doc = \" Stage-2 free-identifier gate, [`Cx::rhs_first_free_id`]). Mirrors the constructor-arm binding\"] # [doc = \" shape the real decision-tree compiler (`crate::decision`) and elaborator already use — every\"] # [doc = \" `Pattern::Ident`/`Ctor`/`Tuple` field becomes a binder in the arm body's scope; `Wildcard`/`Lit`\"] # [doc = \" bind nothing. `Or`'s alternatives are collected from **every** branch (a union, not just the\"] # [doc = \" first) — conservative rather than relying on the \\\"every alternative binds the same identifier\"] # [doc = \" set\\\" invariant holding at this point in the pipeline (that invariant is itself validated later,\"] # [doc = \" downstream, by `check_match`/`normalize_pattern` — see that function's own doc comment — not yet\"] # [doc = \" by the time this Stage 1b gate runs over the raw surface tree).\"] fn collect_pattern_binders (pat : & Pattern , out : & mut Vec < String >) { match pat { Pattern :: Wildcard | Pattern :: Lit (_) => { } Pattern :: Ident (name) => out . push (name . clone ()) , Pattern :: Ctor (_ , fields) | Pattern :: Tuple (fields) => { for f in fields { collect_pattern_binders (f , out) ; } } Pattern :: Or (alts) => { for a in alts { collect_pattern_binders (a , out) ; } } } }",
-      "reason": "`& mut Vec < String >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "mutating method's tail expression is neither a threaded-binding field/whole-value re-assignment nor (with the method's original return type already `()`/self-chain, and either multiple threaded bindings or one already assigned) an extra value — value-threading only supports a flat sequence of `self.<field> = ..`/`*<param> = ..` re-assignments plus, when the source return type is non-unit, one trailing value expression (DN-125 §5, conservative scope per §6.1)",
       "item_name": "collect_pattern_binders"
     },
     {
@@ -1195,7 +1197,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Stage3Fresh { fn mint (& mut self) -> String { let n = self . 0 ; self . 0 += 1 ; format ! (\"%stage3-subst%{n}\") } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `mint` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `mint` body: unsupported expression form `format ! (\"%stage3-subst%{n}\")`",
       "item_name": "Stage3Fresh"
     },
     {
@@ -1255,27 +1257,27 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Re-infer an expression's type against a checked [`Env`] (the elaborator needs the scrutinee type\"] # [doc = \" to lower a `match`, and a `let`-bound's type to track its scope — RFC-0011). The program is\"] # [doc = \" already checked, so this recomputes a type the checker validated; it does not re-litigate errors.\"] pub (crate) fn infer_type (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { let no_imports = NoduleImports :: default () ; let cx = Cx { site : \"<elaborate>\" , types : & env . types , fns : & env . fns , traits : & env . traits , instances : & env . instances , imports : & no_imports , lower_rules : & env . lower_rules , tyvars : & [] , bounds : & [] , std_sys : true , depth : Cell :: new (0) , affine : Tracker :: inert () , # [cfg (test)] stage3_sabotage_skip_substitution : false , } ; cx . infer (scope , e) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified/associated-function call `NoduleImports :: default` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "infer_type"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 9748,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" **Test-only** twin of [`infer_type`] with an **active** affine tracker\"] # [doc = \" ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.\"] # [doc = \" a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate\"] # [doc = \" [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare\"] # [doc = \" call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no\"] # [doc = \" `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`\"] # [doc = \" tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`\"] # [doc = \" interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the\"] # [doc = \" per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a\"] # [doc = \" real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry\"] # [doc = \" point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).\"] # [cfg (test)] pub (crate) fn infer_type_with_active_affine (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { infer_type_with_active_affine_inner (env , scope , e , false) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "dropped non-doc attribute(s) on fn `infer_type_with_active_affine`: # [cfg (test)]",
       "item_name": "infer_type_with_active_affine"
     },
     {
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 9768,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,\"] # [doc = \" DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`\"] # [doc = \" runs its Stage-3 walk over the **unsubstituted** RHS (see\"] # [doc = \" `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating \\\"the substituted-`Expr`\"] # [doc = \" splice never happened,\\\" to prove that splice is load-bearing: a fixture that must genuinely\"] # [doc = \" REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**\"] # [doc = \" here.\"] # [cfg (test)] pub (crate) fn infer_type_with_active_affine_sabotaged (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr ,) -> Result < Ty , CheckError > { infer_type_with_active_affine_inner (env , scope , e , true) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "dropped non-doc attribute(s) on fn `infer_type_with_active_affine_sabotaged`: # [cfg (test)]",
       "item_name": "infer_type_with_active_affine_sabotaged"
     },
     {
@@ -1285,7 +1287,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [cfg (test)] fn infer_type_with_active_affine_inner (env : & Env , scope : & mut Vec < (String , Ty) > , e : & Expr , sabotage : bool ,) -> Result < Ty , CheckError > { let no_imports = NoduleImports :: default () ; let cx = Cx { site : \"<test:active-affine>\" , types : & env . types , fns : & env . fns , traits : & env . traits , instances : & env . instances , imports : & no_imports , lower_rules : & env . lower_rules , tyvars : & [] , bounds : & [] , std_sys : true , depth : Cell :: new (0) , affine : Tracker :: seeded (scope) , stage3_sabotage_skip_substitution : sabotage , } ; cx . infer (scope , e) }",
-      "reason": "`& mut Vec < (String , Ty) >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "qualified/associated-function call `NoduleImports :: default` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "infer_type_with_active_affine_inner"
     },
     {

@@ -46,7 +46,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for RandErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { RandErr :: EmptyRange => f . write_str (\"empty range: hi must be > lo\") , RandErr :: BadProbability => f . write_str (\"bad probability: p must be in [0.0, 1.0]\") , RandErr :: EmptyDomain => f . write_str (\"empty domain: collection has no elements\") , RandErr :: BadParameter => f . write_str (\"bad distribution parameter (e.g. sigma > 0 for Normal, lambda > 0 for Exponential)\" ,) , RandErr :: EntropyUnavailable => { f . write_str (\"entropy source unavailable (FLAG: std-sys phylum / M-541)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "RandErr"
     },
     {
@@ -76,7 +76,7 @@
       "category": "Trait",
       "rust_construct": "Trait",
       "snippet": "# [doc = \" Injectable entropy source — the seam between pure `std.rand` and the `std-sys` phylum.\"] # [doc = \"\"] # [doc = \" The concrete platform implementation (getrandom / `wild`) lives in `std-sys` (M-541) and\"] # [doc = \" is injected at construction time via `EntropyRng::new`. Tests use [`StubEntropy`] (a\"] # [doc = \" deterministic counter), keeping the test suite free of platform OS calls.\"] # [doc = \"\"] # [doc = \" Implementors must return `Err(RandErr::EntropyUnavailable)` rather than a silent fallback\"] # [doc = \" on any failure (C1).\"] pub trait EntropySource { # [doc = \" Fill `buf` with entropy bytes, or return `Err(RandErr::EntropyUnavailable)` (C1).\"] fn fill_bytes (& mut self , buf : & mut [u8]) -> Result < EntropyEffect , RandErr > ; }",
-      "reason": "trait `EntropySource` method `fill_bytes` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence)",
+      "reason": "trait `EntropySource` method `fill_bytes` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `self` parameter with no enclosing impl/trait context)",
       "item_name": "EntropySource"
     },
     {
@@ -326,7 +326,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl EntropySource for StubEntropy { fn fill_bytes (& mut self , buf : & mut [u8]) -> Result < EntropyEffect , RandErr > { for b in buf . iter_mut () { * b = self . counter ; self . counter = self . counter . wrapping_add (1) ; } Ok (EntropyEffect) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fill_bytes` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fill_bytes` signature: unsupported Rust type form `[u8]`",
       "item_name": "StubEntropy"
     },
     {

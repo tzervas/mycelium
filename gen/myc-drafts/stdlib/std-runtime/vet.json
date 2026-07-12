@@ -16,7 +16,7 @@
       "exit_code": 3,
       "diagnostic": "check-error: check error in `std.runtime.dataflow.<use>`: `use std.runtime.task.Deadlock`: no such name `std.runtime.task.Deadlock` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 16,
-      "emitted_items": 4
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/guarantee_matrix.myc",
@@ -128,7 +128,7 @@
     }
   ],
   "total_non_test_items": 132,
-  "total_emitted_items": 27,
+  "total_emitted_items": 28,
   "total_checked_clean_items": 12,
   "class_counts": {
     "CheckError": 4,
@@ -149,10 +149,10 @@
       {
         "nodule": "std.runtime.dataflow",
         "file": "dataflow.myc",
-        "class": "Clean",
-        "site": null,
+        "class": "CheckError",
+        "site": "PollTask",
         "on": null,
-        "message": null
+        "message": "`impl` for unknown trait `PollTask` (RFC-0019 §4.5)"
       },
       {
         "nodule": "std.runtime.guarantee_matrix",
@@ -253,5 +253,5 @@
     ],
     "diagnostic": "duplicate function"
   },
-  "total_checked_clean_items_phylum": 16
+  "total_checked_clean_items_phylum": 12
 }

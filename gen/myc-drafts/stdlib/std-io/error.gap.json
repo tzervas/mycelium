@@ -36,7 +36,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteOffset { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"byte {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ByteOffset"
     },
     {
@@ -66,7 +66,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for FieldPath { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"field path {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "FieldPath"
     },
     {
@@ -136,7 +136,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for SerError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { SerError :: Truncated { at } => write ! (f , \"truncated input at {at}\") , SerError :: Malformed { at , why } => write ! (f , \"malformed input at {at}: {why}\") , SerError :: UnknownTag { path , tag } => { write ! (f , \"unknown tag {tag:?} at {path}\") } SerError :: OutOfDomain { path , why } => { write ! (f , \"value out of domain at {path}: {why}\") } SerError :: BudgetExceeded { kind } => { write ! (f , \"decode budget exceeded ({kind})\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "SerError"
     },
     {
@@ -166,7 +166,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteCount { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"{} bytes\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ByteCount"
     },
     {
@@ -216,7 +216,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for IoError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { IoError :: UnexpectedEof { read } => write ! (f , \"unexpected EOF after {read}\") , IoError :: Refused { why } => write ! (f , \"substrate refused: {why}\") , IoError :: EffectBudget { kind } => write ! (f , \"effect budget exceeded ({kind})\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "IoError"
     },
     {
@@ -246,7 +246,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadValueError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadValueError :: Io (e) => write ! (f , \"io error: {e}\") , ReadValueError :: Ser (e) => write ! (f , \"serialize error: {e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ReadValueError"
     },
     {
