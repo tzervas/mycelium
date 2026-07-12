@@ -1,0 +1,285 @@
+//! DN-125 (M-1081) — the `&mut self`/`&mut T` value-threading lowering. Unit tests over
+//! `emit::{map_signature, emit_mutating_block_as_expr}` via the public `transpile_source` driver
+//! (per CLAUDE.md "Test layout": data-driven fixtures, complex logic stays out of test bodies).
+//!
+//! Covers, per the DN-125 §9 Definition of Done and this leaf's brief:
+//! - a simple `&mut self` field mutation value-threads and (live-oracle) `myc check`-cleans;
+//! - the builder-chain shortcut (`-> &mut Self`) threads without a fabricated tuple;
+//! - a top-level `&mut T` PARAMETER (S2) value-threads (whole-value reassignment);
+//! - the two DN-125 §6 adversarial narrowings NEVER silently mis-thread: (i) an
+//!   interior-`&mut`-return method (`&mut Field`, not the receiver itself) gaps, never a
+//!   fabricated value return; (ii) a body shape outside the flat re-assignment sequence (a
+//!   conditional mutation, a field read through a non-`self` threaded param) gaps, never a
+//!   guessed rebind;
+//! - `&self` (shared) still erases to a plain value param, unaffected by this DN (regression
+//!   guard on the pre-existing behavior DN-125 §2 says this lowering must not touch).
+
+use crate::transpile::transpile_source;
+
+/// Live-oracle helper shared with `tests::vet`/`tests::emit` (see that module's doc) — every
+/// mutating-body case this module claims "emits" is ALSO run through the real `myc-check` binary
+/// when available, so "emitted" and "myc check-clean" are never conflated (VR-5: the emitted text
+/// assertions below are `Declared`-heuristic; only the live-oracle runs below are the checked
+/// claim).
+use super::vet::find_myc_check;
+
+fn myc_check_clean(myc: &str, case: &str) {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "mut_thread: live oracle test skipped for `{case}` — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`)."
+        );
+        return;
+    };
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-mut-thread-oracle-{case}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join(format!("{case}.myc"));
+    std::fs::write(&path, myc).expect("write case .myc");
+
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "case `{case}` must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+         diagnostic={:?}",
+        rec.diagnostic
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A simple `&mut self` compound-assignment mutator (DN-125 §5.1's `incr` illustration, shape-
+/// wise) threads: the receiver is taken by value, the body's `self.0 ^= mask;` rebuilds `Counter`
+/// positionally via nested-let shadowing, and the signature's return type widens to the
+/// receiver's own type (no extra value — the source returned `()`). Uses `^=` (bitwise XOR)
+/// rather than `+=` for the operator: `^` is this transpiler's one glyph that already composes
+/// unconditionally `myc check`-clean on `Binary{N}` operands (see `emit::EmitVisitor::visit_binary`'s
+/// own doc); a *plain* `+`/`+=` on two `Binary{N}` values is a PRE-EXISTING, orthogonal gap this
+/// leaf discovered but does not fix (`add` does not accept `Binary{N}` operand types today,
+/// verified empirically against the real `myc-check` oracle, independent of this DN's threading —
+/// see `mut_self_field_add_assign_hits_pre_existing_add_glyph_gap` below, which pins the finding
+/// honestly rather than silently choosing an operator that hides it).
+#[test]
+fn mut_self_field_compound_assign_value_threads() {
+    let rust =
+        "struct Counter(u64); impl Counter { fn toggle(&mut self, mask: u64) { self.0 ^= mask; } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.gaps.is_empty(),
+        "`toggle` must be emitted with zero gaps (a `&mut self` method with a supported \
+         field-assign body): gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains(
+            "fn toggle(self: Counter, mask: Binary{64}) => Counter = let self = Counter((match \
+             self { Counter(p0) => p0 } ) ^ mask) in self;"
+        ) || myc.contains(
+            "fn toggle(self: Counter, mask: Binary{64}) => Counter = let self = Counter((match \
+             self { Counter(p0) => p0 }) ^ mask) in self;"
+        ),
+        "unexpected emission:\n{myc}"
+    );
+    myc_check_clean(&myc, "mut_self_field_compound_assign");
+}
+
+/// **Honest disconfirming-evidence pin (VR-5, house rule #4 — never sweep a discovered gap under
+/// the rug).** This DN-125 leaf's live-oracle probing incidentally found that a plain `+`/`+=` on
+/// two `Binary{N}` values does NOT `myc check`-clean in this transpiler TODAY — `add` refuses
+/// `Binary{N}` operand types (`T-Op`, RFC-0007 §4.4). This is a PRE-EXISTING, orthogonal gap
+/// (reproduces identically on a plain two-param free fn with no `&mut`/threading involved at
+/// all — confirmed by hand against the oracle during this leaf's work) — NOT introduced by, and
+/// out of scope for, this DN's value-threading lowering (which only composes the SAME `+`/`+=`
+/// text `emit_expr`'s existing `Expr::Binary` arm already emits for any other context). Pinned
+/// here as a regression witness for a future `+`/`Add` composed-form fix (mirroring the `&`/`|`/
+/// `!=`/`>` composed-form precedent already landed for those operators) — never silently claimed
+/// working.
+#[test]
+fn mut_self_field_add_assign_hits_pre_existing_add_glyph_gap() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "mut_thread: pre-existing-gap pin skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`)."
+        );
+        return;
+    };
+    let rust =
+        "struct Counter(u64); impl Counter { fn incr(&mut self, by: u64) { self.0 += by; } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.gaps.is_empty(),
+        "the value-threading lowering itself must still emit with zero gaps (the failure this \
+         test pins is a myc-check-time type error, not a transpile-time gap): gaps={:?}",
+        report.gaps
+    );
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-mut-thread-addgap-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::CheckError,
+        "if this now passes, the pre-existing `add`/`Binary{{N}}` gap has been fixed elsewhere — \
+         update this pin (and `mut_self_field_compound_assign_value_threads` may drop its `^=` \
+         workaround): diagnostic={:?}\nmyc:\n{myc}",
+        rec.diagnostic
+    );
+    assert!(
+        rec.diagnostic.contains("`add` does not accept"),
+        "expected the `add`/T-Op diagnostic specifically, got: {:?}",
+        rec.diagnostic
+    );
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The builder-chain shortcut: `-> &mut Self` returning the receiver for chaining threads to a
+/// SINGLE `Counter` return (never a `(Counter, Counter)` tuple) — DN-125 §1/§4's "builder
+/// methods" classification, not the §6.2 interior-return residual.
+#[test]
+fn mut_self_builder_chain_return_threads_single_type() {
+    let rust = "struct Counter(u64); \
+                impl Counter { fn set(&mut self, v: u64) -> &mut Self { self.0 = v; self } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.gaps.is_empty(),
+        "`set` must be emitted with zero gaps: gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains(
+            "fn set(self: Counter, v: Binary{64}) => Counter = let self = Counter(v) in self;"
+        ),
+        "builder-chain return must thread to a single `Counter`, not a tuple:\n{myc}"
+    );
+    myc_check_clean(&myc, "mut_self_builder_chain");
+}
+
+/// S2: a top-level `&mut T` fn PARAMETER (not a receiver) value-threads too — a whole-value
+/// re-assignment (`*y = v;`) rebinds `y` directly (no struct layout needed, unlike the `self`
+/// field-assign case above).
+#[test]
+fn mut_t_param_whole_value_deref_assign_value_threads() {
+    let rust = "fn set_val(y: &mut u64, v: u64) { *y = v; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "set_val"),
+        "`set_val` must be emitted: gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn set_val(y: Binary{64}, v: Binary{64}) => Binary{64} = let y = v in y;"),
+        "unexpected emission:\n{myc}"
+    );
+    myc_check_clean(&myc, "mut_t_param_whole_value_deref_assign");
+}
+
+/// DN-125 §6.2 adversarial narrowing (HELD): a `&mut self` method returning `&mut <other field
+/// type>` — an interior mutable reference INTO self, not the receiver's own value (`get_mut`-
+/// shape) — must NOT value-thread. It gaps via the pre-existing, UNCHANGED `&mut T` return-type
+/// gap (`map::visit_reference`), never a fabricated value return.
+#[test]
+fn interior_mut_return_never_value_threads() {
+    let rust = "struct Pair(u64, u64); \
+                impl Pair { fn peek_mut(&mut self) -> &mut u64 { &mut self.0 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        !myc.contains("peek_mut"),
+        "an interior-&mut-return method must NEVER be emitted (would fabricate a value return \
+         for a reference into self): myc:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("mutable reference")),
+        "expected a gap citing the mutable-reference basis (DN-125 §6.2's untouched `&mut T` \
+         return-type gap): {:?}",
+        report.gaps
+    );
+}
+
+/// DN-125 §6.1 adversarial narrowing (HELD): a conditional (`if`-guarded, no `else`) mutation of
+/// `self` is OUTSIDE the flat re-assignment sequence this lowering accepts — it must gap, never
+/// silently mis-thread a value that doesn't actually reflect the (possibly-skipped) mutation.
+#[test]
+fn conditional_self_mutation_gaps_not_mis_threaded() {
+    let rust = "struct Counter(u64); \
+                impl Counter { fn maybe_incr(&mut self, by: u64, flag: bool) { \
+                if flag { self.0 += by; } } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "maybe_incr"),
+        "a conditionally-mutated `&mut self` body must NOT be emitted (outside the flat \
+         re-assignment scope DN-125 §6.1 accepts): myc:\n{myc}"
+    );
+    assert!(
+        !report.gaps.is_empty(),
+        "the refusal must be a recorded gap, never a silent drop (G2)"
+    );
+}
+
+/// DN-125 §6.1 adversarial narrowing (HELD): reading a FIELD of a non-`self` threaded `&mut T`
+/// parameter (`other.0`) has no supported projection (`visit_field` only resolves `self.<field>`)
+/// — the whole method must gap rather than silently reinterpreting `other` as an alias of `self`.
+#[test]
+fn field_read_through_non_self_threaded_param_gaps() {
+    let rust = "struct Counter(u64); \
+                impl Counter { fn weird(&mut self, other: &mut Counter) { self.0 = other.0; } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "weird"),
+        "a field read through a non-`self` threaded param must NOT be emitted: myc:\n{myc}"
+    );
+    assert!(
+        !report.gaps.is_empty(),
+        "the refusal must be a recorded gap, never a silent drop (G2)"
+    );
+}
+
+/// Regression guard: an ordinary `&self` (shared) method is completely UNAFFECTED by DN-125 —
+/// still erased to a plain by-value receiver with no threading, exactly as it landed pre-DN-125
+/// (DN-125 §2/§4: this is the ALREADY-landed Native Equivalent, out of this DN's scope).
+#[test]
+fn shared_self_receiver_still_erases_unthreaded() {
+    let rust = "struct Counter(u64); impl Counter { fn get(&self) -> u64 { self.0 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.gaps.is_empty(),
+        "`get` must be emitted: gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn get(self: Counter) => Binary{64} = (match self { Counter(p0) => p0 });"),
+        "a `&self` method must stay a plain (non-tuple, non-threaded) return:\n{myc}"
+    );
+}

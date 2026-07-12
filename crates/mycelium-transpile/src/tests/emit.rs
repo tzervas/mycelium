@@ -427,14 +427,20 @@ fn cases() -> Vec<Case> {
                 contains: "fn digest_eq(a: Ordering, b: Ordering) => Bool = a == b;",
             },
         },
-        // NEVER-SILENT CASCADE: a fn taking `&mut T` stays gapped — a mutable reference has no
-        // value-semantic correspondence (ADR-003), so it is NOT erased. The whole fn gaps (Other),
-        // never a partial emission that silently drops the mutation.
+        // DN-125 (M-1081): a fn taking a top-level `&mut T` parameter now value-threads (Alt A,
+        // Rank 1) instead of hard-gapping — `x` erases to a by-value `Ordering` param, and the
+        // return type widens to carry `x` back out alongside the genuine `bool` return value
+        // (this fixture's body never actually reassigns `x`, so the threaded slot is just `x`
+        // itself, unchanged — a vacuously-correct rebind, not a special case; `map_signature`'s
+        // `FnArg::Typed` `&mut T` arm does not require the body to mutate). Was
+        // `mut_ref_param_gapped` pre-DN-125; kept the same fixture Rust source so the two
+        // behaviors (gap -> emit) are directly comparable in history.
         Case {
-            name: "mut_ref_param_gapped",
+            name: "mut_ref_param_value_threads",
             rust: "fn bump(x: &mut Ordering) -> bool { true }",
-            expect: Expect::Gapped {
-                category: Category::Other,
+            expect: Expect::Emitted {
+                item: "bump",
+                contains: "fn bump(x: Ordering) => (Ordering, Bool) = (x, True);",
             },
         },
         // M-1006 §8.14: a fn taking `&str` now emits — the reference erases to `str`, which maps to
