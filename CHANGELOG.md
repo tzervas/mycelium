@@ -12,6 +12,30 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn): DN-123 records/named-fields surface lever (P2) — design + ranked recommendation (2026-07-11)
+
+- **DN-123 (Draft)** — `docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`. Works DN-121's P2
+  lever (records / named-field surface, Struct 80/10%) forward to a ranked recommendation; enacts and
+  ratifies nothing (house rule #3, append-only — the maintainer ratifies).
+- **Verify-first correction (mitigation #14).** Records are **already substantially supported at the
+  `checked_fraction` level**: the transpiler carries a field-name↔index map (`StructLayout`), already
+  desugars Rust struct literals / field-projection / struct-update to positional `Data`, and emits
+  named-field structs positionally with names **recorded** as a never-silent `NamedFieldDrop` sub-gap
+  (`crates/mycelium-transpile/src/emit.rs`). The blocker is an unmapped field TYPE, not named-fieldness;
+  the genuine residual is **faithfulness** (dropped names) plus the **self-hosted `.myc` surface**
+  (the DN-119 L3-G1 struct-pattern grammar gap).
+- **Ranked recommendation.** Option A — a **mechanically-lowering sugar** over positional `Ctor`/`Data`
+  plus the name↔index map (per DN-106's ratified GP1/GP2 — the gap-closure default is the sugar, not a
+  kernel primitive); Option C (sugar plus inert `field_names` metadata) as a YAGNI-gated faithfulness
+  upgrade; Option B (first-class named-field kernel variant) **rejected** (KC-3, value-semantic
+  positional design). Identity stays positional/structural (ADR-003) — names never in the hash.
+- **Adversarial open questions** OQ-1..5: content-addressed identity vs field ORDER (canonicalize-to-
+  declaration-order) and NAMES (off the hash); cross-phylum name metadata (DN-112/DN-113/M-1060);
+  functional-update spread affine treatment (M-919); struct-pattern exhaustiveness plus DN-104 seal.
+- Also appends the DN-123 `docs/Doc-Index.md` row. `Empirical` where read against dev tip `46006994`;
+  `Declared` for the proposed design (VR-5). FLAGged for integration close-out: DN-99 register Struct
+  rows, DN-119 exclusion-row annotation, M-876 `doc_refs` → DN-123 (integration/orchestrator-owned).
+
 ### docs(notes): file DN-119/120/121/122 (Draft) + DN-32/33 → DN-35 §5 forward cross-refs (2026-07-11)
 
 Four Draft Design Notes filed for maintainer ratification, part of the ongoing gap-close-run wave
