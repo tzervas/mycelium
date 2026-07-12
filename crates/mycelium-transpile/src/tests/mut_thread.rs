@@ -283,3 +283,89 @@ fn shared_self_receiver_still_erases_unthreaded() {
         "a `&self` method must stay a plain (non-tuple, non-threaded) return:\n{myc}"
     );
 }
+
+/// **CRITICAL regression (strict review of PR #1527).** A plain `let y = ..;` in the body whose
+/// pattern name SHADOWS the threaded `&mut T` parameter `y` is a genuinely new, ordinarily-scoped
+/// local (Rust lexical shadowing) with NO effect on the referent — the correct threaded return is
+/// still the value from the earlier `*y = v;` reassignment, never the unrelated shadow's value.
+/// Pre-fix this silently emitted `let y = v in let y = w in y`, which evaluates to `w` — the
+/// wrong, corrupted value — and still `myc check`-cleaned. This pins the fix non-vacuously: it
+/// would fail against the pre-fix emission (whose tail is the bare, shadowable `y`).
+#[test]
+fn let_binding_shadowing_threaded_param_name_does_not_corrupt_threaded_return() {
+    let rust = "fn set_val(y: &mut u64, v: u64, w: u64) { *y = v; let y = w; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "set_val"),
+        "`set_val` must be emitted (synthetic-name routing, not a refusal, for this shape): \
+         gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    // The fold's TAIL reference must be the synthetic carrier, not the bare (shadowable) `y` —
+    // i.e. the emitted body must NOT end `.. in y;` (the pre-fix, corruption-prone shape).
+    assert!(
+        !myc.contains("in y;"),
+        "the threaded return must not resolve through the plain (shadow-vulnerable) name `y` — \
+         unexpected emission:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn set_val(y: Binary{64}, v: Binary{64}, w: Binary{64}) => Binary{64} = \
+             let __myc_thread_y = y in let y = v in let __myc_thread_y = y in let y = w in \
+             __myc_thread_y;"
+        ),
+        "unexpected emission (expected the `v`-preserving synthetic-carrier form):\n{myc}"
+    );
+    myc_check_clean(&myc, "let_shadows_threaded_param_name");
+}
+
+/// **CRITICAL regression (strict review of PR #1527), `want_extra` tuple shape.** Same shadow
+/// hazard as above, but with a genuine extra return value read AFTER the shadow — the extra value
+/// correctly reads the shadow's value (`y = 999`, ordinary Rust lexical scoping: `y + 1` after
+/// `let y = 999` is `1000`), while the THREADED component of the tuple must still be `v`, never
+/// `999`. Pre-fix this emitted `(999, 1000)`; the fix must emit `(v, 1000)`.
+#[test]
+fn let_binding_shadowing_threaded_param_name_preserves_threaded_value_in_extra_tuple() {
+    let rust = "fn set_val(y: &mut u64, v: u64) -> u64 { *y = v; let y = 999u64; y + 1 }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "set_val"),
+        "`set_val` must be emitted: gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        !myc.contains("(999, "),
+        "the threaded tuple component must never be the unrelated shadow's value `999` — \
+         unexpected emission:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn set_val(y: Binary{64}, v: Binary{64}) => (Binary{64}, Binary{64}) = \
+             let __myc_thread_y = y in let y = v in let __myc_thread_y = y in let y = 999 in \
+             (__myc_thread_y, y + 1);"
+        ),
+        "unexpected emission (expected the `(v, 1000)`-preserving synthetic-carrier form):\n{myc}"
+    );
+}
+
+/// **Non-regression companion:** with NO `let` shadowing the threaded name, emission is
+/// completely unaffected by the CRITICAL fix — no synthetic carrier, byte-identical to the
+/// pre-fix nested-`let`-on-`y` chain (the fix is opt-in per-body, never adds unneeded verbosity).
+#[test]
+fn no_shadow_means_no_synthetic_carrier_emitted() {
+    let rust = "fn incr(y: &mut u64) { *y += 1; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.gaps.is_empty(),
+        "`incr` must be emitted with zero gaps: gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        !myc.contains("__myc_thread_"),
+        "a body with no shadow of the threaded name must never introduce the synthetic carrier: \
+         {myc}"
+    );
+}

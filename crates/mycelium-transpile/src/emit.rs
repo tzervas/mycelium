@@ -1048,7 +1048,64 @@ fn emit_mutating_block_as_expr_inner(
             "empty function body (no expression)",
         ));
     }
-    let mut bindings: Vec<(String, String)> = Vec::new();
+    // CRITICAL fix (strict review of PR #1527, DN-125/M-1081): a plain `let` binding whose
+    // pattern name SHADOWS a threaded `&mut` binding's own name (only reachable for a `&mut T`
+    // PARAMETER — Rust forbids `let self`) introduces a genuinely new, ordinarily-scoped local
+    // (Rust lexical shadowing) with NO effect on the referent. Naively folding both the threaded
+    // reassignment(s) AND this unrelated same-named local into ONE nested `let <name> = .. in ..`
+    // chain (the pre-fix behavior) let the shadow silently intercept the fold's tail reference,
+    // returning the shadow's value instead of the actually-threaded one — a silent-corruption bug
+    // that still `myc check`-cleaned. Fix: for exactly the threaded names a `let` in THIS body
+    // shadows, route the tail reference through a synthetic internal alias
+    // (`synth_thread_name`, `__myc_thread_<name>`) that a source-level `let <name> = ..` can never
+    // intercept, seeded before the first statement and re-captured immediately after every
+    // threaded reassignment (`fold_threaded_tail`'s doc has the full nesting argument). A body
+    // with no such shadow is completely unaffected — `shadow_risk` is empty and every emission is
+    // byte-identical to pre-fix (no unnecessary verbosity).
+    let shadow_risk = shadowed_threaded_names(block, threaded);
+    if !shadow_risk.is_empty() {
+        // Never-silent collision guard (VR-5): if the source already spells the exact synthetic
+        // carrier name this fix needs, routing through it would defeat the whole point — refused
+        // outright (Category::Other) rather than risked. Astronomically unlikely for real Rust
+        // source (the `__myc_thread_` prefix is an internal convention, not a reserved word), but
+        // checked rather than assumed.
+        for name in threaded
+            .iter()
+            .map(|t| &t.name)
+            .filter(|n| shadow_risk.contains(*n))
+        {
+            let synth = synth_thread_name(name);
+            let collides = env.contains_key(&synth)
+                || threaded.iter().any(|t| t.name == synth)
+                || block.stmts.iter().any(|s| {
+                    matches!(
+                        s,
+                        Stmt::Local(l)
+                            if local_binding_simple_name(l).as_deref() == Some(synth.as_str())
+                    )
+                });
+            if collides {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "source already uses the internal synthetic carrier name `{synth}` — \
+                         `{name}`'s DN-125 shadow-safe value-threading needs this name \
+                         internally and refuses to risk a collision with a source binding of \
+                         the same spelling (VR-5)",
+                    ),
+                ));
+            }
+        }
+    }
+    // Seed a synthetic capture for every shadow-risked threaded binding BEFORE any statement is
+    // processed, so the tail always has a well-defined synthetic value even when the body never
+    // explicitly reassigns that binding at all (it then simply carries the original parameter
+    // through, unaffected by any later same-named `let` shadow).
+    let mut bindings: Vec<(String, String)> = threaded
+        .iter()
+        .filter(|t| shadow_risk.contains(&t.name))
+        .map(|t| (synth_thread_name(&t.name), t.name.clone()))
+        .collect();
     let mut local_env = env.clone();
     let mut touched: HashSet<String> = HashSet::new();
 
@@ -1062,7 +1119,16 @@ fn emit_mutating_block_as_expr_inner(
                 if let Some((name, value)) = try_threaded_assign(e, self_ty, &local_env, threaded)?
                 {
                     touched.insert(name.clone());
-                    bindings.push((name, value));
+                    bindings.push((name.clone(), value));
+                    if shadow_risk.contains(&name) {
+                        // Re-capture the just-updated value under the synthetic carrier,
+                        // immediately after the reassignment it belongs to (see this fn's
+                        // CRITICAL-fix doc + `fold_threaded_tail`'s nesting argument) — a later
+                        // same-named capture shadows an earlier one exactly like the real
+                        // `<name>` chain does, so the LAST reassignment always wins, unaffected
+                        // by any later unrelated `let <name> = ..` shadow.
+                        bindings.push((synth_thread_name(&name), name));
+                    }
                     continue;
                 }
                 if is_final && semi.is_none() {
@@ -1074,13 +1140,23 @@ fn emit_mutating_block_as_expr_inner(
                         if p.qself.is_none() && p.path.segments.len() == 1 {
                             let nm = p.path.segments[0].ident.to_string();
                             if threaded.iter().any(|t| t.name == nm) {
-                                return Ok(fold_threaded_tail(bindings, threaded, None));
+                                return Ok(fold_threaded_tail(
+                                    bindings,
+                                    threaded,
+                                    None,
+                                    &shadow_risk,
+                                ));
                             }
                         }
                     }
                     if want_extra {
                         let tail_text = emit_expr(e, self_ty, &local_env)?;
-                        return Ok(fold_threaded_tail(bindings, threaded, Some(tail_text)));
+                        return Ok(fold_threaded_tail(
+                            bindings,
+                            threaded,
+                            Some(tail_text),
+                            &shadow_risk,
+                        ));
                     }
                     // No assignment statement touched the (sole) threaded binding at all — the
                     // tail expression may be its whole replacement value (e.g. a full `Self { .. }`
@@ -1100,8 +1176,13 @@ fn emit_mutating_block_as_expr_inner(
                             == Some(threaded[0].ty.as_str())
                     {
                         let tail_text = emit_expr(e, self_ty, &local_env)?;
-                        bindings.push((threaded[0].name.clone(), tail_text));
-                        return Ok(fold_threaded_tail(bindings, threaded, None));
+                        let name = &threaded[0].name;
+                        if shadow_risk.contains(name) {
+                            bindings.push((synth_thread_name(name), tail_text));
+                        } else {
+                            bindings.push((name.clone(), tail_text));
+                        }
+                        return Ok(fold_threaded_tail(bindings, threaded, None, &shadow_risk));
                     }
                     return Err(GapReason::new(
                         Category::Other,
@@ -1149,21 +1230,77 @@ fn emit_mutating_block_as_expr_inner(
              trailing value expression",
         ));
     }
-    Ok(fold_threaded_tail(bindings, threaded, None))
+    Ok(fold_threaded_tail(bindings, threaded, None, &shadow_risk))
+}
+
+/// Best-effort extraction of a `let` binding's simple `Pat::Ident` name — `None` for any other
+/// pattern shape (destructuring, etc.), which `emit_local_binding` itself refuses when the body
+/// is actually processed. Used only by the CRITICAL-fix shadow-detection pre-scan below (a
+/// non-`Pat::Ident` pattern can't textually collide with a threaded binding's bare name anyway).
+fn local_binding_simple_name(local: &syn::Local) -> Option<String> {
+    match &local.pat {
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Some(pi.ident.to_string()),
+        _ => None,
+    }
+}
+
+/// CRITICAL fix (DN-125/M-1081, strict review of PR #1527): the set of threaded-binding names
+/// this body's `let`-bindings SHADOW anywhere in the flat statement sequence — see
+/// `emit_mutating_block_as_expr_inner`'s doc for the full corruption this pre-scan exists to
+/// prevent. Only a plain `let <name> = ..;` (simple `Pat::Ident`) counts; any other pattern shape
+/// is a separate, pre-existing gap (`emit_local_binding`) the moment it is actually processed.
+fn shadowed_threaded_names(block: &Block, threaded: &[ThreadedBinding]) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for s in &block.stmts {
+        if let Stmt::Local(local) = s {
+            if let Some(name) = local_binding_simple_name(local) {
+                if threaded.iter().any(|t| t.name == name) {
+                    out.insert(name);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The synthetic internal carrier name used to route a shadow-risked threaded binding's true
+/// final value safely through to the tail, immune to a source-level `let <name> = ..` shadow of
+/// the same name (see `emit_mutating_block_as_expr_inner`'s CRITICAL-fix doc). `__myc_thread_`
+/// is an internal convention, never emitted for an ordinary source binding — and
+/// `emit_mutating_block_as_expr_inner` additionally refuses outright (never-silent, VR-5) rather
+/// than risk a collision if the source itself already spells this exact name.
+fn synth_thread_name(name: &str) -> String {
+    format!("__myc_thread_{name}")
 }
 
 /// Fold the accumulated `(name, value)` re-assignment bindings into nested `let name = value in
 /// ..` shadows (identical fold direction to [`emit_block_as_expr_inner`]'s, so sequential
 /// re-assignments to the SAME name compose as sequential rebinds — see this section's module
-/// doc), seeded with the threaded binding(s)' own name(s) (plus `extra`, if any) as the innermost
-/// tail — a single bare name when there is exactly one threaded binding and no extra value, else a
-/// tuple.
+/// doc), seeded with the threaded binding(s)' own reference (plus `extra`, if any) as the
+/// innermost tail — a single bare reference when there is exactly one threaded binding and no
+/// extra value, else a tuple. **CRITICAL-fix (DN-125/M-1081):** for a threaded binding whose name
+/// is in `shadow_risk` (i.e. some plain `let` in this body shadows it), the seeded reference is
+/// its synthetic carrier ([`synth_thread_name`]) rather than its bare source name — the carrier
+/// is seeded/re-captured by `emit_mutating_block_as_expr_inner` so it always resolves to the
+/// LAST threaded reassignment's value, never to an unrelated same-named `let` shadow that appears
+/// later in the body (the silent-corruption bug this fix closes). A binding NOT in `shadow_risk`
+/// is completely unaffected — same bare-name reference as before this fix, byte-identical output.
 fn fold_threaded_tail(
     bindings: Vec<(String, String)>,
     threaded: &[ThreadedBinding],
     extra: Option<String>,
+    shadow_risk: &HashSet<String>,
 ) -> String {
-    let mut parts: Vec<String> = threaded.iter().map(|t| t.name.clone()).collect();
+    let mut parts: Vec<String> = threaded
+        .iter()
+        .map(|t| {
+            if shadow_risk.contains(&t.name) {
+                synth_thread_name(&t.name)
+            } else {
+                t.name.clone()
+            }
+        })
+        .collect();
     if let Some(e) = extra {
         parts.push(e);
     }
@@ -3554,21 +3691,36 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                     Ok(sig) => {
                         // DN-125 (M-1081): a `&mut self`/`&mut T`-value-threaded method's body
                         // routes through `emit_mutating_block_as_expr` instead of the ordinary
-                        // let-chain emitter.
-                        let body_result = match &width_cast_body {
-                            Some(body) => Ok(body.clone()),
-                            None if sig.threaded.is_empty() => emit_block_as_expr(
-                                &f.block,
-                                Some(&self_ty_text),
-                                &sig_type_env(&sig),
-                            ),
-                            None => emit_mutating_block_as_expr(
+                        // let-chain emitter. MEDIUM fix (strict review of PR #1527):
+                        // `sig.threaded.is_empty()` is checked FIRST — a threaded signature's
+                        // return type is the mutated-value tuple/type, which `width_cast_body`
+                        // (a `Widen`-shaped, non-threaded `Self`-return convention) never
+                        // accounts for, so a threaded signature must never let `width_cast_body`
+                        // win even if `try_width_cast_widen_body` happened to also fire for the
+                        // same method name/trait shape.
+                        let body_result = if sig.threaded.is_empty() {
+                            match &width_cast_body {
+                                Some(body) => Ok(body.clone()),
+                                None => emit_block_as_expr(
+                                    &f.block,
+                                    Some(&self_ty_text),
+                                    &sig_type_env(&sig),
+                                ),
+                            }
+                        } else {
+                            debug_assert!(
+                                width_cast_body.is_none(),
+                                "a width_cast Widen-shaped body should never coincide with a \
+                                 DN-125 threaded &mut signature — the two body conventions are \
+                                 mutually exclusive by construction (see this match's doc)"
+                            );
+                            emit_mutating_block_as_expr(
                                 &f.block,
                                 Some(&self_ty_text),
                                 &sig_type_env(&sig),
                                 &sig.threaded,
                                 sig.threaded_extra_ret.is_some(),
-                            ),
+                            )
                         };
                         match body_result {
                             Ok(body) => {
