@@ -857,3 +857,154 @@ fn local_same_phylum_unbaked_fn_call_is_unaffected_by_the_hole_b_closure() {
         .expect("nodule present");
     assert!(env.fn_decl("go").is_some(), "the consumer's own fn checked");
 }
+
+// ---------------------------------------------------------------------------------------------
+// The 4th (and, per an exhaustive fn-as-value/carrier×position enumeration, FINAL) cross-phylum
+// type-identity collapse site: fn-as-first-class-VALUE (M-1060 fix-cycle-4, 2026-07-11,
+// adversarial-verification finding). HOLE A/A2 (trait-bound method calls) and HOLE B (the unbaked
+// fn CALL-site fallback) closed the collapse at every CALL position; this cycle closes the same
+// collapse at a VALUE position (`let f = foreignFn`, a HOF argument) those call-site guards never
+// guarded — `check_path`'s fn-as-value branch synthesized `Ty::Fn` from the surface `fd.sig` via a
+// fresh `resolve_ty` against the CALLER's own registry, bypassing both the re-homed baked
+// `resolved_fn_sigs` entry and the `cross_phylum_fns` marker entirely, even in the bakeable case.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn fn_as_value_cross_phylum_collapse_is_refused() {
+    // `gulp`'s signature IS bakeable (`Bar` is declared directly in `gulp`'s own declaring nodule
+    // `m` — no cross-nodule import needed, unlike HOLE B's un-bakeable shape). A direct call
+    // `gulp(x)` already refuses correctly (the baked foreign `Bar{4}` identity mismatches the
+    // consumer's own `Bar{64}`) — but pre-fix, referencing `gulp` as a first-class VALUE
+    // (`let f = gulp in f(x)`) bypassed the baked signature entirely, re-resolving `gulp`'s surface
+    // `Bar` fresh against the CONSUMER's own registry and silently collapsing the foreign `Bar{4}`
+    // onto the consumer's `Bar{64}`.
+    let dep = resolved(
+        "phylum d\nnodule m;\npub type Bar = MkBar(Binary{4});\n\
+         pub fn gulp(x: Bar) => Binary{4} = match x { MkBar(v) => v };",
+        221,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             use pp::m.gulp;\n\
+             pub fn exploit() => Binary{{4}} = \
+             let f = gulp in f(MkBar({sixty_four_zero_bits}));"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar"),
+        "a fn referenced as a first-class VALUE across the phylum boundary must go through the \
+         same baked, re-homed identity as a direct call — never a bare-name collapse via the \
+         value-position synthesis path (M-1060 fix-cycle-4); got: {err}"
+    );
+}
+
+#[test]
+fn foreign_fn_as_hof_arg_is_refused() {
+    // The higher-order-argument twin of the exploit above: `gulp` is passed BY NAME as an argument
+    // to a local HOF (`apply_gulp`), routing through the identical `check_path` value-position
+    // synthesis site via `check_app`'s ordinary bidirectional argument check (`self.check(scope, a,
+    // Some(&want))` on a bare `Expr::Path` argument) rather than a `let`-binder.
+    let dep = resolved(
+        "phylum d\nnodule m;\npub type Bar = MkBar(Binary{4});\n\
+         pub fn gulp(x: Bar) => Binary{4} = match x { MkBar(v) => v };",
+        222,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             use pp::m.gulp;\n\
+             pub fn apply_gulp(f: Bar => Binary{{4}}, x: Bar) => Binary{{4}} = f(x);\n\
+             pub fn exploit() => Binary{{4}} = apply_gulp(gulp, MkBar({sixty_four_zero_bits}));"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar"),
+        "a foreign fn passed BY NAME as a HOF argument must route through the same baked identity \
+         as a direct call or a `let`-bound value-position reference — never a bare-name collapse \
+         (M-1060 fix-cycle-4); got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control (i): a purely LOCAL fn (never cross-phylum) used as a
+/// first-class value must be entirely unaffected — `baked` is always `None` for a local fn (it is
+/// never present in this consumer's own `NoduleImports::resolved_fn_sigs`) and `cross_phylum_fns`
+/// never contains a local name, so the guard never fires.
+#[test]
+fn local_fn_as_value_is_unaffected_by_the_fn_value_closure() {
+    check_with(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{8});\n\
+         fn local_fn(x: Bar) => Binary{8} = match x { MkBar(v) => v };\n\
+         pub fn go() => Binary{8} = let f = local_fn in f(MkBar(0b0000_0001));",
+        &Phyla::default(),
+    )
+    .expect("a local fn referenced as a first-class value must be unaffected by the fix");
+}
+
+/// Non-vacuity / non-over-restriction control (ii): a cross-phylum fn whose signature IS baked,
+/// used as a first-class value with the CORRECT (foreign) type, must still type-check — the
+/// re-homed baked path is taken and accepts the legitimate use.
+#[test]
+fn bakeable_foreign_fn_as_value_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub type Bar = MkBar(Binary{4});\n\
+         pub fn gulp(x: Bar) => Binary{4} = match x { MkBar(v) => v };",
+        223,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule m;\n\
+         use pp::m.gulp;\nuse pp::m.Bar;\n\
+         pub fn go(x: Bar) => Binary{4} = let f = gulp in f(x);",
+        &phyla,
+    )
+    .expect(
+        "a cross-phylum fn whose signature is baked, used as a value with the correct foreign \
+         type, must type-check unaffected by the fn-as-value closure",
+    );
+}
+
+/// Non-vacuity / non-over-restriction control (iii): a cross-phylum fn whose signature is
+/// generic-only / primitive-only (no concrete Data type to collapse) used as a first-class value
+/// must still type-check — the guard's `foreign_fn_sig_names_a_concrete_type` finds nothing
+/// concrete, so it never fires.
+#[test]
+fn generic_only_foreign_fn_as_value_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub fn id_prim[T](x: T) => T = x;",
+        224,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule m;\n\
+         use pp::m.id_prim;\n\
+         pub fn go() => Binary{8} = \
+         let f: Binary{8} => Binary{8} = id_prim in f(0b0000_0001);",
+        &phyla,
+    )
+    .expect(
+        "a cross-phylum fn whose signature is generic/primitive-only carries no concrete-type \
+         reference at all, so the fn-as-value closure must not over-restrict it",
+    );
+}

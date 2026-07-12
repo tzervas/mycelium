@@ -5313,6 +5313,36 @@ impl Cx<'_> {
                      first-class value; apply it directly (never a silent coercion — G2)"
                 ));
             }
+            // **HOLE fn-as-VALUE closure (M-1060 fix-cycle-4, 2026-07-11, adversarial-verification
+            // 4th-cycle finding):** the value-position twin of `check_app`'s /
+            // `check_app_generic_fn`'s baked-signature guard, applied ONCE here so all three
+            // value-position sub-branches below (multi-param curried, monomorphic, generic) share
+            // it (DRY — one guard, not three). Without this, a fn referenced as a VALUE (`let f =
+            // gulp`, a HOF argument) synthesized its `Ty::Fn` by re-resolving `fd.sig` fresh against
+            // `self.types` (THIS caller's own registry) regardless of the re-homed baked entry or the
+            // cross-phylum marker — exactly the M-1036/DN-112 bare-name collapse the CALL-site guards
+            // already close, but reachable at a position they never guarded (DN-113 §7 / DN-122
+            // residual). Preferring `baked` below closes the bakeable case with the correct re-homed
+            // identity; this guard closes the un-bakeable cross-phylum case by refusing rather than
+            // silently re-resolving against a possibly-wrong phylum's registry (G2/VR-5). Same
+            // `foreign_fn_sig_names_a_concrete_type` helper + `cross_phylum_fns` predicate as the
+            // call sites — no forked logic.
+            let baked = self.imports.resolved_fn_sigs.get(name);
+            if baked.is_none() && self.imports.cross_phylum_fns.contains(name) {
+                if let Some(concrete) = foreign_fn_sig_names_a_concrete_type(&fd.sig) {
+                    return self.err(format!(
+                        "`{name}` — the foreign (cross-phylum) fn's signature mentions a concrete \
+                         type `{concrete}` beyond its own generic parameter(s), and its signature \
+                         could not be pre-resolved against its declaring phylum (`resolve_fn_sig` \
+                         only bakes a signature that references no type the declaring nodule itself \
+                         imports — best-effort, never a hard error there); a bare-name reference to \
+                         `{concrete}` here (as a first-class value) cannot be verified against the \
+                         correct phylum's `{concrete}` and would risk the M-1036/DN-112 bare-name \
+                         collapse one level up (DN-113 §7 / DN-122 residual; refused rather than \
+                         silently resolved against a possibly-wrong phylum's registry, G2/VR-5)."
+                    ));
+                }
+            }
             // Multi-parameter monomorphic fn (M-822 / RFC-0024 §4A.5): used as a first-class value,
             // synthesize the curried type `A -> B -> … -> Z` and return a curried lambda expression
             // wrapping the saturated call. Zero-param is refused above; generic multi-param fns
@@ -5330,12 +5360,21 @@ impl Cx<'_> {
                 // the final checked expression structurally (no re-checking needed for a monomorphic
                 // fn — all types are concrete from the declaration).
                 let vparams = fd.sig.value_params.clone();
-                // Resolve each parameter type and the return type.
+                // Resolve each parameter type and the return type — preferring the re-homed BAKED
+                // entry (correct cross-phylum identity) over a fresh `resolve_ty` against this
+                // caller's own registry (M-1060 fix-cycle-4, above).
                 let mut param_tys: Vec<Ty> = Vec::with_capacity(vparams.len());
-                for p in &vparams {
-                    param_tys.push(resolve_ty(self.site, self.types, &[], &p.ty)?.0);
+                for (i, p) in vparams.iter().enumerate() {
+                    let t = match baked.and_then(|(params, _)| params.get(i)) {
+                        Some(w) => w.clone(),
+                        None => resolve_ty(self.site, self.types, &[], &p.ty)?.0,
+                    };
+                    param_tys.push(t);
                 }
-                let ret_ty = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0;
+                let ret_ty = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 // Build the curried type: A -> (B -> (… -> Z)) (right-associative).
                 let curried_ty = param_tys.iter().rev().fold(ret_ty.clone(), |acc, t| {
                     Ty::Fn(Box::new(t.clone()), Box::new(acc))
@@ -5367,27 +5406,44 @@ impl Cx<'_> {
                 }
                 return Ok((curried_ty, body));
             }
-            // Monomorphic callee: resolve the param and return types directly.
+            // Monomorphic callee: resolve the param and return types directly — preferring `baked`
+            // (M-1060 fix-cycle-4, above) over a fresh `resolve_ty` against this caller's registry.
             if fd.sig.params.is_empty() {
-                let (param_ty, _) =
-                    resolve_ty(self.site, self.types, &[], &fd.sig.value_params[0].ty)?;
-                let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                let param_ty = match baked.and_then(|(params, _)| params.first()) {
+                    Some(w) => w.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.value_params[0].ty)?.0,
+                };
+                let ret_ty = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
             }
             // Generic callee: type arguments must be fixed by context (`expected`). Attempt to
             // solve them from the expected `Ty::Fn(a, r)` via unification; any unsolved variable
-            // is a never-silent refusal (G2/VR-5 — never a guessed default).
+            // is a never-silent refusal (G2/VR-5 — never a guessed default). `baked` (when present)
+            // still legitimately contains `Ty::Var(callee_var)` for a parameter mentioning the
+            // callee's own type variable — those resolve via `subst` exactly like the freshly
+            // resolved path (mirrors `check_app_generic_fn`'s baked-signature use, M-1060 fix-cycle-4).
             let callee_vars = fd.sig.param_names();
             let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
             if let Some(Ty::Fn(ea, er)) = expected {
-                let want_a = resolve_ty(
-                    self.site,
-                    self.types,
-                    &callee_vars,
-                    &fd.sig.value_params[0].ty,
-                )?
-                .0;
-                let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+                let want_a = match baked.and_then(|(params, _)| params.first()) {
+                    Some(w) => w.clone(),
+                    None => {
+                        resolve_ty(
+                            self.site,
+                            self.types,
+                            &callee_vars,
+                            &fd.sig.value_params[0].ty,
+                        )?
+                        .0
+                    }
+                };
+                let want_r = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+                };
                 // Best-effort: ignore unification errors here — unsolved vars are caught below.
                 let _ = unify(self.site, &want_a, ea, &mut subst);
                 let _ = unify(self.site, &want_r, er, &mut subst);
@@ -5401,14 +5457,22 @@ impl Cx<'_> {
                     ));
                 }
             }
-            let want_a = resolve_ty(
-                self.site,
-                self.types,
-                &callee_vars,
-                &fd.sig.value_params[0].ty,
-            )?
-            .0;
-            let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+            let want_a = match baked.and_then(|(params, _)| params.first()) {
+                Some(w) => w.clone(),
+                None => {
+                    resolve_ty(
+                        self.site,
+                        self.types,
+                        &callee_vars,
+                        &fd.sig.value_params[0].ty,
+                    )?
+                    .0
+                }
+            };
+            let want_r = match baked {
+                Some((_, ret)) => ret.clone(),
+                None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+            };
             let param_ty = subst_ty(&want_a, &subst);
             let ret_ty = subst_ty(&want_r, &subst);
             return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
