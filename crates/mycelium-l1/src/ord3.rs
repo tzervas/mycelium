@@ -38,6 +38,7 @@ use std::collections::BTreeMap;
 
 use crate::ast::{BaseType, FnSig, Param, TypeRef, WidthRef};
 use crate::checkty::TraitInfo;
+use crate::preseed::PreludeTraitSeed;
 
 /// F-B1 (DN-122 §13.2 WU-B) — the built-in `Ord3` prelude trait: `trait Ord3[T] { fn cmp(a: T, b: T)
 /// => Binary{8}; }` (the module doc explains the `Binary{8}` vs DN-122's illustrative `Binary{2}`).
@@ -75,3 +76,13 @@ pub(crate) fn prelude() -> TraitInfo {
 /// Demeter — a single named constant beats a scattered literal `"Ord3"`; mirrors
 /// [`crate::fuse::TRAIT_NAME`]).
 pub(crate) const TRAIT_NAME: &str = "Ord3";
+
+/// This trait's [`PreludeTraitSeed`] (DN-129 §5) — the shared spine [`crate::checkty`]'s
+/// registration/link/`OwnDecls`-exclusion sites drive off, one call each instead of a hand-copied
+/// conditional. Behavior-identical to the pre-refactor hand-written `Ord3` conditional (pinned by
+/// `tests/ord3.rs`, which asserts only `message.contains("Ord3") && message.contains("built-in")`).
+pub(crate) const SEED: PreludeTraitSeed = PreludeTraitSeed {
+    name: TRAIT_NAME,
+    impl_hint: "impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }",
+    prelude,
+};

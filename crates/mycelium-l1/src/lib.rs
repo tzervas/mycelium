@@ -45,6 +45,10 @@ pub(crate) mod decision;
 pub mod elab;
 pub mod error;
 pub mod eval;
+/// DN-129 §4 (M-1091) — the `Fault` prelude trait (a bare marker, the OQ-2 honest-degrade
+/// resolution — see the module doc), seeded exactly like [`fuse`]'s `Fuse` (M-965) over the shared
+/// [`preseed`] spine. Internal to the frontend, like [`fuse`]; not part of the public surface.
+pub(crate) mod fault;
 /// DN-58 §A (M-965) — the `Fuse` prelude trait (F-A1) + the semilattice-law checker (F-A2), the
 /// [`checkty`] post-pass driven by [`checkty::check_nodule`]/[`checkty::check_phylum`]. Internal
 /// to the frontend, like [`grade`]; not part of the public surface.
@@ -53,6 +57,10 @@ pub(crate) mod fuse;
 /// the guarantee lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` statically. Internal to the
 /// frontend (driven by [`checkty::check_nodule`]); not part of the public surface.
 mod grade;
+/// DN-129 §3 (M-1091) — the `Init` prelude trait (Mycelium's native `Default`), seeded exactly
+/// like [`fuse`]'s `Fuse` (M-965) over the shared [`preseed`] spine. Internal to the frontend, like
+/// [`fuse`]; not part of the public surface.
+pub(crate) mod init;
 pub mod lexer;
 pub mod mono;
 pub mod nodule;
@@ -67,6 +75,10 @@ pub mod parse;
 /// single-phylum resolution mechanism (`Phyla`/`ResolvedPhylum`/`check_phylum_with_deps`) it layers
 /// over lives in [`checkty`] itself (crate-internal access to `Exports`/`Env`/`DataInfo` needed).
 pub mod phyla;
+/// DN-129 §5 — the shared **prelude-trait seeding spine** [`fuse`]/[`ord3`]/[`show`]/[`init`]/
+/// [`fault`] all ride (a DRY factoring of the `Fuse`/`Ord3` conditionals `checkty` used to
+/// hand-copy). Internal to the frontend; not part of the public surface.
+pub(crate) mod preseed;
 /// `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;
 /// DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3). The E3-enabling core: [`reveal::reveal_l0`]
 /// (the shown L0 term), [`reveal::render_surface`] (the honestly-labelled surface pretty-printer),
@@ -74,6 +86,10 @@ pub mod phyla;
 /// and [`reveal::reelaborate`] (the L0-level round-trip witness). See the module doc for the pinned
 /// v0-fidelity/OQ-H3 rulings.
 pub mod reveal;
+/// DN-127 §5 (M-1090; WU-2) — the `Show` prelude trait (generic value-to-text render dispatch),
+/// seeded exactly like [`fuse`]'s `Fuse` (M-965) over the shared [`preseed`] spine. Internal to the
+/// frontend, like [`fuse`]; not part of the public surface.
+pub(crate) mod show;
 /// The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine
 /// handle at the L1 evaluator level. No new L0 node / no `Repr` growth (KC-3). The affine use-once
 /// **runtime backstop** now lives here too (M-903 — [`substrate::SubstrateHandle::try_consume`]);
