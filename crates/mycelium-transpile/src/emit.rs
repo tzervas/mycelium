@@ -156,14 +156,21 @@ fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
 }
 
 /// Per-file emit context installed by `transpile::transpile_source` for the item loop (see
-/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission) and the
-/// **struct layouts** (drives field-projection / struct-literal desugaring). Both are file-scoped
-/// analyses of the parsed items. `None` (direct `emit_*` unit tests / non-opted-in callers) disables
-/// both — a named-field record then emits unconditionally, and a `self.<field>` projection gaps for
-/// want of layout info.
+/// [`with_emit_ctx`]): the M-1006 **resolvability set** (gates named-field-record emission), the
+/// **struct layouts** (drives field-projection / struct-literal desugaring), and — gap-close-2's
+/// Import lever (DN-34 §8.19/§8.20) — the batch-scoped **cross-nodule symbol table** plus this
+/// file's own **pub-needed set** (names at least one sibling file in the batch resolved a `use`
+/// against, so this file must emit them `pub` for the referencing `use` to be the checker-accepted
+/// form — DN-113/M-1060's own `pub`-gated `resolve_imports`; see `symtab.rs` module docs). All are
+/// file/batch-scoped analyses computed before the item loop runs. `None` (direct `emit_*` unit
+/// tests / non-opted-in callers, and every *single-file* transpile) disables all of them — a
+/// named-field record then emits unconditionally, a `self.<field>` projection gaps for want of
+/// layout info, and no item is ever marked `pub` (byte-identical to pre-symtab behavior).
 struct EmitCtx {
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    symtab: crate::symtab::SymbolTable,
+    pub_needed: HashSet<String>,
 }
 
 thread_local! {
@@ -178,16 +185,20 @@ thread_local! {
 
 /// Install the per-file emit context for the duration of `f`, then clear it (RAII-free — the
 /// transpiler never unwinds across this boundary in practice; the budget thread-local in `gap.rs`
-/// takes the same shape). Used by `transpile::transpile_source`.
+/// takes the same shape). Used by `transpile::transpile_source_with_ctx`.
 pub(crate) fn with_emit_ctx<R>(
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    symtab: crate::symtab::SymbolTable,
+    pub_needed: HashSet<String>,
     f: impl FnOnce() -> R,
 ) -> R {
     EMIT_CTX.with(|c| {
         *c.borrow_mut() = Some(EmitCtx {
             resolvable,
             layouts,
+            symtab,
+            pub_needed,
         })
     });
     let r = f();
@@ -214,6 +225,36 @@ fn struct_layout(name: &str) -> Option<StructLayout> {
         None => None,
         Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
         Some(_) => None,
+    })
+}
+
+/// The gap-close-2 cross-nodule `pub`-propagation gate: `"pub "` when `name` is in this file's
+/// pub-needed set (at least one sibling in the batch resolved a `use` against it — see [`EmitCtx`]
+/// docs), else `""`. Context off ⇒ always `""` (byte-identical to pre-symtab emission).
+pub(crate) fn pub_prefix(name: &str) -> &'static str {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) if ctx.pub_needed.contains(name) => "pub ",
+        _ => "",
+    })
+}
+
+/// Resolve `name` in the batch sibling named by `module_key` (dot-joined Rust module-path
+/// segments) against the installed cross-nodule symbol table (see [`EmitCtx`] docs). `None` when
+/// the context is off (single-file mode — no batch, no siblings) or the lookup misses.
+pub(crate) fn cross_nodule_resolve(module_key: &str, name: &str) -> Option<String> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) => ctx.symtab.resolve(module_key, name).map(str::to_owned),
+    })
+}
+
+/// Is `module_key` a batch sibling at all (regardless of whether a particular name resolves)? Used
+/// by `transpile::dispatch_use` to word an honest "not a batch sibling" vs "sibling gapped this
+/// name" reason. `false` when the context is off.
+pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.symtab.has_module(module_key),
     })
 }
 
@@ -618,7 +659,7 @@ fn map_signature(
     })
 }
 
-fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String]) -> String {
+fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String], pub_prefix: &str) -> String {
     let params_str = sig
         .params
         .iter()
@@ -636,7 +677,7 @@ fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String]) -> String 
         out.push('\n');
     }
     out.push_str(&format!(
-        "fn {name}{type_params_text}({params_str}) => {} = {body};",
+        "{pub_prefix}fn {name}{type_params_text}({params_str}) => {} = {body};",
         sig.ret
     ));
     out
@@ -2338,7 +2379,8 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
         myc.push('\n');
     }
     myc.push_str(&format!(
-        "type {}{} = {};",
+        "{}type {}{} = {};",
+        pub_prefix(&item.ident.to_string()),
         item.ident,
         params_text,
         ctors.join(" | ")
@@ -2444,7 +2486,13 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
-    myc.push_str(&format!("type {}{} = {};", item.ident, params_text, ctor));
+    myc.push_str(&format!(
+        "{}type {}{} = {};",
+        pub_prefix(&item.ident.to_string()),
+        item.ident,
+        params_text,
+        ctor
+    ));
     Ok(Emitted {
         name: item.ident.to_string(),
         myc,
@@ -2470,11 +2518,13 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
             ),
         ));
     }
+    let name = item.sig.ident.to_string();
     let myc = render_fn(
-        &item.sig.ident.to_string(),
+        &name,
         &sig,
         &body,
         &doc_lines(&item.attrs),
+        pub_prefix(&name),
     );
     Ok(Emitted {
         name: item.sig.ident.to_string(),
@@ -2586,8 +2636,11 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
         .collect::<Vec<_>>()
         .join("\n");
     myc.push_str(&format!(
-        "trait {}{} {{\n{}\n}};",
-        item.ident, params_text, sig_lines
+        "{}trait {}{} {{\n{}\n}};",
+        pub_prefix(&item.ident.to_string()),
+        item.ident,
+        params_text,
+        sig_lines
     ));
     Ok(Emitted {
         name: item.ident.to_string(),
@@ -2821,7 +2874,18 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                     } else {
                                         f.sig.ident.to_string()
                                     };
-                                method_bodies.push(render_fn(&emitted_fn_name, &sig, &body, &doc));
+                                // Lifted inherent-impl methods are never a cross-nodule `use`
+                                // target in the corpus's own Rust source shape (Rust imports a
+                                // free fn by name via `use`, never an inherent method that way —
+                                // `Type::method(...)` is a qualified call, not an import), so the
+                                // pub-needed gate never applies here — always `""`.
+                                method_bodies.push(render_fn(
+                                    &emitted_fn_name,
+                                    &sig,
+                                    &body,
+                                    &doc,
+                                    "",
+                                ));
                             }
                             Err(e) => sub_gaps.push(GapReason::new(
                                 e.category,

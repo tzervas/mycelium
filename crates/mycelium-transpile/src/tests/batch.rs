@@ -4,6 +4,7 @@
 //! a per-test unique subdirectory, cleaned up at the end of each test.
 
 use crate::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
+use crate::gap::Category;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -257,4 +258,193 @@ fn only_the_rs_extension_is_stripped() {
     let root = Path::new("crates/x/src");
     let got = output_rel_path(Path::new("crates/x/src/foo.bar.rs"), root).unwrap();
     assert_eq!(got, PathBuf::from("foo.bar"));
+}
+
+// ── Gap-close-2 (DN-34 §8.19/§8.20): the batch-scoped cross-nodule symbol table ─────────────────
+//
+// `transpile_batch`'s two real sibling files below: `checkty.rs` declares an emittable `Width`
+// struct and a deliberately-unemittable `Env` struct (a named-field record whose field type has no
+// mapping, so it stays a real `Category::Struct` gap — never in `checkty`'s `emitted_items`).
+// `mono.rs` imports both, plus an external `std::` name, exercising: a full resolve (`Width`), an
+// in-batch-sibling-but-gapped miss (`Env`), and an out-of-batch miss (`std::collections::BTreeMap`)
+// side by side in the same run.
+
+fn checkty_fixture() -> &'static str {
+    "pub struct Width(u8);\nstruct Env { x: NotARealMappableType }\nfn helper(x: bool) -> bool { x }"
+}
+
+fn mono_fixture() -> &'static str {
+    "use std::collections::BTreeMap;\nuse crate::checkty::{Width, Env};\nfn mono_helper(x: bool) -> bool { x }"
+}
+
+/// The end-to-end cross-nodule resolution: `mono.rs`'s `use crate::checkty::{Width, Env};`
+/// partially resolves (`Width` — `checkty` actually emitted it) and partially gaps (`Env` — a
+/// batch sibling, but it gapped that name rather than emitting it), landing as ONE `Outcome::Emitted`
+/// item carrying the unresolved leaf as a `sub_gaps` entry (both "emitted" and "honestly flagged" —
+/// never neither, G2).
+#[test]
+fn cross_nodule_use_partially_resolves_against_a_batch_sibling() {
+    let tmp = TempDir::new("cross-nodule-partial");
+    tmp.write("checkty.rs", checkty_fixture());
+    tmp.write("mono.rs", mono_fixture());
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let mono = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "mono.rs")
+        .expect("mono.rs result present");
+
+    // The resolved leaf landed as real emitted `.myc` text, home-qualified against checkty's own
+    // derived nodule path — never a bare `Width` (no-bare-name-collapse, the M-1060 lesson).
+    assert!(
+        mono.myc.contains("use checkty.Width;") || mono.myc.contains(".Width;"),
+        "expected a qualified `use ….Width;` line in mono.myc, got:\n{}",
+        mono.myc
+    );
+    assert!(
+        !mono.myc.lines().any(|l| l.trim() == "use Width;"),
+        "must never emit a bare, unqualified `use Width;` — no-bare-name-collapse (VR-5/G2); \
+         got:\n{}",
+        mono.myc
+    );
+    assert!(
+        mono.report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("use:") && n.contains("Width")),
+        "expected an emitted `use:…Width…` item, got {:?}",
+        mono.report.emitted_items
+    );
+
+    // `Env` and the external `std::` import both still gap — never silently dropped, never
+    // guessed — but now with the NEW, more precise reasons (a real symbol table exists, so the
+    // old blanket "no cross-nodule symbol table" claim would itself be inaccurate).
+    let import_gaps: Vec<&str> = mono
+        .report
+        .gaps
+        .iter()
+        .filter(|g| g.category == Category::Import)
+        .map(|g| g.reason.as_str())
+        .collect();
+    assert!(
+        import_gaps.iter().any(|r| r.contains("Env")
+            && r.contains("checkty")
+            && r.contains("gapped it rather than emitting it")),
+        "expected an Env-naming, sibling-gapped-it reason among {import_gaps:?}"
+    );
+    assert!(
+        import_gaps
+            .iter()
+            .any(|r| r.contains("BTreeMap") && r.contains("not a sibling module")),
+        "expected a BTreeMap-naming, not-a-batch-sibling reason among {import_gaps:?}"
+    );
+}
+
+/// The other half of the correctness bar the task names explicitly: a resolved cross-nodule `use`
+/// is only the checker-accepted form when the referenced item is itself `pub` in its home nodule
+/// (DN-113/M-1060's `resolve_imports` is `pub`-gated) — so `checkty.rs`'s `Width` (referenced by
+/// `mono.rs` above) must be emitted `pub`, while `helper` (never referenced by any sibling) stays
+/// unmarked, exactly as before this lever landed.
+#[test]
+fn resolved_cross_nodule_reference_marks_the_sibling_item_pub() {
+    let tmp = TempDir::new("pub-propagation");
+    tmp.write("checkty.rs", checkty_fixture());
+    tmp.write("mono.rs", mono_fixture());
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let checkty = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "checkty.rs")
+        .expect("checkty.rs result present");
+
+    assert!(
+        checkty.myc.contains("pub type Width"),
+        "Width is referenced by a sibling's resolved `use` — expected a `pub` prefix; got:\n{}",
+        checkty.myc
+    );
+    // `helper` was never imported by any sibling in this batch, so it stays exactly as before —
+    // no spurious `pub` on every item (only the genuinely-referenced ones).
+    assert!(
+        !checkty.myc.contains("pub fn helper"),
+        "helper is never cross-nodule-referenced — must not be marked pub; got:\n{}",
+        checkty.myc
+    );
+}
+
+/// A batch with **no** in-batch cross-referencing `use` (every file is import-independent) is
+/// byte-identical to the pre-gap-close-2 driver: every `use` still gaps, nothing is ever marked
+/// `pub`. Guards against the two-pass driver silently changing behavior for the common case.
+#[test]
+fn batch_with_no_cross_file_use_is_unaffected() {
+    let tmp = TempDir::new("no-cross-file-use");
+    tmp.write(
+        "a.rs",
+        "pub struct Foo(u8);\nfn helper(x: bool) -> bool { x }",
+    );
+    tmp.write("b.rs", "pub struct Bar(u8);\nuse std::fmt;\n");
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, _failures) = transpile_batch(&files);
+
+    let a = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "a.rs")
+        .unwrap();
+    let b = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "b.rs")
+        .unwrap();
+    assert!(
+        !a.myc.contains("pub "),
+        "no sibling references Foo/helper — nothing should be pub-marked; got:\n{}",
+        a.myc
+    );
+    assert!(
+        b.report.gaps.iter().any(|g| g.category == Category::Import),
+        "the unresolvable `use std::fmt;` must still gap"
+    );
+}
+
+/// A rename/self/glob leaf on an in-batch head never resolves (scoped OUT of this increment —
+/// deliberately, not a bug): a solitary `use crate::checkty::Width as W;` still gaps the whole
+/// item (the only leaf is a `Rename`), never silently emitting the aliased form.
+#[test]
+fn renamed_glob_and_self_leaves_on_an_in_batch_head_still_gap() {
+    let tmp = TempDir::new("scoped-out-leaves");
+    tmp.write("checkty.rs", checkty_fixture());
+    tmp.write(
+        "consumer.rs",
+        "use crate::checkty::Width as W;\nuse crate::checkty::*;\nfn f(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let consumer = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "consumer.rs")
+        .unwrap();
+    let import_gap_count = consumer
+        .report
+        .gaps
+        .iter()
+        .filter(|g| g.category == Category::Import)
+        .count();
+    assert_eq!(
+        import_gap_count, 2,
+        "both the rename and the glob must gap (scoped out, never guessed); gaps: {:?}",
+        consumer.report.gaps
+    );
+    assert!(
+        !consumer.myc.contains("use "),
+        "neither leaf resolves, so consumer.myc must carry no `use` line at all; got:\n{}",
+        consumer.myc
+    );
 }
