@@ -403,6 +403,14 @@ policy, #10 payload-variant census refresh, #24 struct-literal `..rest`.
 
 ## §9 Changelog
 
+- **2026-07-11 (later same day) — DN-123 cross-reference addendum (integration close-out).** Rows
+  **#4** (struct-def, closed) and **#9** (named-field-drop, closed) now cross-reference **DN-123**
+  (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`) as the P2 design note working the
+  records/named-fields lever forward — the residual there is **faithfulness** (dropped field names)
+  plus the **self-hosted `.myc` surface** (DN-119 L3-G1 struct-pattern grammar), **not**
+  expressibility; rows #4/#9's own `closed` status and tally are unchanged (both remain correctly
+  closed at the transpiler-emission level DN-123 §2 verified). Append-only — no row content edited,
+  a dated cross-reference note only; DN-99 itself stays **Draft**.
 - **2026-07-10** — **ENB-2 wording CONFIRMED addendum** (§8): DN-102 is ratified → Accepted
   (maintainer, 2026-07-10), and the maintainer confirms the 2026-07-11 FLAG-try-2 RESOLUTION addendum's
   wording stands. **M-1049** closed on this basis. Append-only — the register's rows and tally are
