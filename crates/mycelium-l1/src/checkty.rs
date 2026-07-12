@@ -1478,7 +1478,10 @@ impl PhylumEnv {
 // fixtures into this type and read `resolve_imports`'s live-oracle output back out — the same
 // widening precedent as `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and `CoherenceView`
 // (commit 65351071).
-#[derive(Debug, Default)]
+// `Clone` (DN-113 / M-1060): a dependency's own `Exports` is retained verbatim inside its
+// [`ResolvedPhylum`] (built once, then re-read by every consumer phylum that declares it as a
+// dependency) — cheap-to-derive, zero logic change.
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Exports {
     /// Exported data types, by qualified name.
     pub(crate) types: BTreeMap<String, DataInfo>,
@@ -1576,6 +1579,254 @@ impl NoduleImports {
     }
 }
 
+// ---- DN-113 Rank 1 / M-1060: the cross-phylum import/resolution subsystem (v1 — CHECK-TIME) ----
+//
+// Layers over the ONE canonical linker/import-registry machinery above ([`Exports`] /
+// [`resolve_imports`] / [`PhylumEnv::link`]) rather than becoming a third parallel resolver (DRY,
+// the maintainer's Decision-1 directive; DN-113 §7/§9.6). A dependency phylum is checked once (via
+// the existing [`check_phylum_matured`] pipeline, unchanged) into a [`ResolvedPhylum`]; its `pub`
+// export table is then merged into the CONSUMING phylum's own [`Exports`] under an added
+// **phylum-qualifier** key dimension (`"{dep_local_name}::{qualified_name}"` — `::` is not a legal
+// Mycelium identifier character, so this can never collide with an intra-phylum qualified name,
+// which is always `.`-joined). [`resolve_imports`]'s existing merge/precedence/never-silent logic is
+// untouched; only the `qual` string it looks up gains the dependency prefix when a `use`'s
+// [`UsePath::phylum`] head is `Some`. **v1 is check-time only** (DN-113 §8) — a `Phyla`'s deps are
+// each already-checked-and-linked (`ResolvedPhylum::env`, via the *unmodified* [`PhylumEnv::link`]),
+// but wiring the evaluator/elaborator/monomorphizer to actually EXECUTE a call that crosses the
+// phylum boundary is explicitly deferred (the "runtime multi-spore linking" residual, DN-113 §8).
+//
+// DN-112 Rank 1 / M-1036 extension (home-identity across the phylum boundary): a foreign type's
+// [`DataInfo::home`] is re-homed at merge time to `"{dep_local_name}::{original_home}"` (or just
+// `dep_local_name` for an anonymous/empty-home dependency nodule — never a bare, unqualified
+// identity), through [`qualify_cross_phylum`] — the SAME `home`-qualification discipline
+// [`qualify_type_name`]/[`lookup_data_home_checked`] already enforce intra-phylum, extended one
+// level up (never a bare-name collapse across the phylum boundary — the DN-112 ctor-seal invariant
+// this subsystem must not reopen). A dependency's already-**baked** `pub` fn signatures
+// ([`Exports::resolved_fn_sigs`], the DN-112 mechanism that closes the M-1036 exploit for plain
+// calls) are re-homed the same way via [`qualify_ty_cross_phylum`] — **required for soundness, not
+// an optional hardening**: omitting this would silently fall back to re-resolving a foreign
+// signature against the CALLER's own registry, reopening the exact bare-name-shadow exploit DN-112
+// closed, one level up, at the phylum boundary.
+
+/// A dependency phylum, already **checked and linked** (DN-113 §5.1) — the unit [`Phyla`] holds one
+/// of, keyed by the consumer's `[dependencies]`-local name. **v1 (DN-113 §5.2/§8): whole-graph
+/// compilation with content-pinned inputs, not separate compilation** — this crate does not itself
+/// load/verify a dependency's source tree against `phylum_hash` (that is the manifest/loader's job,
+/// `mycelium-proj`/`mycelium-cli` territory, out of this crate's scope); a `ResolvedPhylum` is built
+/// from an already-resolved `(hash, checked Phylum)` pair the caller supplies (or via
+/// [`crate::phyla::build_phyla_graph`] for a whole named dependency graph).
+#[derive(Debug, Clone)]
+pub struct ResolvedPhylum {
+    /// The content-addressed pin (ADR-003) this phylum resolved to — the authoritative half of the
+    /// DN-113 §6 def-site ref `(phylum_hash, qualified_name)`. **`Declared`** here: this crate
+    /// verifies nothing about the pin's provenance; it is carried through so a consumer (the future
+    /// separate-compilation / diamond-policy work, or a facility's def-site capture, DN-113 §6 US-3)
+    /// has it available, unforged, alongside the checked exports it was computed from.
+    pub phylum_hash: mycelium_core::ContentHash,
+    /// This dependency's own `pub`-only import registry (its [`Exports`], unmodified) — merged,
+    /// phylum-qualified, into a consumer's own `Exports` by [`merge_phyla_exports`].
+    pub(crate) exports: Exports,
+    /// This dependency's own whole-phylum linked [`Env`] (via the *unmodified* [`PhylumEnv::link`]) —
+    /// retained for a future runtime dual (DN-113 §7 point 2; explicitly out of v1's check-time
+    /// scope, DN-113 §8) and so a consumer can look up a foreign symbol's checked shape without
+    /// re-deriving it.
+    pub env: Env,
+}
+
+impl ResolvedPhylum {
+    /// **The v1 single-node resolution entry point (DN-113 §5.1) — for a caller resolving ONE
+    /// dependency by hand** (a leaf, or a flat/manually-ordered dependency set). Check + link a
+    /// dependency phylum — recursively against ITS OWN `deps` (a further-nested `Phyla`, empty for a
+    /// leaf/no-dependency phylum) — into a `ResolvedPhylum` ready to insert into a consumer's own
+    /// [`Phyla`]. [`crate::phyla::build_phyla_graph`] is the whole-graph, cycle-checked analogue for
+    /// a *named* multi-phylum dependency set (it does its own single check-pass per node internally,
+    /// rather than calling this method, so each node is checked exactly once even though it also
+    /// needs the node's [`PhylumEnv`] — the artifact this method does not itself return).
+    ///
+    /// `phylum_hash` is carried through verbatim, never verified against the checked `phylum`'s
+    /// content here (DN-113 §5.2: v1 is whole-graph compilation with content-pinned *inputs* — the
+    /// pin's provenance is the loader's job, `Declared` from this crate's perspective).
+    ///
+    /// # Errors
+    /// Any never-silent refusal from checking `phylum` against `deps` (unknown/private/ambiguous
+    /// import, an unknown cross-phylum dependency, a coherence/orphan violation, a per-nodule type
+    /// error, or a cross-nodule/cross-phylum name collision at link time — all [`CheckError`]).
+    pub fn resolve(
+        phylum_hash: mycelium_core::ContentHash,
+        phylum: &Phylum,
+        deps: &Phyla,
+    ) -> Result<Self, CheckError> {
+        let (penv, exports) = check_phylum_matured_with_deps_and_exports(phylum, deps, false)?;
+        let env = penv.link()?;
+        Ok(Self {
+            phylum_hash,
+            exports,
+            env,
+        })
+    }
+}
+
+/// The **resolved dependency set** of one phylum being checked (DN-113 §5.1) — additive over
+/// [`check_phylum`]/[`check_phylum_matured`]: a phylum with no declared dependencies checks against
+/// `Phyla::default()` (empty), which is **byte-identical** to the pre-M-1060 behavior (every
+/// cross-phylum `use` then refuses "no such dependency", exactly as an undeclared one should).
+#[derive(Debug, Clone, Default)]
+pub struct Phyla {
+    /// `[dependencies]`-local name → its resolved, checked, linked phylum.
+    pub(crate) deps: BTreeMap<String, ResolvedPhylum>,
+}
+
+impl Phyla {
+    /// An empty dependency set (no `[dependencies]`) — the additive-identity `Phyla` every
+    /// zero-dependency call site uses (DN-113 §5.1).
+    #[must_use]
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Build a `Phyla` directly from already-resolved dependencies, keyed by their consumer-local
+    /// `[dependencies]` name. The v1 constructor for a **flat** (single-level) dependency set; a
+    /// multi-phylum graph with its own acyclicity precondition (DN-113 §9.3) is
+    /// [`crate::phyla::build_phyla_graph`]'s job, which calls this after resolving each node.
+    #[must_use]
+    pub fn from_deps(deps: BTreeMap<String, ResolvedPhylum>) -> Self {
+        Self { deps }
+    }
+
+    /// Is `name` a declared dependency? Used by [`resolve_imports`] to distinguish "no such
+    /// dependency" from "no such name within a known dependency" (DN-113 §9.5 — a more honest
+    /// diagnostic than falling through to the generic unknown-name error).
+    #[must_use]
+    pub(crate) fn has_dep(&self, name: &str) -> bool {
+        self.deps.contains_key(name)
+    }
+
+    /// Read-only access to the declared dependencies, by their local name — a Law-of-Demeter-friendly
+    /// public accessor over the crate-private [`Self::deps`] field (mirrors [`Env::type_info`]'s
+    /// pattern), so an external caller (a loader, a test) can inspect a `Phyla` it was handed without
+    /// needing crate-internal visibility.
+    #[must_use]
+    pub fn deps(&self) -> &BTreeMap<String, ResolvedPhylum> {
+        &self.deps
+    }
+}
+
+/// Re-home an identity string at the phylum boundary (DN-113 §7; DN-112 Rank 1 extension):
+/// unconditionally prepend the dependency's LOCAL name, UNLESS `existing` is the single reserved
+/// [`PRELUDE_HOME`] sentinel (DN-112 §9 invariant i — a builtin/synthetic type resolves identically
+/// everywhere, even across a phylum boundary; never re-qualified further). An empty `existing` (the
+/// documented anonymous/header-less-nodule residual, [`nodule_home`]'s doc comment) becomes just
+/// `dep_name` rather than the visually-ugly `"dep_name::"` — still a fully phylum-qualified, never
+/// bare, identity. Shared by [`DataInfo::home`] re-homing and [`qualify_ty_cross_phylum`] (one
+/// mismatch-free predicate, not two divergent copies — DN-112's own `data_home_mismatch` precedent).
+///
+/// Widened to `pub(crate)` (zero logic change) so the in-crate white-box tests
+/// (`crates/mycelium-l1/src/tests/cross_phylum.rs`) can exercise this unit directly — the same
+/// widening precedent as `resolve_imports`/`resolve_ctors`/`CoherenceView` (M-1013 STEP 4).
+pub(crate) fn qualify_cross_phylum(existing: &str, dep_name: &str) -> String {
+    if existing == PRELUDE_HOME {
+        existing.to_owned()
+    } else if existing.is_empty() {
+        dep_name.to_owned()
+    } else {
+        format!("{dep_name}::{existing}")
+    }
+}
+
+/// Re-home every [`Ty::Data`] identity embedded in a dependency's already-**baked** [`resolve_fn_sig`]
+/// output (DN-112 Rank 1 / M-1036 extension across the phylum boundary — required for soundness, see
+/// this section's header comment). `dep_env_types` is the dependency's OWN linked [`Env::types`] (the
+/// oracle for "is this bare name actually the single reserved prelude/synthetic home, or a dependency
+/// type whose own intra-phylum home happened to be bare?" — `Ty::Data` names never embed
+/// [`PRELUDE_HOME`] literally, so a string-only rewrite cannot tell the two apart; the type registry
+/// can). `Var`/`Binary`/`Ternary`/`Dense`/`Vsa`/`Substrate`/`Bytes`/`Float` carry no `Data` identity to
+/// re-home and are returned unchanged.
+///
+/// Widened to `pub(crate)` (zero logic change) for the in-crate white-box tests (see
+/// [`qualify_cross_phylum`]'s doc comment).
+pub(crate) fn qualify_ty_cross_phylum(
+    ty: &Ty,
+    dep_name: &str,
+    dep_env_types: &BTreeMap<String, DataInfo>,
+) -> Ty {
+    match ty {
+        Ty::Data(name, args) => {
+            let is_prelude = dep_env_types
+                .get(ty_local_name(name))
+                .is_some_and(|d| d.home == PRELUDE_HOME);
+            let qname = if is_prelude {
+                name.clone()
+            } else {
+                qualify_cross_phylum(name, dep_name)
+            };
+            Ty::Data(
+                qname,
+                args.iter()
+                    .map(|a| qualify_ty_cross_phylum(a, dep_name, dep_env_types))
+                    .collect(),
+            )
+        }
+        Ty::Fn(a, r) => Ty::Fn(
+            Box::new(qualify_ty_cross_phylum(a, dep_name, dep_env_types)),
+            Box::new(qualify_ty_cross_phylum(r, dep_name, dep_env_types)),
+        ),
+        Ty::Seq(elem, n) => Ty::Seq(
+            Box::new(qualify_ty_cross_phylum(elem, dep_name, dep_env_types)),
+            *n,
+        ),
+        other => other.clone(),
+    }
+}
+
+/// Extend a phylum's own `pub` export table with every declared dependency's `pub` exports,
+/// phylum-qualified under `"{dep_local_name}::"` (DN-113 §7 point 1) — the "one added qualifier
+/// dimension" that lets [`resolve_imports`] resolve a cross-phylum `use` through the exact same
+/// merge/precedence/never-silent logic as an intra-phylum one (DRY; no second resolver — DN-113
+/// §9.6). A no-op when `phyla` is empty (`Phyla::default()`), so a zero-dependency phylum's `exports`
+/// is unchanged from the pre-M-1060 shape.
+///
+/// Widened to `pub(crate)` (zero logic change) for the in-crate white-box tests (see
+/// [`qualify_cross_phylum`]'s doc comment).
+pub(crate) fn merge_phyla_exports(mut local: Exports, phyla: &Phyla) -> Exports {
+    for (dep_name, resolved) in &phyla.deps {
+        for (qual, is_pub) in &resolved.exports.declared {
+            local
+                .declared
+                .insert(format!("{dep_name}::{qual}"), *is_pub);
+        }
+        for (qual, info) in &resolved.exports.types {
+            let mut info = info.clone();
+            info.home = qualify_cross_phylum(&info.home, dep_name);
+            local.types.insert(format!("{dep_name}::{qual}"), info);
+        }
+        for (qual, fd) in &resolved.exports.fns {
+            local.fns.insert(format!("{dep_name}::{qual}"), fd.clone());
+        }
+        for (qual, info) in &resolved.exports.traits {
+            local
+                .traits
+                .insert(format!("{dep_name}::{qual}"), info.clone());
+        }
+        for (qual, sealed) in &resolved.exports.sealed_ctors {
+            local
+                .sealed_ctors
+                .insert(format!("{dep_name}::{qual}"), sealed.clone());
+        }
+        for (qual, (params, ret)) in &resolved.exports.resolved_fn_sigs {
+            let dep_types = &resolved.env.types;
+            let params = params
+                .iter()
+                .map(|t| qualify_ty_cross_phylum(t, dep_name, dep_types))
+                .collect();
+            let ret = qualify_ty_cross_phylum(ret, dep_name, dep_types);
+            local
+                .resolved_fn_sigs
+                .insert(format!("{dep_name}::{qual}"), (params, ret));
+        }
+    }
+    local
+}
+
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
 /// body against its signature, classify totality. No maturation gate is applied (the scope is
 /// treated as non-matured). Returns the checked [`Env`].
@@ -1624,10 +1875,55 @@ pub fn check_phylum(phylum: &Phylum) -> Result<PhylumEnv, CheckError> {
 /// See [`check_phylum`]; additionally a non-total non-`thaw` definition in any nodule under a matured
 /// scope is an explicit [`CheckError`].
 pub fn check_phylum_matured(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
-    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, matured_scope))
+    check_phylum_matured_with_deps(phylum, &Phyla::default(), matured_scope)
 }
 
-fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
+/// Like [`check_phylum`], but resolving cross-phylum `use dep::a.b.Item` references against `deps`
+/// (DN-113 Rank 1 / M-1060) — **additive** over [`check_phylum`]: a phylum with no cross-phylum `use`
+/// checks identically whether `deps` is empty or non-empty (an unused dependency is simply never
+/// referenced), and `deps: &Phyla::default()` here is byte-identical to plain [`check_phylum`].
+///
+/// # Errors
+/// See [`check_phylum`]; additionally an unknown dependency, a v1-deferred cross-phylum glob, or a
+/// cross-phylum name that does not resolve in the named dependency's `pub` surface is an explicit
+/// [`CheckError`] (DN-113 §7–§9; never a silent skip — G2).
+pub fn check_phylum_with_deps(phylum: &Phylum, deps: &Phyla) -> Result<PhylumEnv, CheckError> {
+    check_phylum_matured_with_deps(phylum, deps, false)
+}
+
+/// [`check_phylum_with_deps`] with the explicit `matured_scope` gate (see [`check_phylum_matured`]).
+///
+/// # Errors
+/// See [`check_phylum_with_deps`] and [`check_phylum_matured`].
+pub fn check_phylum_matured_with_deps(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<PhylumEnv, CheckError> {
+    check_phylum_matured_with_deps_and_exports(phylum, deps, matured_scope).map(|(penv, _)| penv)
+}
+
+/// Like [`check_phylum_matured_with_deps`], but additionally returns the checked phylum's own
+/// `pub`-only [`Exports`] table (crate-internal — [`crate::phyla::build_phyla_graph`]'s use case: a
+/// resolved node in a multi-phylum graph needs to retain its `Exports` inside a [`ResolvedPhylum`]
+/// for a FURTHER consumer up the graph, not just its linked [`Env`]). One registration/check pass
+/// produces both artifacts (DRY — no second pass to keep them in sync).
+///
+/// # Errors
+/// See [`check_phylum_matured_with_deps`].
+pub(crate) fn check_phylum_matured_with_deps_and_exports(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<(PhylumEnv, Exports), CheckError> {
+    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, deps, matured_scope))
+}
+
+fn check_phylum_inner(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<(PhylumEnv, Exports), CheckError> {
     // 1. Ambient-resolve every nodule once (RFC-0012): the checker only ever sees longhand forms.
     let resolved: Vec<Nodule> = phylum
         .nodules
@@ -1811,6 +2107,13 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         per_nodule_regs.push(regs);
     }
 
+    // DN-113 Rank 1 / M-1060: extend the phylum-wide import registry with every declared
+    // dependency's `pub` surface, phylum-qualified (a no-op when `deps` is empty — `merge_phyla_
+    // exports` returns `exports` unchanged). `resolve_imports` below then resolves BOTH an
+    // intra-phylum `use` (unprefixed qual, unchanged) and a cross-phylum `use dep::…` (prefixed
+    // qual) through the exact same lookup — one added qualifier dimension, not a second resolver.
+    let exports = merge_phyla_exports(exports, deps);
+
     // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
@@ -1835,7 +2138,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 .cloned()
                 .collect(),
         });
-        let imports = resolve_imports(nodule, &exports)?;
+        let imports = resolve_imports(nodule, &exports, deps)?;
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
         let via_objects = &via_objects_per_nodule[i];
@@ -1849,7 +2152,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         )?;
         out.push((nodule.path.clone(), env));
     }
-    Ok(PhylumEnv { nodules: out, own })
+    Ok((PhylumEnv { nodules: out, own }, exports))
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
@@ -1987,16 +2290,20 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
     Ok(NoduleRegs { types, fns, traits })
 }
 
-/// Resolve one nodule's `use` imports against the phylum-wide [`Exports`] (M-662). Builds the
-/// per-nodule [`NoduleImports`] — imported `pub` decls merged by simple name at glob-then-explicit
-/// precedence (own decls shadow these later, in [`check_nodule_with`]) — and enforces every
-/// never-silent rule:
+/// Resolve one nodule's `use` imports against the phylum-wide [`Exports`] (M-662) — including any
+/// **cross-phylum** `use dep::a.b.Item` (DN-113 Rank 1 / M-1060), resolved through the identical
+/// merge/precedence logic against the SAME `exports` (already phylum-qualified by
+/// [`merge_phyla_exports`] — DRY, one resolver). Builds the per-nodule [`NoduleImports`] — imported
+/// `pub` decls merged by simple name at glob-then-explicit precedence (own decls shadow these later,
+/// in [`check_nodule_with`]) — and enforces every never-silent rule:
 ///
 /// - **unknown name/path** → explicit refusal (distinguishing "no such name" from "exists but
 ///   private", honest + helpful);
 /// - **two explicit `use`s binding the same simple name** → duplicate-import refusal;
 /// - **glob-vs-glob collision** on a name → recorded `ambiguous` (a *reference* to it is refused at
-///   use-site), never a silent winner.
+///   use-site), never a silent winner;
+/// - **DN-113 v1**: an unknown dependency (`use dep::…` where `dep` is not in `deps`) or a
+///   cross-phylum **glob** (`use dep::a.b.*` — deferred, folds into M-982) → an explicit refusal.
 ///
 /// (A glob over a prefix with zero `pub` names is allowed — an empty import; an unresolved *reference*
 /// then surfaces the normal unknown-name error.)
@@ -2007,6 +2314,7 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
 pub(crate) fn resolve_imports(
     nodule: &Nodule,
     exports: &Exports,
+    deps: &Phyla,
 ) -> Result<NoduleImports, CheckError> {
     let site = qualify(&nodule.path, "<use>");
     let mut imp = NoduleImports::default();
@@ -2017,9 +2325,30 @@ pub(crate) fn resolve_imports(
 
     // First the globs (lowest precedence), then the explicit `use`s (which shadow a glob name).
     for item in &nodule.items {
-        let Item::Use(UsePath { path, glob: true }) = item else {
+        let Item::Use(UsePath {
+            phylum,
+            path,
+            glob: true,
+        }) = item
+        else {
             continue;
         };
+        // DN-113 §7/§8: v1 requires an EXPLICIT (non-glob) cross-phylum import — a cross-phylum glob
+        // is parsed (a real parse tree for a malformed one) but refused here, never-silently, rather
+        // than silently importing nothing or guessing a disambiguation (the residual folds into
+        // M-982, the same qualified-scoping work intra-phylum glob-collision defers to).
+        if let Some(dep) = phylum {
+            return Err(CheckError::new(
+                &site,
+                format!(
+                    "`use {dep}::{}.*`: a cross-phylum glob import is not supported in v1 — DN-113 \
+                     requires an explicit cross-phylum import (`use {dep}::{}.<Item>`); glob \
+                     disambiguation folds into M-982 (never a silent skip — G2)",
+                    path.0.join("."),
+                    path.0.join(".")
+                ),
+            ));
+        }
         let prefix = path.0.join(".");
         // Every exported name directly under this prefix (qualified key = prefix + "." + simple, with
         // exactly one trailing segment).
@@ -2050,12 +2379,19 @@ pub(crate) fn resolve_imports(
         }
         let _ = any; // an empty glob (no pub names) is allowed (the reference, if any, fails later)
     }
-    // Explicit `use a.b.X` (higher precedence than any glob).
+    // Explicit `use a.b.X` (higher precedence than any glob) — or a cross-phylum
+    // `use dep::a.b.X` (DN-113 Rank 1 / M-1060; `phylum: Some(dep)`).
     for item in &nodule.items {
-        let Item::Use(UsePath { path, glob: false }) = item else {
+        let Item::Use(UsePath {
+            phylum,
+            path,
+            glob: false,
+        }) = item
+        else {
             continue;
         };
-        // The path's last segment is the imported item; the prefix is its owning nodule path.
+        // The path's last segment is the imported item; the prefix is its owning nodule path
+        // (within the dependency, for a cross-phylum reference).
         let Some((simple, prefix)) = split_last_seg(path) else {
             return Err(CheckError::new(
                 &site,
@@ -2063,28 +2399,74 @@ pub(crate) fn resolve_imports(
                  a cross-nodule item (M-662)",
             ));
         };
-        // A single-segment `use X` names no nodule (prefix empty). Refuse with a teaching diagnostic
-        // rather than the confusing downstream "no such name" lookup miss (M-662; never-silent — G2).
-        if prefix.is_empty() {
-            return Err(CheckError::new(
-                &site,
-                format!(
-                    "`use {simple}`: a cross-nodule import must be nodule-qualified — `{simple}` names \
-                     no nodule. Write `use <nodule>.{simple}` (a specific import) or `use <nodule>.*` \
-                     (a glob) (M-662)"
-                ),
-            ));
-        }
-        let qual = format!("{prefix}.{simple}");
+        let (qual, display_path) = match phylum {
+            Some(dep) => {
+                // DN-113 §9.5: an undeclared dependency is a never-silent, distinctly-worded refusal
+                // — never conflated with "no such name" (which would misdirect a fix at the wrong
+                // layer: the manifest's `[dependencies]`, not a typo'd item name).
+                if !deps.has_dep(dep) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {dep}::{}`: no such dependency `{dep}` in this phylum's \
+                             `[dependencies]` (DN-113 §9.5; never a silent skip — G2)",
+                            path.0.join(".")
+                        ),
+                    ));
+                }
+                // A cross-phylum reference must be nodule-qualified WITHIN the dependency
+                // (`use dep::nod.Item`, never bare `use dep::Item`) — mirrors the intra-phylum
+                // single-segment refusal below, one level up.
+                if prefix.is_empty() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {dep}::{simple}`: a cross-phylum import must be nodule-qualified \
+                             within the dependency — `{simple}` names no nodule of `{dep}`. Write \
+                             `use {dep}::<nodule>.{simple}` (DN-113 §4)"
+                        ),
+                    ));
+                }
+                (
+                    format!("{dep}::{prefix}.{simple}"),
+                    format!("{dep}::{}", path.0.join(".")),
+                )
+            }
+            None => {
+                // A single-segment `use X` names no nodule (prefix empty). Refuse with a teaching
+                // diagnostic rather than the confusing downstream "no such name" lookup miss (M-662;
+                // never-silent — G2).
+                if prefix.is_empty() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {simple}`: a cross-nodule import must be nodule-qualified — \
+                             `{simple}` names no nodule. Write `use <nodule>.{simple}` (a specific \
+                             import) or `use <nodule>.*` (a glob) (M-662)"
+                        ),
+                    ));
+                }
+                (format!("{prefix}.{simple}"), path.0.join("."))
+            }
+        };
         // Never-silent: unknown path/name vs exists-but-private (honest + helpful — G2).
         match exports.declared.get(&qual) {
             None => {
                 return Err(CheckError::new(
                     &site,
                     format!(
-                        "`use {}`: no such name `{qual}` in the phylum — no nodule declares it \
-                         (M-662; never a silent skip — G2)",
-                        path.0.join(".")
+                        "`use {display_path}`: no such name `{qual}` {} — {} declares it \
+                         (M-662/DN-113; never a silent skip — G2)",
+                        if phylum.is_some() {
+                            "in that dependency phylum"
+                        } else {
+                            "in the phylum"
+                        },
+                        if phylum.is_some() {
+                            "no nodule of the dependency"
+                        } else {
+                            "no nodule"
+                        }
                     ),
                 ));
             }
@@ -2092,9 +2474,8 @@ pub(crate) fn resolve_imports(
                 return Err(CheckError::new(
                     &site,
                     format!(
-                        "`use {}`: `{qual}` exists but is not `pub` — it is private to its nodule \
-                         and not importable (mark it `pub` to export it; M-662)",
-                        path.0.join(".")
+                        "`use {display_path}`: `{qual}` exists but is not `pub` — it is private to \
+                         its nodule and not importable (mark it `pub` to export it; M-662/DN-113)"
                     ),
                 ));
             }
@@ -2236,7 +2617,9 @@ fn check_and_resolve_matured_inner(
     // inner orchestrator directly to avoid nesting worker stacks.
     let resolved = crate::ambient::resolve(nodule)?;
     let phylum = Phylum::of_one(resolved.clone());
-    let penv = check_phylum_inner(&phylum, matured_scope)?;
+    // `check_nodule`/`check_nodule_matured` have no `[dependencies]` surface (M-1060 is a
+    // phylum-level concept) — always the empty `Phyla` (byte-identical to pre-M-1060 behavior).
+    let (penv, _exports) = check_phylum_inner(&phylum, &Phyla::default(), matured_scope)?;
     let env = penv
         .single()
         .expect("a phylum-of-one yields exactly one Env")

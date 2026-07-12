@@ -313,6 +313,12 @@ pub enum Tok {
     AtStdSys,
     /// `:` — **ascription/binding** (`name : type`; DN-57 role: `:` ascribes). Unchanged.
     Colon,
+    /// `::` — the **cross-phylum boundary marker** (DN-113 Rank 1 / M-1060): `use dep::a.b.Item`
+    /// crosses from the local phylum into the `[dependencies]`-local-named phylum `dep`, after which
+    /// `.` resumes its ordinary nodule/path-separator role. Lexed as one atomic token (never two
+    /// `Colon`s) so a cross-phylum `use` is lexically self-evident (never ambiguous with an
+    /// intra-phylum one — G2). No other surface production consumes `::` in v0.
+    ColonColon,
     /// `,` — **sibling separation** within a component (args, fields, params, list elements; DN-57).
     Comma,
     /// `;` — the **component/operation terminator** (DN-57): marks the end of a top-level item or a

@@ -138,6 +138,8 @@ fn classify(tok: &Tok) -> Option<&'static str> {
         | Tok::Shr => "tok-op",
         // Identifiers render plain (default ink) unless the fn-position heuristic in `highlight`
         // promotes them to `tok-fn`; delimiters and `Eof` never highlight — a documented choice.
+        // `::` (DN-113 Rank 1 / M-1060, the cross-phylum `use dep::a.b.Item` boundary marker) joins
+        // `:` in this delimiter bucket.
         Tok::Ident(_)
         | Tok::LParen
         | Tok::RParen
@@ -146,6 +148,7 @@ fn classify(tok: &Tok) -> Option<&'static str> {
         | Tok::LBracket
         | Tok::RBracket
         | Tok::Colon
+        | Tok::ColonColon
         | Tok::Comma
         | Tok::Semi
         | Tok::Dot

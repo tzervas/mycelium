@@ -652,16 +652,38 @@ impl Parser {
         }
     }
 
-    /// `use path` (specific) or `use path.*` (glob) — a cross-nodule import (M-662; RFC-0006 §4.3).
-    /// A trailing `.*` makes it a **glob** (import every `pub` name under the path); otherwise the
-    /// path's last segment names the imported item. A `*` anywhere but the final segment is an
-    /// explicit parse error — the lexer emits `Tok::Star` for any `*`; this production is what
-    /// restricts the glob `*` to the final position. `use` is never `pub`-gated.
+    /// `use path` (specific) or `use path.*` (glob) — a cross-nodule import (M-662; RFC-0006 §4.3) —
+    /// or, with the DN-113 Rank 1 `::` phylum-boundary head, a **cross-phylum** reference
+    /// (`use dep::a.b.Item`; M-1060). A trailing `.*` makes it a **glob** (import every `pub` name
+    /// under the path); otherwise the path's last segment names the imported item. A `*` anywhere but
+    /// the final segment is an explicit parse error — the lexer emits `Tok::Star` for any `*`; this
+    /// production is what restricts the glob `*` to the final position. `use` is never `pub`-gated.
+    ///
+    /// The `::` head is optional and, when present, is **only** legal immediately after the first
+    /// identifier (`use dep::a.b.Item`, never `use a.dep::b.Item`) — the DN-113 syntax names the
+    /// dependency once, up front, then resumes ordinary `.`-separated nodule/item addressing. A
+    /// **cross-phylum glob is parsed** (so a malformed one still gets a real parse tree) but is
+    /// refused at *check* time (v1 requires an explicit cross-phylum import — DN-113 §7/§8); the
+    /// parser does not pre-judge it, keeping the never-silent refusal's diagnostic in one place.
     fn parse_use(&mut self) -> Result<UsePath, ParseError> {
         self.expect(&Tok::Use, "`use`")?;
+        let first = self.ident()?;
+        // DN-113 Rank 1 / M-1060: `first` is a phylum-boundary head iff immediately followed by `::`
+        // — the dependency's local `[dependencies]` name, never itself a path segment. Cloned (not
+        // moved) so `first` remains usable below for the ordinary (no `::`) path.
+        let phylum = if self.eat(&Tok::ColonColon) {
+            Some(first.clone())
+        } else {
+            None
+        };
         // A `use` path is a dotted path whose final segment may be `*` (the glob). Parse the dotted
-        // path, then check for a trailing `.*`.
-        let mut segs = vec![self.ident()?];
+        // path (starting fresh after a `::` head, or continuing from `first` for the ordinary case),
+        // then check for a trailing `.*`.
+        let mut segs = if phylum.is_some() {
+            vec![self.ident()?]
+        } else {
+            vec![first]
+        };
         let mut glob = false;
         while self.eat(&Tok::Dot) {
             if self.eat(&Tok::Star) {
@@ -675,6 +697,7 @@ impl Parser {
             return self.err("a glob `use` needs a path prefix (`use a.b.*`), not a bare `*`");
         }
         Ok(UsePath {
+            phylum,
             path: Path(segs),
             glob,
         })

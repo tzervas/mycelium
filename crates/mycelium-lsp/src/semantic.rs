@@ -194,8 +194,10 @@ pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::RAngle
         | Tok::Shl
         | Tok::Shr => T_OPERATOR,
-        // Delimiters (`()[]{}`, `:` `,` `.`) and `Eof` carry no semantic-token highlight — an
+        // Delimiters (`()[]{}`, `:` `::` `,` `.`) and `Eof` carry no semantic-token highlight — an
         // explicit, documented design choice (see the function doc comment), not a silent drop.
+        // `::` (DN-113 Rank 1 / M-1060, the cross-phylum `use dep::a.b.Item` boundary marker) joins
+        // `:` in this delimiter bucket, unclassified like the rest.
         Tok::LParen
         | Tok::RParen
         | Tok::LBrace
@@ -203,6 +205,7 @@ pub(crate) fn classify(kind: &LexKind) -> Option<u32> {
         | Tok::LBracket
         | Tok::RBracket
         | Tok::Colon
+        | Tok::ColonColon
         | Tok::Comma
         | Tok::Semi
         | Tok::Dot
