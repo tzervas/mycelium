@@ -8,10 +8,10 @@
 
 use crate::gap::{Category, Gap, GapReport};
 use crate::vet::{
-    classify_run, vet_batch, MycChecker, VetClass, VetInput, VetRecord, VetReport,
-    MAX_DIAGNOSTIC_LEN,
+    classify_run, phylum_checked_clean_items, vet_batch, MycChecker, PhylumNodule,
+    PhylumVetSummary, VetClass, VetInput, VetRecord, VetReport, MAX_DIAGNOSTIC_LEN,
 };
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // VetClass::from_exit_code — the exit-contract mapping (data-driven).
@@ -256,6 +256,169 @@ fn unavailable_checker_records_tool_unavailable() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
+// DN-124 / M-1079 Unit 2 — the phylum-mode dual-report (`phylum_checked_clean_items`,
+// `VetReport::with_phylum`/`checked_fraction_phylum`/`delta_basis`). Pure logic, no process spawn.
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+fn nodule(file: &str, class: &str) -> PhylumNodule {
+    PhylumNodule {
+        nodule: file.trim_end_matches(".myc").replace('/', "."),
+        file: file.to_owned(),
+        class: class.to_owned(),
+        site: None,
+        on: None,
+        message: None,
+    }
+}
+
+fn vet_input(myc_path: &str, non_test_items: usize, emitted_items: usize) -> VetInput {
+    VetInput {
+        myc_path: PathBuf::from(myc_path),
+        source_file: format!("{myc_path}.rs"),
+        non_test_items,
+        emitted_items,
+    }
+}
+
+/// Only a `Clean`-classed nodule credits its file's `emitted_items`; `CheckError`/`Blocked` credit
+/// nothing (the same file-gated bridge oracle mode uses, generalized to nodule-Clean).
+#[test]
+fn phylum_checked_clean_items_credits_only_clean_nodules() {
+    let dir = Path::new("/out");
+    let inputs = vec![
+        vet_input("/out/a.myc", 10, 4),
+        vet_input("/out/b.myc", 10, 5),
+        vet_input("/out/c.myc", 10, 3),
+    ];
+    let summary = PhylumVetSummary {
+        ran: true,
+        ok: false,
+        nodules: vec![
+            nodule("a.myc", "Clean"),
+            nodule("b.myc", "CheckError"),
+            nodule("c.myc", "Blocked"),
+        ],
+        diagnostic: "check error at `b.<use>`".to_owned(),
+    };
+    let credited = phylum_checked_clean_items(dir, &inputs, &summary);
+    assert_eq!(credited, 4, "only a.myc (Clean) is credited");
+}
+
+/// A run that could not be executed (`ran: false`) credits **nothing** — never a fabricated clean
+/// result when there is no real verdict to back it (G2/VR-5).
+#[test]
+fn phylum_checked_clean_items_never_credits_an_unran_summary() {
+    let dir = Path::new("/out");
+    let inputs = vec![vet_input("/out/a.myc", 10, 4)];
+    let summary = PhylumVetSummary {
+        ran: false,
+        ok: false,
+        // Even a (hypothetically) fabricated Clean row must not be trusted when `ran` is false —
+        // the guard is on `ran`, never on the presence of rows.
+        nodules: vec![nodule("a.myc", "Clean")],
+        diagnostic: "could not run myc-check --phylum: tool not found".to_owned(),
+    };
+    assert_eq!(phylum_checked_clean_items(dir, &inputs, &summary), 0);
+}
+
+/// The file-join is exact-relative-path (mirrors `mycelium-check`'s `collect_myc` convention): a
+/// nested batch output (`<out_dir>/sub/dir/foo.myc`) still joins correctly against its nodule row's
+/// `file` (`sub/dir/foo.myc`, forward-slashed relative to `dir`).
+#[test]
+fn phylum_checked_clean_items_joins_nested_batch_paths() {
+    let dir = Path::new("/out");
+    let inputs = vec![vet_input("/out/sub/dir/foo.myc", 6, 6)];
+    let summary = PhylumVetSummary {
+        ran: true,
+        ok: true,
+        nodules: vec![nodule("sub/dir/foo.myc", "Clean")],
+        diagnostic: String::new(),
+    };
+    assert_eq!(phylum_checked_clean_items(dir, &inputs, &summary), 6);
+}
+
+/// `VetReport::with_phylum` dual-reports `checked_fraction_phylum` alongside the oracle-mode
+/// `checked_fraction`, over the SAME denominator — and `delta_basis` is exactly their difference,
+/// simulating the DN-124 lever: a file that was oracle-`CheckError` (an unresolved cross-nodule
+/// `use`) becomes phylum-`Clean` once its whole import closure is visible.
+#[test]
+fn with_phylum_dual_reports_and_delta_basis_is_the_recovered_delta() {
+    // Oracle mode: a.myc clean (4 items), b.myc CheckError (5 items) -> checked_fraction = 4/20.
+    let report = VetReport::from_records(vec![
+        record_at("a.myc", VetClass::Clean, 10, 4),
+        record_at("b.myc", VetClass::CheckError, 10, 5),
+    ]);
+    assert!((report.checked_fraction() - 4.0 / 20.0).abs() < 1e-9);
+    assert!(
+        report.phylum.is_none(),
+        "an oracle-only report attaches no phylum result"
+    );
+    assert_eq!(
+        report.delta_basis(),
+        0.0,
+        "nothing to correct for without a phylum result"
+    );
+
+    let dir = Path::new("/out");
+    let inputs = vec![
+        vet_input("/out/a.myc", 10, 4),
+        vet_input("/out/b.myc", 10, 5),
+    ];
+    let summary = PhylumVetSummary {
+        ran: true,
+        ok: true,
+        nodules: vec![nodule("a.myc", "Clean"), nodule("b.myc", "Clean")],
+        diagnostic: String::new(),
+    };
+    let dual = report.with_phylum(dir, &inputs, summary);
+    // Phylum mode recovers b.myc too: (4+5)/20 = 9/20.
+    assert_eq!(dual.total_checked_clean_items_phylum, 9);
+    assert!((dual.checked_fraction_phylum() - 9.0 / 20.0).abs() < 1e-9);
+    // checked_fraction (oracle) is UNCHANGED by attaching phylum.
+    assert!((dual.checked_fraction() - 4.0 / 20.0).abs() < 1e-9);
+    // Δ_basis is exactly phylum - oracle, over the SAME denominator (never a different basis).
+    let expected_delta = 9.0 / 20.0 - 4.0 / 20.0;
+    assert!((dual.delta_basis() - expected_delta).abs() < 1e-9);
+    assert!(
+        dual.delta_basis() > 0.0,
+        "phylum mode must recover, never regress, here"
+    );
+}
+
+/// Attaching a phylum result whose tool did not run (`ran: false`) reports `checked_fraction_phylum
+/// == 0.0` honestly (never inherits/guesses the oracle numerator) — and `delta_basis` is negative in
+/// that degenerate case, which is exactly why the CLI only prints the phylum line when `ran`.
+#[test]
+fn with_phylum_unran_never_fabricates_a_recovered_fraction() {
+    let report = VetReport::from_records(vec![record_at("a.myc", VetClass::Clean, 10, 4)]);
+    let dir = Path::new("/out");
+    let inputs = vec![vet_input("/out/a.myc", 10, 4)];
+    let summary = PhylumVetSummary {
+        ran: false,
+        ok: false,
+        nodules: vec![],
+        diagnostic: "could not run".to_owned(),
+    };
+    let dual = report.with_phylum(dir, &inputs, summary);
+    assert_eq!(dual.total_checked_clean_items_phylum, 0);
+    assert_eq!(dual.checked_fraction_phylum(), 0.0);
+}
+
+/// A record helper carrying an explicit `myc_file` label (the plain [`record`] helper above always
+/// uses `"x.myc"`, which collides across cases needing distinct file identities for the join tests).
+fn record_at(myc_file: &str, class: VetClass, non_test: usize, emitted: usize) -> VetRecord {
+    VetRecord {
+        myc_file: myc_file.to_owned(),
+        source_file: format!("{myc_file}.rs"),
+        class,
+        exit_code: None,
+        diagnostic: String::new(),
+        non_test_items: non_test,
+        emitted_items: emitted,
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
 // Live end-to-end witness against the REAL `myc check` — skip-gracefully when it isn't built.
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -348,6 +511,124 @@ fn live_myc_check_classifies_clean_and_broken() {
     assert!(
         !broken_rec.diagnostic.is_empty(),
         "the failure diagnostic is captured, never silent"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// **The DN-124 lever, end-to-end against the real toolchain.** Two nodules in ONE directory: `a`
+/// exports a `pub fn`; `b` imports it (`use a.*;`). Under **oracle** (per-file) mode `b` is
+/// `CheckError` (a phylum-of-one cannot resolve `a.*`) — under **phylum** mode (this whole dir as one
+/// phylum) `b` resolves and is credited `Clean`. Asserts `checked_fraction_phylum >
+/// checked_fraction` (strict recovery, never a regression) and that `a` (which has no `use` at all)
+/// stays `Clean` under both bases (DN-124's own guarantee: an oracle-clean file is never worsened by
+/// switching to phylum mode). Skips gracefully when `myc-check` is not built.
+#[test]
+fn live_phylum_mode_recovers_a_cross_nodule_use_oracle_mode_false_fails() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "vet: live phylum test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`)."
+        );
+        return;
+    };
+    let checker = MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-vet-phylum-live-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let a_path = dir.join("a.myc");
+    std::fs::write(
+        &a_path,
+        "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n",
+    )
+    .expect("write a.myc");
+    let b_path = dir.join("b.myc");
+    std::fs::write(
+        &b_path,
+        "nodule b;\nuse a.*;\nfn g(x: Binary{8}) => Binary{8} = helper(x);\n",
+    )
+    .expect("write b.myc");
+
+    // Oracle mode (per-file, phylum-blind): a is Clean (no use), b is CheckError (unresolved a.*).
+    let a_oracle = checker.vet_file(&a_path, "a.rs", 1, 1);
+    let b_oracle = checker.vet_file(&b_path, "b.rs", 1, 1);
+    assert_eq!(a_oracle.class, VetClass::Clean, "{:?}", a_oracle.diagnostic);
+    assert_eq!(
+        b_oracle.class,
+        VetClass::CheckError,
+        "b must false-FAIL under oracle mode — this IS the DN-124 problem statement: {:?}",
+        b_oracle.diagnostic
+    );
+
+    let oracle_report = VetReport::from_records(vec![a_oracle, b_oracle]);
+    assert_eq!(
+        oracle_report.total_checked_clean_items, 1,
+        "only a credited"
+    );
+
+    // Phylum mode over the whole dir: both a AND b are credited.
+    let phylum = checker.vet_phylum(&dir);
+    assert!(
+        phylum.ran,
+        "the real myc-check must be runnable here (it was just used for oracle mode): {:?}",
+        phylum.diagnostic
+    );
+    assert!(
+        phylum.ok,
+        "the phylum should check clean end-to-end: {:?}",
+        phylum.diagnostic
+    );
+    let by_nodule: std::collections::BTreeMap<&str, &PhylumNodule> = phylum
+        .nodules
+        .iter()
+        .map(|n| (n.nodule.as_str(), n))
+        .collect();
+    assert!(by_nodule["a"].is_clean(), "{:?}", by_nodule["a"]);
+    assert!(
+        by_nodule["b"].is_clean(),
+        "b must be credited Clean under phylum mode -- the DN-124 fix: {:?}",
+        by_nodule["b"]
+    );
+
+    let inputs = vec![
+        VetInput {
+            myc_path: a_path.clone(),
+            source_file: "a.rs".to_owned(),
+            non_test_items: 1,
+            emitted_items: 1,
+        },
+        VetInput {
+            myc_path: b_path.clone(),
+            source_file: "b.rs".to_owned(),
+            non_test_items: 1,
+            emitted_items: 1,
+        },
+    ];
+    let dual = oracle_report.with_phylum(&dir, &inputs, phylum);
+    assert_eq!(
+        dual.total_checked_clean_items_phylum, 2,
+        "both a and b credited under phylum mode"
+    );
+    assert!(
+        dual.checked_fraction_phylum() > dual.checked_fraction(),
+        "phylum mode must strictly recover here: phylum={} oracle={}",
+        dual.checked_fraction_phylum(),
+        dual.checked_fraction()
+    );
+    assert!(
+        (dual.delta_basis() - (dual.checked_fraction_phylum() - dual.checked_fraction())).abs()
+            < 1e-9
     );
 
     let _ = std::fs::remove_dir_all(&dir);

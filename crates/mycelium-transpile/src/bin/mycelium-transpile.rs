@@ -73,7 +73,13 @@ fn main() -> ExitCode {
 /// Run the vet loop over the written `.myc` files and report `checked_fraction` alongside
 /// `expressible_fraction`. Advisory: a vet failure/tool-unavailable is reported (never silent, G2)
 /// but does **not** change the process exit code — vetting is a measurement, not a gate.
-fn run_vet(inputs: &[VetInput], out_dir: &Path) {
+///
+/// `phylum_dir`, when `Some` (batch/directory mode — DN-124 §3.1/§3.2), **additionally** runs
+/// `myc check --phylum <dir> --json` over the whole written batch directory and dual-reports
+/// `checked_fraction_phylum` alongside the oracle-mode `checked_fraction` (M-A: a transition-cycle
+/// basis correction, never presented as lever progress — see `src/vet.rs`'s module docs). `None` in
+/// single-file mode: a lone file names no real phylum boundary to check against (DN-124 §6 Attack 1a).
+fn run_vet(inputs: &[VetInput], out_dir: &Path, phylum_dir: Option<&Path>) {
     if inputs.is_empty() {
         eprintln!("mycelium-transpile: --vet: no emitted .myc files to vet");
         return;
@@ -81,7 +87,11 @@ fn run_vet(inputs: &[VetInput], out_dir: &Path) {
     // Cargo-fallback runs in the current directory (typically the workspace root); the sanctioned
     // path is a pre-built `MYC_CHECK_CMD` binary, which carries its own absolute program path.
     let checker = MycChecker::from_env(env::current_dir().ok());
-    let report = vet_batch(&checker, inputs);
+    let mut report = vet_batch(&checker, inputs);
+    if let Some(dir) = phylum_dir {
+        let summary = checker.vet_phylum(dir);
+        report = report.with_phylum(dir, inputs, summary);
+    }
     let vet_path = out_dir.join("vet.json");
     match serde_json::to_string_pretty(&report) {
         Ok(j) => {
@@ -119,6 +129,30 @@ fn print_vet_summary(report: &VetReport, vet_path: &Path) {
         report.total_non_test_items,
         vet_path.display(),
     );
+    // DN-124 M-A dual-report: printed ONLY when a phylum-mode result was attached, and always
+    // labeled a basis correction (never lever progress — VR-5).
+    if let Some(phylum) = &report.phylum {
+        if !phylum.ran {
+            println!(
+                "mycelium-transpile: --vet --phylum: myc check --phylum could not be run — \
+                 checked_fraction_phylum not reported this run ({})",
+                phylum.diagnostic
+            );
+        } else {
+            println!(
+                "mycelium-transpile: --vet --phylum: checked_fraction_phylum {:.1}% ({}/{} items, \
+                 same denominator) vs checked_fraction (oracle) {:.1}% -- \
+                 Δ_basis = {:+.1}pp (a basis CORRECTION -- recovered false-fails, NOT lever \
+                 progress, DN-124 §4; phylum ok: {})",
+                report.checked_fraction_phylum() * 100.0,
+                report.total_checked_clean_items_phylum,
+                report.total_non_test_items,
+                report.checked_fraction() * 100.0,
+                report.delta_basis() * 100.0,
+                phylum.ok,
+            );
+        }
+    }
 }
 
 /// Append a `.ext` suffix to a path **without** replacing any existing extension — unlike
@@ -199,7 +233,9 @@ fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
 
     if vet {
         let inputs = vec![VetInput::from_report(myc_path, &report)];
-        run_vet(&inputs, out_dir);
+        // Single-file mode names no real phylum boundary (a lone file's dir may hold unrelated
+        // artifacts) — phylum-mode vetting is directory-mode only (DN-124 §3.2/§6 Attack 1a).
+        run_vet(&inputs, out_dir, None);
     }
     ExitCode::SUCCESS
 }
@@ -345,7 +381,9 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
 
     if vet {
         let inputs: Vec<VetInput> = vet_inputs.into_values().collect();
-        run_vet(&inputs, out_dir);
+        // Batch/directory mode: everything just written under `out_dir` forms the ONE real phylum
+        // boundary for this run (DN-124 §3.2) — dual-report phylum-mode alongside oracle-mode.
+        run_vet(&inputs, out_dir, Some(out_dir));
     }
 
     if failures.is_empty() {
