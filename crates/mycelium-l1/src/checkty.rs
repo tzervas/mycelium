@@ -14,8 +14,8 @@ use crate::affine::{Tracker, UseOutcome};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity,
-    Strength, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
+    TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -2027,8 +2027,11 @@ fn check_phylum_inner(
                     // (`impl[T, T] Foo[T] { … }`) is refused independent of method count — the
                     // per-lifted-method check below rides each method's combined param list, so a
                     // zero-method block would miss it. Mirror the standalone `TypeDecl`/`LowerDecl`
-                    // slot-duplicate refusal here (never silent — G2).
-                    if let Some(dup) = first_duplicate(&id.params) {
+                    // slot-duplicate refusal here (never silent — G2). Checked on *names* only (a
+                    // duplicate name with different bounds is still a duplicate binding).
+                    let impl_param_names: Vec<String> =
+                        id.params.iter().map(|p| p.name.clone()).collect();
+                    if let Some(dup) = first_duplicate(&impl_param_names) {
                         return Err(CheckError::new(
                             "impl",
                             format!(
@@ -2037,23 +2040,21 @@ fn check_phylum_inner(
                             ),
                         ));
                     }
-                    // DN-103 / M-1026 / ENB-3: an impl-level generic slot (`impl[T] Foo[T] { … }`)
-                    // prepends its params to each lifted method's own `fn` type-parameters, so the
-                    // method becomes an ordinary generic free function — monomorphization then reuses
-                    // the existing fn-generics path with zero new mono code (KC-3/DRY). A duplicate
-                    // between an impl param and a method's own param is caught by the existing
-                    // duplicate-type-parameter check on the lifted sig (never silent — G2). For the
-                    // plain M-664 block (`id.params` empty) this is the identity — methods lift
-                    // verbatim exactly as before.
-                    let impl_tps: Vec<TypeParam> = id
-                        .params
-                        .iter()
-                        .map(|name| TypeParam {
-                            name: name.clone(),
-                            kind: ParamKind::Type,
-                            bounds: Vec::new(),
-                        })
-                        .collect();
+                    // DN-103 / M-1026 / ENB-3, **bounded** as of DN-131 / M-1088: an impl-level
+                    // generic slot (`impl[T: Bound] Foo[T] { … }`) prepends its params — bounds
+                    // carried, not forced to `[]` — to each lifted method's own `fn` type-parameters,
+                    // so the method becomes an ordinary **bounded** generic free function. The
+                    // already-landed `check_bounds` (fn-body checking, below) then validates the
+                    // (now non-empty) prepended bounds, and dictionary-free monomorphization (M-673)
+                    // discharges them — the exact path a hand-written `fn f[T: Bound]​(…)` already
+                    // takes (DN-131 §4: zero new discharge code). A duplicate between an impl param
+                    // and a method's own param is caught by the existing duplicate-type-parameter
+                    // check on the lifted sig (never silent — G2); the DN-131 §4 point-2 conservative
+                    // choice is a **refusal**, not a bound union, so `impl[T: A] … fn m[T: B]` is that
+                    // same duplicate-parameter refusal, not a silent `T: A + B` merge. For the plain
+                    // M-664 block (`id.params` empty) this is the identity — methods lift verbatim
+                    // exactly as before.
+                    let impl_tps: Vec<TypeParam> = id.params.clone();
                     for mut m in id.methods {
                         if !impl_tps.is_empty() {
                             let mut params = impl_tps.clone();

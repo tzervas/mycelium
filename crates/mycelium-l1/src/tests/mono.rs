@@ -246,6 +246,33 @@ fn a_bounded_generic_calling_a_trait_method_monomorphizes() {
     assert!(no_reachable_var(&mono));
 }
 
+#[test]
+fn an_impl_slot_bound_calling_a_trait_method_monomorphizes() {
+    // DN-131 / M-1088 discharge witness (mirror of `a_bounded_generic_calling_a_trait_method_
+    // monomorphizes` above): `impl[T: Cmp] Box[T] { fn peek(…) => … = cmp(x, y) }` — the impl-slot
+    // bound rides DN-103's Phase-0 desugar-prepend onto the lifted method's own `fn` type-parameter,
+    // so it discharges via the SAME landed `check_bounds` + dictionary-free-monomorphization path a
+    // hand-written `fn f[T: Cmp](…)` already uses — zero new discharge code (DN-131 §4).
+    let env = env(&format!(
+        "{CMP_I8}type Box[A] = Bx(A);\n\
+         impl[T: Cmp] Box[T] {{ fn peek(b: Box[T], x: T, y: T) => Binary{{2}} = cmp(x, y); }};\n\
+         fn main() => Binary{{2}} = peek(Bx(0b0000_0001), 0b0000_0001, 0b0000_0010);"
+    ));
+    let mono = monomorphize(&env, "main").expect("monomorphizes");
+    let peek_specializations: Vec<&String> =
+        mono.fns.keys().filter(|n| n.starts_with("peek$")).collect();
+    assert_eq!(
+        peek_specializations.len(),
+        1,
+        "one type arg ⇒ one `peek$…` specialization, got: {peek_specializations:?}"
+    );
+    assert!(
+        mono.fn_decl("cmp$Cmp$Binary8").is_some(),
+        "the impl-slot bound's Cmp instance is discharged, dictionary-free"
+    );
+    assert!(no_reachable_var(&mono));
+}
+
 // ---- fragmentation witness: two widths in one program ------------------------------------
 
 #[test]

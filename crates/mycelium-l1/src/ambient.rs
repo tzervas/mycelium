@@ -448,8 +448,10 @@ impl Resolver {
         for m in &id.methods {
             methods.push(self.fn_decl(amb, m)?);
         }
-        // DN-103 / M-1026: the impl-level type-parameter names are inert here (ambient carries no
-        // per-param frame); pass them through unchanged so the desugar sees the faithful block.
+        // DN-103 / M-1026 (bounds per DN-131 / M-1088): the impl-level type-parameters — names and
+        // bounds alike — are inert here (ambient carries no per-param frame; a bound's trait-args are
+        // resolved later, at the lifted method's own fn-body check via `check_bounds`); pass them
+        // through unchanged so the desugar sees the faithful block.
         Ok(InherentImplDecl {
             params: id.params.clone(),
             for_ty,
@@ -1121,12 +1123,14 @@ fn print_impl_decl(id: &ImplDecl) -> String {
 
 /// Canonical surface form of an inherent method block `impl T { fn … }` (DN-03 §1 / M-664).
 fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
-    // DN-103 / M-1026: render the impl-level type-parameter slot `impl[T, …]` when present (empty for
-    // the plain M-664 block — the identity, printed exactly as before).
+    // DN-103 / M-1026, bounded per DN-131 / M-1088: render the impl-level type-parameter slot
+    // `impl[T: Bound, …]` when present (empty for the plain M-664 block — the identity, printed
+    // exactly as before), reusing the same `print_type_param` the bounded `fn` slot uses (DRY).
     let tps = if id.params.is_empty() {
         String::new()
     } else {
-        format!("[{}]", id.params.join(", "))
+        let ps: Vec<String> = id.params.iter().map(print_type_param).collect();
+        format!("[{}]", ps.join(", "))
     };
     let mut s = format!("impl{} {} {{\n", tps, print_type_ref(&id.for_ty));
     for m in &id.methods {
