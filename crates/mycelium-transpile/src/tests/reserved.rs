@@ -5,7 +5,9 @@
 //! over every snapshot word); pure/`Declared` for the guard behaviour tests.
 
 use crate::gap::Category;
-use crate::reserved::{guard_ident, is_reserved, sanitize_nodule_path, RESERVED};
+use crate::reserved::{
+    guard_ident, is_reserved, sanitize_nodule_path, RESERVED, RESERVED_SEGMENT_SUFFIX,
+};
 
 /// **Drift guard.** Every word in the [`RESERVED`] snapshot must still be rejected as an identifier
 /// by the *real* `mycelium-l1` lexer (`mycelium_l1::token::keyword` returns `Some` for a keyword). A
@@ -126,17 +128,28 @@ fn reserved_type_parameter_is_gapped_not_emitted() {
 /// [`RESERVED`] (`crates/mycelium-l1/src/fuse.rs` -> `l1.fuse`,
 /// `crates/mycelium-std-runtime/src/colony.rs` -> `std.runtime.colony`) must never reach
 /// `render_nodule` verbatim (repro: `parse-error: expected an identifier, found Fuse`).
+///
+/// **Revised (PR #1517 review HIGH).** The colliding segment is now **escaped**
+/// (`fuse` -> `fuse_kw`), not dropped — dropping collapsed distinct source files (e.g.
+/// `l1.fuse`/`l1.nodule`, both losing their sole segment) onto the same nodule path, an
+/// undisclosed cross-file collision the per-file vet loop can't see. See
+/// `reserved_word_siblings_do_not_collide_after_sanitize` in `src/tests/transpile.rs` for the
+/// cross-file collision-freedom proof this escape closes.
 #[test]
-fn sanitize_nodule_path_drops_only_colliding_segments() {
+fn sanitize_nodule_path_escapes_only_colliding_segments() {
     // No collision: unchanged, no gap.
     let (path, gap) = sanitize_nodule_path("std.time");
     assert_eq!(path, "std.time");
     assert!(gap.is_none(), "a non-colliding path must not gap");
 
-    // The exact repro shapes: the colliding trailing segment is dropped, falling back to the
-    // pre-M-1042 crate-prefix-only nodule name.
+    // The exact repro shapes: the colliding segment is escaped in place, not dropped — the
+    // crate-prefix segment(s) are preserved unchanged.
     let (path, gap) = sanitize_nodule_path("l1.fuse");
-    assert_eq!(path, "l1", "the reserved `fuse` segment must be dropped");
+    assert_eq!(
+        path,
+        format!("l1.fuse{RESERVED_SEGMENT_SUFFIX}"),
+        "the reserved `fuse` segment must be escaped in place, not dropped"
+    );
     let gap = gap.expect("a collision must produce a gap, never a silent rename");
     assert_eq!(gap.category, Category::ReservedWord);
     assert!(
@@ -147,16 +160,60 @@ fn sanitize_nodule_path_drops_only_colliding_segments() {
 
     let (path, gap) = sanitize_nodule_path("std.runtime.colony");
     assert_eq!(
-        path, "std.runtime",
-        "the reserved `colony` segment must be dropped, non-colliding segments kept"
+        path,
+        format!("std.runtime.colony{RESERVED_SEGMENT_SUFFIX}"),
+        "the reserved `colony` segment must be escaped, non-colliding segments kept unchanged"
     );
     assert_eq!(gap.expect("must gap").category, Category::ReservedWord);
 
     // A collision in a NON-trailing segment is also caught (defensive: not special-cased to the
-    // last segment only).
+    // last segment only) — and the non-colliding trailing segment is preserved unchanged.
     let (path, gap) = sanitize_nodule_path("fuse.sub");
-    assert_eq!(path, "sub");
+    assert_eq!(path, format!("fuse{RESERVED_SEGMENT_SUFFIX}.sub"));
     assert!(gap.is_some());
+
+    // Multiple colliding segments in one path are each escaped independently.
+    let (path, gap) = sanitize_nodule_path("fuse.colony");
+    assert_eq!(
+        path,
+        format!("fuse{RESERVED_SEGMENT_SUFFIX}.colony{RESERVED_SEGMENT_SUFFIX}")
+    );
+    assert!(gap.is_some());
+}
+
+/// **Escape-suffix soundness (PR #1517 review HIGH).** The escaped form of every reserved word
+/// must never itself be reserved — otherwise escaping would re-trigger the very collision it
+/// exists to close (an escaped segment feeding back into `guard_ident`/`is_reserved` as a false
+/// positive, or worse, a *second* silent collision). Exhaustive over the whole snapshot, not just
+/// the `fuse`/`colony` repro shapes.
+#[test]
+fn escaped_reserved_words_are_never_themselves_reserved() {
+    for word in RESERVED {
+        let escaped = format!("{word}{RESERVED_SEGMENT_SUFFIX}");
+        assert!(
+            !is_reserved(&escaped),
+            "escaping `{word}` produced `{escaped}`, which is ITSELF a reserved word — the \
+             escape suffix `{RESERVED_SEGMENT_SUFFIX}` must never turn a keyword into another \
+             keyword"
+        );
+    }
+}
+
+/// **Escape-suffix injectivity (PR #1517 review HIGH).** Two *different* reserved words must
+/// never escape to the same string — otherwise the escape itself could reintroduce the
+/// cross-file collision it exists to close. (Trivially true for a fixed-suffix scheme, but pinned
+/// here as an explicit, checked property rather than an unchecked assumption — VR-5.)
+#[test]
+fn escaped_reserved_words_are_pairwise_distinct() {
+    let mut seen = std::collections::BTreeSet::new();
+    for word in RESERVED {
+        let escaped = format!("{word}{RESERVED_SEGMENT_SUFFIX}");
+        assert!(
+            seen.insert(escaped.clone()),
+            "two distinct reserved words escaped to the same string `{escaped}` — the escape \
+             suffix no longer guarantees injectivity"
+        );
+    }
 }
 
 /// **Live-oracle regression proof** for the fuse.rs/colony.rs repros: a nodule path whose only
@@ -181,8 +238,8 @@ fn reserved_nodule_path_segment_gaps_never_hard_parse_fails() {
         gap.reason
     );
     assert!(
-        myc.contains("nodule l1;"),
-        "the sanitized header must fall back to the crate-prefix-only nodule name, got:\n{myc}"
+        myc.contains(&format!("nodule l1.fuse{RESERVED_SEGMENT_SUFFIX};")),
+        "the sanitized header must escape the colliding segment in place, got:\n{myc}"
     );
     assert!(
         !myc.contains("nodule l1.fuse;"),
