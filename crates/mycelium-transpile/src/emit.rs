@@ -2697,6 +2697,161 @@ fn has_self_receiver(sig: &Signature) -> bool {
     sig.inputs.iter().any(|a| matches!(a, FnArg::Receiver(_)))
 }
 
+// ---- DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl rule-swap ----------------------------
+//
+// **Verify-first (mitigation #14): there is no "synthetic-trait-def" code path in this crate to
+// retire.** DN-34 §8.8 records that a per-file *fabricated* `trait Widen { … }` was tried and
+// FAILED (`unknown Self` / arg mismatch / identity fork) — but that attempt was never committed
+// here; `emit_impl` has always emitted a trait-impl's methods without ever emitting (or attempting
+// to emit) a companion trait declaration for a foreign trait. So there is nothing to delete; this
+// increment only ADDS the MVP-recognition path below (a smallest-auditable-step reading of "retire
+// the failed synthetic-trait-def path for this class" — VR-5, stated rather than silently assumed).
+//
+// **What this actually changes.** Per DN-122's ratified OQ-6 (§13.2 WU-B): the MVP's target traits
+// are **prelude-seeded** (`crates/mycelium-l1/src/ord3.rs`, mirroring `Fuse`/M-965) — ambiently
+// available in every checked phylum, so an eligible impl needs **no `use` at all** (exactly how
+// `impl Fuse[T] for T` already needs none; DN-122 §13.1: "the transpiler emits the impl against the
+// ambient prelude trait — zero new checker work"). `emit_impl`'s per-method emission loop is
+// unchanged either way (it already resolves `Self`/the impl's own type correctly, and already
+// naturally supports the receiverless, param-typed methods this MVP class uses); this recognizer's
+// only two jobs are: (1) tell an MVP-eligible impl apart from every other trait-impl shape, so (2)
+// the emitted `impl` line carries the trait's Mycelium type argument (`[<SelfTy>]`) that Rust's own
+// zero-explicit-arg `impl Ord3 for T` source never spells out (Mycelium's stage-1 trait model has no
+// implicit `Self` slot — RFC-0019 §4.1 — the `T`-for-`T` idiom `Fuse` already established). A shape
+// that does NOT match a registered prelude trait is left **entirely unchanged** — still emitted
+// exactly as before WU-A landed (an honest, never-fabricated `myc check`-time residual tracked by
+// M-876/M-1076, e.g. every `Widen`/`Narrow`/`MycEq`/`MycOrd`/`MycPartialOrd` impl in the corpus,
+// all of which are `Self`-receiver-based and so are correctly excluded below).
+
+/// One prelude trait's checked shape, mirroring its `crates/mycelium-l1/src/<name>.rs` hand-built
+/// [`TraitInfo`](../../mycelium_l1/checkty/struct.TraitInfo.html) **exactly** — this is the emitter's
+/// half of the T-A3 "emit iff check would accept" agreement (`tests/vet.rs`'s live-oracle probes the
+/// other half). Every field here must match the seeded trait 1:1; a mismatch would either wrongly
+/// refuse an eligible impl (safe — falls to the honest, unchanged path) or, far worse, wrongly emit
+/// a `use`-free `impl` the checker then refuses (never allowed to happen — the shared-case-table unit
+/// test in `src/tests/emit.rs` pins agreement against the real registry, not a re-typed copy).
+struct PreludeTraitShape {
+    /// The trait's name — identical on both the Rust source side and the Mycelium prelude side (the
+    /// MVP recognizes a foreign trait **by name**; it never renames/reinterprets a differently-named
+    /// Rust trait as a prelude one — that would be exactly the kind of guess VR-5 forbids).
+    name: &'static str,
+    /// Every method the trait requires, in the prelude `TraitInfo`'s own declared order (the impl's
+    /// method SET must match exactly — no fewer, no more, per RFC-0019 §4.5's impl-method-set check;
+    /// order itself is not significant here, only names/arity/shape are).
+    methods: &'static [PreludeMethodShape],
+}
+
+/// One method's MVP-recognized shape: receiverless, every value parameter typed either `Self` or the
+/// impl's own concrete `for`-type (the single-param, `T`-for-`T` idiom every prelude trait in this
+/// registry uses — mirrors `Fuse::join(a: T, b: T) => T`), and a return type that maps to exactly
+/// `ret` (a primitive repr text, e.g. `"Binary{8}"` for `Ord3::cmp` — never `Self`, in this v0
+/// registry; a prelude trait whose method RETURNS `Self` is not yet a registered shape, YAGNI until
+/// one is needed).
+struct PreludeMethodShape {
+    name: &'static str,
+    /// Value-parameter count; every parameter must be `Self`/the impl's own type (never a second,
+    /// unrelated concrete type — that would be exactly the M-1076 residual, not this MVP).
+    arity: usize,
+    /// The exact [`map_type`]-produced return-type text a matching method must have.
+    ret: &'static str,
+}
+
+/// The MVP's registered prelude traits (DN-122 §13.2 WU-B) — kept intentionally tiny (KISS/YAGNI):
+/// exactly the `Ord3` witness DN-122 §13.1's shape (with the `Binary{8}` width deviation `crates/mycelium-l1/src/ord3.rs` documents; `Ord3[A] { fn cmp(a: A, b: A) => Binary{8};
+/// }`). Growing this registry (a new prelude trait) is always a **paired** change with
+/// `crates/mycelium-l1/src/<name>.rs` — never one side alone (that would silently desync emit from
+/// check, exactly what T-A3 exists to catch).
+const MVP_PRELUDE_TRAITS: &[PreludeTraitShape] = &[PreludeTraitShape {
+    name: "Ord3",
+    methods: &[PreludeMethodShape {
+        name: "cmp",
+        arity: 2,
+        ret: "Binary{8}",
+    }],
+}];
+
+/// Does `ty` (an original, unmapped `syn::Type`) spell `Self`, or literally the same tokens as
+/// `self_ty` (the impl's own `syn::Type`)? The two Rust idioms a receiverless method in an `impl
+/// Trait for ConcreteType` block can use for "the type this impl is for" — never a guess at a THIRD,
+/// unrelated type (VR-5).
+fn type_is_self_or_impl_ty(ty: &syn::Type, self_ty: &syn::Type) -> bool {
+    if let syn::Type::Path(tp) = ty {
+        if tp.qself.is_none() && tp.path.is_ident("Self") {
+            return true;
+        }
+    }
+    tokens_to_string(ty) == tokens_to_string(self_ty)
+}
+
+/// Is `item` an **MVP-eligible foreign-trait impl** (DN-122 §13.1: single-parameter, param-only-sig)
+/// matching a [`MVP_PRELUDE_TRAITS`] entry by name? `Some(shape)` iff: (i) the impl has no explicit
+/// trait type-argument (`trait_targs.is_empty()` — the Rust-side idiom for a trait whose sole
+/// Mycelium parameter is the impl's own `Self`, mirroring `Fuse`'s `impl Fuse[T] for T`); (ii) the
+/// impl's method SET matches the registered shape exactly (same names, same count — RFC-0019 §4.5);
+/// (iii) every method is **receiverless** (`has_self_receiver` false — the exact test that correctly
+/// EXCLUDES `Widen`/`Narrow`/`MycEq`/`MycOrd`/`MycPartialOrd`, every one of which takes a `self`/
+/// `&self` receiver, per DN-122 §13.1's adversarial narrowing, §13.3 finding 3); (iv) every value
+/// parameter is `Self`/the impl's own type ([`type_is_self_or_impl_ty`]); (v) the return type maps
+/// (via [`map_type`]) to exactly the registered primitive text. Any mismatch returns `None` — the
+/// impl then falls through to the ordinary, unchanged emission path (never a partial/guessed match).
+fn mvp_prelude_trait_shape<'a>(
+    trait_name: &str,
+    trait_targs: &[String],
+    self_ty: &syn::Type,
+    self_ty_text: &str,
+    items: &[ImplItem],
+) -> Option<&'a PreludeTraitShape> {
+    if !trait_targs.is_empty() {
+        return None;
+    }
+    let shape = MVP_PRELUDE_TRAITS.iter().find(|s| s.name == trait_name)?;
+    let methods: Vec<&syn::ImplItemFn> = items
+        .iter()
+        .filter_map(|ii| match ii {
+            ImplItem::Fn(f) => Some(f),
+            _ => None,
+        })
+        .collect();
+    if methods.len() != shape.methods.len() {
+        return None;
+    }
+    for expected in shape.methods {
+        let f = methods.iter().find(|f| f.sig.ident == expected.name)?;
+        if has_self_receiver(&f.sig) {
+            return None;
+        }
+        if !f.sig.generics.params.is_empty() {
+            return None;
+        }
+        let value_params: Vec<&syn::PatType> = f
+            .sig
+            .inputs
+            .iter()
+            .map(|a| match a {
+                FnArg::Typed(pt) => Some(pt),
+                FnArg::Receiver(_) => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        if value_params.len() != expected.arity {
+            return None;
+        }
+        if !value_params
+            .iter()
+            .all(|pt| type_is_self_or_impl_ty(&pt.ty, self_ty))
+        {
+            return None;
+        }
+        let ReturnType::Type(_, ret_ty) = &f.sig.output else {
+            return None;
+        };
+        let mapped_ret = map_type(ret_ty, Some(self_ty_text)).ok()?;
+        if mapped_ret != expected.ret {
+            return None;
+        }
+    }
+    Some(shape)
+}
+
 /// `impl` -> `impl_item` (trait-instance or inherent form). Unlike enum/struct/trait (which bail
 /// the whole item on the first unmappable feature), an impl block is emitted **partially**: each
 /// method is attempted independently, a failing method becomes a sub-gap rather than voiding its
@@ -2764,6 +2919,21 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
     } else {
         (None, Vec::new())
     };
+
+    // DN-122 §13 (M-1080; WU-A) — the MVP-prelude-trait recognizer (see the module doc block just
+    // above `emit_impl`). `None` for every non-eligible shape (including every impl with no trait
+    // at all, or any impl whose trait name isn't registered) — the rest of this function's emission
+    // logic is completely unchanged by that case, exactly the "leave it as an honest, unfabricated
+    // residual" DN-122 §13.2 calls for.
+    let mvp_shape = trait_name.as_deref().and_then(|name| {
+        mvp_prelude_trait_shape(
+            name,
+            &trait_targs,
+            &item.self_ty,
+            &self_ty_text,
+            &item.items,
+        )
+    });
 
     let mut sub_gaps = Vec::new();
     let mut method_bodies = Vec::new();
@@ -2960,8 +3130,27 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
+    if mvp_shape.is_some() {
+        // DN-122 §13 (M-1080; WU-A) — EXPLAIN-traceable provenance (G2: never a silent swap): this
+        // impl matched a registered MVP prelude-trait shape, so it needs no `use` (the trait is
+        // ambiently seeded — `crates/mycelium-l1/src/ord3.rs`, mirroring `Fuse`/M-965) and the
+        // Mycelium-side type argument below is SYNTHESIZED from the impl's own `Self`, not read off
+        // the Rust source (which, for this trait shape, never spells one).
+        myc.push_str(
+            "// Declared: DN-122 §13 / M-1080 MVP — foreign-trait impl of a prelude-seeded, \
+             single-param, param-only-sig trait; the `[<SelfTy>]` argument below is synthesized \
+             (Rust's own zero-explicit-arg `impl Trait for T` never spells it — Mycelium's stage-1 \
+             trait model has no implicit `Self` slot, RFC-0019 §4.1).\n",
+        );
+    }
     let name = if let Some(trait_name) = trait_name {
-        let targs_text = if trait_targs.is_empty() {
+        let targs_text = if let Some(_shape) = mvp_shape {
+            // The MVP `T`-for-`T` idiom (mirrors `Fuse`): the trait's sole Mycelium parameter IS
+            // the impl's own `Self`, regardless of whether Rust's source carried an explicit
+            // `<...>` (this registry only ever matches the zero-explicit-arg case — see
+            // `mvp_prelude_trait_shape`'s `trait_targs.is_empty()` guard).
+            format!("[{self_ty_text}]")
+        } else if trait_targs.is_empty() {
             String::new()
         } else {
             format!("[{}]", trait_targs.join(", "))
