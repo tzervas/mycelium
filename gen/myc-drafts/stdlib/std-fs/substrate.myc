@@ -1,4 +1,4 @@
-// nodule: std.fs
+// nodule: std.fs.substrate
 // In-memory filesystem substrate (the testable IO abstraction layer).
 //
 // This module provides the `FsBackend` trait — a minimal seam between the `fs` API and the
@@ -28,6 +28,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.fs;
+nodule std.fs.substrate;
 
-
+// An open file handle in the in-memory substrate.
+type InMemHandle = InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool);

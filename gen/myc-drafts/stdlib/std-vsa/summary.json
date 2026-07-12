@@ -33,8 +33,9 @@
       "gaps": 5,
       "expressible_pct": 0.0,
       "category_counts": {
+        "Closure": 1,
         "Import": 2,
-        "Other": 2,
+        "Other": 1,
         "Struct": 1
       }
     },
@@ -70,12 +71,102 @@
     "gaps": 32,
     "expressible_pct": 0.0,
     "category_counts": {
+      "Closure": 1,
       "GenericBound": 12,
       "Import": 12,
       "InnerAttr": 1,
       "ModuleDecl": 4,
-      "Other": 2,
+      "Other": 1,
       "Struct": 1
     }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-vsa",
+      "target_phylum": "std.vsa"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.vsa.encoding",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-vsa/src/encoding.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.vsa",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-vsa/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.vsa.matrix",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-vsa/src/matrix.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.vsa.ops",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-vsa/src/ops.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.vsa.recon",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-vsa/src/recon.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
   }
 }

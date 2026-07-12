@@ -1,4 +1,4 @@
-// nodule: std.fs
+// nodule: std.fs.path
 // `Path` — a pure, immutable, value-semantic filesystem path (C4/ADR-003).
 //
 // A `Path` is a content-addressable, UTF-8 immutable value. Two equal paths are the same value;
@@ -19,7 +19,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.fs;
+nodule std.fs.path;
 
 // An immutable, content-addressable UTF-8 filesystem path (C4 / ADR-003).
 //

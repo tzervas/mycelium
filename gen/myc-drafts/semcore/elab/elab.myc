@@ -1,4 +1,4 @@
-// nodule: l1
+// nodule: l1.elab
 // **Elaboration to the L0 Core IR** (RFC-0007 §4.6, **retired by RFC-0001 r4**). The
 // evaluation-complete fragment is now the **whole v0 calculus**: representation ops (L0), data +
 // matching (r3, `Construct`/flat `Match`), and **functions + recursion** (r4/r5,
@@ -32,8 +32,52 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule l1;
+nodule l1.elab;
 
 // Why a definition could not be elaborated to L0 — always explicit, never a partial artifact
 // (RFC-0007 §4.6).
 type ElabError = Residual(Bytes, Bytes) | UnknownFn(Bytes) | DepthExceeded(Bytes, Binary{32});
+
+// **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54
+// §4.1/§6 / M-812-cont). This is the `crate::elab` site that **reads [`Env::lower_rules`]** — the
+// completion the `low` (M-812) landing deferred: a `lower Name[…] = <rhs>` rule is no longer mere
+// stored data, it elaborates to real L0.
+//
+// The mechanism is **DRY and observation-faithful by construction**: the rule's RHS is given the
+// **exact same** lowering path a hand-written nullary `fn <rule>%rhs() = <rhs>` would take — it is
+// inserted as a synthetic nullary fn into a *clone* of `env` and run through the ordinary
+// [`elaborate`]. So the §7 differential `observe(derive Name for T) == observe(hand-lowered Name)`
+// holds **because the two go through one code path**, and the rule's observational identity is
+// `Empirical` (earned by running, never self-attested — VR-5).
+//
+// **§6 KC-3 (kernel-growth) — `Proven`-by-construction (narrow, checked sense):** the return type
+// is [`Node`], a *closed* Rust enum (the frozen L0 grammar — `mycelium_core::node`). The elaborator
+// can only ever *construct* one of those variants, so a `lower` rule **cannot** introduce a new
+// kernel node — the type system is the side-condition that makes this `Proven`. (The checker's
+// §4.6 `wild`-refusal closes the one *surface*-growth a rule could otherwise smuggle in.) This
+// function does **not** *prove* an arbitrary RHS elaborates — only that **if** it does, it adds no
+// kernel node, which is exactly KC-3.
+//
+// **Scope / honest residual (DN-54 underdetermination — FLAGGED).** v0 elaborates a **nullary,
+// monomorphic** rule (the landed surface — `lower Name = <expr>`): its RHS is a closed term. A
+// **parametric** rule (`lower Name[T] = <rhs over T>`) whose RHS mentions the type parameter `T`
+// has no monomorphic L0 form until `derive Name for <concrete>` *instantiates* `T` — and **how a
+// `derive` site's instantiated L0 attaches to / is referenced by the surrounding program is
+// underdetermined by DN-54** (the note's worked example RHS is an `impl` block, which is an *item*,
+// not an [`Expr`], so it is not even expressible as a v0 rule RHS). Rather than invent that
+// consumption semantics (G2/VR-5: a correct partial landing beats a guessed elaboration), this
+// elaborates the rule's RHS *as written* (the param-instantiation of a non-nullary RHS surfaces as
+// the ordinary generic [`ElabError::Residual`] from [`elaborate`]) and leaves the attachment model
+// for the maintainer to ratify. See DN-54 §3.2/§5 and the M-812-cont FLAG.
+//
+// # Errors
+// [`ElabError::UnknownFn`] if `rule_name` is not a registered `lower` rule; [`ElabError::Residual`]
+// if the RHS is outside the evaluation-complete fragment (e.g. it mentions an un-instantiated type
+// parameter, or a `wild`/`spore`/`Substrate` site — never a fabricated artifact, G2).
+//
+// **Unchanged by M-1054 Stage 0**: this is the exact pre-Stage-0 nullary signature, kept stable so
+// every existing caller (in-crate + the `tests/lower_derive.rs` integration harness) is unaffected.
+// It is now a thin wrapper over [`elaborate_lower_rule_with_args`] with an empty argument list —
+// the "one entry point, nullary is the degenerate no-args case" shape the M-1054 Stage 0 facility
+// scoping calls for, without breaking a public signature no test in this tree needed changed.
+fn elaborate_lower_rule(env: Env, rule_name: Bytes) => Result[Node, ElabError] = elaborate_lower_rule_with_args(env, rule_name, []);

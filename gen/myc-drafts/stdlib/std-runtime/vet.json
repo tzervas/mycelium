@@ -41,7 +41,7 @@
       "source_file": "crates/mycelium-std-runtime/src/network.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `allocate`: unknown function/constructor/prim `fetch_add`",
+      "diagnostic": "check-error: check error in `ChannelNodeId__allocate`: unknown function/constructor/prim `fetch_add`",
       "non_test_items": 24,
       "emitted_items": 5
     },
@@ -86,9 +86,9 @@
       "source_file": "crates/mycelium-std-runtime/src/region.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `allocate`: duplicate function",
+      "diagnostic": "check-error: check error in `as_u64`: duplicate function",
       "non_test_items": 18,
-      "emitted_items": 4
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/scheduler.myc",
@@ -124,12 +124,12 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 12,
-      "emitted_items": 4
+      "emitted_items": 6
     }
   ],
   "total_non_test_items": 132,
-  "total_emitted_items": 22,
-  "total_checked_clean_items": 13,
+  "total_emitted_items": 25,
+  "total_checked_clean_items": 15,
   "class_counts": {
     "CheckError": 2,
     "Clean": 12

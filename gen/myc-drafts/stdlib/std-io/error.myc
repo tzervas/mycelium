@@ -1,4 +1,4 @@
-// nodule: std.io
+// nodule: std.io.error
 // Explicit error types for `std.io` + `serialize` (C1 — never-silent; RFC-0016 §4.1).
 //
 // Every fallible operation returns a typed error carrying an RFC-0013 diagnostic
@@ -19,7 +19,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.io;
+nodule std.io.error;
 
 // A byte offset into the input: the **locus** of a serialization failure (C1 /
 // RFC-0013 I1). Named `none` (0) when the locus cannot be determined (e.g. the
@@ -33,11 +33,6 @@ type ByteOffset = ByteOffset(Binary{64});
 // This is the structural analogue of [`ByteOffset`] for grammar-structured failures
 // where the byte position is less informative than the semantic path.
 type FieldPath = FieldPath(Bytes);
-
-impl FieldPath {
-  // Construct from a static description.
-  fn from_static(s: Bytes) => FieldPath = FieldPath(to_owned(s));
-};
 
 // The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).
 //

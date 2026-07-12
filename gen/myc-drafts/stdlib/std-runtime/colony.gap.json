@@ -6,6 +6,16 @@
   "gaps": [
     {
       "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 1,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "nodule std.runtime.colony;",
+      "reason": "derived nodule path `std.runtime.colony` has segment(s) [colony] colliding with a Mycelium reserved word — emitting them verbatim would fail to parse (`nodule std.runtime.colony;` tokenizes the colliding word as a keyword, not an identifier); the colliding segment(s) are dropped from the emitted nodule path (now `std.runtime`) rather than guessed at a rename (G2/VR-5)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
       "line": 14,
       "col": 1,
       "category": "Import",

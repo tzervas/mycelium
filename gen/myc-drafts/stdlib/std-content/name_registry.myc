@@ -1,4 +1,4 @@
-// nodule: std.content
+// nodule: std.content.name_registry
 // `NameRegistry` — the read/write `hash ↔ name` side-table (RFC-0001 §4.6).
 //
 // Names are *metadata*, not identity (ADR-003): they live here, not in the hash. A definition's
@@ -23,6 +23,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.content;
+nodule std.content.name_registry;
 
 

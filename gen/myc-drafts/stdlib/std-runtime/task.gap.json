@@ -4,7 +4,9 @@
     "TaskCtx",
     "impl TaskCtx",
     "Poll",
-    "SweepOrder"
+    "SweepOrder",
+    "Deadlock",
+    "impl Deadlock"
   ],
   "gaps": [
     {
@@ -121,20 +123,20 @@
       "file": "crates/mycelium-std-runtime/src/task.rs",
       "line": 92,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
-      "reason": "struct `Deadlock` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `Deadlock`: # [derive (Debug , PartialEq , Eq)]",
       "item_name": "Deadlock"
     },
     {
       "file": "crates/mycelium-std-runtime/src/task.rs",
-      "line": 101,
+      "line": 92,
       "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Deadlock { pub fn new (task_count : usize) -> Self { Deadlock { task_count } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `new` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Deadlock descriptor: returned when a scope cannot make progress.\"] # [doc = \"\"] # [doc = \" Guarantee: **Empirical** — detection is complete for the supported channel graph\"] # [doc = \" (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).\"] # [derive (Debug , PartialEq , Eq)] pub struct Deadlock { pub task_count : usize , }",
+      "reason": "struct `Deadlock` named field(s) `task_count` emitted positionally as `Deadlock(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "Deadlock"
     },
     {

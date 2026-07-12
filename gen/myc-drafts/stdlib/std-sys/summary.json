@@ -88,13 +88,14 @@
       "file": "crates/mycelium-std-sys/src/sys.rs",
       "total_items": 7,
       "non_test_items": 7,
-      "emitted": 0,
-      "gaps": 7,
-      "expressible_pct": 0.0,
+      "emitted": 1,
+      "gaps": 8,
+      "expressible_pct": 14.285714285714285,
       "category_counts": {
+        "DeriveAttr": 1,
         "Impl": 2,
-        "Other": 4,
-        "Struct": 1
+        "NamedFieldDrop": 1,
+        "Other": 4
       }
     },
     {
@@ -115,23 +116,159 @@
   "totals": {
     "total_items": 70,
     "non_test_items": 56,
-    "emitted": 18,
-    "gaps": 57,
-    "expressible_pct": 32.142857142857146,
+    "emitted": 19,
+    "gaps": 58,
+    "expressible_pct": 33.92857142857143,
     "category_counts": {
-      "DeriveAttr": 3,
+      "DeriveAttr": 4,
       "GenericBound": 1,
       "Impl": 7,
       "Import": 7,
       "InnerAttr": 1,
       "ModuleDecl": 7,
       "MultiStmtBody": 1,
-      "NamedFieldDrop": 1,
+      "NamedFieldDrop": 2,
       "Other": 19,
       "PayloadVariant": 1,
       "ReservedWord": 1,
-      "Struct": 1,
       "TestItem": 7
     }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-sys",
+      "target_phylum": "std.sys"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.sys.fs",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/fs.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.guarantee_matrix",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.io",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/io.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.math",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/math.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.rand",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/rand.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.sys",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/sys.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "std.sys.time",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-sys/src/time.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
   }
 }

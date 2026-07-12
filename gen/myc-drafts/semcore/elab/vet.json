@@ -3,17 +3,17 @@
     {
       "myc_file": "gen/myc-drafts/semcore/elab/elab.myc",
       "source_file": "crates/mycelium-l1/src/elab.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
-      "non_test_items": 38,
-      "emitted_items": 1
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `elaborate_lower_rule`: unknown type `Env`",
+      "non_test_items": 47,
+      "emitted_items": 2
     }
   ],
-  "total_non_test_items": 38,
-  "total_emitted_items": 1,
-  "total_checked_clean_items": 1,
+  "total_non_test_items": 47,
+  "total_emitted_items": 2,
+  "total_checked_clean_items": 0,
   "class_counts": {
-    "Clean": 1
+    "CheckError": 1
   }
 }

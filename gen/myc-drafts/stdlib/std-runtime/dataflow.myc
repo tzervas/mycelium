@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.dataflow
 // `run_dataflow` — deadlock-freedom for communicating tasks (M-711 / RFC-0008 §4.3 / E12-1).
 //
 // Communicating tasks (producers/consumers over the [`crate::network`] channels) cannot be run to
@@ -29,7 +29,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.dataflow;
 
 // One non-blocking step of a communicating task.
 type Step = Done | Pending;

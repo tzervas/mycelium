@@ -34,10 +34,150 @@
       "file": "crates/mycelium-std-fs/src/error.rs",
       "line": 69,
       "col": 1,
-      "category": "PayloadVariant",
-      "rust_construct": "PayloadVariant",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
-      "reason": "enum `FsErr` variant `Os` has a field type with no confirmed mapping (signed integer `i32` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
+      "reason": "dropped non-doc attribute(s) on enum `FsErr`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `NotFound` named field(s) `path, why` emitted positionally as `NotFound(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `PermDenied` named field(s) `path, why` emitted positionally as `PermDenied(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `AlreadyExists` named field(s) `path, why` emitted positionally as `AlreadyExists(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `NotADirectory` named field(s) `path, why` emitted positionally as `NotADirectory(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `IsADirectory` named field(s) `path, why` emitted positionally as `IsADirectory(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `NotEmpty` named field(s) `path, why` emitted positionally as `NotEmpty(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `DiskFull` named field(s) `path, why` emitted positionally as `DiskFull(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `CrossDevice` named field(s) `from, to, why` emitted positionally as `CrossDevice(Bytes, Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `WouldBlock` named field(s) `path, why` emitted positionally as `WouldBlock(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `Interrupted` named field(s) `path, why` emitted positionally as `Interrupted(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `Loop` named field(s) `path, why` emitted positionally as `Loop(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `UseAfterConsume` named field(s) `path, why` emitted positionally as `UseAfterConsume(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `InvalidOptions` named field(s) `path, why` emitted positionally as `InvalidOptions(Bytes, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "FsErr"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/error.rs",
+      "line": 69,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The explicit, traceable filesystem error (RFC-0013 diagnostic record).\"] # [doc = \"\"] # [doc = \" Every `FsErr` carries:\"] # [doc = \" - **`path`** — the path that was attempted (for the caller to surface; G11)\"] # [doc = \" - **`errno_class`** — the classified errno, never a bare code (C3)\"] # [doc = \" - **`why`** — a human-readable one-liner explaining the refusal (G11)\"] # [doc = \"\"] # [doc = \" For `UseAfterConsume` the `path` is the handle's original path (if known) and the\"] # [doc = \" errno_class is absent (the violation is caught above the OS floor — no syscall ran).\"] # [doc = \"\"] # [doc = \" # C1 — never-silent\"] # [doc = \" A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant\"] # [doc = \" names the failing operation and the cause. The `Os` variant preserves the raw\"] # [doc = \" errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*\"] # [doc = \" identifier that a caller pattern-matches on.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum FsErr { # [doc = \" The path was not found (and `create`/`create_new` was not set).\"] NotFound { path : String , why : & 'static str } , # [doc = \" Permission denied by the OS.\"] PermDenied { path : String , why : & 'static str } , # [doc = \" The path already exists (with `create_new` set, or `remove`/`rename` collision).\"] AlreadyExists { path : String , why : & 'static str } , # [doc = \" A component of the path is not a directory.\"] NotADirectory { path : String , why : & 'static str } , # [doc = \" The path is a directory where a regular file was expected.\"] IsADirectory { path : String , why : & 'static str } , # [doc = \" A directory was not empty when `remove_dir` was attempted.\"] NotEmpty { path : String , why : & 'static str } , # [doc = \" The disk or quota is full.\"] DiskFull { path : String , why : & 'static str } , # [doc = \" A cross-device rename was attempted.\"] CrossDevice { from : String , to : String , why : & 'static str , } , # [doc = \" The operation would block (non-blocking mode).\"] WouldBlock { path : String , why : & 'static str } , # [doc = \" The operation was interrupted by a signal; the caller should retry.\"] Interrupted { path : String , why : & 'static str } , # [doc = \" Too many levels of symbolic links.\"] Loop { path : String , why : & 'static str } , # [doc = \" An affine `substrate` handle was used after it was consumed (LR-8).\"] # [doc = \"\"] # [doc = \" This is caught *above* the OS floor — no syscall ran.\"] UseAfterConsume { path : String , why : & 'static str } , # [doc = \" The requested `OpenOptions` combination is invalid (e.g. `truncate` without write/append).\"] # [doc = \"\"] # [doc = \" A caller error in the *request*, not a property of the path — caught *above* the OS floor\"] # [doc = \" (no syscall ran). Distinct from `NotFound`/`PermDenied` so a caller pattern-matching on the\"] # [doc = \" variant is not misled (C3).\"] InvalidOptions { path : String , why : & 'static str } , # [doc = \" A lower-level IO failure (threaded, not swallowed — I1).\"] # [doc = \"\"] # [doc = \" This wraps a failure that came from the byte-transfer layer. The\"] # [doc = \" `errno_class` field carries the classification; `raw` is preserved\"] # [doc = \" for the `myc-sec` `wild`-audit tooling (never the primary discriminant).\"] Os { path : String , errno_class : ErrnoClass , # [doc = \" Raw OS error code (preserved for tooling; never the primary identifier — C3).\"] raw : i32 , why : & 'static str , } , }",
+      "reason": "enum `FsErr` variant `Os` named field(s) `path, errno_class, raw, why` emitted positionally as `Os(Bytes, ErrnoClass, Binary{32}, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
       "item_name": "FsErr"
     },
     {
@@ -172,7 +312,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 65,
+      "line": 71,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -182,7 +322,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 66,
+      "line": 72,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -192,7 +332,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 67,
+      "line": 73,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -202,7 +342,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 68,
+      "line": 74,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -212,7 +352,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -222,7 +362,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 70,
+      "line": 76,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -232,7 +372,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 74,
+      "line": 80,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -242,7 +382,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 75,
+      "line": 81,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -252,7 +392,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 76,
+      "line": 82,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -262,7 +402,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 77,
+      "line": 83,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -272,7 +412,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 78,
+      "line": 84,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -282,7 +422,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 82,
+      "line": 88,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -292,7 +432,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 84,
+      "line": 90,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -302,7 +442,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 99,
+      "line": 105,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -312,7 +452,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -322,7 +462,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 122,
+      "line": 128,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -332,7 +472,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 131,
+      "line": 137,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -342,7 +482,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 143,
+      "line": 149,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -352,7 +492,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 342,
+      "line": 348,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -864,10 +1004,20 @@
       "file": "crates/mycelium-std-fs/src/substrate.rs",
       "line": 65,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
-      "reason": "struct `InMemHandle` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `InMemHandle`: # [derive (Debug)]",
+      "item_name": "InMemHandle"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/substrate.rs",
+      "line": 65,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" An open file handle in the in-memory substrate.\"] # [derive (Debug)] pub (crate) struct InMemHandle { pub (crate) path : String , pub (crate) read : bool , pub (crate) write : bool , pub (crate) append : bool , # [doc = \" Current read/write position within the file contents.\"] pub (crate) position : usize , pub (crate) consumed : bool , }",
+      "reason": "struct `InMemHandle` named field(s) `path, read, write, append, position, consumed` emitted positionally as `InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "InMemHandle"
     },
     {
@@ -902,17 +1052,17 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 26,
+    "DeriveAttr": 28,
     "Impl": 11,
     "Import": 12,
     "InnerAttr": 1,
     "MacroInvocation": 1,
     "ModuleDecl": 6,
     "MultiStmtBody": 6,
-    "NamedFieldDrop": 5,
+    "NamedFieldDrop": 20,
     "Other": 8,
-    "PayloadVariant": 2,
-    "Struct": 5,
+    "PayloadVariant": 1,
+    "Struct": 4,
     "TestItem": 7
   }
 }

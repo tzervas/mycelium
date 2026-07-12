@@ -1,4 +1,4 @@
-// nodule: l1
+// nodule: l1.mono
 // **Monomorphization** (M-673; RFC-0007 §11.3 / §12.3, RFC-0019 §4.4) — the elaboration pre-pass
 // that turns a *checked* generic-and-trait `Env` into a **closed, monomorphic** `Env` the existing
 // [`crate::elab::elaborate`] / [`crate::elab::build_registry`] then lower **unchanged**.
@@ -68,7 +68,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule l1;
+nodule l1.mono;
 
 // Like [`mangle_ty`] but mangles a `Ty::Fn` to its arrow tag-sum name (`Fn$A$B`) rather than the
 // loud `HOF_FN_…` leak marker — used inside closure mangling where a fn-typed capture/codomain is a

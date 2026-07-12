@@ -1,4 +1,4 @@
-// nodule: std.fs
+// nodule: std.fs.metadata
 // `Metadata`, `FileKind`, `Permissions` — read-only filesystem metadata values (C4/ADR-003).
 //
 // Metadata is a **value snapshot**, not an identity: two equal-bytes files may have different
@@ -13,7 +13,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.fs;
+nodule std.fs.metadata;
 
 // The kind of filesystem entry.
 type FileKind = File | Directory | Symlink | Other;
@@ -27,7 +27,8 @@ type Permissions = Permissions(Binary{32});
 
 impl Permissions {
   // Construct from raw Unix mode bits.
-  fn from_mode(mode: Binary{32}) => Permissions = Permissions(mode);
+  // Declared: renamed `from_mode` -> `Permissions__from_mode` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn Permissions__from_mode(mode: Binary{32}) => Permissions = Permissions(mode);
   // The raw mode bits (preserved for tooling; not the primary interface — C3).
   fn raw_mode(self: Permissions) => Binary{32} = (match self { Permissions(p0) => p0 });
   // Whether the owner has read permission.
@@ -57,7 +58,8 @@ type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
 
 impl Metadata {
   // Construct a metadata value directly (used by the in-memory substrate).
-  fn new(kind: FileKind, size: Binary{64}, permissions: Permissions, mtime_secs: Binary{64}) => Metadata = Metadata(kind, size, permissions, mtime_secs);
+  // Declared: renamed `new` -> `Metadata__new` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn Metadata__new(kind: FileKind, size: Binary{64}, permissions: Permissions, mtime_secs: Binary{64}) => Metadata = Metadata(kind, size, permissions, mtime_secs);
   // Whether this entry is a regular file.
   fn is_file(self: Metadata) => Bool = (match self { Metadata(p0, _, _, _) => p0 }) == File;
   // Whether this entry is a directory.

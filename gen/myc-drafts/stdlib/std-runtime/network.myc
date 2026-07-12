@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.network
 // Network, Sender, Receiver, TrySend, TryRecv — channel surface (ADR-020 v0 R1).
 //
 // This module also carries the **third live reclamation trigger** (`ChannelClose` — RFC-0027 §9 /
@@ -30,7 +30,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.network;
 
 // The canonical channel-tier identity type (resolves the MEM-1 `ChannelId` placeholder FLAG).
 //
@@ -46,7 +46,8 @@ impl ChannelNodeId {
   // Allocate a fresh, unique `ChannelNodeId`.
   //
   // Guarantee: `Exact` — strictly greater than all previously allocated ids.
-  fn allocate() => ChannelNodeId = ChannelNodeId(fetch_add(GLOBAL_CHANNEL_ID, 1, Relaxed));
+  // Declared: renamed `allocate` -> `ChannelNodeId__allocate` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn ChannelNodeId__allocate() => ChannelNodeId = ChannelNodeId(fetch_add(GLOBAL_CHANNEL_ID, 1, Relaxed));
   // Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).
   //
   // This is the canonical bridge between the channel-tier allocation identity and the

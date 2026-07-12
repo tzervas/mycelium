@@ -1,4 +1,4 @@
-// nodule: std.content
+// nodule: std.content.error
 // Explicit error types for `std.content` (C1 — never-silent; RFC-0016 §4.1).
 //
 // Every fallible operation in this crate returns a typed error or `Option`, never a sentinel
@@ -7,7 +7,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.content;
+nodule std.content.error;
 
 // The content-address string is not well-formed (`<algo>:<digest>` shape; RFC-0001 §4.6).
 //

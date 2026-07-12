@@ -3,11 +3,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/error.myc",
       "source_file": "crates/mycelium-std-io/src/error.rs",
-      "class": "CheckError",
-      "exit_code": 3,
-      "diagnostic": "check-error: check error in `from_static`: unknown function/constructor/prim `to_owned`",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
       "non_test_items": 19,
-      "emitted_items": 7
+      "emitted_items": 6
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/guarantee_matrix.myc",
@@ -47,10 +47,10 @@
     }
   ],
   "total_non_test_items": 59,
-  "total_emitted_items": 14,
-  "total_checked_clean_items": 0,
+  "total_emitted_items": 13,
+  "total_checked_clean_items": 6,
   "class_counts": {
-    "CheckError": 4,
-    "Clean": 1
+    "CheckError": 3,
+    "Clean": 2
   }
 }

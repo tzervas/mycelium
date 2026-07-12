@@ -3,17 +3,17 @@
     {
       "myc_file": "gen/myc-drafts/semcore/checkty/checkty.myc",
       "source_file": "crates/mycelium-l1/src/checkty.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
-      "non_test_items": 110,
-      "emitted_items": 3
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `prim_name_is_recognized`: unknown function/constructor/prim `is_some`",
+      "non_test_items": 147,
+      "emitted_items": 5
     }
   ],
-  "total_non_test_items": 110,
-  "total_emitted_items": 3,
-  "total_checked_clean_items": 3,
+  "total_non_test_items": 147,
+  "total_emitted_items": 5,
+  "total_checked_clean_items": 0,
   "class_counts": {
-    "Clean": 1
+    "CheckError": 1
   }
 }

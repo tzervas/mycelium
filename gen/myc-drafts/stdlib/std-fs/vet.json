@@ -7,7 +7,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 7,
-      "emitted_items": 1
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-fs/guarantee_matrix.myc",
@@ -61,12 +61,12 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 8,
-      "emitted_items": 0
+      "emitted_items": 1
     }
   ],
   "total_non_test_items": 47,
-  "total_emitted_items": 15,
-  "total_checked_clean_items": 8,
+  "total_emitted_items": 17,
+  "total_checked_clean_items": 10,
   "class_counts": {
     "CheckError": 2,
     "Clean": 5

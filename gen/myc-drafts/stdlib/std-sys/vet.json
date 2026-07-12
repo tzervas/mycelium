@@ -61,7 +61,7 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 7,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-sys/time.myc",
@@ -74,8 +74,8 @@
     }
   ],
   "total_non_test_items": 56,
-  "total_emitted_items": 18,
-  "total_checked_clean_items": 15,
+  "total_emitted_items": 19,
+  "total_checked_clean_items": 16,
   "class_counts": {
     "CheckError": 2,
     "Clean": 6

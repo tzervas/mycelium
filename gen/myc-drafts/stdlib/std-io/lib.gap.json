@@ -14,7 +14,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 109,
+      "line": 115,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +24,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 110,
+      "line": 116,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +34,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 111,
+      "line": 117,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +44,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 112,
+      "line": 118,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +54,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 116,
+      "line": 122,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -64,7 +64,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 123,
+      "line": 129,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -74,7 +74,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 126,
+      "line": 132,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -84,7 +84,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 129,
+      "line": 135,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -94,7 +94,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 132,
+      "line": 138,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -104,7 +104,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 136,
+      "line": 142,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

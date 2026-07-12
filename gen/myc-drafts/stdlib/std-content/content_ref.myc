@@ -1,4 +1,4 @@
-// nodule: std.content
+// nodule: std.content.content_ref
 // `ContentRef` — a typed, opaque pointer that cert / policy / provenance / spore artifacts embed
 // to designate a content-addressed target (spec §3; RFC-0001 §4.6; ADR-013).
 //
@@ -19,7 +19,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.content;
+nodule std.content.content_ref;
 
 // The role a [`ContentRef`] points to (the explicit kind tag).
 //

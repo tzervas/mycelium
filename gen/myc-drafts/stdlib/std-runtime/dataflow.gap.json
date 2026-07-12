@@ -123,7 +123,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn sweep_indices (n : usize , dir : SweepDir) -> Vec < usize > { match dir { SweepDir :: Ascending => (0 .. n) . collect () , SweepDir :: Descending => (0 .. n) . rev () . collect () , } }",
-      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "unsupported expression form `0 .. n`",
       "item_name": "sweep_indices"
     },
     {

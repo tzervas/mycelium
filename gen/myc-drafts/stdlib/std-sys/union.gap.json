@@ -217,7 +217,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external\"] # [doc = \" edge). The safe form for **untrusted** input: a hostile/runaway pipe cannot drive an unbounded\"] # [doc = \" allocation.\"] # [doc = \"\"] # [doc = \" Never-silent (G2): if the input would **exceed** `max` bytes, this returns\"] # [doc = \" `Err(ReadCappedError::TooLarge { cap: max })` — it never silently truncates the stream. An input\"] # [doc = \" of **exactly** `max` bytes (or fewer) succeeds and returns those bytes. OS read errors surface as\"] # [doc = \" `Err(ReadCappedError::Io(_))`.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — a thin bounded wrapper over `std::io`; no theorem and no measured bound backs the\"] # [doc = \" underlying stream semantics. The cap itself is exact by construction (the returned buffer length\"] # [doc = \" is always `<= max`), but the floor's overall guarantee stays `Declared` (VR-5).\"] pub fn read_to_end_capped (max : usize) -> Result < Vec < u8 > , ReadCappedError > { read_capped (io :: stdin () . lock () , max) }",
-      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "qualified/associated-function call `io :: stdin` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "read_to_end_capped"
     },
     {
@@ -292,7 +292,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 56,
+      "line": 62,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -302,7 +302,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 57,
+      "line": 63,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -312,7 +312,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 58,
+      "line": 64,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -322,7 +322,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 59,
+      "line": 65,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -332,7 +332,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 60,
+      "line": 66,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -342,7 +342,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 61,
+      "line": 67,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -352,7 +352,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 62,
+      "line": 68,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -362,7 +362,7 @@
     },
     {
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 67,
+      "line": 73,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -457,7 +457,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Terminate the process with `code`. Does not return. The exit status is the caller's\"] # [doc = \" explicit choice — never a silent `0` substituted for an error path (G2): a program that wants to\"] # [doc = \" signal failure passes a non-zero `code`.\"] pub fn exit (code : i32) -> ! { std :: process :: exit (code) }",
-      "reason": "signed integer `i32` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5)",
+      "reason": "unsupported Rust type form `!`",
       "item_name": "exit"
     },
     {
@@ -474,10 +474,20 @@
       "file": "crates/mycelium-std-sys/src/sys.rs",
       "line": 44,
       "col": 1,
-      "category": "Struct",
-      "rust_construct": "Struct",
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
       "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
-      "reason": "struct `NonUtf8Arg` has a field type with no confirmed mapping (`usize` has a platform-dependent width; no fixed Binary{N} mapping)",
+      "reason": "dropped non-doc attribute(s) on struct `NonUtf8Arg`: # [derive (Debug , Clone , PartialEq , Eq)]",
+      "item_name": "NonUtf8Arg"
+    },
+    {
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 44,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" \\\\[Declared\\\\] A command-line argument that was not valid UTF-8, reported by its **position**\"] # [doc = \" (`index` — arg 0 is the program name) so the offending input is named, never silently dropped\"] # [doc = \" (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic\"] # [doc = \" can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct NonUtf8Arg { # [doc = \" 0-based position of the offending argument (0 = program name).\"] pub index : usize , # [doc = \" `String::from_utf8_lossy` rendering of the raw argument (U+FFFD for each invalid byte).\"] pub lossy : String , }",
+      "reason": "struct `NonUtf8Arg` named field(s) `index, lossy` emitted positionally as `NonUtf8Arg(Binary{64}, Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
       "item_name": "NonUtf8Arg"
     },
     {
@@ -572,18 +582,17 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 3,
+    "DeriveAttr": 4,
     "GenericBound": 1,
     "Impl": 7,
     "Import": 7,
     "InnerAttr": 1,
     "ModuleDecl": 7,
     "MultiStmtBody": 1,
-    "NamedFieldDrop": 1,
+    "NamedFieldDrop": 2,
     "Other": 19,
     "PayloadVariant": 1,
     "ReservedWord": 1,
-    "Struct": 1,
     "TestItem": 7
   }
 }

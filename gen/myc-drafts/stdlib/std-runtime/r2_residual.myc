@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.r2_residual
 // The never-silent R2 residual ledger and refusal surface (M-963; DN-78 §3 B-3 / §4; G2).
 //
 // Every M-828-tail item that DN-78 §4 defers to a research spike or Phase II has exactly one
@@ -26,7 +26,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.r2_residual;
 
 // A deferred M-828-tail item (DN-78 §4). Each variant carries exactly one [`ResidualRow`] in
 // [`RESIDUALS`] (completeness is tested, not assumed).

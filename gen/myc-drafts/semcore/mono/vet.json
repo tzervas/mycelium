@@ -6,11 +6,11 @@
       "class": "CheckError",
       "exit_code": 3,
       "diagnostic": "check-error: check error in `mangle_ty_or_fn`: unknown type `Ty`",
-      "non_test_items": 46,
+      "non_test_items": 47,
       "emitted_items": 1
     }
   ],
-  "total_non_test_items": 46,
+  "total_non_test_items": 47,
   "total_emitted_items": 1,
   "total_checked_clean_items": 0,
   "class_counts": {

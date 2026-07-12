@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.io
 // \[Declared\] Standard-stream I/O floor (RFC-0028 §4.5; M-722). Thin, never-silent wrappers over
 // Rust `std::io` stdin/stdout/stderr.
 //
@@ -41,6 +41,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.io;
 
 

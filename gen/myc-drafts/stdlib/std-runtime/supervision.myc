@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.supervision
 // Re-export of the structured-concurrency supervision/cancellation surface (M-713 / RFC-0008
 // RT4·RT7), relocated to `mycelium-rt-abi` (M-883/M-884 runtime-ABI seam extraction).
 //
@@ -21,6 +21,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.supervision;
 
 

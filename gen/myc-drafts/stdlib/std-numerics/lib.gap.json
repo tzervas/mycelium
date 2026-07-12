@@ -17,7 +17,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 58,
+      "line": 64,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -27,7 +27,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 60,
+      "line": 66,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -37,7 +37,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 61,
+      "line": 67,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -47,7 +47,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
@@ -57,7 +57,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 71,
+      "line": 77,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -67,7 +67,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 87,
+      "line": 93,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -77,7 +77,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 101,
+      "line": 107,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -87,7 +87,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 132,
+      "line": 138,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -97,7 +97,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 158,
+      "line": 164,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -107,7 +107,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 177,
+      "line": 183,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -117,7 +117,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 202,
+      "line": 208,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -127,7 +127,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 202,
+      "line": 208,
       "col": 1,
       "category": "NamedFieldDrop",
       "rust_construct": "NamedFieldDrop",
@@ -137,7 +137,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 216,
+      "line": 222,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -147,7 +147,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 236,
+      "line": 242,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -157,7 +157,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 269,
+      "line": 275,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -167,7 +167,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 416,
+      "line": 422,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -177,7 +177,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 439,
+      "line": 445,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -187,7 +187,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 493,
+      "line": 499,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -197,7 +197,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 511,
+      "line": 517,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -207,7 +207,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 532,
+      "line": 538,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -217,7 +217,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 577,
+      "line": 583,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -227,7 +227,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 640,
+      "line": 646,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -237,7 +237,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 669,
+      "line": 675,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -247,7 +247,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 696,
+      "line": 702,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -257,7 +257,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 741,
+      "line": 747,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

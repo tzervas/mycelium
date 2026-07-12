@@ -3,7 +3,6 @@
   "emitted_items": [
     "ByteOffset",
     "FieldPath",
-    "impl FieldPath",
     "SerError",
     "ByteCount",
     "IoError",
@@ -54,11 +53,11 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 44,
       "col": 1,
-      "category": "DeriveAttr",
-      "rust_construct": "DeriveAttr",
+      "category": "Impl",
+      "rust_construct": "Impl",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "dropped non-doc attribute(s) on method `from_static`: # [must_use]",
-      "item_name": "impl FieldPath"
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` body: Rust ownership/identity-conversion no-op method `.to_owned()` has no Mycelium free-function/prim referent (value semantics — ADR-003); desugaring it to a bare `to_owned(recv)` would fabricate an unknown prim (`unknown function/constructor/prim `to_owned`` — verified against the oracle), so it is gapped, never fake-emitted (G2/VR-5)",
+      "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",

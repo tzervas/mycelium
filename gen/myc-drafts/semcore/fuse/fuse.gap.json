@@ -4,6 +4,16 @@
   "gaps": [
     {
       "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 1,
+      "col": 1,
+      "category": "ReservedWord",
+      "rust_construct": "ReservedWord",
+      "snippet": "nodule l1.fuse;",
+      "reason": "derived nodule path `l1.fuse` has segment(s) [fuse] colliding with a Mycelium reserved word — emitting them verbatim would fail to parse (`nodule l1.fuse;` tokenizes the colliding word as a keyword, not an identifier); the colliding segment(s) are dropped from the emitted nodule path (now `l1`) rather than guessed at a rename (G2/VR-5)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
       "line": 46,
       "col": 1,
       "category": "Import",
@@ -59,7 +69,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" F-A1 — the built-in `Fuse` trait (DN-58 §A.2): `trait Fuse[T] { fn join(a: T, b: T) => T; }`.\"] # [doc = \" Hand-built in Rust (mirrors [`crate::checkty::prelude`]'s `Bool` `DataInfo`) rather than parsed\"] # [doc = \" from surface syntax, so the parameter name `T` (standing in for DN-58's proposed `Self`) is\"] # [doc = \" just an ordinary trait type-variable — no new trait-model feature.\"] # [must_use] pub (crate) fn prelude () -> TraitInfo { let t = | name : & str | TypeRef :: unguaranteed (BaseType :: Named (name . to_owned () , vec ! [])) ; TraitInfo { name : \"Fuse\" . to_owned () , params : vec ! [\"T\" . to_owned ()] , sigs : vec ! [FnSig { name : \"join\" . to_owned () , params : vec ! [] , value_params : vec ! [Param { name : \"a\" . to_owned () , ty : t (\"T\") , } , Param { name : \"b\" . to_owned () , ty : t (\"T\") , } ,] , ret : t (\"T\") , effects : vec ! [] , effect_budgets : BTreeMap :: new () , }] , } }",
-      "reason": "unsupported expression form `| name : & str | TypeRef :: unguaranteed (BaseType :: Named (name . to_owned () , vec ! []))`",
+      "reason": "qualified/associated-function call `TypeRef :: unguaranteed` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "prelude"
     },
     {
@@ -78,13 +88,13 @@
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
-      "snippet": "# [doc = \" If `ty` is a **finite, enumerable** domain in v0's sense (a registered `Data` type every one of\"] # [doc = \" whose constructors takes zero fields — the `Bool`-shape), return every value of that domain;\"] # [doc = \" `None` for anything else (an unregistered name, a type with fielded constructors, a repr type,\"] # [doc = \" an uninhabited type) — never a guess at a partial enumeration (G2).\"] fn enumerate_finite_domain (ty : & Ty , types : & BTreeMap < String , DataInfo > ,) -> Option < Vec < crate :: eval :: L1Value > > { let Ty :: Data (name , _args) = ty else { return None ; } ; let info = types . get (name) ? ; if info . ctors . is_empty () || info . ctors . iter () . any (| c | ! c . fields . is_empty ()) { return None ; } Some (info . ctors . iter () . map (| c | crate :: eval :: L1Value :: Data { ty : name . clone () , ctor : c . name . clone () , fields : std :: sync :: Arc :: new (vec ! []) , }) . collect () ,) }",
+      "snippet": "# [doc = \" If `ty` is a **finite, enumerable** domain in v0's sense (a registered `Data` type every one of\"] # [doc = \" whose constructors takes zero fields — the `Bool`-shape), return every value of that domain;\"] # [doc = \" `None` for anything else (an unregistered name, a type with fielded constructors, a repr type,\"] # [doc = \" an uninhabited type) — never a guess at a partial enumeration (G2).\"] fn enumerate_finite_domain (ty : & Ty , types : & BTreeMap < String , DataInfo > ,) -> Option < Vec < crate :: eval :: L1Value > > { let Ty :: Data (name , _args) = ty else { return None ; } ; let local = crate :: checkty :: ty_local_name (name) ; let info = crate :: checkty :: lookup_data_home_checked (types , name , \"check_fuse_laws\") . ok () ? ; if info . ctors . is_empty () || info . ctors . iter () . any (| c | ! c . fields . is_empty ()) { return None ; } Some (info . ctors . iter () . map (| c | crate :: eval :: L1Value :: Data { ty : local . to_owned () , ctor : c . name . clone () , fields : std :: sync :: Arc :: new (vec ! []) , }) . collect () ,) }",
       "reason": "qualified type path `crate :: eval :: L1Value` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "enumerate_finite_domain"
     },
     {
       "file": "crates/mycelium-l1/src/fuse.rs",
-      "line": 118,
+      "line": 129,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -94,7 +104,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/fuse.rs",
-      "line": 171,
+      "line": 182,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
