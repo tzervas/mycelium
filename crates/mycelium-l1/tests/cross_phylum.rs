@@ -285,6 +285,173 @@ fn same_named_types_used_independently_across_the_phylum_boundary_both_still_che
 }
 
 // ---------------------------------------------------------------------------------------------
+// CRITICAL fix (adversarial-verification finding, 2026-07-11): `merge_phyla_exports` re-homes an
+// imported type's OWN identity (`DataInfo::home`) but, pre-fix, left every ctor field's baked
+// `Ty::Data` identity in the DEPENDENCY's own (un-rehomed) home-space. A ctor field naming a
+// dependency-internal nodule (e.g. `Ty::Data("m::Bar", [])`) collided with a same-named nodule in
+// the CONSUMER — the M-1036 ctor-seal/type-identity collapse one level up, across the phylum
+// boundary. Fixed by re-homing every ctor field through `qualify_ty_cross_phylum` against the
+// dependency's own linked `Env::types` (the exact helper + oracle the `resolved_fn_sigs` loop
+// already used — DRY, one re-homing path).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn exploit_ctor_field_width_collapse_is_now_refused() {
+    // `dep`'s nodule `m` declares `Bar` (home `m`, `Binary{4}`) and a wrapper `BoxP = MkP(Bar)`
+    // whose field is baked as `Ty::Data("m::Bar", [])` at the dependency's OWN registration.
+    // The CONSUMER also has its own nodule `m`, with its OWN, differently-shaped `Bar`
+    // (`Binary{64}`) — same bare identity string `"m::Bar"` pre-fix, so the un-rehomed field
+    // collided with the consumer's local `Bar` (home `m` == home `m`, no mismatch detected).
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub type BoxP = MkP(Bar);",
+        10,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let err = check_with_err(
+        "phylum p\nnodule m;\n\
+         pub type Bar = MkBar(Binary{64});\n\
+         use pp::m.BoxP;\n\
+         pub fn exploit(x: BoxP) => Binary{64} = match x { MkP(MkBar(v)) => v };",
+        &phyla,
+    );
+    // Post-fix, the wrapper's field carries the correctly-re-homed identity `pp::m::Bar` — which
+    // the consumer's own `m::Bar` does NOT satisfy, so the nested `MkBar(v)` sub-pattern is a
+    // genuine, explicit DN-112 home-mismatch refusal (never a silent bare-name collapse — G2).
+    // Pre-fix, this same program type-checked (Ok) — a `Binary{4}` dependency value silently
+    // accepted as the consumer's own `Binary{64}` `Bar`.
+    assert!(
+        err.contains("pp::m::Bar"),
+        "the foreign ctor field must resolve to the re-homed `pp::m::Bar` identity, not collapse \
+         onto the consumer's local `m::Bar` (CRITICAL fix, DN-113/M-1060 extension of DN-112 Rank \
+         1 across the phylum boundary); got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control for the CRITICAL fix: a benign single-dep consumer
+/// that imports BOTH the wrapper type AND its field type explicitly, and never shadows either name
+/// locally, must still type-check — the re-homing fix must not turn a legitimate cross-phylum flow
+/// into a false refusal. Pre-fix, this same program actually **failed** — an unrelated internal
+/// error (`data type m::Bar is not registered`), because the un-rehomed field identity `m::Bar`
+/// never matched anything the consumer had registered under the correctly-rehomed bare key `Bar`
+/// (home `pp::m`).
+#[test]
+fn legit_import_wrapper_and_field_type_checks_after_the_fix() {
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub type BoxP = MkP(Bar);",
+        11,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let penv = check_with(
+        "phylum p\nnodule use_it;\n\
+         use pp::m.BoxP;\nuse pp::m.Bar;\n\
+         pub fn go(x: BoxP) => BoxP = match x { MkP(b) => MkP(b) };",
+        &phyla,
+    )
+    .expect(
+        "importing both the wrapper and its field type, with no local shadow, must type-check \
+         after the ctor-field re-homing fix (the false-reject twin of the CRITICAL exploit)",
+    );
+    let env = penv
+        .nodule(&mycelium_l1::ast::Path(vec!["use_it".to_owned()]))
+        .expect("nodule present");
+    assert!(env.fn_decl("go").is_some(), "the consumer's own fn checked");
+    // The field is correctly re-homed to the dependency's own qualified identity.
+    let box_p = env
+        .types
+        .get("BoxP")
+        .expect("the imported wrapper type is registered");
+    assert_eq!(
+        box_p.ctors[0].fields[0],
+        mycelium_l1::checkty::Ty::Data("pp::m::Bar".to_owned(), vec![]),
+        "the wrapper's field must carry the re-homed `pp::m::Bar` identity, not the dependency's \
+         un-rehomed bare `m::Bar`"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// MED closure (2026-07-11, adversarial-verification follow-up): a foreign trait's signature naming
+// a concrete type beyond its own params is NOT yet re-homed against its declaring phylum (unlike
+// ctor fields, now fixed above, and fn sigs, always re-homed) — confirmed reachable via a plain
+// `use dep::Trait; impl Trait for LocalType { .. }` (no cross-phylum `instances` merge needed at
+// all). Refused explicitly (see `foreign_trait_sig_names_a_concrete_type`'s doc comment) rather
+// than silently re-resolved against the wrong phylum's registry.
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn implementing_a_foreign_trait_whose_signature_names_a_concrete_type_is_refused() {
+    // `pp::m::Trt`'s `get` returns the DEPENDENCY's own concrete `Bar` (not a trait param). The
+    // consumer ALSO has its own, differently-shaped `Bar` and tries to satisfy `Trt` for a local
+    // type — pre-fix this silently type-checked (the impl's own `Bar` resolved against the
+    // CONSUMER's registry, not the dependency's), exactly the same bare-name collapse class the
+    // CRITICAL ctor-field fix closes, one level up for a trait signature.
+    let dep = resolved(
+        "phylum d\nnodule m;\n\
+         pub type Bar = MkBar(Binary{4});\n\
+         pub trait Trt[A] { fn get(x: A) => Bar; };",
+        200,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    let sixty_four_zero_bits = format!("0b{}", "0".repeat(64));
+    let err = check_with_err(
+        &format!(
+            "phylum p\nnodule m;\n\
+             pub type Bar = MkBar(Binary{{64}});\n\
+             pub type Local = MkL(Binary{{8}});\n\
+             use pp::m.Trt;\n\
+             impl Trt[Binary{{8}}] for Local {{ fn get(x: Binary{{8}}) => Bar = \
+             MkBar({sixty_four_zero_bits}); }};"
+        ),
+        &phyla,
+    );
+    assert!(
+        err.contains("Bar") && err.contains("DN-122"),
+        "a foreign trait signature naming a concrete type beyond its own params must be refused \
+         (MED closure, DN-113 §7 / DN-122 residual) rather than silently re-resolved against the \
+         consumer's own (wrong) registry; got: {err}"
+    );
+}
+
+/// Non-vacuity / non-over-restriction control: a foreign trait whose signature references ONLY its
+/// own generic params (no concrete type beyond them — the common, legitimate "impl a foreign trait
+/// for your own type" pattern the orphan rule exists to allow) is entirely UNAFFECTED by the MED
+/// closure above and still type-checks.
+#[test]
+fn implementing_a_foreign_generic_only_trait_still_type_checks() {
+    let dep = resolved(
+        "phylum d\nnodule m;\npub trait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };",
+        201,
+    );
+    let mut deps = BTreeMap::new();
+    deps.insert("pp".to_owned(), dep);
+    let phyla = Phyla::from_deps(deps);
+
+    check_with(
+        "phylum p\nnodule use_it;\n\
+         pub type Local = MkL(Binary{8});\n\
+         use pp::m.Cmp;\n\
+         impl Cmp[Local] for Local { fn cmp(a: Local, b: Local) => Binary{2} = 0b00; };",
+        &phyla,
+    )
+    .expect(
+        "a foreign trait whose signature references only its own generic params carries no \
+         concrete-type reference at all, so the MED closure must not over-restrict it",
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
 // DN-113 §9.3: the acyclic-phyla precondition, enforced by `phyla::build_phyla_graph`.
 // ---------------------------------------------------------------------------------------------
 
