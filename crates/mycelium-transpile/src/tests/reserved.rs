@@ -5,7 +5,7 @@
 //! over every snapshot word); pure/`Declared` for the guard behaviour tests.
 
 use crate::gap::Category;
-use crate::reserved::{guard_ident, is_reserved, RESERVED};
+use crate::reserved::{guard_ident, is_reserved, sanitize_nodule_path, RESERVED};
 
 /// **Drift guard.** Every word in the [`RESERVED`] snapshot must still be rejected as an identifier
 /// by the *real* `mycelium-l1` lexer (`mycelium_l1::token::keyword` returns `Some` for a keyword). A
@@ -119,4 +119,105 @@ fn unused_reserved_fn_parameter_is_gapped_not_emitted() {
 fn reserved_type_parameter_is_gapped_not_emitted() {
     let err = guard_ident("Binary", "type parameter").expect_err("reserved type param must gap");
     assert_eq!(err.category, Category::ReservedWord);
+}
+
+/// **Gap-close-2 Phase-0 regression fix — `sanitize_nodule_path` unit coverage.** M-1042 added
+/// intra-crate module-path segments to the derived nodule path; a segment that collides with
+/// [`RESERVED`] (`crates/mycelium-l1/src/fuse.rs` -> `l1.fuse`,
+/// `crates/mycelium-std-runtime/src/colony.rs` -> `std.runtime.colony`) must never reach
+/// `render_nodule` verbatim (repro: `parse-error: expected an identifier, found Fuse`).
+#[test]
+fn sanitize_nodule_path_drops_only_colliding_segments() {
+    // No collision: unchanged, no gap.
+    let (path, gap) = sanitize_nodule_path("std.time");
+    assert_eq!(path, "std.time");
+    assert!(gap.is_none(), "a non-colliding path must not gap");
+
+    // The exact repro shapes: the colliding trailing segment is dropped, falling back to the
+    // pre-M-1042 crate-prefix-only nodule name.
+    let (path, gap) = sanitize_nodule_path("l1.fuse");
+    assert_eq!(path, "l1", "the reserved `fuse` segment must be dropped");
+    let gap = gap.expect("a collision must produce a gap, never a silent rename");
+    assert_eq!(gap.category, Category::ReservedWord);
+    assert!(
+        gap.reason.contains("fuse") && gap.reason.contains("l1.fuse"),
+        "the gap reason names both the original path and the colliding word (never silent): {}",
+        gap.reason
+    );
+
+    let (path, gap) = sanitize_nodule_path("std.runtime.colony");
+    assert_eq!(
+        path, "std.runtime",
+        "the reserved `colony` segment must be dropped, non-colliding segments kept"
+    );
+    assert_eq!(gap.expect("must gap").category, Category::ReservedWord);
+
+    // A collision in a NON-trailing segment is also caught (defensive: not special-cased to the
+    // last segment only).
+    let (path, gap) = sanitize_nodule_path("fuse.sub");
+    assert_eq!(path, "sub");
+    assert!(gap.is_some());
+}
+
+/// **Live-oracle regression proof** for the fuse.rs/colony.rs repros: a nodule path whose only
+/// segment collides with a reserved word must yield a `ReservedWord`-category [`Gap`][crate::gap::Gap]
+/// (never a hard parse error) — and the resulting `.myc` header must itself `myc check`-clean
+/// parse. Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn reserved_nodule_path_segment_gaps_never_hard_parse_fails() {
+    let (myc, report) =
+        crate::transpile::transpile_source("pub fn f() -> u32 { 42 }\n", "fixture.rs", "l1.fuse")
+            .expect("transpile_source itself succeeds — the header collision is a recorded gap");
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::ReservedWord && g.reason.contains("nodule path"))
+        .unwrap_or_else(|| {
+            panic!("expected a ReservedWord gap naming the nodule-path collision, got: {report:?}")
+        });
+    assert!(
+        gap.reason.contains("fuse"),
+        "the gap must name the colliding segment: {}",
+        gap.reason
+    );
+    assert!(
+        myc.contains("nodule l1;"),
+        "the sanitized header must fall back to the crate-prefix-only nodule name, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("nodule l1.fuse;"),
+        "the colliding segment must never reach the emitted header verbatim, got:\n{myc}"
+    );
+
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "reserved: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or \
+             build `cargo build -p mycelium-check --bin myc-check`)."
+        );
+        return;
+    };
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-reserved-nodule-path-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_ne!(
+        rec.class,
+        crate::vet::VetClass::ParseError,
+        "the sanitized nodule header must never hard-parse-fail (the G2 \"zero hard parse \
+         failures\" invariant this fix restores) — diagnostic={:?}",
+        rec.diagnostic
+    );
+    let _ = std::fs::remove_dir_all(&dir);
 }

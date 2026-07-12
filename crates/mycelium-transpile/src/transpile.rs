@@ -40,6 +40,27 @@ pub fn transpile_source(
     let mut emitted_items = Vec::new();
     let mut gaps = Vec::new();
 
+    // Gap-close-2 Phase-0 regression fix (M-1042 follow-on): a derived nodule-path segment that
+    // collides with a Mycelium reserved word (`l1.fuse`, `std.runtime.colony`, …) cannot be
+    // emitted verbatim — see `reserved::sanitize_nodule_path`'s doc for the full root cause. This
+    // must run before `render_nodule` below is ever called, so the header itself never carries an
+    // un-parseable segment.
+    let derived_nodule_path = nodule_path.to_string();
+    let (nodule_path, nodule_path_gap) = crate::reserved::sanitize_nodule_path(nodule_path);
+    let nodule_path = nodule_path.as_str();
+    if let Some(g) = nodule_path_gap {
+        gaps.push(Gap {
+            file: file_label.to_string(),
+            line: 1,
+            col: 1,
+            category: g.category,
+            rust_construct: g.category.as_str().to_string(),
+            snippet: format!("nodule {derived_nodule_path};"),
+            reason: g.reason,
+            item_name: None,
+        });
+    }
+
     if !parsed.attrs.is_empty() {
         // Inner (`#![...]`) attributes live outside `syn::File::items`, so they are outside the
         // per-item invariant's scope by construction — but still recorded, never silently

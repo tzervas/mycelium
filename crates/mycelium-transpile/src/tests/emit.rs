@@ -1595,6 +1595,114 @@ fn shadow_and_pattern_bound_fixes_fall_back_to_known_gap_not_wrong_prim_call() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// **DN-34 §8.13/8.14 "D4" — the live-oracle proof for inherent-impl no-`self` associated-fn
+/// mangling.** Two different tuple-struct types each declare a same-named, receiver-less
+/// constructor (`Foo::new`/`Bar::new`) in ONE nodule — exactly the shape that regressed the
+/// gap-close-2 Phase-0 re-measure (`Duration::from_nanos`/`MonoInstant::from_nanos`,
+/// `Task::new`/`TaskCtx::new`/`Deadlock::new`). Before the fix both emit a bare `fn new(...)`,
+/// which `mycelium-l1`'s M-664 inherent-impl desugar lifts to the SAME flat top-level name —
+/// `myc check` real-oracle-verified `duplicate function`. After the fix each is mangled
+/// `{Type}__new`, so the combined nodule is myc-check **Clean**. Skips gracefully (never fails)
+/// when `myc-check` is not built.
+#[test]
+fn inherent_impl_no_self_name_collision_is_mangled_and_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    // A parameterized constructor (never a bare literal — a bare integer literal has no
+    // representation family in v0 with no `default paradigm` in scope, orthogonal to what this
+    // test is proving).
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                pub struct Bar(u32);\n\
+                impl Bar {\n\
+                    pub fn new(x: u32) -> Self { Bar(x) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the two-`new` fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo")
+            && report.emitted_items.iter().any(|n| n == "impl Bar"),
+        "both impl blocks must emit (mangling must not turn either into a gap): {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        myc.contains("Foo__new"),
+        "expected the mangled name `Foo__new` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("Bar__new"),
+        "expected the mangled name `Bar__new` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("fn new("),
+        "the bare, colliding name `fn new(` must never be emitted once mangling applies, got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-inherent-mangle-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the mangled two-`new` nodule must check CLEAN with the real myc-check oracle (a \
+         `duplicate function` here would mean the mangling regressed) — emitted:\n{myc}\n\
+         diagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A `self`-receiving inherent-impl method is deliberately **not** mangled (see
+/// `emit::mangled_inherent_fn_name`'s doc for the full scope rationale — mangling those would also
+/// require rewriting every `visit_method_call` call site to the identical mangled name, a larger,
+/// separately-scoped change). Pins that boundary: `as_ref`-shaped same-named `self`-methods across
+/// two types stay bare (so a caller's un-qualified `.method()` desugar still resolves) — the
+/// residual flat-namespace collision risk for that case is real and undocumented-away, not silently
+/// "fixed" by this narrower change (VR-5: no overclaiming).
+#[test]
+fn self_receiving_inherent_method_is_left_unmangled() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn get(&self) -> u32 { self.0 }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the self-method fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo"),
+        "impl Foo must emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn get(") && !myc.contains("Foo__get"),
+        "a `self`-receiving method must keep its bare name (never mangled), got:\n{myc}"
+    );
+}
+
 // --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
 //
 // Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are
