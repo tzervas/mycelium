@@ -1076,6 +1076,140 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
 
 **Guarantee tags:** CU-3 prims `Empirical`; transpiler emission `Declared`; the `checked_fraction`/vet figures `Empirical` (myc-check-clean). **Status unchanged (Draft)** — a ladder phase on the normal `dev → integration → main` path. (Append-only; VR-5; G2.)
 
+### §8.22 The 114 `Impl`-gap class, root-cause breakdown — every avenue probed is design-heavy, cross-leaf-owned, or zero-yield (gap-close-2, method-body Impl-lever leaf) — `Empirical`
+
+**Verify-first (mitigation #14): re-derived the corpus's 114 `Impl`-category-gap count directly from the
+committed `gen/myc-drafts/**/*.gap.json` records** (excluding `union.gap.json` aggregates, which double-count
+— `python3` sum over the per-file `gap.json`s' `category == "Impl"` entries reproduces exactly 114, matching
+`manifest.json`'s per-target `gap_category_counts.Impl` sum and commit `06b4d7a7`'s "honest re-measure" note
+(DN-122's own WU-A Phase-0 result: these 114 are Display/Drop/Default/From method-**body** failures, not
+external-trait-def shapes — DN-122 §13 already closes the latter). This entry is the requested root-cause
+breakdown of that 114, plus the buildability finding for each bucket — a **negative result**, recorded per
+VR-5/G2 rather than forcing a low-yield build.
+
+**Gap-level top bucket (114 total):** 98 are `no member of this impl block could be transpiled` (one or more
+per-method sub-issues), 12 are `impl block has no items` (every one, sampled exhaustively, is a literal
+zero-item `impl std::error::Error for X {}` marker), 4 are `impl target type … has no confirmed mapping`.
+
+**Sub-issue breakdown of the 98 method-body-failure gaps (229 total sub-issues; a gap may carry several):**
+
+| Bucket | Sub-issues | "Pure" gaps (only this issue — fixing it alone would unblock the whole gap) |
+|---|---:|---:|
+| A — `&mut self` receiver (ADR-003) | 39 | 6 |
+| B — `&mut Formatter` **parameter** (`Display`/`Debug::fmt`, ADR-003) | 30 | **30** |
+| G — `self.field` projection on a non-in-file-resolvable struct | 34 | 1 |
+| I — qualified/associated-fn call (`Self::x(..)`/`Type::x(..)`) | 21 | 9 |
+| D — qualified type-path collision-risk in a signature | 17 | 1 |
+| E — method/type name collides with a Mycelium reserved word | 14 | 10 |
+| C — unsupported match-pattern form (`Type::Variant { .. }`) | 6 | 2 |
+| F — multi-stmt body (semicolon-terminated stmt before tail) | 5 | 0 |
+| B2 — other `&mut T` parameter (non-`self`, non-`Formatter`) | 5 | 0 |
+| (long tail, each count 1–3) | 58 | 7 |
+
+**Per-bucket finding — every one is blocked on something outside a transpiler-only smallest-auditable-step:**
+
+1. **A/B — `&mut self` and `&mut` parameters (69 sub-issues, the largest class) are the SAME open ADR-003
+   question, in-code but un-owned by any design note.** `emit.rs:604` (`&mut self`) and `map.rs:352` (`&mut
+   T` generically — reused verbatim for `&mut Formatter`) both cite ADR-003 with no `M-`/`DN-` pointer.
+   **Correction to this leaf's own kickoff brief (VR-5, house rule #4 — don't inherit an unchecked
+   premise):** `docs/notes/DN-118-…` was named as the owning lane, but DN-118's own header/§5 (re-read in
+   full) scope it to **closures that mutate a captured binding across calls** (`FnMut`/capture-mutation) —
+   it does **not** cover a `&mut self`/`&mut T` **method receiver or parameter**, which is a different
+   surface (no closure, no capture) with **no existing design note**. Recommend minting a fresh, narrowly-
+   scoped design question (or folding into M-876's trait-Self-body surface, since `&mut self` is exactly a
+   receiver-shape question) rather than routing to DN-118. **Not built here** — this is squarely a
+   value-semantics design decision (does `&mut self`/`&mut T` get an explicit accumulator/builder mapping,
+   an in-place-return-`Self` rewrite, or stay permanently gapped?), not a transpiler-only step.
+   - **Sub-finding on B specifically (`&mut Formatter`, 30 *pure* single-issue gaps — the single largest
+     clean bucket in the whole corpus):** sampled the full **30/30** and every one's body is
+     `match self { Variant => write!(f, "…", …), … }` or a bare `write!(f, "…")` — i.e. the REAL blocker
+     co-located directly underneath is the **`write!`/`format!` macro invocation**, which `emit.rs`
+     categorically gaps *before* signature mapping is even reached in the failure path (macro invocations
+     gap independently). So fixing *only* the `&mut Formatter` signature would yield **zero** measured
+     movement — the 30 gaps would just re-surface as "body contains a macro invocation," matching this same
+     note's own §8.14 D3/D4 "probed, NOT built — zero yield" precedent exactly. A full `write!`/`format!`
+     translator was scoped as a follow-on possibility (render a `Display`/`Debug` impl as a value-returning
+     `Bytes` match, sidestepping the trait entirely — mirroring DN-122's MVP-shape special-casing) but
+     **regex-sampled against all 30 real bodies**, only **4/30** have zero-interpolation (pure string
+     literal) `write!` calls the existing `bytes.concat`-only prim surface could serve without new
+     kernel work; the remaining 26 interpolate non-`Bytes` values (`{n}`/`{limit}`/nested `{e}`) and there is
+     **no** int→string / generic-Display kernel prim (`grep`-confirmed empty in `mycelium-core/src/prim.rs`)
+     — the same "transpiler-only levers are exhausted; the movers are kernel decisions" verdict §8.14
+     already reached, re-confirmed for this class. **Not built** (4-gap yield does not clear the bar against
+     the new-emission-shape risk it would add).
+2. **G/D — field projection + qualified-type-path signature gaps (51 sub-issues) are the residual of the
+   already-landed cross-nodule symbol table (gap-close-2 wave-2, `feat(transpile): batch-scoped cross-nodule
+   symbol table`, `dev@4f346da3`, merged via PR #1521).** `struct_layout`/`EmitCtx` (`emit.rs:169`–`229`)
+   gates exactly these two gap shapes on `ctx.resolvable` — **re-verified against the current corpus, not
+   assumed stale** (mitigation #14): sampled `MonoSelections` (`gen/myc-drafts/semcore/mono.gap.json`) —
+   its *struct definition itself* is gapped ("references a type not resolvable in-file"), so the field-
+   projection failure is strictly downstream. This is exactly DN-34's own **D5** lever named in §8.14
+   ("`mycelium_core`/kernel declarations target-set — the largest remaining transpiler-adjacent lever… a
+   headers-only `core`/`compiler` nodule… deferred from this phase, larger") — the residual after the
+   landed cross-nodule work is now genuinely-external (out-of-corpus kernel) types, not a same-batch
+   resolution gap. **Not built here** — D5 is a separately-scoped, larger lever (expanding the target set
+   with header-only decls), not a smallest-auditable-step fit for this leaf, and touching `EmitCtx`'s shape
+   without that scoping risks redoing work the landed symtab leaf already owns the design of.
+3. **E — reserved-word collisions (14 sub-issues; almost entirely `impl Default for X { fn default(..) }`,
+   `default` tokenizing as a Mycelium keyword, `crates/mycelium-l1/src/token.rs:491`).** Even a sanctioned
+   rename (there is none — `emit.rs`'s own gap text says so explicitly) would not flip these gaps: Mycelium
+   has **no native `Default` trait** (`grep -n '"default"' crates/mycelium-l1/src/checkty.rs` — no hit
+   besides the token), so `impl Default for X` cannot check regardless of the method name, mirroring the
+   pre-DN-122 "impl for undefined external trait" problem. Closing this needs a checker-side decision (does
+   Mycelium want a native `Default`-shaped prelude trait, DN-122-MVP-style?) plus a keyword-collision
+   rename convention — both language decisions, not transpiler-only. The 12 `impl std::error::Error for X {}`
+   empty-marker impls (its own gap-level bucket, above) hit the identical wall: no native `Error` trait
+   either, `grep`-confirmed. **Not built.**
+4. **I — qualified/associated-fn calls (21 sub-issues, e.g. `Self::new(..)`, `Self::default()`,
+   `HashMap::new()`) — confirmed ZERO yield by direct sampling, not assumed.** `visit_call` (`emit.rs:1264`)
+   gaps every `Type::method(..)` call unconditionally (no established Mycelium qualified-call surface); this
+   is exactly the shape `mangled_inherent_fn_name`'s own doc (`emit.rs:2652`–`2698`, the landed DN-34
+   §8.13/8.14 "D4" no-`self`-receiver mangling) flags as future work, scoped out at landing time because it
+   "would require also re-deriving the identical mangled name at every… call site… not always resolvable."
+   Sampled **3/3** concrete call targets end-to-end: `Self::canon` (`mycelium-std-fs/src/substrate.rs:119`)
+   — its own body uses `.to_owned()`, an independently-gapped conversion method, so it never emits regardless
+   of call-site mangling; `Self::new` on `Path` (`mycelium-std-fs/src/path.rs`) — `Path::new`'s own signature
+   (`impl Into<String>`) is independently unmappable; `Self::default` — blocked by finding 3 above
+   (no native `Default` trait). **Every sampled callee is independently unemittable for an unrelated reason**
+   — building call-site-aware receiver-type mangling here would, per the D3/D4 precedent, yield **zero**
+   measured `checked_fraction` movement on this corpus. **Not built** (YAGNI/VR-5 — no speculative work for
+   a confirmed-zero payoff; this finding is recorded so a future leaf does not re-probe it, mitigation #14).
+5. **C — match-pattern struct-variant forms (6 sub-issues, e.g. `Self::NotFound { path, .. }`,
+   `L1Value::Data { .. }`).** `map_pattern_inner`'s exhaustive match (`emit.rs:2160`–`2232`) has no
+   `Pat::Struct` arm — falls to the catch-all gap. Unlike buckets A/B/G/D/E/I, this one is **not** blocked on
+   a design decision or another leaf's ownership — it is a genuine transpiler gap. But `StructLayout`
+   (`emit.rs:28`, `type StructLayout = Vec<Option<String>>`, keyed `HashMap<String, StructLayout>`) is
+   **not variant-aware** — one flat layout per type name, matching a single-ctor product struct, not a
+   multi-variant enum. Closing this needs extending that registry's shape (or a parallel variant-keyed map)
+   plus population logic in the pre-pass that builds it, which this leaf did not locate/verify within budget
+   — flagged as a **moderately-scoped, medium-confidence follow-on** (unlike the buckets above, not a
+   confirmed dead end), sized at ~6/114 (≈5%) of this corpus's Impl class. **Not built this pass** — the
+   registry-shape change plus pre-pass wiring exceeds what this leaf could complete *and verify* end-to-end
+   in the remaining budget; shipping it half-verified would violate "never a red or unverified `just check`
+   hand-off."
+6. **Impl-target-type-unmapped (4 gaps): 3 are lifetime-only generic args (`Elab<'_>`, `DepthGuard<'_>`,
+   `Cx<'_>` — Mycelium has no lifetime concept, so `'_` is trivially erasable, matching the established
+   `&'a T`-reference-erasure precedent, `map.rs:330`–`342`).** Checked whether fixing this would flip any of
+   the 3 to fully-checked (not assumed): `DepthGuard<'_>`'s impl is `impl Drop for DepthGuard<'_> { fn
+   drop(&mut self) {..} }` — still blocked by finding 1 (`&mut self`); `Cx<'_>`'s impl uses a generic method
+   (`fn err<T>`), `impl Into<String>`, and `format!` — still blocked by findings 1/4's siblings. **Confirmed
+   zero net yield on this corpus even if built** — not built, though the erasure fix itself remains a
+   correct, low-risk, standalone improvement worth landing whenever `map_type`'s lifetime-arg handling is
+   next touched for an unrelated reason.
+
+**Net verdict (VR-5 — the measurement is the deliverable, not a forced build).** Every one of the 114 Impl
+gaps' root causes traces to one of: (a) an un-owned `&mut self`/`&mut T` value-semantics design question
+(69/229 sub-issues — recommend a fresh design note, NOT DN-118), (b) the already-landed cross-nodule symtab's
+D5 residual (out-of-corpus kernel types — a separately-scoped, larger lever, 51/229), (c) a missing native
+`Default`/`Error` prelude trait plus a reserved-word rename convention (both language decisions, 14/229 +
+the 12 empty-impl gaps), (d) a **confirmed-by-sampling zero-yield** transpiler-only lever matching the D3/D4
+precedent exactly (qualified-call mangling, 21/229), or (e) a genuine but moderately-scoped registry
+extension this leaf could not complete-and-verify within budget (match-pattern struct-variants, 6/229, flagged
+as the one real follow-on candidate). **No code changed in `crates/mycelium-transpile` this pass** — the
+corpus's Impl-gap-class count (114) and phylum `checked_fraction` (7.4%) are unchanged from the DN-122 WU-A
+baseline (`06b4d7a7`); this entry documents *why*, so the next leaf does not re-derive the same analysis
+(mitigation #14). **Status unchanged (Draft)** — a measurement entry, enacts nothing. (Append-only; VR-5; G2.)
+
 ---
 
 ## Meta — changelog
@@ -1429,3 +1563,26 @@ Closes the transpiler-side half of §8.16 item 4. `&`/`|` now emit `and`/`or` (n
   difference; both yield the same rounded headline percentages, flagged here rather than silently
   reconciled. Emission `Declared`; profiling `Empirical`. **Status unchanged (Draft).** (Append-only;
   VR-5; G2.)
+- **2026-07-12 — §8.22 added: the 114 `Impl`-gap class, root-cause breakdown (gap-close-2 method-body
+  Impl-lever leaf) — every avenue probed is design-heavy, cross-leaf-owned, or confirmed zero-yield.**
+  Re-derived the 114-`Impl`-gap count directly from the committed `gap.json` corpus (matches DN-122
+  WU-A's `06b4d7a7` "honest re-measure"). Bucketed the 98 method-body-failure gaps' 229 sub-issues:
+  `&mut self`/`&mut T` parameter (69, incl. `&mut Formatter` — the single largest *pure* bucket at 30,
+  but sampled 30/30 and every body also uses the independently-gapped `write!` macro, so fixing the
+  signature alone yields **zero** measured movement, matching this note's own §8.14 D3/D4 precedent);
+  field-projection/qualified-type-path (51 — the D5 residual of the already-landed cross-nodule symtab,
+  `dev@4f346da3`, out-of-corpus kernel types, a separately-scoped larger lever); reserved-word collisions
+  (14, almost all `Default`/`Error` — no native Mycelium trait for either, `grep`-confirmed, so a rename
+  wouldn't help); qualified/associated-fn calls (21 — **sampled 3/3 concrete callees end-to-end and every
+  one is independently unemittable for an unrelated reason**, confirming the D4 doc's own "not always
+  resolvable" caveat with zero speculative work); match-pattern struct-variants (6 — the one genuine,
+  moderately-scoped follow-on candidate, blocked on `StructLayout` not being variant-aware, not completed
+  this pass); lifetime-only impl-target generics (3 of the 4 target-type-unmapped gaps — trivially
+  erasable per the established `&'a T` precedent, but confirmed zero net yield on this corpus since the
+  same 3 impls are independently blocked by `&mut self`/other findings above). **Corrects this leaf's own
+  kickoff premise:** DN-118 is closures/`FnMut`-capture-mutation only (re-read in full) — it does **not**
+  cover a `&mut self`/`&mut T` receiver-or-parameter gap, which has **no owning design note**; recommends
+  minting one rather than routing there. **No transpiler code changed** — 114/7.4% unchanged from the
+  `06b4d7a7` baseline; this is a negative-result measurement entry (VR-5 — the measurement is the
+  deliverable), recorded so a future leaf does not re-derive the same analysis (mitigation #14). **Status
+  unchanged (Draft).** (Append-only; VR-5; G2.)
