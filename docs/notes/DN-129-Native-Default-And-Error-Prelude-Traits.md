@@ -72,7 +72,9 @@ impl Init[Counter] for Counter { fn init() => Counter{ n: 0 }; }
 - **Why this is cheap (grounded).** `Init[T] { fn init() => T }` is **single-parameter and param-only** — its
   signature names only the trait's own param `T`, no foreign concrete type. That is exactly the DN-122 §13.1
   class the checker **admits today with no new checker code** (`register_instances` + the orphan rule;
-  `checkty.rs:4335`–`4338`). The foreign-sig guard does not fire. `impl Init for LocalType` checks clean now.
+  `checkty.rs:4459` onward, fn def; the orphan-rule check itself at `checkty.rs:4518`–`4546` — corrected
+  from a prior mis-citation of `:4335`–`4338`, which is `check_sig_resolves`'s doc comment, an unrelated
+  function). The foreign-sig guard does not fire. `impl Init for LocalType` checks clean now.
 - **Seeding mechanism (the shared spine — §5).** `Init` is seeded into the linked env **iff** some nodule
   declares an `impl Init[…] for …`, mirroring `Fuse` (`checkty.rs:1358`–`1369`) and `Ord3`
   (`checkty.rs:1372`–`1381`, M-1080) verbatim. Zero `use`, zero manifest emission (the DN-122 OQ-6
@@ -201,3 +203,10 @@ T-B1-style visibility test — `impl Init for LocalType` and `impl Fault for MyE
   generic default-polymorphism, else a plain fn is the KISS answer). OQ-2 (supertrait bound) an honest
   residual. Names DN-02-gated. All mechanism `Declared`; tree-facts `Empirical` + `file:line`. **Recommends,
   does not ratify** (house rule #3). Enacts nothing. (Append-only; VR-5; G2.)
+- **2026-07-12 — Strict-review fix (H2), @a0f4b90c.** §3's `register_instances`/orphan-rule citation
+  (`checkty.rs:4335`–`4338`) pointed at `check_sig_resolves`'s doc comment — an unrelated function — not
+  `register_instances`. Corrected to the verified location: `fn register_instances` is declared at
+  `checkty.rs:4459`, with its phylum-wide pub-blind orphan-rule enforcement at `checkty.rs:4518`–`4546`. The
+  substantive claim this citation supports (`impl Init[T] for LocalType` checks clean today, no new checker
+  work) is unchanged and remains true — only the pointer was wrong. Append-only edit to this still-Draft
+  note; no status change. (VR-5; G2.)
