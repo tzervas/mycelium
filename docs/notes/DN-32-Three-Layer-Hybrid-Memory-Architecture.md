@@ -91,6 +91,17 @@ counted runtime.** The optimizations:
   copy/mut); lane-F F-1/F-2/F-4.
 - **This is the hardest layer to build — see §6b (KC-3 tension).**
 
+> **Forward cross-reference (2026-07-11, append-only note — no normative text changed).** The
+> `rc==1` in-place-reuse bullet above interacts with Mycelium's content-addressed value identity
+> (RFC-0001 §4.6 / ADR-003): mutating a cell's bytes in place must not leave a live alias holding the
+> **old** content-hash identity. **DN-35 §5** works this content-address-coherence obligation forward
+> in full (the rc==1 ⇒ no-live-alias argument; the intern/hash-cons table modeled as a weak map with
+> evict-or-copy-on-reuse) and is the answer this layer's reuse path composes with. **DN-120** records
+> the verdict that this residual is solved-by-design, not an open problem — the runtime half (`Arc::get_mut`
+> in `eval.rs`) is landed; only the AOT env-machine reuse-write remains, tracked as E12 Increment 3
+> under this already-ratified design. DN-35 is **Accepted**; DN-120 is **Draft** (verdict note, pending
+> ratification); this pointer adds no new claim to DN-32 itself.
+
 ### §2.3 Layer 3 — Region-based allocation & reclamation (within scopes)
 
 **Within a scope, allocation is region-local and reclamation is batched at scope-exit** — bulk
@@ -377,4 +388,9 @@ most-kernel-growing leg and is sequenced last and measured.
   since landed **additively** in `mycelium-mir-passes` (Core IR pristine — KC-3 held; full FIP/
   Increment-3 stays Phase-3). Status remains **Accepted**; no normative text changed. (Append-only;
   VR-5; G2.)
+- **2026-07-11 — Forward cross-reference added (§2.2; append-only; no status move).** Pointed the
+  `rc==1` in-place-reuse bullet to **DN-35 §5** (the content-address-coherence answer — reuse fires
+  only at rc==1, weak intern table with evict-or-copy) and to **DN-120** (Draft verdict note: this
+  residual is solved-by-design, runtime half landed in `eval.rs`, only the AOT reuse-write remains as
+  E12 Increment 3). Status remains **Accepted**; no normative text changed. (Append-only; VR-5; G2.)
 </content>

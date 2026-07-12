@@ -75,7 +75,7 @@ FROM ${BASE_IMAGE} AS toolchain
 ARG RUST_TOOLCHAIN=1.96.1
 ARG PYTHON_VERSION=3.13
 ARG UV_VERSION=0.8.17
-ARG NODE_VERSION=22.22.2
+ARG NODE_VERSION=24.18.0
 # The `just api` public-API surface gate reads rustdoc-JSON (a nightly-only feature), so a nightly
 # toolchain is baked ALONGSIDE the MSRV — used ONLY to introspect the surface, never to build any
 # real artifact (the MSRV RUST_TOOLCHAIN above stays the build toolchain, ADR-041). Override to a

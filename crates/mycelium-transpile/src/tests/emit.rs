@@ -136,12 +136,15 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::NamedFieldDrop,
             },
         },
-        // M-1006: a named-field struct with an UNMAPPABLE field type (`char`) still gaps — the
+        // M-1006: a named-field struct with an UNMAPPABLE field type (`f32`) still gaps — the
         // field's own precise repr reason wins (mapped *before* the resolvability gate), so the gap
-        // profile keeps "unmappable field" distinct from "out-of-file reference".
+        // profile keeps "unmappable field" distinct from "out-of-file reference". (P4/P5, DN-99 §8
+        // ENB-6: `char` itself now maps to `Binary{32}`, so this fixture moved to `f32` — still
+        // genuinely unmapped, `Float` being binary64-only — to keep exercising the still-gapped
+        // case.)
         Case {
             name: "struct_named_field_unmappable_type_still_gaps",
-            rust: "struct Bad { c: char }",
+            rust: "struct Bad { c: f32 }",
             expect: Expect::Gapped {
                 category: Category::Struct,
             },
@@ -354,10 +357,13 @@ fn cases() -> Vec<Case> {
             },
         },
         // M-1006: a named-field variant with an UNMAPPABLE field type (`char`) still gaps — the
-        // variant's own precise reason wins (mapped before the resolvability gate).
+        // variant's own precise reason wins (mapped before the resolvability gate). (P4/P5,
+        // DN-99 §8 ENB-6: `char` itself now maps to `Binary{32}`, so this fixture moved to `f32`
+        // — still genuinely unmapped, `Float` being binary64-only — to keep exercising the
+        // still-gapped case.)
         Case {
             name: "payload_variant_unmappable_field_still_gaps",
-            rust: "enum Bad { A { c: char } }",
+            rust: "enum Bad { A { c: f32 } }",
             expect: Expect::Gapped {
                 category: Category::PayloadVariant,
             },
@@ -442,12 +448,13 @@ fn cases() -> Vec<Case> {
                 contains: "fn tag(msg: Bytes) => Bool = True;",
             },
         },
-        // NEVER-SILENT CASCADE: a fn taking `&char` still gaps — the reference erases but the referent
-        // `char` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
-        // a fabricated emission.
+        // NEVER-SILENT CASCADE: a fn taking `&f32` still gaps — the reference erases but the referent
+        // `f32` has no confirmed base_type arm, so the honest deeper blocker surfaces (Other), never
+        // a fabricated emission. (P4/P5, DN-99 §8 ENB-6: `char` itself now maps to `Binary{32}`, so
+        // this fixture moved to `f32` — still genuinely unmapped — to keep exercising the cascade.)
         Case {
             name: "shared_ref_to_unmappable_referent_still_gapped",
-            rust: "fn is_err(c: &char) -> bool { true }",
+            rust: "fn is_err(c: &f32) -> bool { true }",
             expect: Expect::Gapped {
                 category: Category::Other,
             },
@@ -547,6 +554,71 @@ fn cases() -> Vec<Case> {
             expect: Expect::Emitted {
                 item: "f",
                 contains: "a != g(b)",
+            },
+        },
+        // ── P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028): signed-operand-gated op emission ─────────
+        // (verify-first, mitigation #14 — see this module's `signed_numeric_idiom_check_clean`
+        // live-oracle test for the `myc check`-clean proof over the real toolchain, and
+        // `emit.rs`'s `Expr::Binary`/`Expr::Unary` arm docs for the full citation trail.) Both
+        // operands are known source-signed `i32` params -> the `_s`-suffixed op family.
+        Case {
+            name: "signed_add_emits_add_s",
+            rust: "fn f(a: i32, b: i32) -> i32 { a + b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "add_s(a, b)",
+            },
+        },
+        Case {
+            name: "signed_sub_emits_sub_s",
+            rust: "fn f(a: i32, b: i32) -> i32 { a - b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "sub_s(a, b)",
+            },
+        },
+        Case {
+            name: "signed_mul_emits_mul_s",
+            rust: "fn f(a: i32, b: i32) -> i32 { a * b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "mul_s(a, b)",
+            },
+        },
+        Case {
+            name: "signed_neg_emits_neg_s",
+            rust: "fn f(a: i32) -> i32 { -a }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "neg_s(a)",
+            },
+        },
+        Case {
+            name: "signed_lt_composes_bridged_lt_s",
+            rust: "fn f(a: i32, b: i32) -> bool { a < b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match lt_s(a, b) { 0b1 => True, _ => False })",
+            },
+        },
+        Case {
+            name: "signed_gt_composes_from_eq_and_lt_s",
+            rust: "fn f(a: i32, b: i32) -> bool { a > b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, b) { 0b1 => False, _ => match lt_s(a, b) { 0b1 => False, \
+                            _ => True } })",
+            },
+        },
+        // Unsigned `Add`/`Sub`/`Mul` are UNCHANGED by this leaf (pre-existing, out-of-scope glyph
+        // fallback — this leaf only adds signed-specific coverage, never regresses the unsigned
+        // path). Proves the signed gate does not mis-fire on an unsigned `Binary{N}` operand.
+        Case {
+            name: "unsigned_add_keeps_glyph_unchanged_by_this_leaf",
+            rust: "fn f(a: u32, b: u32) -> u32 { a + b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "a + b",
             },
         },
         // A `let`-aliased local of a known `Binary{N}` param is itself recognized as known (the
@@ -659,6 +731,101 @@ fn cases() -> Vec<Case> {
             expect: Expect::Emitted {
                 item: "classify",
                 contains: "match s { \"yes\" => True, _ => False }",
+            },
+        },
+        // ── DN-118 Phase 1 — the closure-EMIT pass (`lambda_expr`) ────────────────────────────────
+        // A move/`Copy`-capture closure (every free var read-only, no mutation signal): Mechanical
+        // per the DN-109 D5/D7 ratchet, auto-emitted as `lambda(params) => body`, captures left as
+        // ordinary in-scope references (mono's whole-program defunctionalization, RFC-0024 §4A,
+        // resolves the capture set — this transpiler never synthesizes an env record). Verified
+        // `myc check`-clean end-to-end (this exact shape) in DN-118 Phase 0's verify-first probe —
+        // the `apply$Fn` synthetic-`Env` gap the facility hit is a *different*, unrelated mechanism
+        // (`elaborate_lower_rule`'s ad-hoc single-function `Env`, `lower`-rule RHS elaboration
+        // only), not a general `myc check`/whole-program limitation.
+        Case {
+            name: "closure_move_copy_capture_emits_lambda",
+            rust: "fn make_masker(n: u16) -> u16 { let f = |x: u16| x & n; f(n) }",
+            expect: Expect::Emitted {
+                item: "make_masker",
+                contains: "let f = lambda(x: Binary{16}) => and(x, n) in f(n)",
+            },
+        },
+        // An untyped closure parameter has no `lambda_expr`'s `Ident ':' type_ref` correspondence
+        // — this transpiler has no type-inference pass to recover an omitted type (VR-5: absence,
+        // never a guess).
+        Case {
+            name: "closure_untyped_param_gapped",
+            rust: "fn f(n: u16) -> u16 { let g = |x| x; g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // VERIFY-FIRST FINDING (mitigation #14): a multi-parameter closure PARSES to a `lambda`
+        // declaration but the L1 checker curries it (RFC-0024 §4A.8/M-822), so an ordinary
+        // multi-arg call site (`f(a, b)`, this transpiler's existing `Expr::Call` emission)
+        // fails `myc check` — confirmed empirically against the real oracle, NOT emitted as a
+        // plausible-but-failing form (G2/VR-5); deferred as a separate, larger call-site-aware
+        // unit of work.
+        Case {
+            name: "closure_multi_param_gapped",
+            rust: "fn combine(a: u16, b: u16) -> u16 { let f = |x: u16, y: u16| and(x, y); \
+                   f(a, b) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // A zero-parameter closure has no v0 `lambda` form (the grammar note on `lambda_expr`).
+        Case {
+            name: "closure_zero_param_gapped",
+            rust: "fn f(n: u16) -> u16 { let g = || n; g() }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The DN-109 D7 safety gate: a captured binding mutated via compound assignment
+        // (`total += x`, the syntactic shape of an `FnMut`-style accumulator capture) is FLAGGED,
+        // never auto-emitted — `syn` carries no borrowck facts, so this cannot be proven
+        // value-safe (mono would otherwise silently snapshot `total`'s value at closure
+        // construction, diverging from the Rust closure's per-call-mutated semantics).
+        Case {
+            name: "closure_fnmut_compound_assign_capture_gapped",
+            rust: "fn f(n: u16) -> u16 { let mut total = 0; let mut g = |x: u16| total += x; \
+                   g(n); total }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The same D7 gate for an explicit `&mut` on a captured binding.
+        Case {
+            name: "closure_fnmut_explicit_mut_ref_capture_gapped",
+            rust: "fn f(n: u16) -> u16 { let mut total = 0; let g = |x: u16| { let r = &mut \
+                   total; x }; g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // The same D7 gate for a captured binding used as a method-call RECEIVER — `syn` cannot
+        // decide `&self` vs `&mut self` from syntax alone, so this is conservatively flagged too
+        // (never auto-emitted on the hope the method happens to be read-only).
+        Case {
+            name: "closure_captured_method_receiver_gapped",
+            rust: "fn f(n: u16) -> u16 { let v = n; let g = |x: u16| v.wrapping_add(x); g(n) }",
+            expect: Expect::Gapped {
+                category: Category::Closure,
+            },
+        },
+        // NEGATIVE control: a closure that mutates a PURELY INTERNAL local (never escapes, never a
+        // capture — bound and mutated entirely within the closure's own body) must NOT be
+        // misclassified as a captured-mutation `Closure` gap. It still gaps (Mycelium's body
+        // grammar has no assignment-statement production at all, `MultiStmtBody`'s pre-existing
+        // semicolon-terminated-statement refusal), but via the ordinary generic path — pinning
+        // that the DN-109 D7 scan does not false-positive on a shadowed/local name.
+        Case {
+            name: "closure_purely_local_mutation_not_misclassified_as_closure_gap",
+            rust: "fn f(n: u16) -> u16 { let g = |x: u16| { let mut acc = 0; acc += x; acc }; \
+                   g(n) }",
+            expect: Expect::Gapped {
+                category: Category::MultiStmtBody,
             },
         },
     ]
@@ -1061,6 +1228,72 @@ fn binop_operand_gated_forms_check_clean() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// **The DN-118 Phase 1 verify-first live-oracle proof** (mitigation #14): the closure-EMIT pass's
+/// `lambda` output — for a move/`Copy`-capture closure, the `closure_move_copy_capture_emits_lambda`
+/// fixture above — is run through the REAL `myc-check` oracle, WHOLE-NODULE (one file, mirroring the
+/// real driver), not just asserted as a substring match. This is the property the whole Phase 1
+/// closure-EMIT pass exists to prove: the `apply$Fn` synthetic-`Env` gap the facility hit
+/// (`elaborate_lower_rule`'s ad-hoc single-function `Env`, a `lower`-rule-only mechanism, DN-118's
+/// header) is CLOSED here because mono's whole-program defunctionalization (RFC-0024 §4A, M-704)
+/// resolves the generated `apply$Fn$Binary16$Binary16` dispatcher itself when the whole nodule is
+/// checked — exactly as DN-118 Phase 0's standalone verify-first probe (`myc check` + `myc run`
+/// against a hand-written `.myc`) already confirmed. Skips gracefully (never fails) when
+/// `myc-check` is not built.
+#[test]
+fn closure_move_copy_capture_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertion \
+             (`closure_move_copy_capture_emits_lambda`) still covers the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-closure-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // The move/Copy-capture closure case (`closure_move_copy_capture_emits_lambda`'s Rust source) —
+    // the shape whose transpiled `.myc` must resolve `apply$Fn$Binary16$Binary16` whole-program.
+    let rust = "fn make_masker(n: u16) -> u16 { let f = |x: u16| x & n; f(n) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+    assert!(
+        !report.emitted_items.is_empty(),
+        "closure case failed to emit at all: gaps={:?}",
+        report.gaps
+    );
+    assert!(
+        report.gaps.is_empty(),
+        "closure case must have zero gaps (the `apply$Fn` gap must be fully closed): {:?}",
+        report.gaps
+    );
+    let path = dir.join("closure_case.myc");
+    std::fs::write(&path, &myc).expect("write closure case .myc");
+
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "closure case must check CLEAN with the real myc-check oracle (the apply$Fn dispatcher \
+         must resolve whole-program) — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// **The verify-first live-oracle proof** (mitigation #14) for DN-51 §2 D3/§6's transpiler flip:
 /// the narrow-cast `truncate` emission (`cast_narrow_binary_emits_truncate` above) is run through
 /// the REAL `myc-check` oracle, not just asserted as a substring match — the property that matters
@@ -1098,6 +1331,88 @@ fn cast_narrow_truncate_emission_checks_clean() {
         "fn f_identity(x: u32) -> u32 { x as u32 }",
         // A narrow all the way down to a single bit — the boundary `M = 1` case.
         "fn f_narrow_to_bit(x: u32) -> u8 { x as u8 }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// **The verify-first live-oracle proof** (mitigation #14) for P4/P5 (DN-99 §8 ENB-6 / M-1029 /
+/// ADR-028): every signed-int / usize / isize / char numeric-type-idiom emission this leaf added
+/// runs through the REAL `myc-check` oracle, mirroring `binop_operand_gated_forms_check_clean`'s
+/// pattern. **Non-vacuity (this leaf's verify-first finding):** every one of these Rust snippets
+/// was a hard GAP before this leaf (`i8..i128`/`isize`/`usize`/`char` all refused in `map_type`,
+/// so the whole containing fn never emitted at all) — this test both proves the new emission is
+/// `myc check`-clean AND (via `report.emitted_items`) that it is a *real* emission, not a
+/// coincidental no-op. Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn signed_numeric_idiom_check_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             elsewhere still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-p4p5-numeric-idiom-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // i32 arithmetic — routes to the landed `add_s`/`sub_s`/`mul_s` (ADR-028: overflow-checked
+        // two's-complement, distinct from the unsigned `_u` family).
+        "fn f_add(a: i32, b: i32) -> i32 { a + b }",
+        "fn f_sub(a: i32, b: i32) -> i32 { a - b }",
+        "fn f_mul(a: i32, b: i32) -> i32 { a * b }",
+        // i64 arithmetic — a second width, pinning the width-parametric emission is not an i32-only
+        // special case.
+        "fn f_add64(a: i64, b: i64) -> i64 { a + b }",
+        // i32 comparison — the signed order `lt_s`, bridged `Binary{1}` -> `Bool` (mirrors the
+        // unsigned `Gt` composition already proven by `binop_operand_gated_forms_check_clean`).
+        "fn f_lt(a: i32, b: i32) -> bool { a < b }",
+        "fn f_gt(a: i32, b: i32) -> bool { a > b }",
+        "fn f_ne(a: i32, b: i32) -> bool { a != b }",
+        // Unary negation — the landed `neg_s`.
+        "fn f_neg(a: i32) -> i32 { -a }",
+        // `isize` — same `Binary{64}` mapping as `i64`, but sourced from the DISTINCT `isize` Rust
+        // type (pins that `type_is_signed_int` recognizes `isize`, not just the fixed-width `iN`s).
+        "fn f_neg_isize(a: isize) -> isize { -a }",
+        // `usize` — a plain identity fn (the realistic index/count-parameter shape); proves the
+        // UNSIGNED `Binary{64}` mapping alone (no `_s` routing — `usize` is never marked signed).
+        "fn f_usize_identity(i: usize) -> usize { i }",
+        // `char` — a plain identity fn; proves the `Binary{32}` codepoint mapping.
+        "fn f_char_identity(c: char) -> char { c }",
     ];
     for (i, rust) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")

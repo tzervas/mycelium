@@ -110,6 +110,16 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
+/// P4/P5 (DN-99 §8 ENB-6): [`expr_env_type`] narrowed to the **signed**-marked `Binary{N}` case
+/// (via [`signed_binary_width`]) — `Expr::Binary`'s signed-op gate (`add_s`/`sub_s`/`mul_s`/
+/// `lt_s`) and `Expr::Unary`'s `neg_s` gate read this directly. `None` for an unmarked (unsigned)
+/// `Binary{N}` entry, a non-`Binary` type, or a name absent from `env` — signedness is never
+/// guessed (VR-5); it is only ever known via [`map_signature`]'s `signed_param_names` bookkeeping
+/// reaching `env` through [`sig_type_env`]'s marker.
+fn expr_env_signed_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
+    expr_env_type(e, env).and_then(|t| signed_binary_width(&t))
+}
+
 /// If `e` is a struct-literal expression (`Ty { .. }` / `Self { .. }`) naming an **in-file struct
 /// that actually emits** (the same [`struct_layout`] resolvability gate `Expr::Struct`'s own
 /// emission arm already uses — see that arm's docs), return that struct's type name as the local's
@@ -349,13 +359,24 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
 // gap rather than a forced/fabricated emission.
 
 /// Parse a `map_type`-produced `Binary{N}` type-ref string back to its width `N`. Only matches
-/// the exact `Binary{<digits>}` shape `map_type` emits for unsigned integers — never a guess for
-/// any other text (e.g. `Bool`, a bare ident) that happens to not match.
+/// the exact `Binary{<digits>}` shape `map_type` emits for unsigned OR signed integers (`Binary`
+/// is sign-free, ADR-028 — P4/P5, DN-99 §8 ENB-6) — never a guess for any other text (e.g. `Bool`,
+/// a bare ident) that happens to not match. Deliberately returns `None` for a P4/P5 `"!s"`-marked
+/// [`TypeEnv`] entry (the trailing marker breaks the `strip_suffix('}')` match) — see
+/// [`sig_type_env`]'s doc for why that opacity is load-bearing for `Expr::Cast`, and
+/// [`signed_binary_width`] for the marker-aware counterpart.
 pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
     ty_text
         .strip_prefix("Binary{")
         .and_then(|rest| rest.strip_suffix('}'))
         .and_then(|digits| digits.parse::<u32>().ok())
+}
+
+/// P4/P5 (DN-99 §8 ENB-6): the marker-aware counterpart of [`binary_width`] — parses a
+/// [`sig_type_env`]-produced `"Binary{N}!s"` marked entry back to its width `N`. Returns `None`
+/// for an UNMARKED `Binary{N}` (unsigned) or any non-matching text; never a guess.
+fn signed_binary_width(ty_text: &str) -> Option<u32> {
+    ty_text.strip_suffix("!s").and_then(binary_width)
 }
 
 /// True iff `ty` is a bare (single-segment, no-generic) Rust float type `f32`/`f64`. Used by the
@@ -370,6 +391,26 @@ fn type_is_float(ty: &syn::Type) -> bool {
         && tp.path.segments.last().is_some_and(|s| {
             matches!(s.arguments, PathArguments::None)
                 && matches!(s.ident.to_string().as_str(), "f32" | "f64")
+        }))
+}
+
+/// True iff `ty` is a bare (single-segment, no-generic) Rust **signed**-integer-family type
+/// (`i8`/`i16`/`i32`/`i64`/`i128`/`isize`). P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028): `map_type`
+/// now maps every one of these to the SAME `Binary{N}` text as its unsigned counterpart (`Binary`
+/// is sign-free, ADR-028) — so signedness can no longer be read back off the *mapped* type text.
+/// This probe reads it off the ORIGINAL `syn::Type` instead, at the one place it is still known
+/// (a fn/method parameter's declared Rust type, in [`map_signature`]) — purely transpile-time
+/// bookkeeping that is never itself emitted into `.myc` text (mirrors [`type_is_float`]'s shape;
+/// never a guess — VR-5).
+fn type_is_signed_int(ty: &syn::Type) -> bool {
+    matches!(ty, syn::Type::Path(tp)
+    if tp.qself.is_none()
+        && tp.path.segments.last().is_some_and(|s| {
+            matches!(s.arguments, PathArguments::None)
+                && matches!(
+                    s.ident.to_string().as_str(),
+                    "i8" | "i16" | "i32" | "i64" | "i128" | "isize"
+                )
         }))
 }
 
@@ -459,6 +500,13 @@ struct MappedSig {
     params: Vec<(String, String)>,
     ret: String,
     type_params: Vec<String>,
+    /// P4/P5 (DN-99 §8 ENB-6): the subset of `params`' names whose ORIGINAL Rust type was a
+    /// signed-integer-family type ([`type_is_signed_int`]) — the signedness bookkeeping that
+    /// `map_type`'s sign-free `Binary{N}` output can no longer carry (ADR-028). Rendering
+    /// (`render_fn`/`render_fn_sig`) never reads this field — only [`sig_type_env`] does, to build
+    /// the internal (never-emitted) [`TypeEnv`] marker `Expr::Binary`/`Expr::Unary`'s signed-gate
+    /// reads. Never includes `"self"` (a receiver's type is a struct/`Self`, never numeric).
+    signed_param_names: HashSet<String>,
 }
 
 /// Build the body's initial [`TypeEnv`] from a mapped signature's `params` — the two body-emission
@@ -468,8 +516,30 @@ struct MappedSig {
 /// `map_signature`'s doc). For a method, `self` is already present in `params` (the `FnArg::Receiver`
 /// arm of `map_signature` pushes `("self".to_string(), ty)`), so this one function covers both the
 /// free-fn and impl-method cases without a separate `self`-insertion step.
+///
+/// **P4/P5 signed marker (DN-99 §8 ENB-6):** a name in `sig.signed_param_names` gets a `"!s"`
+/// suffix appended to its stored value (e.g. `"Binary{32}!s"`) — an internal-only marker, never
+/// emitted as `.myc` text (the actual signature text is rendered straight from `sig.params` by
+/// `render_fn`/`render_fn_sig`, which never consult this env). [`signed_binary_width`] is the sole
+/// reader that understands the marker; every *other* consumer of a `TypeEnv` entry
+/// (`binary_width`, `receiver_gate_matches`, `Expr::Cast`'s `operand_width`) parses the UNMARKED
+/// `Binary{N}` shape only, so a marked entry safely fails to match them (`None`, not a wrong
+/// answer — VR-5) rather than being silently treated as an ordinary unsigned `Binary{N}`. That is
+/// deliberate for `Expr::Cast` in particular: `width_cast`'s widen is an unconditional
+/// zero-extend (DN-41 §3), which is faithful for an unsigned source but WRONG for a signed one
+/// (Rust sign-extends); opacity-by-construction is what keeps a signed-source widen an honest gap
+/// instead of a silently-wrong zero-extend.
 fn sig_type_env(sig: &MappedSig) -> TypeEnv {
-    sig.params.iter().cloned().collect()
+    sig.params
+        .iter()
+        .map(|(name, ty)| {
+            if sig.signed_param_names.contains(name) {
+                (name.clone(), format!("{ty}!s"))
+            } else {
+                (name.clone(), ty.clone())
+            }
+        })
+        .collect()
 }
 
 /// Map a fn signature's generics/params/return type. `self_ty` is `Some(name)` inside an
@@ -483,6 +553,7 @@ fn map_signature(
 ) -> Result<MappedSig, GapReason> {
     let type_params = plain_type_params(generics)?;
     let mut params = Vec::with_capacity(inputs.len());
+    let mut signed_param_names = HashSet::new();
     for arg in inputs {
         match arg {
             FnArg::Receiver(r) => {
@@ -519,6 +590,12 @@ fn map_signature(
                 // reserved-word guard must fire here, not only at use sites (PR #1207 review).
                 crate::reserved::guard_ident(&name, "fn parameter")?;
                 let ty = map_type(&pt.ty, self_ty)?;
+                // P4/P5 (DN-99 §8 ENB-6): record signedness off the ORIGINAL `syn::Type` — the
+                // one place it is still legible before `map_type` erases it onto the shared,
+                // sign-free `Binary{N}` text (ADR-028).
+                if type_is_signed_int(&pt.ty) {
+                    signed_param_names.insert(name.clone());
+                }
                 params.push((name, ty));
             }
         }
@@ -537,6 +614,7 @@ fn map_signature(
         params,
         ret,
         type_params,
+        signed_param_names,
     })
 }
 
@@ -1029,15 +1107,57 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // emission (Declared heuristic, exactly as before this deliverable).
         let both_known_binary = expr_env_binary_width(&b.left, self.env).is_some()
             && expr_env_binary_width(&b.right, self.env).is_some();
+        // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028; VERIFY-FIRST, mitigation #14 — every claim
+        // below is a *measured* `myc check` result over the built `target/debug/myc-check`, not a
+        // doc-derived guess, mirroring the Deliverable-1 probes above; see this crate's
+        // `src/tests/emit.rs` `signed_*_check_clean` live-oracle fixtures).
+        //
+        // ADR-028: `add`/`sub`/`mul`/`neg` are bit-identical for signed/unsigned two's-complement,
+        // but the kernel's OVERFLOW-CHECKED prims still split by signedness (`add_u`/`sub_u`/
+        // `mul_u` detect UNSIGNED overflow; `add_s`/`sub_s`/`mul_s`/`neg_s` detect SIGNED/two's-
+        // complement overflow — checkty.rs:8005-8040) — so a source-signed operand must route to
+        // the `_s` family to report the semantically-correct overflow. `lt`'s ordering genuinely
+        // differs by signedness (`lt` reads Binary as unsigned magnitude; `lt_s` is the signed/
+        // two's-complement order, ADR-028's `bvslt`/`bvult` split) — confirmed `lt_s(a, b)`
+        // resolves as a bare-call prim with no import, `myc check`-clean. `eq` is signedness-
+        // agnostic (bit-pattern equality) — no `eq_s` exists or is needed, so `Ne`'s EXISTING
+        // `both_known_binary`-gated composed form already applies unchanged to a signed operand
+        // too (widened below to `both_known_signed_binary` so it still fires when `expr_env_
+        // binary_width` is opaque to the `"!s"` marker — see `sig_type_env`'s doc). `Gt`'s signed
+        // form composes `eq` + `lt_s` exactly as the existing unsigned `Gt` arm composes `eq` +
+        // `lt` (same derivation, signed order). `Lt` (RFC-0032 D1's "canonical" bare glyph for
+        // unsigned `lt`) has no established bare-glyph convention for the signed case — bare
+        // `lt_s` also returns `Binary{1}`, so a signed `<` is bridged to `Bool` the same proven
+        // way `Gt`'s composition already is (confirmed empirically: a bare `a < b`/`==` embedded
+        // directly as a `Bool`-typed fn body does NOT check-clean regardless of signedness — a
+        // PRE-EXISTING, orthogonal gap this leaf does not touch; the bridged form is required).
+        //
+        // Each signed arm is gated on **both operands resolving to a KNOWN SIGNED `Binary{N}`**
+        // via `expr_env_signed_binary_width` — only a bare identifier the signature already
+        // recorded as source-signed (`type_is_signed_int`, `map_signature`) can ever resolve;
+        // never a guess (VR-5). An unresolved-signed operand (unsigned, or type unknown) falls
+        // through unchanged to the existing unsigned-gated / plain-glyph arms below — Add/Sub/Mul
+        // for an unsigned `Binary{N}` operand stay the PRE-EXISTING (already-broken, out of
+        // scope) plain-glyph form; this leaf only adds new signed-specific coverage, never
+        // regresses the unsigned path.
+        let both_known_signed_binary = expr_env_signed_binary_width(&b.left, self.env).is_some()
+            && expr_env_signed_binary_width(&b.right, self.env).is_some();
         match &b.op {
             // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
             // — left unchanged (not part of this deliverable's operand-gated rewrite).
             BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
+            BinOp::Lt(_) if both_known_signed_binary => Ok(format!(
+                "(match lt_s({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
+            )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-            BinOp::Ne(_) if both_known_binary => Ok(format!(
+            BinOp::Ne(_) if both_known_binary || both_known_signed_binary => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
             )),
             BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
+            BinOp::Gt(_) if both_known_signed_binary => Ok(format!(
+                "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt_s({lhs}, {rhs}) {{ 0b1 \
+                 => False, _ => True }} }})"
+            )),
             BinOp::Gt(_) if both_known_binary => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
@@ -1054,8 +1174,11 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             BinOp::BitXor(_) => Ok(format!("{lhs} ^ {rhs}")),
             BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
             BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
+            BinOp::Add(_) if both_known_signed_binary => Ok(format!("add_s({lhs}, {rhs})")),
             BinOp::Add(_) => Ok(format!("{lhs} + {rhs}")),
+            BinOp::Sub(_) if both_known_signed_binary => Ok(format!("sub_s({lhs}, {rhs})")),
             BinOp::Sub(_) => Ok(format!("{lhs} - {rhs}")),
+            BinOp::Mul(_) if both_known_signed_binary => Ok(format!("mul_s({lhs}, {rhs})")),
             BinOp::Mul(_) => Ok(format!("{lhs} * {rhs}")),
             BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
             BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
@@ -1078,6 +1201,14 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
     fn visit_unary(&mut self, _expr: &Expr, u: &syn::ExprUnary) -> Self::Output {
         let operand = emit_expr(&u.expr, self.self_ty, self.env)?;
         match &u.op {
+            // P4/P5 (DN-99 §8 ENB-6 / ADR-028): a source-signed `Binary{N}` operand routes to
+            // the landed `neg_s` prim (`crates/mycelium-l1/src/checkty.rs:8020`, DN-72/M-766 —
+            // confirmed `myc check`-clean against the real toolchain, this leaf's verify-first
+            // probe). Gated exactly like `Expr::Binary`'s signed arms — never a guess (VR-5); an
+            // unresolved/unsigned operand keeps the prior, unchanged bare-glyph fallback.
+            syn::UnOp::Neg(_) if expr_env_signed_binary_width(&u.expr, self.env).is_some() => {
+                Ok(format!("neg_s({operand})"))
+            }
             syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
             syn::UnOp::Not(_) => Ok(format!("!{operand}")),
             _ => Err(GapReason::new(
@@ -1526,6 +1657,366 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 ),
             ))
         }
+    }
+
+    /// DN-118 Phase 1 (the closure-EMIT pass). `syn::ExprClosure` (`|a, b| …`) has **no**
+    /// arm here before this method — defunctionalization of an env-capturing closure is *already*
+    /// done in the LANGUAGE (RFC-0024 §4A, M-704 `done`: `mono.rs`'s `ClosureSpecialization` lowers
+    /// every escaping closure to a per-arrow `Fn$A$B` tag-sum + an `apply$A$B` dispatcher,
+    /// whole-program, at `finish()`), so this transpiler does **not** build its own defunctionalizer
+    /// — that would duplicate mono and re-hit the exact synthetic-`Env` limitation a *different*,
+    /// unrelated mechanism (`elaborate_lower_rule`'s ad-hoc single-function `Env`, used only for
+    /// `lower`-rule RHS elaboration) already hit (`crate::tests::facility_stage1_hygiene`
+    /// fixture-4 doc, `apply$Fn$…` unresolved there — NOT a general `myc check`/`myc run`
+    /// limitation; DN-118 Phase 0 verify-first reproduced the language side end-to-end clean: a
+    /// whole-program `nodule` with a `lambda` capturing an outer `let`-binder both `myc
+    /// check`-clean and runs to the expected value). This method instead **emits the Mycelium
+    /// `lambda` surface** (`lambda_expr ::= 'lambda' '(' params? ')' '=>' expr`) and leaves the
+    /// captured names as ordinary in-scope references in the body — mono resolves the whole
+    /// program's capture set itself; this emitter never synthesizes an env record.
+    fn visit_closure(&mut self, _expr: &Expr, c: &syn::ExprClosure) -> Self::Output {
+        // `async`/`const`/`static` (movable) closures have no Mycelium `lambda` correspondence —
+        // `lambda_expr` is plain, synchronous, and always moves its captures by value (there is no
+        // reference type in this grammar fragment, ADR-003).
+        if c.asyncness.is_some() || c.constness.is_some() || c.movability.is_some() {
+            return Err(GapReason::new(
+                Category::Closure,
+                "an `async`/`const`/`static` closure has no Mycelium `lambda` equivalent \
+                 (`lambda_expr` is plain and synchronous; RFC-0037 D5)",
+            ));
+        }
+
+        // Params: each must be a simple, EXPLICITLY-typed identifier (`x: T`) — Mycelium's
+        // `lambda_expr`'s `params` production is exactly `Ident ':' type_ref` (mirroring
+        // `fn_item`'s own `param`), and this transpiler has no type-inference pass to recover an
+        // omitted Rust closure-param type (most Rust closures infer their param types from usage —
+        // VR-5: absence, never a guess).
+        let mut params: Vec<(String, String)> = Vec::with_capacity(c.inputs.len());
+        for pat in &c.inputs {
+            let Pat::Type(pt) = pat else {
+                return Err(GapReason::new(
+                    Category::Closure,
+                    format!(
+                        "closure parameter `{}` has no explicit type annotation — Mycelium's \
+                         `lambda` parameters are always `name: Type` (grammar `lambda_expr` / \
+                         `param`) and this transpiler has no type-inference pass to recover an \
+                         omitted Rust closure-param type",
+                        tokens_to_string(pat)
+                    ),
+                ));
+            };
+            let name = match &*pt.pat {
+                Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
+                    pi.ident.to_string()
+                }
+                _ => {
+                    return Err(GapReason::new(
+                        Category::Closure,
+                        "non-identifier closure-parameter pattern (destructuring) has no \
+                         `param ::= Ident ':' type_ref` equivalent",
+                    ))
+                }
+            };
+            guard_ident(&name, "closure parameter")?;
+            let ty = map_type(&pt.ty, self.self_ty)?;
+            params.push((name, ty));
+        }
+        if params.is_empty() {
+            return Err(GapReason::new(
+                Category::Closure,
+                "a zero-parameter closure has no v0 `lambda` form (grammar note on \
+                 `lambda_expr` — a never-silent refusal, G2)",
+            ));
+        }
+        // DN-111/M-822 multi-arg convention — VERIFY-FIRST FINDING (mitigation #14), Phase 0:
+        // `lambda(x: T, y: U) => …` PARSES (the grammar's `params?` production allows any arity),
+        // but empirically (against the real `target/debug/myc-check` oracle) the L1 checker treats
+        // the resulting value as fully CURRIED (RFC-0024 §4A.8/§5, M-822): each application takes
+        // exactly one argument ("`f` has function type and takes exactly 1 argument in stage-1").
+        // An ordinary Rust multi-arg call site `f(a, b)` — this transpiler's existing, UNCHANGED
+        // `Expr::Call` emission (`visit_call` above; out of this leaf's scope) — therefore fails
+        // `myc check` against a directly-multi-param `lambda` declaration. A faithful multi-param
+        // closure needs BOTH a curried declaration (`lambda(x: T) => lambda(y: U) => …`) AND a
+        // chained call-site rewrite (`f(a)(b)`) — and `visit_call` cannot even emit a chained call
+        // today (its call-target match only accepts a bare/qualified `Expr::Path`, not a nested
+        // `Expr::Call`). That is a distinct, larger unit of work (a call-site-aware pass, not a
+        // closure-EMIT one), so — rather than emit a plausible-but-`myc check`-failing form — a
+        // multi-parameter closure is an explicit gap here (G2/VR-5); only the single-parameter
+        // form is Mechanical/auto-emitted in Phase 1.
+        if params.len() > 1 {
+            return Err(GapReason::new(
+                Category::Closure,
+                format!(
+                    "a {}-parameter closure has no auto-emittable Mechanical form in DN-118 \
+                     Phase 1 — VERIFIED (not guessed, mitigation #14): `lambda(x: T, y: U) => …` \
+                     parses, but the L1 checker treats the value as fully curried (RFC-0024 \
+                     §4A.8/§5, M-822), so an ordinary multi-arg call site `f(a, b)` (this \
+                     transpiler's unchanged `Expr::Call` emission) fails `myc check` \
+                     (\"has function type and takes exactly 1 argument in stage-1\"). A faithful \
+                     curried declaration plus a chained call-site rewrite (`f(a)(b)`) is a \
+                     separate, larger unit of work — deferred rather than emitted as a \
+                     plausible-but-failing form (G2/VR-5)",
+                    params.len()
+                ),
+            ));
+        }
+
+        // DN-109 D5/D7 safety gate (DN-118 Phase 1's load-bearing step): classify whether every
+        // capture this closure reaches is provably value-safe (read-only / moved / Copy) BEFORE
+        // ever emitting a `lambda`. `syn` carries no borrowck facts, so this is deliberately
+        // conservative — any *syntactically detectable* sign that the closure mutates a binding it
+        // did not itself bind (a direct/compound assignment, an explicit `&mut`, or using it as a
+        // method-call receiver at all, since a receiver's `&self` vs `&mut self` split is
+        // unknowable from syntax alone) is treated as "cannot prove value-safe" and FLAGGED, never
+        // auto-emitted (never-silent, G2/VR-5). This is the boundary DN-109 D7 names: mono's
+        // defunctionalization captures a closure's environment as a **value snapshot at
+        // construction** (a tag-sum struct field, set once), so an `FnMut`-style closure that
+        // mutates a capture *across calls* would, if silently auto-emitted, produce a Mycelium
+        // program that reads a DIFFERENT (stale) value every call — a silent semantic divergence,
+        // not merely a check-time rejection.
+        let mut bound: HashSet<String> = HashSet::new();
+        for (name, _) in &params {
+            bound.insert(name.clone());
+        }
+        let mutation = match &*c.body {
+            Expr::Block(b) => scan_block_for_capture_mutation(&b.block.stmts, &bound),
+            other => scan_expr_for_capture_mutation(other, &bound),
+        };
+        if let Some(captured) = mutation {
+            return Err(GapReason::new(
+                Category::Closure,
+                format!(
+                    "closure captures `{captured}` and appears to mutate it in place \
+                     (`FnMut`/`&mut`-style: a direct/compound assignment, an explicit `&mut`, or a \
+                     method-call receiver whose mutability `syn` cannot decide without borrowck \
+                     facts) — DN-109 D7: this cannot be proven value-safe, so it is never \
+                     auto-emitted (VR-5/G2). Suggested idiom: rewrite the closure to thread \
+                     `{captured}` as an explicit fold/accumulator parameter (return the updated \
+                     value instead of mutating in place), or as a functional update returning a \
+                     new value — see DN-118 Phase 1, the FnMut/&mut safety boundary."
+                ),
+            ));
+        }
+
+        // Every remaining capture is provably value-safe (no mutation signal detected): mono's
+        // whole-program defunctionalization (RFC-0024 §4A, M-704) resolves the capture set itself
+        // at `finish()` — this emitter does NOT synthesize an env record; captured names are left
+        // as ordinary in-scope references in the emitted body (module docs above).
+        let mut body_env = self.env.clone();
+        for (name, ty) in &params {
+            body_env.insert(name.clone(), ty.clone());
+        }
+        let body_text = match &*c.body {
+            Expr::Block(b) => emit_block_as_expr(&b.block, self.self_ty, &body_env)?,
+            other => emit_expr(other, self.self_ty, &body_env)?,
+        };
+        let params_text = params
+            .iter()
+            .map(|(n, t)| format!("{n}: {t}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Ok(format!("lambda({params_text}) => {body_text}"))
+    }
+}
+
+/// Extract the "root" identifier a place-expression (an assignment LHS, a `&mut` target, or a
+/// method-call receiver) ultimately projects from — unwrapping field access, indexing,
+/// parenthesization, and dereference so `cap.field = x`, `cap[0] = x`, and `(*cap).field = x` all
+/// resolve to `cap`. `None` when the root is not a bare identifier (nothing to flag against — e.g.
+/// a temporary, a literal, a nested call result).
+fn place_root_ident(e: &Expr) -> Option<String> {
+    match e {
+        Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => {
+            Some(p.path.segments.last()?.ident.to_string())
+        }
+        Expr::Field(f) => place_root_ident(&f.base),
+        Expr::Index(i) => place_root_ident(&i.expr),
+        Expr::Paren(p) => place_root_ident(&p.expr),
+        Expr::Unary(u) if matches!(u.op, syn::UnOp::Deref(_)) => place_root_ident(&u.expr),
+        _ => None,
+    }
+}
+
+/// Whether a `syn::BinOp` is one of the ten compound-assignment operators (`+=`, `-=`, …) — syn 2
+/// folds compound assignment into `Expr::Binary` (there is no separate `ExprAssignOp`), so this is
+/// the gate `scan_expr_for_capture_mutation`'s `Expr::Binary` arm uses to recognize an in-place
+/// mutation shape distinct from an ordinary arithmetic/logical binary op.
+fn is_compound_assign_op(op: &syn::BinOp) -> bool {
+    use syn::BinOp;
+    matches!(
+        op,
+        BinOp::AddAssign(_)
+            | BinOp::SubAssign(_)
+            | BinOp::MulAssign(_)
+            | BinOp::DivAssign(_)
+            | BinOp::RemAssign(_)
+            | BinOp::BitXorAssign(_)
+            | BinOp::BitAndAssign(_)
+            | BinOp::BitOrAssign(_)
+            | BinOp::ShlAssign(_)
+            | BinOp::ShrAssign(_)
+    )
+}
+
+/// Collect the identifier(s) a closure PARAMETER pattern binds, into `out` — used to seed
+/// [`scan_block_for_capture_mutation`]/[`scan_expr_for_capture_mutation`]'s `local` set so a
+/// closure's own parameters (and a nested closure's own parameters, `Expr::Closure`'s arm below)
+/// are never mistaken for an outer capture. Deliberately narrow (only `Pat::Ident`, plain or
+/// type-ascribed) — a pattern shape this collects nothing for still can't cause a false "safe"
+/// classification, because `EmitVisitor::visit_closure` itself already gaps any
+/// non-`Pat::Ident` PARAMETER before this scan ever runs; this helper exists only so the *nested*-
+/// closure recursion inside the scanner has a matching narrow collector to call.
+fn collect_closure_param_names(pat: &Pat, out: &mut HashSet<String>) {
+    match pat {
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
+            out.insert(pi.ident.to_string());
+        }
+        Pat::Type(pt) => collect_closure_param_names(&pt.pat, out),
+        _ => {}
+    }
+}
+
+/// The DN-109 D7 capture-mutation scan over a closure BODY BLOCK's statements (see
+/// `EmitVisitor::visit_closure`'s doc for the safety rationale). Tracks `let`-bound names
+/// (cloned into a fresh, block-scoped `local` set) so a purely internal accumulator — fully
+/// `let`-bound and mutated only inside the closure's own body, never escaping — is never confused
+/// with a genuine outer capture. Returns the first captured name found syntactically mutated, if
+/// any.
+fn scan_block_for_capture_mutation(stmts: &[Stmt], local: &HashSet<String>) -> Option<String> {
+    let mut local = local.clone();
+    for s in stmts {
+        match s {
+            Stmt::Local(l) => {
+                if let Some(init) = &l.init {
+                    if let Some(found) = scan_expr_for_capture_mutation(&init.expr, &local) {
+                        return Some(found);
+                    }
+                    if let Some(diverge) = &init.diverge {
+                        if let Some(found) = scan_expr_for_capture_mutation(&diverge.1, &local) {
+                            return Some(found);
+                        }
+                    }
+                }
+                collect_closure_param_names(&l.pat, &mut local);
+            }
+            Stmt::Expr(e, _) => {
+                if let Some(found) = scan_expr_for_capture_mutation(e, &local) {
+                    return Some(found);
+                }
+            }
+            // Nested items/macros carry no expression to scan (macro args are opaque tokens, not
+            // parsed `Expr`s here — the same PoC-scope boundary `emit_block_as_expr_inner` already
+            // draws for `Stmt::Item`/`Stmt::Macro`).
+            Stmt::Item(_) | Stmt::Macro(_) => {}
+        }
+    }
+    None
+}
+
+/// The DN-109 D7 capture-mutation scan over a single expression (see
+/// `EmitVisitor::visit_closure`'s doc). `local` is the set of names bound *within* the closure
+/// itself (its own parameters, plus every `let`-bound name in scope so far) — a name outside
+/// `local` that this scan finds as the root of an assignment target, an explicit `&mut` target, or
+/// a method-call receiver is a capture whose mutability could not be proven safe. Deliberately
+/// conservative: this recurses into the shapes common enough to matter (blocks, control flow,
+/// calls, field/index/paren/cast, nested closures) and returns `None` (no signal) for any shape it
+/// does not specifically recognize — an unrecognized shape containing a real mutation would in any
+/// case already fail the ordinary body emission generically (`emit_block_as_expr_inner`/
+/// `emit_expr_inner` have no `Expr::Assign`/compound-assign arm at all), so this scan's only job is
+/// to catch the mutation *before* emission with a curated, DN-109-cited message — never to be the
+/// sole safety boundary.
+fn scan_expr_for_capture_mutation(e: &Expr, local: &HashSet<String>) -> Option<String> {
+    match e {
+        Expr::Assign(a) => {
+            if let Some(name) = place_root_ident(&a.left) {
+                if !local.contains(&name) {
+                    return Some(name);
+                }
+            }
+            scan_expr_for_capture_mutation(&a.left, local)
+                .or_else(|| scan_expr_for_capture_mutation(&a.right, local))
+        }
+        Expr::Binary(b) if is_compound_assign_op(&b.op) => {
+            if let Some(name) = place_root_ident(&b.left) {
+                if !local.contains(&name) {
+                    return Some(name);
+                }
+            }
+            scan_expr_for_capture_mutation(&b.left, local)
+                .or_else(|| scan_expr_for_capture_mutation(&b.right, local))
+        }
+        Expr::Binary(b) => scan_expr_for_capture_mutation(&b.left, local)
+            .or_else(|| scan_expr_for_capture_mutation(&b.right, local)),
+        Expr::Reference(r) if r.mutability.is_some() => {
+            if let Some(name) = place_root_ident(&r.expr) {
+                if !local.contains(&name) {
+                    return Some(name);
+                }
+            }
+            scan_expr_for_capture_mutation(&r.expr, local)
+        }
+        Expr::Reference(r) => scan_expr_for_capture_mutation(&r.expr, local),
+        Expr::MethodCall(m) => {
+            if let Some(name) = place_root_ident(&m.receiver) {
+                if !local.contains(&name) {
+                    return Some(name);
+                }
+            }
+            scan_expr_for_capture_mutation(&m.receiver, local).or_else(|| {
+                m.args
+                    .iter()
+                    .find_map(|a| scan_expr_for_capture_mutation(a, local))
+            })
+        }
+        Expr::Unary(u) => scan_expr_for_capture_mutation(&u.expr, local),
+        Expr::Paren(p) => scan_expr_for_capture_mutation(&p.expr, local),
+        Expr::Field(f) => scan_expr_for_capture_mutation(&f.base, local),
+        Expr::Index(i) => scan_expr_for_capture_mutation(&i.expr, local)
+            .or_else(|| scan_expr_for_capture_mutation(&i.index, local)),
+        Expr::Call(c) => scan_expr_for_capture_mutation(&c.func, local).or_else(|| {
+            c.args
+                .iter()
+                .find_map(|a| scan_expr_for_capture_mutation(a, local))
+        }),
+        Expr::If(i) => scan_expr_for_capture_mutation(&i.cond, local)
+            .or_else(|| scan_block_for_capture_mutation(&i.then_branch.stmts, local))
+            .or_else(|| {
+                i.else_branch
+                    .as_ref()
+                    .and_then(|(_, e)| scan_expr_for_capture_mutation(e, local))
+            }),
+        Expr::Block(b) => scan_block_for_capture_mutation(&b.block.stmts, local),
+        Expr::Match(m) => scan_expr_for_capture_mutation(&m.expr, local).or_else(|| {
+            m.arms
+                .iter()
+                .find_map(|arm| scan_expr_for_capture_mutation(&arm.body, local))
+        }),
+        Expr::Tuple(t) => t
+            .elems
+            .iter()
+            .find_map(|e| scan_expr_for_capture_mutation(e, local)),
+        Expr::Array(a) => a
+            .elems
+            .iter()
+            .find_map(|e| scan_expr_for_capture_mutation(e, local)),
+        Expr::Struct(s) => s
+            .fields
+            .iter()
+            .find_map(|f| scan_expr_for_capture_mutation(&f.expr, local)),
+        Expr::Cast(c) => scan_expr_for_capture_mutation(&c.expr, local),
+        Expr::Closure(c) => {
+            // A nested closure over the same outer capture is exactly the same hazard — recurse
+            // with its own params added as further locals, never popped back out (this scan never
+            // needs precise lexical scoping, only "is this name bound somewhere enclosing the use"
+            // — the conservative direction is to under-report a false capture, not over-report one
+            // that's actually a shadowed local, and adding names monotonically never does that).
+            let mut inner = local.clone();
+            for p in &c.inputs {
+                collect_closure_param_names(p, &mut inner);
+            }
+            scan_expr_for_capture_mutation(&c.body, &inner)
+        }
+        _ => None,
     }
 }
 

@@ -162,7 +162,9 @@ impl Lexer {
                 // could never lex as `@` + an identifier — it must be recognized whole here. Only the
                 // exact `@std-sys` is special; any other `@…` stays the bare `Tok::At`.
                 '@' => self.lex_at(),
-                ':' => self.single(Tok::Colon),
+                // `:` (ascription) / `::` (the DN-113 cross-phylum boundary marker, M-1060) — lexed
+                // whole so a cross-phylum `use dep::a.b.Item` is never two `Colon`s.
+                ':' => self.lex_colon(),
                 ',' => self.single(Tok::Comma),
                 // `;` — the DN-57 component/operation terminator (optional in v0; whitespace-free /
                 // streamable source). `,` separates siblings within a component; `;` terminates one.
@@ -342,6 +344,18 @@ impl Lexer {
             Tok::BangEq
         } else {
             Tok::Bang
+        }
+    }
+
+    /// `:` (ascription) / `::` (the DN-113 cross-phylum boundary marker, M-1060) — the doubled form
+    /// lexes whole, mirroring [`Self::lex_bang`]/[`Self::lex_pipe`].
+    fn lex_colon(&mut self) -> Tok {
+        self.bump(); // ':'
+        if self.peek() == Some(':') {
+            self.bump();
+            Tok::ColonColon
+        } else {
+            Tok::Colon
         }
     }
 

@@ -694,8 +694,13 @@ fn ty_to_field_ty_ref_cases() {
         // A Fn with a non-monomorphic leaf → None.
         Ty::Fn(Box::new(Ty::Var("A".to_owned())), Box::new(Ty::Bytes)),
     ];
+    // CRITICAL #2 sibling fix (elab.rs `field_spec`/`ty_to_field_ty_ref`): the home-check only
+    // fires for a genuinely QUALIFIED `Ty::Data` name (contains `::`); every case here is bare, so
+    // an empty registry is a faithful fixture (no registry precondition for the unqualified path).
+    let types: std::collections::BTreeMap<String, crate::checkty::DataInfo> =
+        std::collections::BTreeMap::new();
     for (i, t) in cases.iter().enumerate() {
-        let want = ty_to_field_ty_ref(t);
+        let want = ty_to_field_ty_ref(&types, t);
         assert_l1_marshal(
             &format!("ty_to_field_ty_ref_{i}"),
             &format!(
@@ -735,8 +740,11 @@ fn field_spec_cases() {
         // Fn with an unresolvable leaf → None.
         Ty::Fn(Box::new(bin(8)), Box::new(Ty::Var("R".to_owned()))),
     ];
+    // CRITICAL #2 sibling fix: see the matching comment in `ty_to_field_ty_ref_cases` above.
+    let types: std::collections::BTreeMap<String, crate::checkty::DataInfo> =
+        std::collections::BTreeMap::new();
     for (i, t) in cases.iter().enumerate() {
-        let want = field_spec(t);
+        let want = field_spec(&types, t);
         assert_l1_marshal(
             &format!("field_spec_{i}"),
             &format!(

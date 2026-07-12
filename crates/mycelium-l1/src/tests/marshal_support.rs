@@ -14,11 +14,60 @@
 //! caught by each increment's `marshal_discriminates` non-vacuity twin.
 
 use crate::ast::{BaseType, Scalar, Sparsity, TypeRef, WidthRef};
-use crate::checkty::{check_nodule, Ty, Width};
+use crate::checkty::{check_nodule, ty_local_name, CtorInfo, DataInfo, Ty, Width};
 use crate::eval::{Evaluator, L1Value};
 use crate::mono::monomorphize;
 use crate::parse;
 use mycelium_core::{Payload, Value};
+use std::collections::BTreeMap;
+
+/// **DN-112 Rank 1 / M-1036, DoD item 8 (flagged `.myc`-parity residual).** The nodule-qualified
+/// type-identity mechanism is a Rust-checker-only change (DN-112 §3: "check-time... single crate");
+/// the `.myc` self-hosted mirror does not yet compute or compare qualified names anywhere (its
+/// enforcement/identity port rides the checkty cross-nodule port — DN-104 §6, DN-112 DoD item 8).
+/// So every self-hosting marshalling differential that carries a `Ty`/`DataInfo` through a
+/// multi-nodule-declaring Rust oracle must have its qualification **stripped to the local/bare
+/// name** before comparison — isolating the differential to the dimensions `.myc` actually mirrors.
+/// This is a deliberate, documented narrowing (G2/VR-5), not a silent drop: the qualified-identity
+/// behavior itself is pinned by the LIVE (non-`.myc`) `tests/ctor_seal.rs`/`tests/checkty.rs`
+/// differentials instead. `unqualify_ty` recurses through every `Ty::Data` occurrence (nested
+/// generic arguments included).
+pub(crate) fn unqualify_ty(t: &Ty) -> Ty {
+    match t {
+        Ty::Data(n, args) => Ty::Data(
+            ty_local_name(n).to_owned(),
+            args.iter().map(unqualify_ty).collect(),
+        ),
+        Ty::Seq(elem, n) => Ty::Seq(Box::new(unqualify_ty(elem)), *n),
+        Ty::Fn(a, r) => Ty::Fn(Box::new(unqualify_ty(a)), Box::new(unqualify_ty(r))),
+        other => other.clone(),
+    }
+}
+
+/// [`unqualify_ty`] applied to every field of a [`DataInfo`] (and its own `home`, for a `DataInfo`
+/// equality comparison — [`DataInfo::home`] does not exist in the `.myc` mirror's encoding at all).
+pub(crate) fn unqualify_data_info(d: DataInfo) -> DataInfo {
+    DataInfo {
+        name: d.name,
+        home: String::new(),
+        params: d.params,
+        ctors: d
+            .ctors
+            .into_iter()
+            .map(|c| CtorInfo {
+                name: c.name,
+                fields: c.fields.iter().map(unqualify_ty).collect(),
+            })
+            .collect(),
+    }
+}
+
+/// [`unqualify_data_info`] applied to a whole `register_types`-shaped oracle map.
+pub(crate) fn unqualify_types_map(map: BTreeMap<String, DataInfo>) -> BTreeMap<String, DataInfo> {
+    map.into_iter()
+        .map(|(k, d)| (k, unqualify_data_info(d)))
+        .collect()
+}
 
 pub(crate) const SEMCORE_SRC: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),

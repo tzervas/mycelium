@@ -693,7 +693,7 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
 
 // -------------------------------------------------------------------------------------------
 // M-1054 Stage 0/1b — expression-position sugar-rule call-site recognition (`Cx::check_sugar_call`,
-// DN-110 §5-A / DN-114). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args`
+// DN-110 §5-A / DN-116). Companion to `src/tests/elab.rs`'s `elaborate_lower_rule_with_args`
 // matcher/guard tests (the L0 elab-phase half) and `src/tests/reachability_stage1b.rs` (the
 // full-chain check→elab→eval reachability corpus). No surface grammar produces a non-empty
 // `LowerDecl::value_params` yet (§8.6 is an open naming question), so every fixture here
@@ -702,7 +702,7 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
 //
 // **Stage 0 → Stage 1b note (VR-5 — this banner is a claim too, kept current):** Stage 0 refused
 // *every* recognized, arity/type-matched sugar call unconditionally (never returned `Ok`). Stage
-// 1b (M-1054, DN-114) lands the accept path: a recognized call whose RHS also clears the Stage-2
+// 1b (M-1054, DN-116) lands the accept path: a recognized call whose RHS also clears the Stage-2
 // (OQ-H1 free-identifier) and Stage-3 (OQ-H4 affine) gates is now **accepted**, typed by
 // `infer_expr_rule_rhs_type`. The arity-mismatch / type-mismatch / item-shaped-rule refusals below
 // are unchanged by Stage 1b (those gates fire *before* the RHS is ever consulted); only the
@@ -768,7 +768,7 @@ fn stage0_base_env() -> Env {
     env("nodule d;\nlower Eight = 0b0000_0001;")
 }
 
-/// **Recognition + accept (M-1054 Stage 1b, DN-114).** A value-parametric sugar rule invoked with
+/// **Recognition + accept (M-1054 Stage 1b, DN-116).** A value-parametric sugar rule invoked with
 /// the right arity and well-typed arguments, whose RHS clears both Stage 1b gates (this fixture's
 /// inert `0b0000_0001` RHS trivially does — no free identifiers, no affine binding), is *recognized
 /// and accepted* by `check_sugar_call`: `infer_type` now returns `Ok`, typed at the RHS's own
@@ -786,14 +786,14 @@ fn stage1b_sugar_call_recognized_and_accepted() {
     assert_eq!(
         ty,
         Ty::Binary(Width::Lit(8)),
-        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B, DN-114), not the arguments' or anything else"
+        "the accepted call's type must be the RHS's own def-time-fixed result type (Option B, DN-116), not the arguments' or anything else"
     );
 }
 
 // ---- Adversarial-verify finding 1 (2026-07-11, HIGH — fixed): a composite/nested-Substrate value
 // parameter must hit the Stage-3 (OQ-H4) residual, not just a top-level `Substrate` type ----------
 //
-// `Self::ty_structurally_contains_substrate`'s own doc comment (`checkty.rs`) and DN-114 §3.2 carry
+// `Self::ty_structurally_contains_substrate`'s own doc comment (`checkty.rs`) and DN-116 §3.2 carry
 // the full narrative; these fixtures pin the regression + its non-vacuity.
 
 /// A bare named-type `TypeRef` with no type arguments (`Data("Handle", [])` once resolved) —
@@ -806,7 +806,7 @@ fn named_ty(name: &str) -> TypeRef {
 }
 
 /// Register a `Data` type `Handle` whose sole constructor `Wrap` wraps a `Substrate{gpu}` field —
-/// the composite/nested-affine shape DN-114 §3.2's adversarial-verify finding names — directly into
+/// the composite/nested-affine shape DN-116 §3.2's adversarial-verify finding names — directly into
 /// `e.types` (white-box, matching [`register_value_parametric_rule`]'s own convention of hand-
 /// building registry entries rather than routing through a surface grammar that does not yet exist
 /// for this shape either).
@@ -814,6 +814,7 @@ fn register_handle_wrapping_substrate(e: &mut Env) {
     e.types.insert(
         "Handle".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Handle".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
@@ -852,13 +853,87 @@ fn register_dup_handle_rule(e: &mut Env) {
     );
 }
 
-/// **The load-bearing regression (DN-114 §3.2, adversarial-verify finding 1, HIGH — fixed).** A
-/// value parameter typed `Handle` — a `Data` type whose constructor *structurally contains* a
-/// `Substrate` field, not a top-level `Substrate` type itself — must be refused by the Stage-3
-/// (OQ-H4) gate exactly as a bare `Substrate`-typed value parameter is, citing "Stage 3" and
-/// "OQ-H4".
+/// **Superseded by Stage 3's real linear check (DN-117 §2, 2026-07-11) — was
+/// `stage3_composite_substrate_field_value_param_is_refused`, asserted wholesale refusal of any
+/// `Handle`-typed value parameter.** The composite/nested-affine hazard DN-116 §3.2 first found is
+/// now caught *precisely* rather than refused wholesale: a `Handle`-typed value parameter used
+/// **twice** in the RHS (`Dup`, extracting the wrapped field via two separate `match`es) is REFUSED
+/// only when the caller's argument genuinely carries a duplicatable affine move — here, a freshly
+/// constructed `Wrap(consume some_substrate)` whose inner `consume` gets spliced (and so
+/// re-evaluated) at both RHS occurrences, exactly DN-117 §2/§5's R2 shape. Uses the
+/// `#[cfg(test)]`-only active-tracker entry point ([`infer_type_with_active_affine`]) — the real
+/// double-consume detection needs a live [`crate::affine::Tracker`], which the ordinary
+/// `infer_type` (deliberately inert — post-check re-inference) cannot exercise; see that function's
+/// own doc comment. The sibling case — passing a *pre-existing*, non-consuming `Handle`-typed local
+/// and destructuring it twice (this test's OLD fixture) — is honestly documented as a **pre-existing,
+/// Stage-3-independent** limitation of the landed M-919 tracker in
+/// `stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap`, below (verified via
+/// an equivalent hand-written, non-sugar `fn` fixture: the landed tracker does not catch it either
+/// — Stage 3 faithfully inherits, not regresses, hand-written code's own static posture, DN-117
+/// §4.3).
 #[test]
-fn stage3_composite_substrate_field_value_param_is_refused() {
+fn stage3_composite_substrate_field_value_param_refused_on_genuine_duplication() {
+    let mut e = stage0_base_env();
+    register_handle_wrapping_substrate(&mut e);
+    register_dup_handle_rule(&mut e);
+    let call = call_expr(
+        "Dup",
+        vec![Expr::App {
+            head: Box::new(Expr::Path(Path(vec!["Wrap".to_owned()]))),
+            args: vec![Expr::Consume(Box::new(Expr::Path(Path(vec![
+                "some_substrate".to_owned(),
+            ]))))],
+        }],
+    );
+    let mut scope = vec![("some_substrate".to_owned(), Ty::Substrate("gpu".to_owned()))];
+    let err = infer_type_with_active_affine(&e, &mut scope, &call).expect_err(
+        "a composite (`Handle`)-typed value parameter used twice in the RHS, whose argument \
+         genuinely carries a duplicated affine move once substituted, must be refused \
+         (M-1054 Stage 3/OQ-H4/DN-117)",
+    );
+    assert!(
+        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
+        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("double-consume"),
+        "expected the underlying double-consume diagnostic to be named, got: {}",
+        err.message
+    );
+}
+
+/// **Honest, Stage-3-independent limitation (DN-117 §4.3's "matches hand-written code's own static
+/// posture exactly" — verified, not assumed).** Referencing the *same*, pre-existing `Handle`-typed
+/// local twice and destructuring each occurrence independently is accepted — by an equivalent
+/// **ordinary, non-sugar** `fn` too (each `match`'s field-capture creates its own fresh, independent
+/// tracker slot, DN-71 §4.2; the landed tracker does not itself track a composite value's identity
+/// across two separate destructurings of it — a real, pre-existing M-919 gap, not something this
+/// leaf introduces or is asked to close). This is *not* the same shape as
+/// `stage3_composite_substrate_field_value_param_refused_on_genuine_duplication`'s R2 fixture
+/// (a *freshly constructed* `Wrap(consume s)` argument, re-evaluated by the splice) — this fixture
+/// aliases a *pre-existing* binding instead, which the tracker only ever tracks by scope index, not
+/// by "this Data value's wrapped field came from the same acquisition."
+#[test]
+fn stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap() {
+    // The ordinary hand-written equivalent, independent of any sugar rule at all — confirms this is
+    // not a Stage-3-introduced regression.
+    check_nodule(
+        &parse(
+            "nodule d;\ntype Handle = Wrap(Substrate{gpu});\n\
+             fn f(h: Handle) => (Substrate{gpu}, Substrate{gpu}) = \
+             (match h { Wrap(s1) => s1 }, match h { Wrap(s2) => s2 });",
+        )
+        .expect("parses"),
+    )
+    .expect(
+        "the ordinary hand-written fn (no sugar involved) is ALSO accepted by the landed tracker \
+         — grounding that this is a pre-existing gap, not a Stage-3 regression",
+    );
+
+    // The value-parametric-sugar analogue, over the same real Cx pipeline (the exact assertion this
+    // test module makes for the composite case): a bare, pre-existing `Handle`-typed local, passed
+    // once, destructured at both RHS occurrences.
     let mut e = stage0_base_env();
     register_handle_wrapping_substrate(&mut e);
     register_dup_handle_rule(&mut e);
@@ -870,20 +945,10 @@ fn stage3_composite_substrate_field_value_param_is_refused() {
         "some_handle".to_owned(),
         Ty::Data("Handle".to_owned(), vec![]),
     )];
-    let err = infer_type(&e, &mut scope, &call).expect_err(
-        "a value parameter whose type structurally contains `Substrate` must be refused \
-         (Stage 3/OQ-H4), not just a top-level `Substrate` type",
-    );
-    assert!(
-        err.message.contains("Stage 3") && err.message.contains("OQ-H4"),
-        "expected the Stage-3 (OQ-H4) diagnostic, got: {}",
-        err.message
-    );
-    assert!(
-        err.message.contains("structurally contains"),
-        "expected the diagnostic to name the structural-containment shape (not just a top-level \
-         `Substrate` type), got: {}",
-        err.message
+    infer_type_with_active_affine(&e, &mut scope, &call).expect(
+        "aliasing a pre-existing Handle-typed local across two independent destructurings is \
+         accepted, matching the equivalent hand-written fn's own (pre-existing) posture — DN-117 \
+         §4.3: Stage 3 must not be *stricter* than hand-written code, only as precise",
     );
 }
 
@@ -897,6 +962,7 @@ fn stage3_composite_non_affine_data_value_param_still_accepted() {
     e.types.insert(
         "Handle2".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Handle2".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
@@ -939,6 +1005,7 @@ fn stage3_recursive_non_affine_data_terminates_and_accepts() {
     e.types.insert(
         "Ring".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Ring".to_owned(),
             params: vec![],
             ctors: vec![
@@ -1274,6 +1341,101 @@ fn empty_list_literal_without_context_is_refused() {
             || err.message.contains("element type")
             || err.message.contains("Seq"),
         "expected undetermined-element-type error for empty `[]`, got: {}",
+        err.message
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-112 Rank 1 / M-1036 — the nodule-qualified type-identity helpers themselves (white-box unit
+// tests; the end-to-end integration witnesses live in `tests/ctor_seal.rs`, which cannot reach
+// these `pub(crate)` helpers directly).
+// ---------------------------------------------------------------------------------------------
+
+#[test]
+fn qualify_type_name_qualifies_a_real_home_and_stays_bare_for_prelude_or_empty() {
+    assert_eq!(qualify_type_name("a", "T"), "a::T");
+    assert_eq!(qualify_type_name("a.b", "T"), "a.b::T");
+    // The reserved/single-home exemption (DN-112 §9 invariant i): PRELUDE_HOME never qualifies.
+    assert_eq!(qualify_type_name(PRELUDE_HOME, "Bool"), "Bool");
+    // An empty (path-less/anonymous nodule) home also stays bare (the documented narrow residual —
+    // see `nodule_home`'s doc comment).
+    assert_eq!(qualify_type_name("", "T"), "T");
+}
+
+#[test]
+fn ty_local_name_strips_exactly_the_last_qualifier_segment() {
+    assert_eq!(ty_local_name("a::T"), "T");
+    assert_eq!(ty_local_name("a.b::T"), "T");
+    // Unqualified input is returned unchanged (the common, single-nodule case — a pure passthrough).
+    assert_eq!(ty_local_name("T"), "T");
+    assert_eq!(ty_local_name("Bool"), "Bool");
+}
+
+#[test]
+fn qualify_then_ty_local_name_round_trips_for_any_real_home() {
+    // The pair is a round-trip inverse for any non-reserved, non-empty home — the invariant
+    // `resolve_ty`'s stamping site relies on (`ty_local_name(name)` before re-qualifying, so a
+    // round-trip through an already-qualified name never double-qualifies).
+    for (home, bare) in [("a", "T"), ("a.b.c", "Widget"), ("solo_nodule", "X")] {
+        let qualified = qualify_type_name(home, bare);
+        assert_eq!(ty_local_name(&qualified), bare);
+    }
+}
+
+#[test]
+fn lookup_data_finds_a_bare_key_directly_and_a_qualified_name_via_local_fallback() {
+    let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
+    types.insert(
+        "T".to_owned(),
+        DataInfo {
+            name: "T".to_owned(),
+            home: "a".to_owned(),
+            params: vec![],
+            ctors: vec![],
+        },
+    );
+    // The exact (bare) key — the surface-resolution common case.
+    assert!(lookup_data(&types, "T").is_some());
+    // A qualified name falls back to its local part (the post-check consumer case —
+    // `crate::mono`/`crate::elab`/`crate::decision`/`crate::usefulness`).
+    assert!(lookup_data(&types, "a::T").is_some());
+    assert_eq!(lookup_data(&types, "a::T").unwrap().home, "a");
+    // A genuinely unknown name (exact AND local-fallback both miss) is `None` — never a guess.
+    assert!(lookup_data(&types, "b::U").is_none());
+    assert!(lookup_data(&types, "U").is_none());
+}
+
+#[test]
+fn nodule_home_joins_a_dotted_path_and_is_empty_for_a_path_less_nodule() {
+    assert_eq!(nodule_home(&crate::ast::Path(vec!["a".to_owned()])), "a");
+    assert_eq!(
+        nodule_home(&crate::ast::Path(vec!["a".to_owned(), "b".to_owned()])),
+        "a.b"
+    );
+    assert_eq!(nodule_home(&crate::ast::Path(vec![])), "");
+}
+
+/// **DN-112 Rank 1 / M-1036 — the seal becomes real.** A minimal, direct check of the exploit
+/// program's core shape at the `check_nodule`/`Env` level (the fuller cross-nodule differential
+/// lives in `tests/ctor_seal.rs`): two nodules each declaring a same-named `T`, with a value of
+/// one home's `T` passed where the other home's `T` is expected, is a type mismatch naming both
+/// qualified identities — never a silent same-bare-name pass.
+#[test]
+fn cross_nodule_same_bare_name_types_are_distinct_in_a_checked_signature() {
+    let src = "phylum p\n\
+               nodule a;\n\
+               pub type T = Mk(Binary{8});\n\
+               pub fn take(x: T) => Binary{8} = match x { Mk(v) => v };\n\
+               nodule b;\n\
+               use a.take;\n\
+               type T = Mk(Binary{8});\n\
+               fn make() => T = Mk(0b0000_0000);\n\
+               pub fn bad() => Binary{8} = take(make());";
+    let ph = crate::parse::parse_phylum(src).expect("parses as a phylum");
+    let err = check_phylum(&ph).expect_err("a::T and b::T must not unify");
+    assert!(
+        err.message.contains("a::T") && err.message.contains("b::T"),
+        "the mismatch names BOTH qualified identities; got: {}",
         err.message
     );
 }

@@ -945,6 +945,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::CtorInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::CtorInfo
 pub struct mycelium_l1::checkty::DataInfo
 pub mycelium_l1::checkty::DataInfo::ctors: alloc::vec::Vec<mycelium_l1::checkty::CtorInfo>
+pub mycelium_l1::checkty::DataInfo::home: alloc::string::String
 pub mycelium_l1::checkty::DataInfo::name: alloc::string::String
 pub mycelium_l1::checkty::DataInfo::params: alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for mycelium_l1::checkty::DataInfo

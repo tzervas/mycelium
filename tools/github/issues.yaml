@@ -9346,8 +9346,18 @@ issues:
     epic: E18-1
     doc_refs:
       - corpus:DN-34
+      - corpus:DN-123
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
     body: |
+      **Append-only note (2026-07-11, integration close-out, FLAG-5 from DN-123).** The records/
+      named-field sub-scope (item 5 below) now has a dedicated design: **DN-123**
+      (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`, Draft) — sugar-over-positional
+      (Option A) via the existing `StructLayout` field-name↔index map, per DN-106's ratified
+      gap-closure default; a first-class kernel record variant (Option B) stays rejected. See
+      **M-1078** (new, this close-out) for the residual faithfulness + self-hosted-surface tracking.
+      This does not close any part of M-876 — the other three sub-scopes (bounded generics,
+      payload-variant enums, trait Self-bodies) remain `needs-design`.
+
       The remaining surface gaps from the transpiler union backlog (DN-34 §8.5), grouped: (3)
       trait-bounded generics `<T: Bound>` (12% -- `[T]` type-params landed M-656/7, but the bound
       slot on impl/fn generics is missing); (5) named-field records/structs (7% -- only a single-ctor
@@ -13995,9 +14005,11 @@ issues:
   - id: M-1036
     title: "nodule-qualified type identity — the real fix for M-1027's ctor-seal capability-gate bypass"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:bug, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-1027]
+    landed_date: 2026-07-11
+    landed_basis: "landed on dev via claude/leaf/m1036-ctor-seal (5fe6471f), merged with dev's facility-Stage-3/DN-117 pull-down; verified: cargo test -p mycelium-l1 = 565 lib + 26 ctor_seal.rs tests green, clippy/fmt clean. DoD met: nodule-qualified identity (DataInfo::home, checkty.rs) closes the shadow-bypass; ctor_seal.rs's known_gap_a_same_named_local_shadow_type_bypasses_the_seal renamed + flipped to assert the refusal; the DN-112 SS10 item 9 builtin/prelude uniform-home-invariant regression test shipped (ctor_seal.rs L542+, tests/checkty.rs L1358-9). Two CRITICAL soundness holes found+fixed during the leaf's own adversarial audit (generic-callee shadow reopening; shadow-plus-cross-nodule-reach pattern-match type confusion via lookup_data_home_checked). Disclosed, NOT silently closed, residuals filed as follow-ups: M-1070 (full per-import-provenance correct-home resolution — the shipped fix is the conservative refuse-on-home-mismatch closure, not the full correct-home resolution), M-1071 (pre-existing M-919 affine-tracker prior-handle-alias gap, confirmed not a regression), M-1072 (LOW doc-nit in decision.rs's compile_rows audit comment)."
     doc_refs:
       - corpus:DN-104
       - corpus:DN-99
@@ -14065,6 +14077,25 @@ issues:
       `ctor_seal.rs` differential, the general same-name-collision property test, and this
       builtin-invariant test all land; `Declared` if a narrower point-patch is chosen instead (VR-5).
       Status stays `todo` here -- DN-112 ratifies the mechanism, it does not implement it.
+
+      Landed (2026-07-11, integration close-out for `claude/leaf/m1036-ctor-seal`, status
+      todo -> done, append-only). DN-112 Rank 1 implemented: `DataInfo::home` + `qualify_type_name`/
+      `nodule_home` (`checkty.rs`) stamp the nodule-qualified identity at `resolve_ty`; the flipped
+      `ctor_seal.rs` differential (26 tests) and the DN-112 SS10 item 9 builtin/prelude
+      uniform-home-invariant regression test both land, moving this issue's guarantee posture to
+      `Empirical` per the mechanism note's own stated condition above. Two CRITICAL soundness holes
+      (generic-callee shadow reopening; a shadow-plus-cross-nodule-reach pattern-match type
+      confusion) were found and closed during the leaf's own adversarial self-audit before landing
+      (mitigation #14 — verified, not rubber-stamped). Three residuals are explicitly disclosed, not
+      silently folded into "done": the shipped fix is the conservative refuse-on-home-mismatch
+      closure, not the full per-import-provenance correct-home resolution (filed as **M-1070**); the
+      pre-existing M-919 affine-tracker prior-handle-alias gap is confirmed not a regression (filed
+      as **M-1071**); a LOW doc-nit in `decision.rs`'s `compile_rows` audit comment is filed as
+      **M-1072**. DN-112 itself stays `Accepted` (design ratification) -- this landing is the
+      implementation the note's own DoD condition names, but stepping DN-112 to `Enacted` is a
+      separate, deliberate review this close-out does not perform (house rule #3: `Enacted` is
+      reserved for a decision confirmed fully complete and outside ongoing integration, and this
+      issue's own residuals above mean the identity-resolution story is not yet fully closed).
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"
@@ -15415,6 +15446,37 @@ issues:
       "DN-114" and means DN-116 -- flagged, not silent (G2); `grep DN-114 crates/mycelium-l1/` finds
       the residual set for whoever next touches that crate.
 
+      **Stage 3 (DN-117, OQ-H4 affine soundness over the substituted `Expr`) progressed + the
+      DN-114 mycelium-l1 residual RESOLVED (2026-07-11, append-only, this Stage-3 landing pass --
+      `claude/leaf/m1054-stage3-affine`, pulling `dev` down per mitigation #6).** The residual
+      flagged immediately above is closed: all 22 `crates/mycelium-l1/` source/test-comment
+      occurrences of "DN-114" (`elab.rs`, `checkty.rs`, `src/tests/checkty.rs`,
+      `src/tests/defsite_resolution_stage2.rs`, `src/tests/reachability_stage1b.rs`,
+      `src/tests/facility_stage1_hygiene.rs`) repointed to **DN-116**, verified by
+      `grep -rn DN-114 crates/mycelium-l1/` returning empty. On the Stage-3 design/implementation
+      side (`docs/notes/DN-117-M1054-Stage3-Affine-Over-Substituted-Expr.md`), the leaf's own
+      Ratification section moves DN-117 to **Accepted** (delegated ratification, mirroring the
+      Stage 2/DN-115 precedent -- ratifies the §1-§7 design decisions, NOT `Enacted`, per house
+      rule #3), and a same-day append-only Errata (Ratification point 11) records a CRITICAL fix:
+      an adversarial review found `Cx::stage3_substitute_pattern` left an ambiguous match-arm
+      `Pattern::Ident` binder unrenamed whenever its spelling collided with a registered nullary
+      constructor, which could let a spliced argument's free variable be captured by the pattern
+      binder instead of the caller's value, hiding a real double-consume (confirmed reproducible
+      both ways by a `git stash`-revert of just the fix). Fixed: `stage3_substitute_pattern`/
+      `stage3_substitute_arm` now return `Result<_, CheckError>`, refusing the whole sugar call in
+      the ambiguous case with a never-silent diagnostic (G2) rather than guessing -- a conservative
+      false-REFUSE, not the unsound false-ACCEPT it replaces. Two new tests in
+      `crates/mycelium-l1/src/tests/affine_stage3.rs` (the exploit, now refused; a non-collision
+      control, still accepted -- no over-refusal). `cargo test -p mycelium-l1`: 559 lib tests
+      (0 failed, 1 ignored) + every integration target green after this landing pass's `dev`
+      pull-down merge, confirming no regression; `clippy -D warnings` / `fmt` clean.
+      Guarantee posture unchanged by this note: the double-consume upper bound over the real
+      substituted `Expr` is `Empirical` (checked by the §5/§7 + errata corpus); no `Proven` claim
+      anywhere (VR-5). Status stays `in-progress` -- Stage 3's own `Enacted`/close-out call (and
+      the still-open FLAG-pattern-ctor-collision disambiguation residual DN-117 §9/Ratification
+      point 10 names) are for a subsequent integrating pass, not this one; Stage 4 (cross-nodule,
+      DN-113/M-1060) remains unbuilt.
+
   - id: M-1055
     title: "E1 + E3 hygiene experiment prototype -- DN-110 §8.2 expression-position sugar-rule hygiene, Rank-1 go/no-go for J3"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -15774,13 +15836,34 @@ issues:
   - id: M-1060
     title: "implement the DN-113 v1 cross-phylum import/resolution subsystem"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1024]
     doc_refs:
       - corpus:DN-113
       - src:crates/mycelium-l1/src/checkty.rs:1086
       - src:crates/mycelium-proj/src/manifest.rs:84
+    landed_basis: >
+      status:done (2026-07-11, integration close-out; mitigation #14 -- verified against `dev`, not
+      rubber-stamped). v1 (DN-113 Rank 1) is SOUND at the checker level: PR #1503 (`98908c8d`) landed
+      the core mechanism (`::` phylum-boundary `use`, the additive `Phyla`/`check_phylum_with_deps`
+      type layered over `PhylumEnv::link`, DN-112 home-qualified identity extended across the phylum
+      boundary). Four adversarial-verification fix cycles then closed the bare-name type-identity
+      collapse class this landing's own audit surfaced, each with its own regression corpus (full
+      `cargo test -p mycelium-l1` green after each): PR #1506 (`9a03f988`, CRITICAL -- re-home every
+      ctor field's `Ty::Data` identity, closing the M-1036-pattern-one-level-up exploit); PR #1508
+      (`a282104a`, holes A/A2/B -- `check_trait_method_call` through a generic bound, and the
+      `check_app`/`check_app_generic_fn` unbaked-fn-signature fallback); PR #1511 (`343276e2`, the
+      4th/final site -- `check_path`'s fn-as-first-class-VALUE synthesis). An exhaustive
+      carrier×position enumeration (ctor field / call / generic-call / trait-method-call / value-ref)
+      confirms these four sites are the complete reachable set for this collapse class -- see DN-113
+      §7.1 (v1-limitation disclosure, added this close-out). Deferred, never-silently: the general fix
+      (re-home every foreign trait/fn signature `TypeRef` against its declaring phylum, replacing the
+      four narrow refusals with full acceptance -- tracked **M-1076**); separate compilation, re-export,
+      glob cross-phylum `use`, version ranges (v1's own disclosed deferrals, unchanged). Guarantee tags:
+      the closed collapse class is `Empirical` (checked by the four fix cycles' regression corpora);
+      the deferred general-fix scope and P3 items stay `Declared` (VR-5 -- no upgrade past the checked
+      basis).
     body: |
       Filed 2026-07-10 on DN-113's ratification (delegated -- maintainer-authorized, orchestrator-
       selected the recommended design on the merits). Implements DN-113 v1: the cross-phylum
@@ -16087,3 +16170,408 @@ issues:
       - Guarantee tags move exactly as bounded: single-nodule resolution + G1/G2 fixtures
         `Declared -> Empirical`; cross-nodule/phylum resolution and reveal-provenance (routed to
         OQ-H3/M-1051) stay `Declared`/open -- no upgrade past the checked basis (VR-5). ✅
+
+  - id: M-1070
+    title: "M-1036 residual: full per-import-provenance correct-home type resolution (the (a) fix, not the shipped conservative (b) closure)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - corpus:DN-112
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out (`claude/leaf/
+      m1036-ctor-seal`), a disclosed residual named honestly rather than folded silently into
+      M-1036's `done` (G2/VR-5). M-1036 shipped `lookup_data_home_checked` (`checkty.rs`), the
+      **conservative (b) closure**: when the bare-local fallback would resolve a qualified name
+      against a `DataInfo` whose `home` disagrees with the qualifier, it refuses explicitly rather
+      than proceeding with the wrong declaration's shape. This is sound (a false-refuse is safe) but
+      is NOT the full **(a) correct-home resolution** -- a single bare-keyed registry (own decls
+      shadow imports, RFC-0006 §4.3) holds at most one `DataInfo` per bare name, so once a nodule
+      locally shadows a foreign type's bare name, the foreign type's own `DataInfo` is not reachable
+      from `types` at all. There is nothing correct to resolve against without a structurally larger
+      change.
+
+      User stories:
+      - As a `.myc` author with a legitimate same-named-but-unrelated local type that also
+        legitimately reaches (via a pattern match) a foreign nodule's same-named sealed type, I want
+        my program to type-check correctly rather than being conservatively refused, so that the
+        ctor-seal fix's soundness doesn't cost me an otherwise-valid shadow+cross-nodule-reach
+        program.
+
+      Definition of Done:
+      - `crate::mono` (or an equivalent resolution layer) gains **per-import-provenance-scoped**
+        type registries -- not one merged bare-keyed `BTreeMap<String, DataInfo>` -- so a qualified
+        name resolves against the FOREIGN type's own `DataInfo`, not merely refuses on a home
+        mismatch. The M-1036 conservative-refuse regression corpus (`ctor_seal.rs`) is extended with
+        the previously-refused-but-legitimate shadow+cross-nodule-reach cases now correctly
+        ACCEPTED. No regression on the existing refuse-on-genuine-mismatch cases. Guarantee posture
+        moves the affected resolution path `Empirical` once witnessed by the extended differential
+        (VR-5).
+
+  - id: M-1071
+    title: "Affine-tracker gap: a same, pre-existing Handle-typed local referenced+destructured twice is not tracked as a duplicated affine move (M-919/DN-71)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E30-1
+    depends_on: [M-919]
+    doc_refs:
+      - corpus:DN-71
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/tests/checkty.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out, surfacing a
+      **pre-existing** gap the M-1054 Stage-3 affine work's own regression corpus documents and the
+      ctor-seal leaf's soundness audit independently re-confirmed is NOT a regression from either of
+      those landings (mitigation #14 -- verified, not assumed). Pinned by
+      `crates/mycelium-l1/src/tests/checkty.rs::
+      stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap`: referencing the
+      *same* pre-existing `Handle`-typed local twice and destructuring each occurrence
+      independently (`match h { Wrap(s1) => s1 }` used alongside a second, independent `match h {
+      Wrap(s2) => s2 }` over the same `h`) is accepted by the landed M-919/DN-71 Model-S affine
+      `Tracker` -- and, confirmed by an equivalent ordinary hand-written (non-sugar) `fn` fixture in
+      the same test, is accepted identically with NO sugar/facility machinery involved at all. Each
+      `match`'s field-capture creates its own fresh, independent tracker slot (DN-71 §4.2), so the
+      tracker does not itself track a composite value's identity across separate binding sites.
+
+      User stories:
+      - As a `.myc` author relying on the affine tracker to catch a duplicated-move bug, I want a
+        genuinely duplicated consume of the same `Substrate`-carrying value to be caught even when
+        it is reached through two independent pattern-match sites on the same prior local, not just
+        within a single match's own arms.
+
+      Definition of Done:
+      - The `Tracker` (or its caller) gains composite-value identity tracking across independent
+        binding sites reached from the same prior local (or a documented, ratified decision that
+        this is out of scope, with a Draft DN recording why). A property test over generated
+        multi-site-destructure programs. The existing
+        `stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap` regression is
+        updated to assert the refusal once closed (or is documented as an accepted, ratified
+        limitation if the DN scoping concludes fixing it is out of scope).
+
+  - id: M-1072
+    title: "Doc-nit: decision.rs's compile_rows M-1036 residual-close audit comment overstates Point 2 relative to the load-bearing Point 1 induction"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:language, priority:P4, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - src:crates/mycelium-l1/src/decision.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out -- a LOW-severity doc-nit
+      a verify pass flagged during self-audit and deliberately deferred rather than blocking the
+      landing (house rule #4 -- ground every claim, including this one's own severity assessment).
+      `crates/mycelium-l1/src/decision.rs`'s "M-1036 residual-close audit (B -- mirrors usefulness's
+      algorithm)" doc comment on `compile_rows` gives two numbered arguments for why the fn's
+      unguarded plain `lookup_data` calls are not exploitable: Point 1 (an induction over how `dn`
+      reaches this fn only via a `col` selection that requires an already-home-checked
+      `Pat::Ctor`/`Pat::Lit` entry) is the actual load-bearing, sound argument. Point 2 ("the emitted
+      `cases` never depend on a wrong `d` anyway") is comparatively imprecise -- worth tightening or
+      demoting to a supporting note rather than standing as a second independent argument of equal
+      weight, since Point 1 alone already establishes `dn` is never mismatched when this fn is
+      reached.
+
+      User story:
+      - As a future reader auditing this fn's soundness argument, I want the doc comment to name
+        clearly which point is load-bearing, so I don't have to re-derive that Point 1's induction is
+        sufficient on its own.
+
+      Definition of Done:
+      - `decision.rs`'s audit comment is reworded so Point 1 is clearly marked as the sufficient,
+        load-bearing argument and Point 2 is either tightened to be precise on its own terms or
+        reframed as a corroborating (not independently necessary) observation. No behavior change --
+        doc-only.
+
+  - id: M-1073
+    title: "M-1073 -- value-semantics-aware security scanning + exploit hardening for Mycelium programs (BACKLOG)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:language, priority:P3, status:todo]
+    epic: E22-1
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-032
+      - corpus:ADR-003
+      - corpus:RFC-0035
+      - corpus:DN-30
+      - src:.claude/skills/security-review/SKILL.md
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). BACKLOG -- deferred until the core
+      zero-hand-port language/transpiler levers land (no single blocking M-id; the zero-hand-port
+      tree is a diffuse set of in-flight ports/transpiler-gap-closure work, not one dependency --
+      left undepended rather than fabricating a false edge, VR-5). Scope: determine the best
+      approaches to statically scan/analyze *Mycelium programs* (not the Rust kernel -- that is
+      M-1075) for security issues and harden against exploits, LEVERAGING Mycelium's value
+      semantics. This is the value-semantics-specific angle within the existing E22-1 Security
+      Scanning Toolkit epic (DN-30/RFC-0035, Proposed) -- E22-1's own body notes its leaves are
+      "scoped when the binding security-scanning RFC lands (the forward-epic pattern)"; this issue
+      is filed forward against that epic now, gated on RFC-0035's ratification and the zero-hand-port
+      levers, rather than left unrecorded.
+
+      Working hypothesis (to VALIDATE, not assume -- `Declared` until the scoping note checks it):
+      Mycelium's value-semantic nature -- immutable content-addressed values (ADR-003), no
+      aliasing-induced UB, never-silent representation swaps (G2), explicit `Option`/error on
+      out-of-range -- yields a SMALLER, more tractable attack surface than pointer-aliasing
+      languages (no use-after-free/double-free/data-race class by construction), so security
+      analysis over Mycelium programs should be *easier* and more decidable than the C/Rust
+      equivalent. This is a real, checkable claim, not a marketing assertion -- the scoping note
+      must ground it or refute it.
+
+      User stories:
+      - As a Mycelium developer, I want static security analysis of my program, so that I catch
+        exploitable patterns before shipping.
+      - As a security reviewer, I want the analysis to exploit value-semantics (no aliasing/UB) so
+        that it gives stronger, more decidable guarantees than a C/Rust equivalent.
+      - As the maintainer, I want a scoped recommendation of the best approach/tooling before we
+        build, so we don't over-invest prematurely on an unvalidated hypothesis.
+
+      Definition of Done:
+      - A design/scoping note (Draft DN, or a research note feeding a future DN) that: (a)
+        validates or refutes the value-semantics-eases-analysis hypothesis above with grounding
+        (cite ADR-003/ADR-032/G2, and the actual vuln classes RFC-0035 §2/D1 already enumerates,
+        rather than asserting in the abstract); (b) enumerates candidate approaches (e.g.
+        taint/flow analysis over the RFC-0035 inspectable-Core-IR substrate, provenance/audit-trail
+        leverage per ADR-032, capability/guarantee-tag checking against the Exact/Proven/
+        Empirical/Declared lattice); (c) recommends a ranked approach with honest guarantee tags
+        (no upgrade past the checked basis, VR-5); (d) names the deferred-until conditions
+        precisely (which zero-hand-port/transpiler milestones actually unblock this, once known).
+        NO implementation lands under this backlog item -- the note is the deliverable.
+
+  - id: M-1074
+    title: "M-1074 -- extensible CPU+GPU acceleration for identity hashing & crypto (BACKLOG)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:design, area:execution, priority:P3, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-003
+      - corpus:DN-93
+      - src:justfile
+      - src:scripts/vsa-desktop-checks.sh
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). BACKLOG -- deferred; no epic fits
+      cleanly (E15-1/E25-1, the Native-AOT-acceleration epics, are both `status:done` and
+      subsumed; filed standalone with no `epic:`, the same pattern already used for the adjacent
+      M-832/M-1014 desktop-held perf tracks -- FLAG: if this bucket grows, a live
+      "acceleration/perf" epic successor to E15-1/E25-1 may be warranted; not minted speculatively
+      here). Accelerate content-address identity hashing (ADR-003) and any encryption support to be
+      performant AND rock-solid, via an EXTENSIBLE, capability-detected accelerator-backend
+      abstraction with an ALWAYS-PRESENT portable fallback (never-silent capability swap -- G2, the
+      same discipline the runtime's representation swaps already use). First concrete backends
+      (directly in hand, maintainer's desktop): the i7-14700K (SHA-NI hardware SHA-256 as the
+      always-available low-latency + rock-solid tier; AES-NI for encryption; AVX2/AVX-VNNI for
+      vectorized hash-batch/VSA/dense ops; hybrid P/E-core + thread-director scheduling) AND the
+      RTX 5080 (batch-throughput tier). Designed as pluggable/extensible to FUTURE hardware (the
+      3090Ti, other CPUs/GPUs/accelerators) -- NOT hardcoded to today's box. Ties to the VSA/GPU
+      lane (M-832/M-1014, both desktop-held per the standing cloud-session policy), the AOT-perf
+      track (E15-1/E25-1), and DN-93's content-address rehash-settlement discipline (batch any
+      identity-changing change into one rehash, never piecemeal). Heavy perf verification is
+      desktop-held (per the standing "heavy checks run on the maintainer's desktop" policy,
+      `scripts/vsa-desktop-checks.sh`); this issue's own DoD is design-only.
+
+      User stories:
+      - As a Mycelium runtime, I want identity hashing accelerated by whatever the host CPU/GPU
+        offers, so content-addressing is fast without sacrificing correctness.
+      - As a user on a machine without a GPU (or without SHA-NI), I want a correct portable
+        fallback with a disclosed capability swap, so behavior is never silently degraded (G2).
+      - As the maintainer, I want the backend layer extensible to future hardware without rework.
+      - As a security-conscious user, I want crypto/hashing rock-solid (constant-time where it
+        matters, validated) regardless of backend.
+
+      Definition of Done:
+      - A design note specifying: the backend-abstraction + capability-detection +
+        never-silent-fallback contract; an initial 14700K (SHA-NI/AES-NI/AVX) + 5080 backend plan;
+        a differential/validation strategy (every accelerated path must be bit-identical to the
+        portable oracle -- VR-5, no correctness traded for speed); an explicit extensibility seam
+        for future hardware. Heavy perf verification stays desktop-held (unchanged policy).
+        Implementation is deferred past this backlog item -- no code lands here.
+
+  - id: M-1075
+    title: "M-1075 -- standard Rust-kernel security scans: establish + maintain a hardened baseline"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P1, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-44
+      - src:CONTRIBUTING.md
+      - src:.claude/skills/security-review/SKILL.md
+      - src:scripts/checks/deny.sh
+      - src:scripts/checks/unsafe-per-use.sh
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). NEAR-TERM PREP, not backlog --
+      ongoing hygiene, `status:todo` (the repo's real "not started / in the backlog" status; the
+      informal "near-term prep" framing is priority, not a distinct status label -- no `backlog`
+      status exists in this repo's vocabulary, `tools/github/labels.json`). No epic fits cleanly:
+      E22-1 (Security Scanning Toolkit) is scoped to scanning *Mycelium programs* (DN-30/RFC-0035),
+      not the Rust kernel's own dependency/license/unsafe hygiene; M-678 (the prior Rust-kernel
+      unsafe-hardening epic, DN-21) is `status:done` and narrower in scope (JIT-FFI unsafe only,
+      not supply-chain/license/advisory hygiene workspace-wide). FLAG: a dedicated
+      "hardened-baseline maintenance" epic may be warranted if this recurring-hygiene bucket grows
+      beyond this one issue -- not minted speculatively here; filed standalone with no `epic:`.
+
+      Because the zero-hand-port pipeline transpiles FROM the Rust reference implementation, run
+      standard Rust security scans -- `cargo-audit` for RUSTSEC advisories, `cargo-deny` for
+      licenses/bans/advisories/sources (`justfile`'s existing `deny`/`deny-net-fix` recipes,
+      `scripts/checks/deny.sh`), supply-chain (pinned deps + lockfile integrity + no curl|bash,
+      per CONTRIBUTING's licensing/security posture), secrets hygiene, and an `unsafe` audit
+      (`scripts/checks/unsafe-per-use.sh`, the ADR-014 `// SAFETY:`-adjacency gate already wired
+      into `just check`) -- to establish and MAINTAIN a solid hardened baseline that the
+      transpiled output inherits. This is ONGOING hygiene, not a one-off report. Heavy/periodic
+      runs stay desktop-held per the standing cloud-session policy; the light gates already run in
+      `just check`. DN-44 (Codebase Security Posture) is the existing consolidating reference this
+      issue's baseline report extends, not duplicates.
+
+      User stories:
+      - As the maintainer, I want a documented security baseline of the Rust kernel, so we
+        transpile from a hardened state.
+      - As a contributor, I want dependency advisories/license violations caught in the gate, so
+        regressions don't land.
+      - As a security reviewer, I want the `unsafe` surface inventoried + justified.
+
+      Definition of Done:
+      - A baseline security report of the current posture (advisories, license findings, `unsafe`
+        site inventory, secrets-scan result); `cargo-audit` + `cargo-deny` confirmed wired into the
+        gate config (already present per `scripts/checks/deny.sh` -- this issue verifies + documents
+        rather than assumes, house rule #14) with a documented policy; an `unsafe`-usage inventory
+        cross-checked against `scripts/checks/unsafe-per-use.sh`'s live gate; a recurring-scan
+        cadence documented (tied to the existing tier policy: light in `just check`, heavy
+        desktop-held). The first baseline report is this issue's initial deliverable; DN-44 is
+        updated (append-only) rather than superseded if this report sharpens its posture map.
+
+  - id: M-1076
+    title: "M-1076 -- full cross-phylum trait/fn signature re-homing (close DN-113 §7 / DN-122's general fix)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-1060]
+    doc_refs:
+      - corpus:DN-113
+      - corpus:DN-122
+      - corpus:DN-112
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/cross_phylum.rs
+    body: |
+      Filed 2026-07-11 at the M-1060/DN-113 integration close-out (mitigation #1 -- verified M-1076
+      free before minting; M-1075 was highest). M-1060's four fix cycles (PRs #1503/#1506/#1508/#1511)
+      closed the cross-phylum bare-name type-identity collapse class at every reachable site via
+      **narrow, conservative never-silent refusals**: a foreign trait's method sig invoked through a
+      generic bound, or a foreign fn's sig referenced at a call/generic-call/value position, is
+      REFUSED whenever that un-re-homed signature names a concrete type beyond its own generic
+      parameters (see DN-113 §7.1, added this close-out, and each fix commit's own disclosed residual).
+      This is sound (a false-refuse never silently accepts the wrong type) but not the full fix: it
+      trades soundness for coverage, refusing some LEGITIMATE cross-phylum trait/fn signatures that a
+      full re-homing would correctly accept. This issue is that general fix -- mirroring the CRITICAL
+      ctor-field re-homing (PR #1506) that already re-homes every constructor field's `Ty::Data`
+      identity against its declaring phylum, extend the SAME re-homing mechanism
+      (`qualify_ty_cross_phylum`) to every foreign trait/fn signature `TypeRef` at merge time (not
+      lazily at call/impl-check time against the wrong registry), so the four conservative refusals
+      become full acceptance.
+
+      User stories:
+      - As a phylum author, I want a legitimate cross-phylum trait-method call through a generic
+        bound (or a legitimate cross-phylum fn call/value-ref) whose signature genuinely names a
+        concrete foreign type to TYPE-CHECK, rather than being conservatively refused, so the M-1060
+        soundness fix doesn't cost me an otherwise-valid cross-phylum program.
+      - As a kernel reviewer, I want the re-homing done ONCE at merge time (mirroring the ctor-field
+        precedent), not four times lazily at each call site, so the mechanism stays DRY and auditable
+        (KC-3).
+
+      Definition of Done:
+      - Every foreign trait/fn signature `TypeRef` reachable from `check_app` / `check_app_generic_fn`
+        / `check_trait_method_call` / `check_path` is re-homed against its declaring phylum at
+        `merge_phyla_exports` (or an equivalent single merge-time pass), the same way ctor fields
+        already are.
+      - The four existing conservative-refusal regressions in `crates/mycelium-l1/tests/cross_phylum.rs`
+        (holes A/A2/B, the fn-as-value 4th site) are extended with the previously-refused-but-legitimate
+        cases now correctly ACCEPTED, with no regression on the genuine-mismatch refuse cases.
+      - Guarantee posture for the affected resolution paths moves `Declared -> Empirical` once
+        witnessed by the extended differential (VR-5 -- no upgrade past the checked basis).
+
+  - id: M-1077
+    title: "M-1077 -- loose/gradual typing DX mode + Python-transpile enabler"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-032
+      - corpus:RFC-0034
+      - corpus:RFC-0018
+    body: |
+      Filed 2026-07-11 at the gap-close-run integration close-out (backlog, P3 -- not gating the
+      current wave). Proposes a **loose/gradual typing developer-experience mode** on the fast
+      interpreted path: types are inferred and used as HINTS for diagnostics/tooling, but do not GATE
+      iteration -- a program with an unresolved/mismatched type can still run on the `fast` tier
+      (ADR-032/RFC-0034's honesty-lattice framing: an unverified type binding is `Declared`, not a
+      hard compile-time refusal), while STRICT typing continues to gate `certified`-tier COMPILATION
+      as it does today. This is explicitly a DEV-ITERATION ACCELERATOR, not a soundness relaxation of
+      the certified path -- the transparency rule (house rule #1) still applies: a loose-mode program
+      that would fail strict checking is FLAGGED, never silently accepted as if checked.
+
+      A grounded, concrete payoff this mode inherently enables: composing a **Python -> Mycelium**
+      pipeline via the EXISTING py2rust tooling (Python -> Rust) followed by the existing
+      Rust -> Mycelium transpiler, using py2rust's own inferred/duck types as the loose-mode TYPE
+      HINTS rather than requiring them resolved to Mycelium's strict kernel vocabulary up front. This
+      does not build a new Python frontend -- it reuses two existing pipeline stages and only adds the
+      loose-typing acceptance mode this issue scopes.
+
+      User stories:
+      - As a developer iterating quickly, I want to run/explore a program whose types aren't fully
+        resolved yet, so I'm not blocked by the strict checker during exploration (fast tier only).
+      - As a maintainer, I want strict typing to remain the unconditional gate for `certified`
+        compilation, so loose mode never weakens the certified guarantee (ADR-032 tier separation).
+      - As a porting engineer, I want a Python source to flow through py2rust's inferred types as
+        Mycelium loose-mode hints, so a Python -> Rust -> Mycelium composition becomes a realistic
+        porting path without a bespoke Python frontend.
+
+      Definition of Done:
+      - A DN scoping the loose-mode mechanism (what "hint, don't gate" means precisely on the `fast`
+        interpreter path; how it interacts with RFC-0018's grading and the honesty lattice) is
+        ratified before implementation (house rule #3 -- design first).
+      - A fixture demonstrates a type-unresolved program running on `fast` with a flagged (not
+        silent) diagnostic, and an equivalent `certified`-tier compile of the same program still
+        refuses via strict typing.
+      - A minimal py2rust-sourced Python fixture flows through Python -> Rust -> Mycelium end to end,
+        using py2rust's inferred types as loose hints, with the honest `Declared`/`Empirical` boundary
+        preserved (VR-5) -- no fabricated "full Python support" claim from a narrow fixture.
+
+  - id: M-1078
+    title: "M-1078 -- records/named-fields faithfulness + self-hosted struct-pattern surface (DN-123)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-876]
+    doc_refs:
+      - corpus:DN-123
+      - corpus:DN-119
+      - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-l1/src/ast.rs
+    body: |
+      Filed 2026-07-11 at the DN-123 integration close-out (mitigation #1 -- verified M-1078 free
+      before minting). DN-123 (Draft, `docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`)
+      verify-first-corrected the records/named-field lever: the transpiler already substantially
+      supports records at the `checked_fraction` level (a field-name<->index map, positional
+      desugaring of struct literals/field-projection/struct-update, named-field structs emitted
+      positionally with names RECORDED, not lost, as a never-silent `NamedFieldDrop` sub-gap). The
+      genuine residual this issue tracks is **not expressibility** but (i) **faithfulness** (dropped
+      field names -- a round-trip-readable named-field reveal, not just a positional emission) and
+      (ii) the **self-hosted `.myc` surface** (no named-field construction / `.field` access /
+      `Foo { x, y }` pattern -- DN-119's **L3-G1** grammar residual).
+
+      User stories (DN-123 §10):
+      - As a port author, I want `struct Foo { x, y }`, `foo.x`, `Foo { x, y }` patterns, and
+        `Foo { x, ..base }` to port mechanically and stay readable (names not silently lost).
+      - As a Mycelium developer, I want to `expand`/`EXPLAIN` a named-field sugar to see the
+        positional grammar it compiles to (house rule #2 / DN-106 GP1 transparency).
+      - As a maintainer, I want the named-field surface to be sugar with zero kernel-semantic growth
+        (KC-3), so a rename stays identity-neutral and no named-field resolver enters the trusted
+        base.
+
+      Definition of Done (DN-123 §9, the DN's own ratification gate, restated as this issue's build
+      gate once ratified):
+      - DN-123 ratified (Draft -> Accepted, maintainer) as a build precondition (house rule #3).
+      - Option A (mechanically-lowering sugar over positional `Ctor`/`Data` plus the name<->index
+        map) implemented; Option B (first-class named-field kernel variant) stays rejected.
+      - The self-hosted `.myc` named-field sugar (construction / `.field` / `Foo { x, y }` pattern,
+        DN-119 L3-G1) lands with usefulness/exhaustiveness green.
+      - A differential witnesses round-trip name preservation before any `Empirical` upgrade past
+        the sugar's `Declared` design status (VR-5).

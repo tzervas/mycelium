@@ -36,7 +36,8 @@ use crate::ast::{
 use crate::checkty::{
     collect_tuple_arities, first_duplicate, prelude, register_instances, register_nodule_decls,
     register_traits, register_types, resolve_ctors, resolve_imports, type_head, CoherenceView,
-    CtorInfo, DataInfo, Exports, InstanceInfo, NoduleImports, NoduleRegs, TraitInfo, Ty, Width,
+    CtorInfo, DataInfo, Exports, InstanceInfo, NoduleImports, NoduleRegs, Phyla, TraitInfo, Ty,
+    Width,
 };
 use crate::eval::L1Value;
 use crate::tests::marshal_support::*;
@@ -118,6 +119,11 @@ fn decode_data_info(v: &L1Value) -> DataInfo {
     match ctor {
         "DI" => DataInfo {
             name: decode_string(&fields[0]),
+            // DN-112/M-1036: the `.myc` mirror does not yet encode `home` (DN-112 DoD item 8 — the
+            // `.myc` enforcement/identity mirror is a flagged residual, riding the checkty
+            // cross-nodule port); the differential normalizes both sides' `home` to bare before
+            // comparing (see the `strip_home`/`normalize_want_types` call sites below).
+            home: String::new(),
             params: decode_vec(&fields[1], decode_string),
             ctors: decode_vec(&fields[2], decode_ctor_info),
         },
@@ -394,6 +400,7 @@ fn type_decl(name: &str, params: &[&str], ctors: Vec<Ctor>) -> TypeDecl {
 /// before `resolve_ctors` runs, so a recursive field reference resolves.
 fn shell(name: &str, params: &[&str]) -> DataInfo {
     DataInfo {
+        home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
         name: name.to_owned(),
         params: params.iter().map(|s| (*s).to_owned()).collect(),
         ctors: vec![],
@@ -1196,6 +1203,14 @@ fn seed_bool() -> BTreeMap<String, DataInfo> {
     map
 }
 
+/// **DN-112 Rank 1 / M-1036, DoD item 8 (flagged `.myc`-parity residual).** The `.myc` self-hosted
+/// mirror's `register_types`/`register_nodule_decls` port does not yet compute/encode nodule-
+/// qualified identity at all (`DataInfo::home`, nor the qualified names embedded in a checked
+/// `Ty::Data` field) — see `marshal_support::unqualify_types_map`'s doc comment for the full
+/// rationale (DN-112 DoD item 8). Every `register_types`/`register_nodule_decls` oracle built here
+/// is normalized through it before comparison.
+use super::marshal_support::unqualify_types_map as strip_home_map;
+
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 // register_types (LIVE — checkty::register_types): monomorphic, cross-referencing, generic, the two
 // refusals (duplicate type name / duplicate type param), and a ctor-field TUPLE. Compared to the live
@@ -1282,7 +1297,8 @@ fn register_types_cases() {
     for (label, n) in &cases {
         let mut map = seed_bool();
         let res = register_types(&mut map, n);
-        let want = res.map(|()| map).map_err(|_| ());
+        // DN-112/M-1036 DoD item 8: normalize `home` — see `strip_home`'s doc comment.
+        let want = res.map(|()| strip_home_map(map)).map_err(|_| ());
         assert_l1_marshal(
             &format!("register_types_{label}"),
             &format!(
@@ -1536,6 +1552,7 @@ fn collect_tuple_arities_cases() {
             "otherkinds_free",
             nodule(vec![
                 Item::Use(crate::ast::UsePath {
+                    phylum: None,
                     path: Path(vec!["m".to_owned(), "X".to_owned()]),
                     glob: false,
                 }),
@@ -1622,8 +1639,11 @@ fn register_types_registers_leg_tuples() {
     ]);
 
     // (1) register_types port ↔ oracle: identical registry, INCLUDING the leg-derived Tuple$2/Tuple$3.
+    // DN-112/M-1036 DoD item 8: normalize `home` — see `strip_home`'s doc comment.
     let mut map = seed_bool();
-    let want = register_types(&mut map, &n).map(|()| map).map_err(|_| ());
+    let want = register_types(&mut map, &n)
+        .map(|()| strip_home_map(map))
+        .map_err(|_| ());
     assert_l1_marshal(
         "register_types_leg_tuples",
         &format!(
@@ -2635,6 +2655,14 @@ fn decode_nodule_imports(v: &L1Value) -> NoduleImports {
         // (its `NoduleImports` `NI` carries 4 fields — the enforcement layer is Rust-only until the
         // checkty cross-nodule port), so the decoded value's withheld set is empty. FLAGGED residual.
         sealed: std::collections::BTreeSet::new(),
+        // DN-112 Rank 1 / M-1036, DoD item 8: same flagged residual — the `.myc` mirror does not
+        // yet bake/carry a resolved-signature mechanism at all.
+        resolved_fn_sigs: BTreeMap::new(),
+        // M-1060 fix-cycle-3: same flagged residual — the `.myc` mirror predates the cross-phylum
+        // subsystem entirely (DN-113/M-1060), so it carries no cross-phylum marker at all; the
+        // decoded value's cross-phylum sets are always empty.
+        cross_phylum_traits: std::collections::BTreeSet::new(),
+        cross_phylum_fns: std::collections::BTreeSet::new(),
     }
 }
 
@@ -2642,6 +2670,7 @@ fn decode_nodule_imports(v: &L1Value) -> NoduleImports {
 
 fn use_item(segs: &[&str], glob: bool) -> Item {
     Item::Use(UsePath {
+        phylum: None,
         path: Path(segs.iter().map(|s| (*s).to_owned()).collect()),
         glob,
     })
@@ -2649,6 +2678,7 @@ fn use_item(segs: &[&str], glob: bool) -> Item {
 
 fn data_info_leaf(name: &str) -> DataInfo {
     DataInfo {
+        home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
         name: name.to_owned(),
         params: vec![],
         ctors: vec![],
@@ -2699,7 +2729,10 @@ impl ExportsBuilder {
 }
 
 fn run_resolve_imports_case(label: &str, nod: &Nodule, exports: &Exports) {
-    let want = resolve_imports(nod, exports).map_err(|_| ());
+    // M-1060: this differential exercises intra-phylum resolution only (its self-hosted `.myc`
+    // mirror predates cross-phylum `use`); the empty `Phyla` makes `resolve_imports` behave
+    // byte-identically to its pre-M-1060 signature.
+    let want = resolve_imports(nod, exports, &Phyla::default()).map_err(|_| ());
     assert_l1_marshal(
         label,
         &format!(
@@ -2895,8 +2928,9 @@ fn decode_nodule_regs(
 }
 
 fn run_register_nodule_decls_case(label: &str, nod: &Nodule) {
+    // DN-112/M-1036 DoD item 8: normalize `home` — see `strip_home`'s doc comment.
     let want = register_nodule_decls(nod)
-        .map(|regs: NoduleRegs| (regs.types, fn_names(&regs.fns), regs.traits))
+        .map(|regs: NoduleRegs| (strip_home_map(regs.types), fn_names(&regs.fns), regs.traits))
         .map_err(|_| ());
     assert_l1_marshal(
         label,

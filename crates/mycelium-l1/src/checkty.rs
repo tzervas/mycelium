@@ -247,8 +247,21 @@ pub struct CtorInfo {
 /// type arguments when a value is constructed or matched.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataInfo {
-    /// Type name.
+    /// Type name — the **bare/local** (simple) name, unchanged from v0 (the registry-lookup key
+    /// this crate has always used; DN-112 Rank 1 / M-1036 does not qualify this field, only the
+    /// [`Ty::Data`] identity string derived from it via [`qualify_type_name`]).
     pub name: String,
+    /// **Nodule-qualified type identity — the home** (DN-112 Rank 1 / M-1036): the declaring
+    /// nodule's home string (`nodule.path` dot-joined, e.g. `"a"`, `"a.b"`), or [`PRELUDE_HOME`]
+    /// for a prelude/synthetic type (`Bool`, `Tuple$N`) that must resolve identically under every
+    /// nodule (the §9 uniform-home invariant). Stamped **once**, at first registration
+    /// ([`register_types`]), from the **declaring** nodule — never the use-site (§9 invariant ii):
+    /// an imported [`DataInfo`] clone carries its original declaring nodule's home unchanged
+    /// through the export/import pipeline. [`qualify_type_name`] combines this with [`Self::name`]
+    /// to produce the identity string embedded in a fresh [`Ty::Data`] (e.g. `"a::T"`); the
+    /// registry KEY (this map's `String` key) stays bare/simple throughout — only the `Ty::Data`
+    /// identity is qualified (KC-3 — the ~79 destructuring arms DN-112 §3 counts need no change).
+    pub home: String,
     /// Type parameters, in declaration order (empty for a monomorphic type). `List<A>` ⇒ `["A"]`.
     pub params: Vec<String>,
     /// Constructors, in declaration order (the index is the `#type#i` of RFC-0007 §4.2). Field types
@@ -314,6 +327,193 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
         Ty::Var(_) | Ty::Fn(_, _) => return None,
     })
+}
+
+// ---- DN-112 Rank 1 / M-1036: nodule-qualified type identity (the ctor-seal capability boundary) ----
+//
+// The mechanism (ratified DN-112 §4 Alt 1 / §10): a [`Ty::Data`] name carries the **declaring
+// nodule's home**, qualified into the existing `String` slot (`"a::T"` for `T` declared in nodule
+// `a`), so two same-named-different-home types are **structurally distinct** — `PartialEq`,
+// `subst_ty`, and mangling (`mono::mangle_ty`) all stay collision-free "for free" (no change to
+// their own logic — DN-112 §4/§7). [`DataInfo::home`]/`::name` and the registry `BTreeMap` **key**
+// stay bare/simple throughout (the checking-time surface-lookup scheme, unchanged); only the
+// identity **stamped into a freshly-constructed `Ty::Data`** is qualified. Prelude/synthetic types
+// (`Bool`, `Tuple$N`) stay under the single [`PRELUDE_HOME`] and are **never** qualified (§9's
+// uniform-home invariant — every nodule must see the *same* builtin).
+
+/// The single reserved home for prelude/synthetic types (`Bool`, `Tuple$N`) that must resolve
+/// **identically** under every nodule (DN-112 §9 invariant i). A type registered under this home is
+/// never qualified by [`qualify_type_name`] — its `Ty::Data` identity stays the bare name, exactly
+/// as before this fix, so every nodule sees the same builtin regardless of which nodule's
+/// registration pass happened to seed it (`Bool` is re-seeded per nodule via [`prelude`]; `Tuple$N`
+/// is synthesized on demand per nodule via [`synthetic_tuple_data`]).
+pub(crate) const PRELUDE_HOME: &str = "<prelude>";
+
+/// A nodule's **home** string for type-identity qualification (DN-112 Rank 1): its dot-joined path
+/// (`"a"`, `"a.b"`), or `""` for a path-less (anonymous, header-less) nodule. An empty home is
+/// treated as bare/unqualified by [`qualify_type_name`] (the same "stay bare" treatment as
+/// [`PRELUDE_HOME`]) — a documented, narrow residual: two distinct anonymous nodules in one phylum
+/// would share the empty home, but the pre-existing [`PhylumEnv::link`] cross-nodule bare-name
+/// collision refusal already rejects that shape independent of this fix, and every multi-nodule
+/// fixture in this crate's test corpus uses an explicit `nodule NAME;` header.
+#[must_use]
+pub(crate) fn nodule_home(path: &Path) -> String {
+    path.0.join(".")
+}
+
+/// Qualify a type's bare/local name with its declaring nodule's `home` (DN-112 Rank 1 / M-1036) —
+/// the identity embedded in a freshly-constructed [`Ty::Data`]. A [`PRELUDE_HOME`] (or empty) home
+/// stays **bare** (the single-reserved-home exemption, §9 invariant i) — so `Bool`/`Tuple$N` mangle
+/// and compare exactly as they did before this fix, and every existing bare-name literal comparison
+/// against them (`n == "Bool"`) is unaffected.
+#[must_use]
+pub(crate) fn qualify_type_name(home: &str, bare: &str) -> String {
+    if home.is_empty() || home == PRELUDE_HOME {
+        bare.to_owned()
+    } else {
+        format!("{home}::{bare}")
+    }
+}
+
+/// The **local/bare** segment of a (possibly nodule-qualified) `Ty::Data` identity — the part after
+/// the last `::` separator, or the whole string if unqualified (DN-112 Rank 1). `::` is not a legal
+/// Mycelium surface-identifier character, so this split is unambiguous and never mistakes a real
+/// identifier for a qualified one. Used wherever a heuristic or lookup needs the type's simple name
+/// regardless of which nodule declared it — the `$try` postfix's `Result`/`Option` naming
+/// convention (any nodule may declare its own type literally named `Result`), or the L0 bridge in
+/// `crate::elab` (which stays bare/nodule-agnostic by design — DN-112 §3, no runtime change).
+#[must_use]
+pub(crate) fn ty_local_name(qualified_or_bare: &str) -> &str {
+    qualified_or_bare
+        .rsplit_once("::")
+        .map_or(qualified_or_bare, |(_, local)| local)
+}
+
+/// Look up a data type by its `Ty::Data` identity string, which may be **qualified** (any consumer
+/// downstream of the checker — `crate::mono`/`crate::elab`/`crate::decision`/`crate::usefulness`/
+/// `crate::fuse` — sees the checked, home-stamped name) or **bare** (the checking-time surface
+/// registry `resolve_ty` itself consults, always keyed by simple name; DN-112 Rank 1 / M-1036).
+/// Tries the exact key first — the common case, and the *only* case for a genuinely bare surface
+/// name, so this is a pure passthrough for every pre-existing (single-nodule) call site — then
+/// falls back to the local/bare segment, which is what the (unchanged, simple-name-keyed) registry
+/// `BTreeMap` is keyed by. Never *wrongly* matches within a single-registry lookup: the registry
+/// keys are bare, so the fallback only ever succeeds when the qualified input's local part is
+/// genuinely registered *in that registry*.
+///
+/// **CORRECTED (CRITICAL #2, post-landing — the claim below was FALSE; VR-5 downgrade).** The
+/// original doc text here claimed *"the static check stays sound... this cannot admit an unsound
+/// accept... an unwitnessed elaboration-time misresolution risk... out of DN-112 Rank 1's stated
+/// check-time scope."* That is **wrong**: this exact fallback is also reached from **inside the
+/// checker itself** — [`normalize_pattern`] is called from `Cx::check_pattern` (check-time, not
+/// merely elaboration), and a same-nodule-shadow-plus-legitimate-cross-nodule-reach program was
+/// reproduced type-checking a pattern binder to the SHADOW's `DataInfo` (a `Binary{4}` local decoy)
+/// while the scrutinee's real runtime value was the FOREIGN type's shape (`Binary{8}`) — a
+/// checker-accepted static/runtime type mismatch, unsealed, no `priv` needed. Closed at the
+/// pattern-normalization call sites via [`lookup_data_home_checked`] (conservative refuse — see its
+/// own doc comment for why the full correct-home resolution is not reachable from a single
+/// bare-keyed registry). **Every other consumer of this plain `lookup_data`** (`crate::mono`,
+/// `crate::elab`'s non-pattern paths, `crate::decision`, `crate::usefulness`, `crate::fuse`) is
+/// **unaudited by this fix** — the same latent risk this doc originally (mis)claimed was merely an
+/// elaboration-time curiosity may be reachable through them too; treat as an **open, disclosed
+/// residual**, not re-asserted-safe (G2/VR-5 — downgrade honestly, never claim more than checked).
+///
+/// **Original (uncorrected) framing, kept for the historical record — DO NOT treat as current:**
+/// *"the consulted registry is a single nodule's own `Env.types`... if that nodule (a) declares its
+/// own local type of the same bare name as a foreign type and (b) legitimately reaches a value of
+/// the foreign type... this fallback resolves the foreign qualified name to the local shadow's
+/// `DataInfo`... The static check stays sound... this cannot admit an unsound accept."* This framing
+/// is superseded by the correction above.
+#[must_use]
+pub(crate) fn lookup_data<'a>(
+    types: &'a BTreeMap<String, DataInfo>,
+    name: &str,
+) -> Option<&'a DataInfo> {
+    types.get(name).or_else(|| types.get(ty_local_name(name)))
+}
+
+/// **Home-checked** variant of [`lookup_data`] (CRITICAL #2 fix, DN-112 Rank 1 / M-1036 residual
+/// close). Used at the pattern-normalization call sites ([`normalize_pattern`], shared by
+/// `Cx::check_pattern` at check-time and the elaborator) — the sites where [`lookup_data`]'s own
+/// bare-keyed fallback was found to be reachable from **inside the checker itself**, not merely
+/// elaboration, making the type/runtime mismatch **checker-accepted** rather than an elaboration-only
+/// curiosity (see the corrected doc comment on [`lookup_data`] above).
+///
+/// When the exact-key lookup misses and the bare-local fallback would resolve a **qualified** `name`
+/// (one with a `home::` prefix) against a `DataInfo` whose own [`DataInfo::home`] is **different**
+/// from that prefix — the exact same-nodule-shadow-plus-legitimate-cross-nodule-reach shape — this
+/// **refuses explicitly** (G2) rather than silently proceeding with the wrong declaration's
+/// ctors/field-shape. This is the **conservative (b) closure**, not the full (a) correct-home
+/// resolution: a single bare-keyed registry (own decls shadow imports, RFC-0006 §4.3) holds at most
+/// ONE `DataInfo` per bare name, so once a nodule locally shadows a foreign type's bare name, the
+/// foreign type's own `DataInfo` is not reachable from `types` at all — there is nothing correct to
+/// resolve against here. **The full (a) fix — resolving against the foreign type's own `DataInfo`
+/// via per-import-provenance-scoped resolution — needs a materially larger change in `crate::mono`
+/// (per-import registries, not one merged bare-keyed map) and is an explicit, disclosed residual, not
+/// silently deferred (G2/VR-5).** A false-refuse of the legitimate shadow+cross-nodule-pattern shape
+/// is sound (conservative); the prior false-accept was not.
+///
+/// # Errors
+/// A [`CheckError`] iff `name` is not registered at all under its own bare key (an internal
+/// consistency violation — the same condition [`lookup_data`]'s callers previously `.expect()`ed,
+/// now surfaced never-silently instead of panicking), or iff `name` is nodule-qualified and its home
+/// prefix does not match the resolved [`DataInfo::home`] (the shadow/home-mismatch case above).
+pub(crate) fn lookup_data_home_checked<'a>(
+    types: &'a BTreeMap<String, DataInfo>,
+    name: &str,
+    site: &str,
+) -> Result<&'a DataInfo, CheckError> {
+    if let Some(info) = types.get(name) {
+        return Ok(info);
+    }
+    let local = ty_local_name(name);
+    let Some(info) = types.get(local) else {
+        return Err(CheckError::new(
+            site,
+            format!(
+                "internal: data type `{name}` is not registered in this nodule's own type \
+                 registry — a checked type escaped registration (report this; never a silent \
+                 default, G2)"
+            ),
+        ));
+    };
+    if let Some(home) = data_home_mismatch(name, info) {
+        return Err(CheckError::new(
+            site,
+            data_home_mismatch_message(name, home, info),
+        ));
+    }
+    Ok(info)
+}
+
+/// The qualifier-home mismatch, if any: `Some(home)` iff `name` is nodule-qualified (has a `::`
+/// separator) and that qualifier `home` differs from `info`'s own declared [`DataInfo::home`] — the
+/// same-nodule-shadow-plus-legitimate-cross-nodule-reach shape [`lookup_data_home_checked`] refuses
+/// (DN-112 Rank 1 / M-1036). `name`'s qualifier prefix is everything before the LAST `::` (home
+/// strings use `.` as their OWN internal separator — `nodule_home` — so a single `::` unambiguously
+/// splits home from bare name; see [`ty_local_name`]'s doc comment). An unqualified `name` (no `::`)
+/// never mismatches — the common own-type / single-nodule surface-syntax case, structurally
+/// unaffected. Shared by [`lookup_data_home_checked`] (the checker-side pattern-normalization sites)
+/// and [`resolve_ty`]'s own `BaseType::Named` arm (the re-resolution round-trip a *qualified* name
+/// can reach via `crate::mono`'s `ty_to_source_ref`, DN-112 Rank 1 residual close, KC-3/DRY: one
+/// mismatch predicate, not two divergent copies).
+fn data_home_mismatch<'a>(name: &'a str, info: &DataInfo) -> Option<&'a str> {
+    let (home, _) = name.rsplit_once("::")?;
+    (home != info.home).then_some(home)
+}
+
+/// The shared home-mismatch [`CheckError`] message — identical wording regardless of which caller
+/// ([`lookup_data_home_checked`] or [`resolve_ty`]) detected the mismatch, so an `EXPLAIN`/audit
+/// reader sees one consistent diagnostic for this exploit class (G2 — never silent, and never two
+/// subtly-different refusal texts for the same underlying shape).
+fn data_home_mismatch_message(name: &str, home: &str, info: &DataInfo) -> String {
+    format!(
+        "type-identity mismatch: `{name}` resolves, in this nodule's own type registry, to a \
+         DIFFERENT declaration of the same bare name — `{}` is declared in `{}`, not the expected \
+         `{home}` (a local type shadows a foreign-home type of the same name, and this position \
+         legitimately reaches a value of the foreign type — CRITICAL #2 / DN-112 Rank 1 residual \
+         close; refused rather than silently checked against the wrong declaration's shape, G2/VR-5)",
+        info.name, info.home
+    )
 }
 
 /// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
@@ -624,6 +824,9 @@ impl Env {
 pub(crate) fn prelude() -> DataInfo {
     DataInfo {
         name: "Bool".to_owned(),
+        // DN-112 §9 invariant i: the single reserved home so `Bool` resolves identically under
+        // every nodule (never qualified — its `Ty::Data` identity stays bare `"Bool"`).
+        home: PRELUDE_HOME.to_owned(),
         params: vec![],
         ctors: vec![
             CtorInfo {
@@ -686,9 +889,27 @@ pub(crate) fn resolve_ty(
             if args.is_empty() && tyvars.iter().any(|v| v == name) {
                 Ty::Var(name.clone())
             } else {
-                let Some(decl) = types.get(name) else {
+                // DN-112 Rank 1 / M-1036: `lookup_data` tries the exact (bare, surface-syntax) key
+                // first — the only case for ordinary surface code — then falls back to the local
+                // part, so a *re-resolved* already-qualified name (e.g. `crate::mono`'s re-inference
+                // round-trip via `ty_to_source_ref`) still resolves correctly.
+                let Some(decl) = lookup_data(types, name) else {
                     return Err(CheckError::new(site, format!("unknown type `{name}`")));
                 };
+                // M-1036 residual close (the `resolve_ty` re-inference round-trip site named in the
+                // exhaustive re-verify inventory): ordinary surface `TypeRef`s are always BARE (the
+                // parser never emits `::`), so this can only fire when `name` was re-fed in already
+                // QUALIFIED — exactly `crate::mono::ty_to_source_ref`'s round-trip. In that case the
+                // bare-local fallback above may have resolved to a DIFFERENT (locally-shadowing)
+                // declaration than `name`'s own qualifier names; refuse explicitly (G2) rather than
+                // silently stamping `qname` from the WRONG `decl.home` below (the same shape
+                // `lookup_data_home_checked` closes for the checker-side pattern sites).
+                if let Some(home) = data_home_mismatch(name, decl) {
+                    return Err(CheckError::new(
+                        site,
+                        data_home_mismatch_message(name, home, decl),
+                    ));
+                }
                 // Arity is checked — never a guess (§11.3). A type parameter cannot be applied.
                 if args.len() != decl.params.len() {
                     return Err(CheckError::new(
@@ -700,11 +921,17 @@ pub(crate) fn resolve_ty(
                         ),
                     ));
                 }
+                // DN-112 Rank 1 / M-1036: the identity stamp — the **declaring** nodule's home
+                // (`decl.home`, read from the registry, never the use-site), qualified onto the
+                // type's bare/local name. Both `types` and `Ty::Var` skip this arm (arity-checked
+                // above), and `decl.home` is the same regardless of whether `decl` was found via the
+                // exact key or the local-name fallback.
+                let qname = qualify_type_name(&decl.home, ty_local_name(name));
                 let mut resolved = Vec::with_capacity(args.len());
                 for a in args {
                     resolved.push(resolve_ty(site, types, tyvars, a)?.0);
                 }
-                Ty::Data(name.clone(), resolved)
+                Ty::Data(qname, resolved)
             }
         }
         BaseType::Ambient(_) => {
@@ -755,6 +982,47 @@ pub(crate) fn resolve_ty(
     Ok((base, t.guarantee))
 }
 
+/// **DN-112 Rank 1 / M-1036 (a required piece of the mechanism, not an optional hardening).**
+/// Pre-resolve a `pub fn`'s value-parameter and return types against its **own declaring nodule's**
+/// registry, exactly once, at export time — the function-signature analogue of how a constructor's
+/// field types are already baked once at `register_types`/`resolve_ctors` time.
+///
+/// **Why this is load-bearing, not cosmetic.** `FnDecl.sig` stores *surface* [`TypeRef`]s
+/// (never a resolved [`Ty`]); every call site re-resolves a callee's parameter/return types fresh
+/// via `resolve_ty(caller_site, caller_types, …, &pm.ty)` — using the **caller's own** merged
+/// registry (own decls shadow imports, RFC-0006 §4.3). Without baking, a foreign caller that
+/// shadows a name locally would re-resolve the callee's signature against *its own* (wrong-home)
+/// declaration — reintroducing, one level up, exactly the bare-name conflation DN-104's CRITICAL
+/// callout named as M-1036's root cause. Baking here closes it for the DN-112 §10 item 2 exploit
+/// shape (`use a.use_t; type T = Mk(..); use_t(forge())`): `use_t`'s parameter type is permanently
+/// `a::T`, never re-derived from whichever nodule happens to be checking the call.
+///
+/// **Scoped, honest best-effort (VR-5) — never a spurious refusal.** Resolved against the
+/// declaring nodule's **own** registered types only (no cross-nodule imports it itself might use —
+/// resolving those would need the whole phylum's imports settled first, a larger change). A
+/// signature that itself references a type the declaring nodule imports from elsewhere fails to
+/// resolve here; the caller (`Exports`-building loop) treats that as "not bakeable" and leaves the
+/// entry absent — `check_app` then falls back to the pre-existing (unbaked) re-resolution path for
+/// that one function, unchanged from before this fix (never a hard error from this best-effort
+/// step). This is a disclosed, narrower residual, not a silent gap.
+///
+/// # Errors
+/// A [`CheckError`] iff a value-parameter or return `TypeRef` does not resolve against `types` —
+/// the caller treats this as "not bakeable" rather than propagating it.
+pub(crate) fn resolve_fn_sig(
+    types: &BTreeMap<String, DataInfo>,
+    sig: &FnSig,
+) -> Result<(Vec<Ty>, Ty), CheckError> {
+    let tyvars = sig.param_names();
+    let mut params = Vec::with_capacity(sig.value_params.len());
+    for p in &sig.value_params {
+        let (ty, _) = resolve_ty(&sig.name, types, &tyvars, &p.ty)?;
+        params.push(ty);
+    }
+    let (ret, _) = resolve_ty(&sig.name, types, &tyvars, &sig.ret)?;
+    Ok((params, ret))
+}
+
 /// The synthetic name for a tuple type of arity `n` (M-826, KC-3). Injective over n; `$` is not
 /// a surface-identifier character, so this name cannot collide with user-defined types.
 /// `Tuple$2` = the 2-tuple (pair), `Tuple$3` = the 3-tuple, etc.
@@ -778,6 +1046,9 @@ pub(crate) fn synthetic_tuple_data(n: usize) -> DataInfo {
     let fields: Vec<Ty> = params.iter().map(|p| Ty::Var(p.clone())).collect();
     DataInfo {
         name: tuple_type_name(n),
+        // DN-112 §9 invariant i: `Tuple$N` is synthesized on demand per nodule but must resolve to
+        // the same identity everywhere — the single reserved home, never qualified.
+        home: PRELUDE_HOME.to_owned(),
         params: params.clone(),
         ctors: vec![CtorInfo {
             name: tuple_ctor_name(n),
@@ -1207,7 +1478,10 @@ impl PhylumEnv {
 // fixtures into this type and read `resolve_imports`'s live-oracle output back out — the same
 // widening precedent as `resolve_ctors`/`first_duplicate` (commit 2bb06f88) and `CoherenceView`
 // (commit 65351071).
-#[derive(Debug, Default)]
+// `Clone` (DN-113 / M-1060): a dependency's own `Exports` is retained verbatim inside its
+// [`ResolvedPhylum`] (built once, then re-read by every consumer phylum that declares it as a
+// dependency) — cheap-to-derive, zero logic change.
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Exports {
     /// Exported data types, by qualified name.
     pub(crate) types: BTreeMap<String, DataInfo>,
@@ -1226,6 +1500,10 @@ pub(crate) struct Exports {
     /// ([`NoduleImports::sealed`]). Only `pub` types appear here (a private type is unimportable, so its
     /// seal is moot). Empty for a phylum with no sealed constructors (backward-compatible).
     pub(crate) sealed_ctors: BTreeMap<String, BTreeSet<String>>,
+    /// **DN-112 Rank 1 / M-1036:** each `pub` fn's [`resolve_fn_sig`]-baked `(param types, return
+    /// type)`, keyed by qualified name — best-effort (absent if the signature could not resolve
+    /// against the declaring nodule's own registry; see [`resolve_fn_sig`]'s doc comment).
+    pub(crate) resolved_fn_sigs: BTreeMap<String, (Vec<Ty>, Ty)>,
 }
 
 /// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
@@ -1266,7 +1544,45 @@ pub(crate) struct NoduleImports {
     /// enforced capability/security boundary against an adversarial or accidentally-colliding
     /// same-named local declaration; it only ever refuses a well-behaved caller that goes through
     /// `use home.Ctor`. A real fix needs nodule-qualified type identity (tracked as M-1036).
+    ///
+    /// **DN-112 Rank 1 / M-1036 — CLOSED.** Type/ctor identity is now nodule-qualified
+    /// ([`qualify_type_name`]), and each imported `pub` fn's signature is pre-resolved against its
+    /// **declaring** nodule ([`Exports::resolved_fn_sigs`] / [`Self::resolved_fn_sigs`]) rather than
+    /// re-resolved fresh against the caller's own (possibly shadowing) registry — so the exploit
+    /// this comment described is a never-silent type mismatch, not a values-forged pass. Pinned by
+    /// `tests/ctor_seal.rs`.
     pub(crate) sealed: BTreeSet<String>,
+    /// **DN-112 Rank 1 / M-1036:** this nodule's imported `pub` fns' [`resolve_fn_sig`]-baked
+    /// `(param types, return type)`, keyed by **simple** name (mirroring [`Self::fns`]) — the
+    /// mechanism that closes the M-1036 exploit for plain function calls (see [`resolve_fn_sig`]'s
+    /// doc comment). This nodule's **own** fn names are subtracted (own decls shadow imports,
+    /// mirroring [`Self::sealed`]'s own-ctor subtraction) so a local fn of the same name is never
+    /// wrongly resolved through a foreign baked signature.
+    pub(crate) resolved_fn_sigs: BTreeMap<String, (Vec<Ty>, Ty)>,
+    /// **M-1060 fix-cycle-3 (2026-07-11, adversarial-verification HOLE A/A2/B closure):** the
+    /// imported trait/fn simple-names, respectively, whose CURRENT (highest-precedence) binding
+    /// entered via a **cross-phylum** `use dep::…` (as opposed to an ordinary intra-phylum
+    /// `use sibling.Item` — same phylum, different nodule). Detected from the resolved import key
+    /// (`"{dep}::…"` — `::` is not a legal Mycelium identifier character, so it can never collide
+    /// with an intra-phylum `.`-joined qualified name; see the DN-113 module doc comment above).
+    /// Re-inserted/removed in lockstep with [`Self::traits`]/[`Self::fns`] at every `insert_export`
+    /// call so a later (higher-precedence) intra-phylum shadow of an earlier cross-phylum glob
+    /// import correctly clears the marker, and vice versa. This nodule's **own** trait/fn names are
+    /// subtracted at the end of [`resolve_imports`] (own decls always shadow imports — RFC-0006
+    /// §4.3), mirroring [`Self::resolved_fn_sigs`]'s own-fn subtraction, so a local declaration that
+    /// happens to share a cross-phylum import's simple name is never wrongly treated as foreign.
+    ///
+    /// A cross-phylum trait's method signatures / a cross-phylum fn's signature (when
+    /// [`Self::resolved_fn_sigs`] has no baked entry — best-effort, see [`resolve_fn_sig`]'s doc
+    /// comment) are not yet re-homed against their declaring phylum's own type registry the way a
+    /// ctor field / a bakeable fn signature now is (`merge_phyla_exports`, `qualify_ty_cross_phylum`)
+    /// — the DN-113 §7 / DN-122 residual. `check_trait_method_call` / `check_app` /
+    /// `check_app_generic_fn` consult these sets (never `traits`/`fns` wholesale) so their narrow
+    /// never-silent refusal fires ONLY for the true cross-phylum case — never for a same-phylum
+    /// sibling trait/fn, whose signature is safe to resolve against `self.types` (M-1036 already
+    /// gives every intra-phylum type a qualified, unambiguous identity in that shared registry).
+    pub(crate) cross_phylum_traits: BTreeSet<String>,
+    pub(crate) cross_phylum_fns: BTreeSet<String>,
 }
 
 impl NoduleImports {
@@ -1285,6 +1601,275 @@ impl NoduleImports {
             )
         })
     }
+}
+
+// ---- DN-113 Rank 1 / M-1060: the cross-phylum import/resolution subsystem (v1 — CHECK-TIME) ----
+//
+// Layers over the ONE canonical linker/import-registry machinery above ([`Exports`] /
+// [`resolve_imports`] / [`PhylumEnv::link`]) rather than becoming a third parallel resolver (DRY,
+// the maintainer's Decision-1 directive; DN-113 §7/§9.6). A dependency phylum is checked once (via
+// the existing [`check_phylum_matured`] pipeline, unchanged) into a [`ResolvedPhylum`]; its `pub`
+// export table is then merged into the CONSUMING phylum's own [`Exports`] under an added
+// **phylum-qualifier** key dimension (`"{dep_local_name}::{qualified_name}"` — `::` is not a legal
+// Mycelium identifier character, so this can never collide with an intra-phylum qualified name,
+// which is always `.`-joined). [`resolve_imports`]'s existing merge/precedence/never-silent logic is
+// untouched; only the `qual` string it looks up gains the dependency prefix when a `use`'s
+// [`UsePath::phylum`] head is `Some`. **v1 is check-time only** (DN-113 §8) — a `Phyla`'s deps are
+// each already-checked-and-linked (`ResolvedPhylum::env`, via the *unmodified* [`PhylumEnv::link`]),
+// but wiring the evaluator/elaborator/monomorphizer to actually EXECUTE a call that crosses the
+// phylum boundary is explicitly deferred (the "runtime multi-spore linking" residual, DN-113 §8).
+//
+// DN-112 Rank 1 / M-1036 extension (home-identity across the phylum boundary): a foreign type's
+// [`DataInfo::home`] is re-homed at merge time to `"{dep_local_name}::{original_home}"` (or just
+// `dep_local_name` for an anonymous/empty-home dependency nodule — never a bare, unqualified
+// identity), through [`qualify_cross_phylum`] — the SAME `home`-qualification discipline
+// [`qualify_type_name`]/[`lookup_data_home_checked`] already enforce intra-phylum, extended one
+// level up (never a bare-name collapse across the phylum boundary — the DN-112 ctor-seal invariant
+// this subsystem must not reopen). A dependency's already-**baked** `pub` fn signatures
+// ([`Exports::resolved_fn_sigs`], the DN-112 mechanism that closes the M-1036 exploit for plain
+// calls) are re-homed the same way via [`qualify_ty_cross_phylum`] — **required for soundness, not
+// an optional hardening**: omitting this would silently fall back to re-resolving a foreign
+// signature against the CALLER's own registry, reopening the exact bare-name-shadow exploit DN-112
+// closed, one level up, at the phylum boundary.
+
+/// A dependency phylum, already **checked and linked** (DN-113 §5.1) — the unit [`Phyla`] holds one
+/// of, keyed by the consumer's `[dependencies]`-local name. **v1 (DN-113 §5.2/§8): whole-graph
+/// compilation with content-pinned inputs, not separate compilation** — this crate does not itself
+/// load/verify a dependency's source tree against `phylum_hash` (that is the manifest/loader's job,
+/// `mycelium-proj`/`mycelium-cli` territory, out of this crate's scope); a `ResolvedPhylum` is built
+/// from an already-resolved `(hash, checked Phylum)` pair the caller supplies (or via
+/// [`crate::phyla::build_phyla_graph`] for a whole named dependency graph).
+#[derive(Debug, Clone)]
+pub struct ResolvedPhylum {
+    /// The content-addressed pin (ADR-003) this phylum resolved to — the authoritative half of the
+    /// DN-113 §6 def-site ref `(phylum_hash, qualified_name)`. **`Declared`** here: this crate
+    /// verifies nothing about the pin's provenance; it is carried through so a consumer (the future
+    /// separate-compilation / diamond-policy work, or a facility's def-site capture, DN-113 §6 US-3)
+    /// has it available, unforged, alongside the checked exports it was computed from.
+    pub phylum_hash: mycelium_core::ContentHash,
+    /// This dependency's own `pub`-only import registry (its [`Exports`], unmodified) — merged,
+    /// phylum-qualified, into a consumer's own `Exports` by [`merge_phyla_exports`].
+    pub(crate) exports: Exports,
+    /// This dependency's own whole-phylum linked [`Env`] (via the *unmodified* [`PhylumEnv::link`]) —
+    /// retained for a future runtime dual (DN-113 §7 point 2; explicitly out of v1's check-time
+    /// scope, DN-113 §8) and so a consumer can look up a foreign symbol's checked shape without
+    /// re-deriving it.
+    pub env: Env,
+}
+
+impl ResolvedPhylum {
+    /// **The v1 single-node resolution entry point (DN-113 §5.1) — for a caller resolving ONE
+    /// dependency by hand** (a leaf, or a flat/manually-ordered dependency set). Check + link a
+    /// dependency phylum — recursively against ITS OWN `deps` (a further-nested `Phyla`, empty for a
+    /// leaf/no-dependency phylum) — into a `ResolvedPhylum` ready to insert into a consumer's own
+    /// [`Phyla`]. [`crate::phyla::build_phyla_graph`] is the whole-graph, cycle-checked analogue for
+    /// a *named* multi-phylum dependency set (it does its own single check-pass per node internally,
+    /// rather than calling this method, so each node is checked exactly once even though it also
+    /// needs the node's [`PhylumEnv`] — the artifact this method does not itself return).
+    ///
+    /// `phylum_hash` is carried through verbatim, never verified against the checked `phylum`'s
+    /// content here (DN-113 §5.2: v1 is whole-graph compilation with content-pinned *inputs* — the
+    /// pin's provenance is the loader's job, `Declared` from this crate's perspective).
+    ///
+    /// # Errors
+    /// Any never-silent refusal from checking `phylum` against `deps` (unknown/private/ambiguous
+    /// import, an unknown cross-phylum dependency, a coherence/orphan violation, a per-nodule type
+    /// error, or a cross-nodule/cross-phylum name collision at link time — all [`CheckError`]).
+    pub fn resolve(
+        phylum_hash: mycelium_core::ContentHash,
+        phylum: &Phylum,
+        deps: &Phyla,
+    ) -> Result<Self, CheckError> {
+        let (penv, exports) = check_phylum_matured_with_deps_and_exports(phylum, deps, false)?;
+        let env = penv.link()?;
+        Ok(Self {
+            phylum_hash,
+            exports,
+            env,
+        })
+    }
+}
+
+/// The **resolved dependency set** of one phylum being checked (DN-113 §5.1) — additive over
+/// [`check_phylum`]/[`check_phylum_matured`]: a phylum with no declared dependencies checks against
+/// `Phyla::default()` (empty), which is **byte-identical** to the pre-M-1060 behavior (every
+/// cross-phylum `use` then refuses "no such dependency", exactly as an undeclared one should).
+#[derive(Debug, Clone, Default)]
+pub struct Phyla {
+    /// `[dependencies]`-local name → its resolved, checked, linked phylum.
+    pub(crate) deps: BTreeMap<String, ResolvedPhylum>,
+}
+
+impl Phyla {
+    /// An empty dependency set (no `[dependencies]`) — the additive-identity `Phyla` every
+    /// zero-dependency call site uses (DN-113 §5.1).
+    #[must_use]
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    /// Build a `Phyla` directly from already-resolved dependencies, keyed by their consumer-local
+    /// `[dependencies]` name. The v1 constructor for a **flat** (single-level) dependency set; a
+    /// multi-phylum graph with its own acyclicity precondition (DN-113 §9.3) is
+    /// [`crate::phyla::build_phyla_graph`]'s job, which calls this after resolving each node.
+    #[must_use]
+    pub fn from_deps(deps: BTreeMap<String, ResolvedPhylum>) -> Self {
+        Self { deps }
+    }
+
+    /// Is `name` a declared dependency? Used by [`resolve_imports`] to distinguish "no such
+    /// dependency" from "no such name within a known dependency" (DN-113 §9.5 — a more honest
+    /// diagnostic than falling through to the generic unknown-name error).
+    #[must_use]
+    pub(crate) fn has_dep(&self, name: &str) -> bool {
+        self.deps.contains_key(name)
+    }
+
+    /// Read-only access to the declared dependencies, by their local name — a Law-of-Demeter-friendly
+    /// public accessor over the crate-private [`Self::deps`] field (mirrors [`Env::type_info`]'s
+    /// pattern), so an external caller (a loader, a test) can inspect a `Phyla` it was handed without
+    /// needing crate-internal visibility.
+    #[must_use]
+    pub fn deps(&self) -> &BTreeMap<String, ResolvedPhylum> {
+        &self.deps
+    }
+}
+
+/// Re-home an identity string at the phylum boundary (DN-113 §7; DN-112 Rank 1 extension):
+/// unconditionally prepend the dependency's LOCAL name, UNLESS `existing` is the single reserved
+/// [`PRELUDE_HOME`] sentinel (DN-112 §9 invariant i — a builtin/synthetic type resolves identically
+/// everywhere, even across a phylum boundary; never re-qualified further). An empty `existing` (the
+/// documented anonymous/header-less-nodule residual, [`nodule_home`]'s doc comment) becomes just
+/// `dep_name` rather than the visually-ugly `"dep_name::"` — still a fully phylum-qualified, never
+/// bare, identity. Shared by [`DataInfo::home`] re-homing and [`qualify_ty_cross_phylum`] (one
+/// mismatch-free predicate, not two divergent copies — DN-112's own `data_home_mismatch` precedent).
+///
+/// Widened to `pub(crate)` (zero logic change) so the in-crate white-box tests
+/// (`crates/mycelium-l1/src/tests/cross_phylum.rs`) can exercise this unit directly — the same
+/// widening precedent as `resolve_imports`/`resolve_ctors`/`CoherenceView` (M-1013 STEP 4).
+pub(crate) fn qualify_cross_phylum(existing: &str, dep_name: &str) -> String {
+    if existing == PRELUDE_HOME {
+        existing.to_owned()
+    } else if existing.is_empty() {
+        dep_name.to_owned()
+    } else {
+        format!("{dep_name}::{existing}")
+    }
+}
+
+/// Re-home every [`Ty::Data`] identity embedded in a dependency's already-**baked** [`resolve_fn_sig`]
+/// output (DN-112 Rank 1 / M-1036 extension across the phylum boundary — required for soundness, see
+/// this section's header comment). `dep_env_types` is the dependency's OWN linked [`Env::types`] (the
+/// oracle for "is this bare name actually the single reserved prelude/synthetic home, or a dependency
+/// type whose own intra-phylum home happened to be bare?" — `Ty::Data` names never embed
+/// [`PRELUDE_HOME`] literally, so a string-only rewrite cannot tell the two apart; the type registry
+/// can). `Var`/`Binary`/`Ternary`/`Dense`/`Vsa`/`Substrate`/`Bytes`/`Float` carry no `Data` identity to
+/// re-home and are returned unchanged.
+///
+/// Widened to `pub(crate)` (zero logic change) for the in-crate white-box tests (see
+/// [`qualify_cross_phylum`]'s doc comment).
+pub(crate) fn qualify_ty_cross_phylum(
+    ty: &Ty,
+    dep_name: &str,
+    dep_env_types: &BTreeMap<String, DataInfo>,
+) -> Ty {
+    match ty {
+        Ty::Data(name, args) => {
+            let is_prelude = dep_env_types
+                .get(ty_local_name(name))
+                .is_some_and(|d| d.home == PRELUDE_HOME);
+            let qname = if is_prelude {
+                name.clone()
+            } else {
+                qualify_cross_phylum(name, dep_name)
+            };
+            Ty::Data(
+                qname,
+                args.iter()
+                    .map(|a| qualify_ty_cross_phylum(a, dep_name, dep_env_types))
+                    .collect(),
+            )
+        }
+        Ty::Fn(a, r) => Ty::Fn(
+            Box::new(qualify_ty_cross_phylum(a, dep_name, dep_env_types)),
+            Box::new(qualify_ty_cross_phylum(r, dep_name, dep_env_types)),
+        ),
+        Ty::Seq(elem, n) => Ty::Seq(
+            Box::new(qualify_ty_cross_phylum(elem, dep_name, dep_env_types)),
+            *n,
+        ),
+        other => other.clone(),
+    }
+}
+
+/// Extend a phylum's own `pub` export table with every declared dependency's `pub` exports,
+/// phylum-qualified under `"{dep_local_name}::"` (DN-113 §7 point 1) — the "one added qualifier
+/// dimension" that lets [`resolve_imports`] resolve a cross-phylum `use` through the exact same
+/// merge/precedence/never-silent logic as an intra-phylum one (DRY; no second resolver — DN-113
+/// §9.6). A no-op when `phyla` is empty (`Phyla::default()`), so a zero-dependency phylum's `exports`
+/// is unchanged from the pre-M-1060 shape.
+///
+/// Widened to `pub(crate)` (zero logic change) for the in-crate white-box tests (see
+/// [`qualify_cross_phylum`]'s doc comment).
+pub(crate) fn merge_phyla_exports(mut local: Exports, phyla: &Phyla) -> Exports {
+    for (dep_name, resolved) in &phyla.deps {
+        for (qual, is_pub) in &resolved.exports.declared {
+            local
+                .declared
+                .insert(format!("{dep_name}::{qual}"), *is_pub);
+        }
+        for (qual, info) in &resolved.exports.types {
+            let mut info = info.clone();
+            info.home = qualify_cross_phylum(&info.home, dep_name);
+            // DN-113/M-1060 CRITICAL fix (adversarial-verification finding, 2026-07-11): a ctor
+            // field's `Ty` is a *baked* identity from the DEPENDENCY's own home-space (e.g.
+            // `Ty::Data("m::Bar", [])` for the dep's internal nodule `m`). Re-homing only
+            // `info.home` above (the type's OWN identity) and leaving `ctor.fields` untouched
+            // left every field in the dependency's bare/local namespace — if the CONSUMER
+            // happens to have its own same-named nodule/type (e.g. also `m::Bar`), the bare-name
+            // fallback in `lookup_data_home_checked` resolved the foreign field to the local type
+            // and the checker silently accepted a foreign representation (e.g. `Binary{4}`) as
+            // the consumer's own (e.g. `Binary{64}`) — the M-1036 ctor-seal collapse pattern one
+            // level up, across the phylum boundary. Fix: re-home every ctor field's `Ty::Data`
+            // identity through the exact same helper + oracle the `resolved_fn_sigs` loop below
+            // already uses (DRY — one re-homing path, not two): `qualify_ty_cross_phylum` against
+            // the dependency's OWN linked `Env::types` (the oracle that disambiguates "bare name
+            // is actually the reserved prelude home" from "bare name is a dep type whose intra-
+            // phylum home happened to be bare").
+            let dep_types = &resolved.env.types;
+            for ctor in &mut info.ctors {
+                for field in &mut ctor.fields {
+                    *field = qualify_ty_cross_phylum(field, dep_name, dep_types);
+                }
+            }
+            local.types.insert(format!("{dep_name}::{qual}"), info);
+        }
+        for (qual, fd) in &resolved.exports.fns {
+            local.fns.insert(format!("{dep_name}::{qual}"), fd.clone());
+        }
+        for (qual, info) in &resolved.exports.traits {
+            local
+                .traits
+                .insert(format!("{dep_name}::{qual}"), info.clone());
+        }
+        for (qual, sealed) in &resolved.exports.sealed_ctors {
+            local
+                .sealed_ctors
+                .insert(format!("{dep_name}::{qual}"), sealed.clone());
+        }
+        for (qual, (params, ret)) in &resolved.exports.resolved_fn_sigs {
+            let dep_types = &resolved.env.types;
+            let params = params
+                .iter()
+                .map(|t| qualify_ty_cross_phylum(t, dep_name, dep_types))
+                .collect();
+            let ret = qualify_ty_cross_phylum(ret, dep_name, dep_types);
+            local
+                .resolved_fn_sigs
+                .insert(format!("{dep_name}::{qual}"), (params, ret));
+        }
+    }
+    local
 }
 
 /// Check a whole nodule: build the registry (prelude + declarations), then type every function
@@ -1335,10 +1920,55 @@ pub fn check_phylum(phylum: &Phylum) -> Result<PhylumEnv, CheckError> {
 /// See [`check_phylum`]; additionally a non-total non-`thaw` definition in any nodule under a matured
 /// scope is an explicit [`CheckError`].
 pub fn check_phylum_matured(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
-    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, matured_scope))
+    check_phylum_matured_with_deps(phylum, &Phyla::default(), matured_scope)
 }
 
-fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv, CheckError> {
+/// Like [`check_phylum`], but resolving cross-phylum `use dep::a.b.Item` references against `deps`
+/// (DN-113 Rank 1 / M-1060) — **additive** over [`check_phylum`]: a phylum with no cross-phylum `use`
+/// checks identically whether `deps` is empty or non-empty (an unused dependency is simply never
+/// referenced), and `deps: &Phyla::default()` here is byte-identical to plain [`check_phylum`].
+///
+/// # Errors
+/// See [`check_phylum`]; additionally an unknown dependency, a v1-deferred cross-phylum glob, or a
+/// cross-phylum name that does not resolve in the named dependency's `pub` surface is an explicit
+/// [`CheckError`] (DN-113 §7–§9; never a silent skip — G2).
+pub fn check_phylum_with_deps(phylum: &Phylum, deps: &Phyla) -> Result<PhylumEnv, CheckError> {
+    check_phylum_matured_with_deps(phylum, deps, false)
+}
+
+/// [`check_phylum_with_deps`] with the explicit `matured_scope` gate (see [`check_phylum_matured`]).
+///
+/// # Errors
+/// See [`check_phylum_with_deps`] and [`check_phylum_matured`].
+pub fn check_phylum_matured_with_deps(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<PhylumEnv, CheckError> {
+    check_phylum_matured_with_deps_and_exports(phylum, deps, matured_scope).map(|(penv, _)| penv)
+}
+
+/// Like [`check_phylum_matured_with_deps`], but additionally returns the checked phylum's own
+/// `pub`-only [`Exports`] table (crate-internal — [`crate::phyla::build_phyla_graph`]'s use case: a
+/// resolved node in a multi-phylum graph needs to retain its `Exports` inside a [`ResolvedPhylum`]
+/// for a FURTHER consumer up the graph, not just its linked [`Env`]). One registration/check pass
+/// produces both artifacts (DRY — no second pass to keep them in sync).
+///
+/// # Errors
+/// See [`check_phylum_matured_with_deps`].
+pub(crate) fn check_phylum_matured_with_deps_and_exports(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<(PhylumEnv, Exports), CheckError> {
+    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, deps, matured_scope))
+}
+
+fn check_phylum_inner(
+    phylum: &Phylum,
+    deps: &Phyla,
+    matured_scope: bool,
+) -> Result<(PhylumEnv, Exports), CheckError> {
     // 1. Ambient-resolve every nodule once (RFC-0012): the checker only ever sees longhand forms.
     let resolved: Vec<Nodule> = phylum
         .nodules
@@ -1489,6 +2119,12 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
             exports.declared.insert(qual(name), fd.vis.is_pub());
             if fd.vis.is_pub() {
                 exports.fns.insert(qual(name), fd.clone());
+                // DN-112 Rank 1 / M-1036: bake this fn's signature against ITS OWN declaring
+                // nodule's registry now (best-effort — see `resolve_fn_sig`'s doc comment; an
+                // `Err` here just leaves this fn's entry absent, never a phylum-wide failure).
+                if let Ok(resolved) = resolve_fn_sig(&regs.types, &fd.sig) {
+                    exports.resolved_fn_sigs.insert(qual(name), resolved);
+                }
             }
         }
         for (name, info) in &regs.traits {
@@ -1516,6 +2152,13 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         per_nodule_regs.push(regs);
     }
 
+    // DN-113 Rank 1 / M-1060: extend the phylum-wide import registry with every declared
+    // dependency's `pub` surface, phylum-qualified (a no-op when `deps` is empty — `merge_phyla_
+    // exports` returns `exports` unchanged). `resolve_imports` below then resolves BOTH an
+    // intra-phylum `use` (unprefixed qual, unchanged) and a cross-phylum `use dep::…` (prefixed
+    // qual) through the exact same lookup — one added qualifier dimension, not a second resolver.
+    let exports = merge_phyla_exports(exports, deps);
+
     // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
@@ -1540,7 +2183,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 .cloned()
                 .collect(),
         });
-        let imports = resolve_imports(nodule, &exports)?;
+        let imports = resolve_imports(nodule, &exports, deps)?;
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
         let via_objects = &via_objects_per_nodule[i];
@@ -1554,7 +2197,7 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         )?;
         out.push((nodule.path.clone(), env));
     }
-    Ok(PhylumEnv { nodules: out, own })
+    Ok((PhylumEnv { nodules: out, own }, exports))
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
@@ -1692,16 +2335,20 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
     Ok(NoduleRegs { types, fns, traits })
 }
 
-/// Resolve one nodule's `use` imports against the phylum-wide [`Exports`] (M-662). Builds the
-/// per-nodule [`NoduleImports`] — imported `pub` decls merged by simple name at glob-then-explicit
-/// precedence (own decls shadow these later, in [`check_nodule_with`]) — and enforces every
-/// never-silent rule:
+/// Resolve one nodule's `use` imports against the phylum-wide [`Exports`] (M-662) — including any
+/// **cross-phylum** `use dep::a.b.Item` (DN-113 Rank 1 / M-1060), resolved through the identical
+/// merge/precedence logic against the SAME `exports` (already phylum-qualified by
+/// [`merge_phyla_exports`] — DRY, one resolver). Builds the per-nodule [`NoduleImports`] — imported
+/// `pub` decls merged by simple name at glob-then-explicit precedence (own decls shadow these later,
+/// in [`check_nodule_with`]) — and enforces every never-silent rule:
 ///
 /// - **unknown name/path** → explicit refusal (distinguishing "no such name" from "exists but
 ///   private", honest + helpful);
 /// - **two explicit `use`s binding the same simple name** → duplicate-import refusal;
 /// - **glob-vs-glob collision** on a name → recorded `ambiguous` (a *reference* to it is refused at
-///   use-site), never a silent winner.
+///   use-site), never a silent winner;
+/// - **DN-113 v1**: an unknown dependency (`use dep::…` where `dep` is not in `deps`) or a
+///   cross-phylum **glob** (`use dep::a.b.*` — deferred, folds into M-982) → an explicit refusal.
 ///
 /// (A glob over a prefix with zero `pub` names is allowed — an empty import; an unresolved *reference*
 /// then surfaces the normal unknown-name error.)
@@ -1712,6 +2359,7 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
 pub(crate) fn resolve_imports(
     nodule: &Nodule,
     exports: &Exports,
+    deps: &Phyla,
 ) -> Result<NoduleImports, CheckError> {
     let site = qualify(&nodule.path, "<use>");
     let mut imp = NoduleImports::default();
@@ -1722,9 +2370,30 @@ pub(crate) fn resolve_imports(
 
     // First the globs (lowest precedence), then the explicit `use`s (which shadow a glob name).
     for item in &nodule.items {
-        let Item::Use(UsePath { path, glob: true }) = item else {
+        let Item::Use(UsePath {
+            phylum,
+            path,
+            glob: true,
+        }) = item
+        else {
             continue;
         };
+        // DN-113 §7/§8: v1 requires an EXPLICIT (non-glob) cross-phylum import — a cross-phylum glob
+        // is parsed (a real parse tree for a malformed one) but refused here, never-silently, rather
+        // than silently importing nothing or guessing a disambiguation (the residual folds into
+        // M-982, the same qualified-scoping work intra-phylum glob-collision defers to).
+        if let Some(dep) = phylum {
+            return Err(CheckError::new(
+                &site,
+                format!(
+                    "`use {dep}::{}.*`: a cross-phylum glob import is not supported in v1 — DN-113 \
+                     requires an explicit cross-phylum import (`use {dep}::{}.<Item>`); glob \
+                     disambiguation folds into M-982 (never a silent skip — G2)",
+                    path.0.join("."),
+                    path.0.join(".")
+                ),
+            ));
+        }
         let prefix = path.0.join(".");
         // Every exported name directly under this prefix (qualified key = prefix + "." + simple, with
         // exactly one trailing segment).
@@ -1755,12 +2424,19 @@ pub(crate) fn resolve_imports(
         }
         let _ = any; // an empty glob (no pub names) is allowed (the reference, if any, fails later)
     }
-    // Explicit `use a.b.X` (higher precedence than any glob).
+    // Explicit `use a.b.X` (higher precedence than any glob) — or a cross-phylum
+    // `use dep::a.b.X` (DN-113 Rank 1 / M-1060; `phylum: Some(dep)`).
     for item in &nodule.items {
-        let Item::Use(UsePath { path, glob: false }) = item else {
+        let Item::Use(UsePath {
+            phylum,
+            path,
+            glob: false,
+        }) = item
+        else {
             continue;
         };
-        // The path's last segment is the imported item; the prefix is its owning nodule path.
+        // The path's last segment is the imported item; the prefix is its owning nodule path
+        // (within the dependency, for a cross-phylum reference).
         let Some((simple, prefix)) = split_last_seg(path) else {
             return Err(CheckError::new(
                 &site,
@@ -1768,28 +2444,74 @@ pub(crate) fn resolve_imports(
                  a cross-nodule item (M-662)",
             ));
         };
-        // A single-segment `use X` names no nodule (prefix empty). Refuse with a teaching diagnostic
-        // rather than the confusing downstream "no such name" lookup miss (M-662; never-silent — G2).
-        if prefix.is_empty() {
-            return Err(CheckError::new(
-                &site,
-                format!(
-                    "`use {simple}`: a cross-nodule import must be nodule-qualified — `{simple}` names \
-                     no nodule. Write `use <nodule>.{simple}` (a specific import) or `use <nodule>.*` \
-                     (a glob) (M-662)"
-                ),
-            ));
-        }
-        let qual = format!("{prefix}.{simple}");
+        let (qual, display_path) = match phylum {
+            Some(dep) => {
+                // DN-113 §9.5: an undeclared dependency is a never-silent, distinctly-worded refusal
+                // — never conflated with "no such name" (which would misdirect a fix at the wrong
+                // layer: the manifest's `[dependencies]`, not a typo'd item name).
+                if !deps.has_dep(dep) {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {dep}::{}`: no such dependency `{dep}` in this phylum's \
+                             `[dependencies]` (DN-113 §9.5; never a silent skip — G2)",
+                            path.0.join(".")
+                        ),
+                    ));
+                }
+                // A cross-phylum reference must be nodule-qualified WITHIN the dependency
+                // (`use dep::nod.Item`, never bare `use dep::Item`) — mirrors the intra-phylum
+                // single-segment refusal below, one level up.
+                if prefix.is_empty() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {dep}::{simple}`: a cross-phylum import must be nodule-qualified \
+                             within the dependency — `{simple}` names no nodule of `{dep}`. Write \
+                             `use {dep}::<nodule>.{simple}` (DN-113 §4)"
+                        ),
+                    ));
+                }
+                (
+                    format!("{dep}::{prefix}.{simple}"),
+                    format!("{dep}::{}", path.0.join(".")),
+                )
+            }
+            None => {
+                // A single-segment `use X` names no nodule (prefix empty). Refuse with a teaching
+                // diagnostic rather than the confusing downstream "no such name" lookup miss (M-662;
+                // never-silent — G2).
+                if prefix.is_empty() {
+                    return Err(CheckError::new(
+                        &site,
+                        format!(
+                            "`use {simple}`: a cross-nodule import must be nodule-qualified — \
+                             `{simple}` names no nodule. Write `use <nodule>.{simple}` (a specific \
+                             import) or `use <nodule>.*` (a glob) (M-662)"
+                        ),
+                    ));
+                }
+                (format!("{prefix}.{simple}"), path.0.join("."))
+            }
+        };
         // Never-silent: unknown path/name vs exists-but-private (honest + helpful — G2).
         match exports.declared.get(&qual) {
             None => {
                 return Err(CheckError::new(
                     &site,
                     format!(
-                        "`use {}`: no such name `{qual}` in the phylum — no nodule declares it \
-                         (M-662; never a silent skip — G2)",
-                        path.0.join(".")
+                        "`use {display_path}`: no such name `{qual}` {} — {} declares it \
+                         (M-662/DN-113; never a silent skip — G2)",
+                        if phylum.is_some() {
+                            "in that dependency phylum"
+                        } else {
+                            "in the phylum"
+                        },
+                        if phylum.is_some() {
+                            "no nodule of the dependency"
+                        } else {
+                            "no nodule"
+                        }
                     ),
                 ));
             }
@@ -1797,9 +2519,8 @@ pub(crate) fn resolve_imports(
                 return Err(CheckError::new(
                     &site,
                     format!(
-                        "`use {}`: `{qual}` exists but is not `pub` — it is private to its nodule \
-                         and not importable (mark it `pub` to export it; M-662)",
-                        path.0.join(".")
+                        "`use {display_path}`: `{qual}` exists but is not `pub` — it is private to \
+                         its nodule and not importable (mark it `pub` to export it; M-662/DN-113)"
                     ),
                 ));
             }
@@ -1834,6 +2555,33 @@ pub(crate) fn resolve_imports(
         .flat_map(|td| td.ctors.iter().map(|c| c.name.clone()))
         .collect();
     imp.sealed.retain(|c| !own_ctors.contains(c));
+    // DN-112 Rank 1 / M-1036: an own fn always shadows an imported one of the same simple name
+    // (RFC-0006 §4.3), so its baked signature must never linger under that name in `imp.fns` —
+    // mirroring the own-ctor subtraction above (`imp.fns.remove` happens implicitly via the merge
+    // in `check_nodule_with`; this subtracts the *baked-signature* twin so `Cx::resolved_fn_sigs`
+    // never wrongly attributes a foreign signature to a name this nodule's own decl shadows).
+    let own_fns: BTreeSet<String> = nodule
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            Item::Fn(fd) => Some(fd.sig.name.clone()),
+            _ => None,
+        })
+        .collect();
+    imp.resolved_fn_sigs.retain(|n, _| !own_fns.contains(n));
+    imp.cross_phylum_fns.retain(|n| !own_fns.contains(n));
+    // M-1060 fix-cycle-3: mirror the own-fn subtraction for traits — an own trait declaration always
+    // shadows an imported one of the same simple name (RFC-0006 §4.3), so a local trait must never be
+    // wrongly flagged cross-phylum-foreign by `check_trait_method_call`'s guard.
+    let own_traits: BTreeSet<String> = nodule
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            Item::Trait(td) => Some(td.name.clone()),
+            _ => None,
+        })
+        .collect();
+    imp.cross_phylum_traits.retain(|n| !own_traits.contains(n));
     Ok(imp)
 }
 
@@ -1864,6 +2612,12 @@ fn split_last_seg(path: &Path) -> Option<(String, String)> {
 /// Insert the export `qual` (a `pub` type/fn/trait) into the per-nodule imports under `simple`.
 /// Exactly one of the three export tables holds `qual` (a name is one kind); insert from whichever.
 fn insert_export(imp: &mut NoduleImports, exports: &Exports, qual: &str, simple: &str) {
+    // M-1060 fix-cycle-3: a cross-phylum key is always `"{dep}::…"` (`::` cannot appear in an
+    // intra-phylum `.`-joined qualified name — see the DN-113 module doc comment). Tracked per-name
+    // (insert on a cross-phylum binding, remove on an intra-phylum one) so the marker always reflects
+    // the CURRENT highest-precedence binding for `simple`, exactly like `imp.traits`/`imp.fns`
+    // themselves are unconditionally overwritten here.
+    let is_cross_phylum = qual.contains("::");
     if let Some(info) = exports.types.get(qual) {
         imp.types.insert(simple.to_owned(), info.clone());
         // M-1027 / DN-104 §4: importing a `pub` type inherits the cross-nodule construction seal on any
@@ -1875,9 +2629,25 @@ fn insert_export(imp: &mut NoduleImports, exports: &Exports, qual: &str, simple:
     }
     if let Some(fd) = exports.fns.get(qual) {
         imp.fns.insert(simple.to_owned(), fd.clone());
+        // DN-112 Rank 1 / M-1036: carry the baked signature too (own-fn-name subtraction happens
+        // once at the end of `resolve_imports`, mirroring `imp.sealed`'s own-ctor subtraction).
+        if let Some(resolved) = exports.resolved_fn_sigs.get(qual) {
+            imp.resolved_fn_sigs
+                .insert(simple.to_owned(), resolved.clone());
+        }
+        if is_cross_phylum {
+            imp.cross_phylum_fns.insert(simple.to_owned());
+        } else {
+            imp.cross_phylum_fns.remove(simple);
+        }
     }
     if let Some(info) = exports.traits.get(qual) {
         imp.traits.insert(simple.to_owned(), info.clone());
+        if is_cross_phylum {
+            imp.cross_phylum_traits.insert(simple.to_owned());
+        } else {
+            imp.cross_phylum_traits.remove(simple);
+        }
     }
 }
 
@@ -1887,6 +2657,11 @@ fn remove_import(imp: &mut NoduleImports, simple: &str) {
     imp.types.remove(simple);
     imp.fns.remove(simple);
     imp.traits.remove(simple);
+    imp.resolved_fn_sigs.remove(simple); // DN-112 Rank 1 / M-1036: keep in sync with `imp.fns`.
+                                         // M-1060 fix-cycle-3: keep in sync with `imp.traits`/`imp.fns` — an ambiguous name has no
+                                         // resolved binding at all, cross-phylum or otherwise.
+    imp.cross_phylum_traits.remove(simple);
+    imp.cross_phylum_fns.remove(simple);
 }
 
 /// Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,
@@ -1920,7 +2695,9 @@ fn check_and_resolve_matured_inner(
     // inner orchestrator directly to avoid nesting worker stacks.
     let resolved = crate::ambient::resolve(nodule)?;
     let phylum = Phylum::of_one(resolved.clone());
-    let penv = check_phylum_inner(&phylum, matured_scope)?;
+    // `check_nodule`/`check_nodule_matured` have no `[dependencies]` surface (M-1060 is a
+    // phylum-level concept) — always the empty `Phyla` (byte-identical to pre-M-1060 behavior).
+    let (penv, _exports) = check_phylum_inner(&phylum, &Phyla::default(), matured_scope)?;
     let env = penv
         .single()
         .expect("a phylum-of-one yields exactly one Env")
@@ -1987,11 +2764,16 @@ pub(crate) fn register_types(
             if types.contains_key(&td.name) {
                 return Err(CheckError::new(&td.name, "duplicate type declaration"));
             }
-            // Insert a shell first so recursive field references resolve.
+            // Insert a shell first so recursive field references resolve. DN-112 Rank 1 / M-1036:
+            // stamp this type's home from the **declaring** nodule now, at first registration — an
+            // imported clone of this `DataInfo` (via `Exports`/`NoduleImports`) carries this exact
+            // home unchanged through the whole export/import pipeline (§9 invariant ii: home is
+            // always the declaring nodule, never the use-site).
             types.insert(
                 td.name.clone(),
                 DataInfo {
                     name: td.name.clone(),
+                    home: nodule_home(&nodule.path),
                     params: td.params.clone(),
                     ctors: vec![],
                 },
@@ -2253,15 +3035,18 @@ fn check_nodule_with(
     // EXPLAIN provenance (M-966, DN-53 §A.3.3): record which `via` clause produced each generated
     // forwarding impl, the `via` analogue of `derived_provenance` below. The coherence key matches
     // `register_instances`'s `(trait_name, type_head)`: for an `object`, `type_head` always resolves
-    // to `Data:<name>` (an object's own declared type name is never itself a bound type-variable —
-    // `resolve_ty`'s `Ty::Var` branch only fires for names in `tyvars`, which an object's own type
-    // name is not), so this can be built directly without a `resolve_ty` round-trip. Only reached
+    // to `Data:<qualified name>` (an object's own declared type name is never itself a bound
+    // type-variable — `resolve_ty`'s `Ty::Var` branch only fires for names in `tyvars`, which an
+    // object's own type name is not), so this can be built directly without a `resolve_ty`
+    // round-trip. **DN-112 Rank 1 / M-1036:** the qualified name is `od.name`'s home stamped from
+    // *this* (declaring) nodule — `type_head` now embeds the home, so the key must too. Only reached
     // when `expand_object_via_decls` above did **not** refuse for ambiguity, so at most one `via`
     // entry per `(trait, object)` ever lands here (never overwritten silently).
     let via_provenance: BTreeMap<(String, String), (u32, String)> = {
         let mut all = BTreeMap::new();
+        let this_home = nodule_home(&nodule.path);
         for od in via_objects {
-            let head = format!("Data:{}", od.name);
+            let head = format!("Data:{}", qualify_type_name(&this_home, &od.name));
             for via in &od.via_decls {
                 all.insert(
                     (via.trait_name.clone(), head.clone()),
@@ -2701,7 +3486,7 @@ fn check_lower_rule_rhs_type(
 /// empty `value_params` makes this identical to the pre-Stage-1b empty-scope walk — no behavioral
 /// change for that case) and infers the RHS's type once.
 ///
-/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-114):**
+/// **Why the call site reuses this instead of re-checking per-argument types (Option B, DN-116):**
 /// the checker has **no coercion** (`want == got`, exact match — see the ordinary user-fn accept
 /// branch's own `if want != got` gate) so a monomorphic value-parametric rule's RHS result type is
 /// **fixed at definition** — inferring it once, with the params bound to their *declared* types
@@ -2724,24 +3509,25 @@ fn check_lower_rule_rhs_type(
 /// from the (now possibly non-empty) value-param scope closes both: every `let`/lambda/match binder
 /// pushed during the RHS walk — value param **or** RHS-local — is tracked exactly as it would be
 /// inside an ordinary function body, so a double-consume of either is refused here too, never
-/// silently. **This is the M-919 *upper-bound* (duplication) check only** — it does not by itself
-/// make a *call site* with a `Substrate`-**containing** value parameter safe to accept (a
-/// value-parametric expansion *splices* the caller's argument node into the RHS, which is a
-/// different hazard than an ordinary function call — see [`Cx::check_sugar_call`]'s own Stage-3
-/// (OQ-H4) gate, which refuses any value parameter whose type is or **structurally contains**
-/// `Substrate` outright, via [`Cx::ty_structurally_contains_substrate`]'s recursive walk into
-/// registered `Data` types' constructor fields — not just a top-level `Substrate` type — rather
-/// than relying on this tracker alone).
+/// silently. **This is the M-919 *upper-bound* (duplication) check only, over the RHS-local
+/// bindings and the *unsubstituted* value-param references.** It does not by itself make a *call
+/// site* with a `Substrate`-**containing** value parameter safe to accept — a value-parametric
+/// expansion *splices* the caller's argument node into the RHS at every occurrence of its param,
+/// which is a different hazard than an ordinary function call (each param used only once here,
+/// against its own *declared* type, not the call site's actual argument content). Closing that is
+/// [`Cx::check_sugar_call`]'s own Stage-3 (OQ-H4/DN-117) job: the real substituted-`Expr` affine
+/// walk (triggered by [`Cx::ty_structurally_contains_substrate`] or a per-argument tracker-touch
+/// signal — see that function's doc comment).
 ///
-/// **Stage-3's two gates are not redundant with each other (DN-114 §3.2, resolved 2026-07-11).**
-/// [`Cx::check_sugar_call`]'s Stage-3 part 1 (the value-parameter structural-containment check just
-/// named) and part 2 ([`Cx::rhs_first_affine_binding`], the RHS-*local*-binding check) close two
-/// distinct hazard classes: part 1 gates a value **parameter's declared type**; part 2 gates an
-/// RHS-local `let`-bound affine **acquisition** (a helper `fn` returning `Substrate`, or a bare
-/// `consume`) that appears in no parameter's type at all. A rule with no affine-typed value
-/// parameter but a `let`-bound `Substrate`-returning helper used twice in its RHS is caught only by
-/// part 2; a rule whose value parameter's type structurally wraps a `Substrate` field with no
-/// RHS-local `let` at all is caught only by part 1. Neither subsumes the other.
+/// **Stage 3's RHS-local-affine-binding case needs no separate structural gate (DN-117 §3.3,
+/// 2026-07-11 — superseding the earlier two-part-gate design).** This function's own active
+/// tracker, seeded from the value-param scope and walking the *unsubstituted* `rhs`, already and
+/// unconditionally catches a duplicated RHS-local affine acquisition (a `let`-bound helper-fn call
+/// returning `Substrate`, or a bare `consume`, referenced more than once) — that hazard does not
+/// depend on value-parameter substitution at all, so no additional structural pre-check
+/// (`Cx::rhs_first_affine_binding`, since removed) is needed; a **dropped** RHS-local affine binding
+/// is correctly *accepted* here too (DN-117 §4.3 — the static pass enforces only the use-at-most-once
+/// upper bound), where the earlier structural gate wrongly refused it wholesale.
 #[allow(clippy::too_many_arguments)] // mirrors check_lower_rule_rhs_type/check_fn_body's own shape
 fn infer_expr_rule_rhs_type(
     ld: &LowerDecl,
@@ -2771,6 +3557,8 @@ fn infer_expr_rule_rhs_type(
         std_sys: false,
         depth: Cell::new(0),
         affine: Tracker::seeded(&scope),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
     };
     cx.infer(&mut scope, rhs).map_err(|e| {
         CheckError::new(
@@ -3516,6 +4304,98 @@ fn check_sig_resolves(
     Ok(())
 }
 
+/// **MED closure (2026-07-11, adversarial-verification follow-up to the CRITICAL ctor-field fix
+/// above):** a **foreign** (cross-phylum-imported) trait's method signatures are surface
+/// [`TypeRef`]s, resolved **lazily** — at `impl`-check time, in [`check_impl_methods`]'s
+/// `resolve_ty(site, types, &tr.params, &rp.ty)` — against the IMPLEMENTING phylum's OWN type
+/// registry. They are never re-homed against the trait's own declaring phylum the way a ctor field
+/// now is (the CRITICAL fix in [`merge_phyla_exports`]) or a fn-sig always was
+/// (`Exports::resolved_fn_sigs`). A concrete named type mentioned in a foreign trait's signature
+/// that is NOT one of the trait's own generic params — e.g. `trait Trt[A] { fn get(x: A) => Bar; }`
+/// where `Bar` is some concrete type in the trait's *declaring* phylum, not a param — is therefore
+/// silently re-resolved against whatever bare name the CONSUMER's own registry happens to bind:
+/// exactly the M-1036/DN-112 bare-name collapse, one level up, for a **trait signature** rather
+/// than a ctor field.
+///
+/// **Confirmed reachable in v1** by a scratch differential (`use dep::Trait; impl Trait for
+/// LocalType { .. }`, no cross-phylum `instances` merge required at all — the confusion is entirely
+/// local to [`check_impl_methods`]'s own re-resolution). This is narrower than what the CRITICAL
+/// fix's own follow-up note assumed ("gated-unreachable because v1 does not merge instances") —
+/// that assumption covered *querying* another phylum's registered instances, not *registering* a
+/// local instance of an *imported* trait, which needs no instance-merge at all.
+///
+/// The real fix is DN-113/DN-122 territory: re-home a foreign trait's sigs against its own
+/// declaring phylum, the way [`merge_phyla_exports`] now does for ctor fields — out of scope here
+/// (needs the instances-merge machinery DN-122 tracks). Until it lands, this closes the *soundness*
+/// gap the narrow, conservative way [`lookup_data_home_checked`] does for CRITICAL #2: **refuse**
+/// rather than silently re-resolve. `!trait_local` (computed in [`register_instances`], just below)
+/// is exactly "this trait is not declared anywhere in this phylum" — the only way `traits.get`
+/// could have found it is a cross-phylum import (traits are never a prelude/ambient construct, so
+/// there is no other source for a phylum-non-local hit). A trait whose signature only ever
+/// references its own params (e.g. `Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }`) carries no
+/// concrete-type reference at all and is **unaffected** — only a signature that actually names a
+/// concrete type beyond its params is refused, so this does not regress the common "impl a foreign
+/// trait for your own type" pattern the orphan rule exists to allow.
+fn foreign_trait_sig_names_a_concrete_type(tr: &TraitInfo) -> Option<&str> {
+    let params: BTreeSet<&str> = tr.params.iter().map(String::as_str).collect();
+    tr.sigs
+        .iter()
+        .find_map(|sig| fn_sig_names_a_concrete_type(sig, &params))
+}
+
+/// **HOLE B closure (M-1060 fix-cycle-3, 2026-07-11, adversarial-verification 3rd-cycle finding):**
+/// the fn-signature analogue of [`foreign_trait_sig_names_a_concrete_type`] — does a **foreign**
+/// (cross-phylum-imported) fn's OWN signature mention a concrete named type beyond its own generic
+/// type parameters, when [`NoduleImports::resolved_fn_sigs`] has **no baked entry** for it (the
+/// un-bakeable case: [`resolve_fn_sig`] only resolves against the declaring nodule's own registered
+/// types, so a signature that itself references a type the declaring nodule imports from a sibling
+/// nodule fails to bake — see that fn's doc comment)? [`Self::check_app`] /
+/// [`Self::check_app_generic_fn`]'s fallback then re-resolves the un-bakeable `TypeRef` fresh
+/// against `self.types` (the CALLER's own registry) — exactly the M-1036/DN-112 bare-name collapse,
+/// one level up, for a **fn signature** across the phylum boundary rather than intra-phylum. Shares
+/// [`fn_sig_names_a_concrete_type`]'s core with the trait-sig guard (DRY — one recognizer, not two);
+/// `sig.params` (the fn's own `Vec<TypeParam>` — empty for a monomorphic fn) is the "safe" set here,
+/// exactly as `tr.params` is for a trait.
+fn foreign_fn_sig_names_a_concrete_type(sig: &FnSig) -> Option<&str> {
+    let params: BTreeSet<&str> = sig.params.iter().map(|p| p.name.as_str()).collect();
+    fn_sig_names_a_concrete_type(sig, &params)
+}
+
+/// Shared core of [`foreign_trait_sig_names_a_concrete_type`] /
+/// [`foreign_fn_sig_names_a_concrete_type`]: does `sig`'s value-param/return types reference a
+/// concrete named type beyond `params` (the enclosing trait's or fn's own generic parameter names)?
+/// `None` if `sig` is built entirely from primitives/params (the safe case).
+fn fn_sig_names_a_concrete_type<'a>(sig: &'a FnSig, params: &BTreeSet<&str>) -> Option<&'a str> {
+    for p in &sig.value_params {
+        if let Some(name) = typeref_names_concrete_type(&p.ty, params) {
+            return Some(name);
+        }
+    }
+    typeref_names_concrete_type(&sig.ret, params)
+}
+
+/// Recursively find a [`BaseType::Named`] in `tr` that is not one of `params` — the "concrete named
+/// type" a foreign trait signature might reference beyond its own generic parameters. `None` if
+/// `tr` is built entirely from primitives/params (the safe case).
+fn typeref_names_concrete_type<'a>(tr: &'a TypeRef, params: &BTreeSet<&str>) -> Option<&'a str> {
+    match &tr.base {
+        BaseType::Named(name, args) => {
+            if !params.contains(name.as_str()) {
+                return Some(name.as_str());
+            }
+            args.iter()
+                .find_map(|a| typeref_names_concrete_type(a, params))
+        }
+        BaseType::Seq { elem, .. } => typeref_names_concrete_type(elem, params),
+        BaseType::Fn(a, b) => typeref_names_concrete_type(a, params)
+            .or_else(|| typeref_names_concrete_type(b, params)),
+        BaseType::Tuple(elems) => elems
+            .iter()
+            .find_map(|e| typeref_names_concrete_type(e, params)),
+        _ => None,
+    }
+}
+
 /// **Impl pass — registration + coherence** (RFC-0019 §4.5; LR-2 — guarantee: `Declared`, the
 /// coherence argument is Declared-with-argument per RFC-0019, not machine-checked). For each
 /// `impl Trait<args> for T`:
@@ -3598,7 +4478,11 @@ pub(crate) fn register_instances(
         // type are both outside the phylum still orphan-rejects.
         let trait_local = phylum_traits.contains(id.trait_name.as_str());
         let type_local = match &for_ty {
-            Ty::Data(n, _) => phylum_types.contains(n.as_str()),
+            // DN-112 Rank 1 / M-1036: `n` is now nodule-qualified, but `phylum_types` (the
+            // pub-blind coherence view) is still keyed by bare/local name — the locality test is
+            // "declared *somewhere* in the phylum", independent of qualification, so compare the
+            // local part.
+            Ty::Data(n, _) => phylum_types.contains(ty_local_name(n)),
             // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5) — the
             // RFC-0032 sequence/byte-string reprs and the M-892 VSA repr included.
             Ty::Binary(_)
@@ -3624,6 +4508,32 @@ pub(crate) fn register_instances(
                     id.trait_name, id.trait_name
                 ),
             ));
+        }
+        // MED closure (2026-07-11, adversarial-verification follow-up — see
+        // `foreign_trait_sig_names_a_concrete_type`'s doc comment for the full rationale):
+        // `!trait_local` here means `id.trait_name` resolved to a TraitInfo not declared anywhere
+        // in this phylum — i.e. a cross-phylum import. If its signature mentions any concrete
+        // named type beyond its own generic params, refuse rather than silently re-resolve that
+        // bare name against this (possibly wrong) phylum's own registry (the DN-113/DN-122
+        // residual; confirmed reachable, not yet fully re-homed).
+        if !trait_local {
+            if let Some(name) = foreign_trait_sig_names_a_concrete_type(tr) {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "`impl {} for {for_ty}` — the foreign (cross-phylum) trait `{}`'s \
+                         signature mentions a concrete type `{name}` beyond its own generic \
+                         parameter(s); a cross-phylum trait's signature is not yet re-homed \
+                         against its declaring phylum (DN-113 §7 / DN-122 residual — a bare-name \
+                         reference to `{name}` here cannot be verified against the correct \
+                         phylum's `{name}` and would risk the M-1036/DN-112 bare-name collapse one \
+                         level up; refused rather than silently resolved against a possibly-wrong \
+                         declaration, G2/VR-5). Declare a local wrapper trait instead, or await the \
+                         tracked follow-up for full cross-phylum trait-sig re-homing.",
+                        id.trait_name, tr.name
+                    ),
+                ));
+            }
         }
         // Global uniqueness — at most one instance per `(trait, head)` (RFC-0019 §4.5; ADR-003). A
         // duplicate (even at a different width on the same head — the documented stage-1 over-rejection)
@@ -3877,6 +4787,8 @@ fn check_fn_body(
         // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
         // DN-71 §4.2: a parameter pass counts as the caller's move-in).
         affine: Tracker::seeded(&scope),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
     if got != ret {
@@ -3941,6 +4853,27 @@ fn check_bounds(
     Ok(bounds)
 }
 
+/// A minimal, per-call fresh-name generator for [`Cx::stage3_substitute_expr`]'s (A)-style
+/// RHS-local-binder renaming (M-1054 Stage 3, DN-117 §2 step 1) — the check-time-only analogue of
+/// [`crate::elab::Elab::fresh`]. `%`-prefixed (surface-illegal — `crate::lexer::is_ident_start`
+/// forbids `%`, mirrored by every other synthetic-name scheme in this module/`elab.rs`), so a
+/// minted name can never collide with a real surface identifier; the counter makes distinct mints
+/// within one substitution walk distinct from each other. Not persisted past one
+/// `check_sugar_call` invocation — a fresh instance every time (no cross-call state, unlike
+/// `elab.rs`'s `SUGAR_EXPANSION_SITE`, which needs cross-invocation uniqueness for the *real*,
+/// elaboration-time expansion; this walk's renamed binders are discarded with the rest of the
+/// substituted term).
+#[derive(Default)]
+struct Stage3Fresh(u64);
+
+impl Stage3Fresh {
+    fn mint(&mut self) -> String {
+        let n = self.0;
+        self.0 += 1;
+        format!("%stage3-subst%{n}")
+    }
+}
+
 /// The checking context for one function body.
 struct Cx<'a> {
     site: &'a str,
@@ -3957,7 +4890,11 @@ struct Cx<'a> {
     /// in by ≥2 globs and not shadowed). Imported `pub` decls themselves are already merged into
     /// `types`/`fns`/`traits` (by simple name), so ordinary resolution sees them directly; this field
     /// only carries the `ambiguous` set so a reference to an ambiguous name is refused, never a silent
-    /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one.
+    /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one. **Also**
+    /// carries [`NoduleImports::resolved_fn_sigs`] (DN-112 Rank 1 / M-1036) — [`Self::check_app`]'s
+    /// monomorphic-callee path consults it in preference to re-resolving a callee's signature
+    /// fresh against `self.types` (the caller's own registry), so an imported function's
+    /// parameter/return types stay the *declaring* nodule's, never re-derived at the call site.
     imports: &'a NoduleImports,
     /// **M-1054 Stage 0** — the nodule's registered `lower` rules (DN-110 §5-A), consulted **only**
     /// after every existing call-resolution path (fn/HOF/ctor/trait-method/prim families) has
@@ -3994,6 +4931,18 @@ struct Cx<'a> {
     /// `crate::affine`'s module docs for why. (FLAG-6 fix, M-973: this doc previously read that the
     /// tracker was inert in `check_lower_rule_rhs_type`, stale since M-919 made it active there.)
     affine: Tracker,
+    /// **Test-only non-vacuity sabotage toggle (M-1054 Stage 3, DN-117 §5 item 2).** When `true`,
+    /// [`Self::check_sugar_call`]'s Stage-3 walk feeds the walk the **unsubstituted** `rhs` instead
+    /// of the real, spliced [`Self::stage3_substitute_expr`] output — simulating "the substitution
+    /// never ran" to prove the substituted-`Expr` walk is load-bearing: a fixture that must
+    /// genuinely REFUSE (e.g. the composite/hidden-affine classes no type-based gate alone can
+    /// catch) should wrongly ACCEPT under this sabotage. **Does not exist in a non-test build at
+    /// all** (`#[cfg(test)]`-gated field — zero production footprint); every non-test `Cx`
+    /// construction site sets it `false` (also `#[cfg(test)]`-gated, so it only compiles under
+    /// `cfg(test)` too — see each `Cx { .. }` literal). Set `true` only by the dedicated
+    /// `#[cfg(test)]`-only entry point in `src/tests/affine_stage3.rs`.
+    #[cfg(test)]
+    stage3_sabotage_skip_substitution: bool,
 }
 
 /// RFC-0040 (M-977): if `expected` is a **cons-list-shaped** user ADT, return its `(nil, cons)`
@@ -4013,7 +4962,9 @@ pub(crate) fn cons_list_ctors(
     let Ty::Data(name, _args) = expected else {
         return None;
     };
-    let di = types.get(name)?;
+    // DN-112 Rank 1 / M-1036: `expected` is a checked (possibly qualified) type; `types` is the
+    // bare-keyed surface registry.
+    let di = lookup_data(types, name)?;
     if di.ctors.len() != 2 {
         return None;
     }
@@ -4320,12 +5271,15 @@ impl Cx<'_> {
                 // Nullary constructor as a value. A **generic** type has no fields to infer its type
                 // arguments from, so they must come from `expected` (bidirectional) — an absent or
                 // mismatched context is an explicit "ascribe it" error, never a guess (§11.3).
+                // DN-112 Rank 1 / M-1036: the constructed value's identity is the OWNER type's
+                // qualified name (its home is where the ctor is *declared*, never the call site).
+                let qname = qualify_type_name(&d.home, &d.name);
                 let targs = if d.params.is_empty() {
                     vec![]
                 } else {
                     match expected {
                         Some(Ty::Data(en, eargs))
-                            if en == &d.name && eargs.len() == d.params.len() =>
+                            if *en == qname && eargs.len() == d.params.len() =>
                         {
                             eargs.clone()
                         }
@@ -4339,7 +5293,7 @@ impl Cx<'_> {
                         }
                     }
                 };
-                return Ok((Ty::Data(d.name.clone(), targs), e.clone()));
+                return Ok((Ty::Data(qname, targs), e.clone()));
             }
             return self.err(format!(
                 "constructor `{name}` takes {} field(s) — apply it (W6 saturation)",
@@ -4359,6 +5313,36 @@ impl Cx<'_> {
                      first-class value; apply it directly (never a silent coercion — G2)"
                 ));
             }
+            // **HOLE fn-as-VALUE closure (M-1060 fix-cycle-4, 2026-07-11, adversarial-verification
+            // 4th-cycle finding):** the value-position twin of `check_app`'s /
+            // `check_app_generic_fn`'s baked-signature guard, applied ONCE here so all three
+            // value-position sub-branches below (multi-param curried, monomorphic, generic) share
+            // it (DRY — one guard, not three). Without this, a fn referenced as a VALUE (`let f =
+            // gulp`, a HOF argument) synthesized its `Ty::Fn` by re-resolving `fd.sig` fresh against
+            // `self.types` (THIS caller's own registry) regardless of the re-homed baked entry or the
+            // cross-phylum marker — exactly the M-1036/DN-112 bare-name collapse the CALL-site guards
+            // already close, but reachable at a position they never guarded (DN-113 §7 / DN-122
+            // residual). Preferring `baked` below closes the bakeable case with the correct re-homed
+            // identity; this guard closes the un-bakeable cross-phylum case by refusing rather than
+            // silently re-resolving against a possibly-wrong phylum's registry (G2/VR-5). Same
+            // `foreign_fn_sig_names_a_concrete_type` helper + `cross_phylum_fns` predicate as the
+            // call sites — no forked logic.
+            let baked = self.imports.resolved_fn_sigs.get(name);
+            if baked.is_none() && self.imports.cross_phylum_fns.contains(name) {
+                if let Some(concrete) = foreign_fn_sig_names_a_concrete_type(&fd.sig) {
+                    return self.err(format!(
+                        "`{name}` — the foreign (cross-phylum) fn's signature mentions a concrete \
+                         type `{concrete}` beyond its own generic parameter(s), and its signature \
+                         could not be pre-resolved against its declaring phylum (`resolve_fn_sig` \
+                         only bakes a signature that references no type the declaring nodule itself \
+                         imports — best-effort, never a hard error there); a bare-name reference to \
+                         `{concrete}` here (as a first-class value) cannot be verified against the \
+                         correct phylum's `{concrete}` and would risk the M-1036/DN-112 bare-name \
+                         collapse one level up (DN-113 §7 / DN-122 residual; refused rather than \
+                         silently resolved against a possibly-wrong phylum's registry, G2/VR-5)."
+                    ));
+                }
+            }
             // Multi-parameter monomorphic fn (M-822 / RFC-0024 §4A.5): used as a first-class value,
             // synthesize the curried type `A -> B -> … -> Z` and return a curried lambda expression
             // wrapping the saturated call. Zero-param is refused above; generic multi-param fns
@@ -4376,12 +5360,21 @@ impl Cx<'_> {
                 // the final checked expression structurally (no re-checking needed for a monomorphic
                 // fn — all types are concrete from the declaration).
                 let vparams = fd.sig.value_params.clone();
-                // Resolve each parameter type and the return type.
+                // Resolve each parameter type and the return type — preferring the re-homed BAKED
+                // entry (correct cross-phylum identity) over a fresh `resolve_ty` against this
+                // caller's own registry (M-1060 fix-cycle-4, above).
                 let mut param_tys: Vec<Ty> = Vec::with_capacity(vparams.len());
-                for p in &vparams {
-                    param_tys.push(resolve_ty(self.site, self.types, &[], &p.ty)?.0);
+                for (i, p) in vparams.iter().enumerate() {
+                    let t = match baked.and_then(|(params, _)| params.get(i)) {
+                        Some(w) => w.clone(),
+                        None => resolve_ty(self.site, self.types, &[], &p.ty)?.0,
+                    };
+                    param_tys.push(t);
                 }
-                let ret_ty = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0;
+                let ret_ty = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 // Build the curried type: A -> (B -> (… -> Z)) (right-associative).
                 let curried_ty = param_tys.iter().rev().fold(ret_ty.clone(), |acc, t| {
                     Ty::Fn(Box::new(t.clone()), Box::new(acc))
@@ -4413,27 +5406,44 @@ impl Cx<'_> {
                 }
                 return Ok((curried_ty, body));
             }
-            // Monomorphic callee: resolve the param and return types directly.
+            // Monomorphic callee: resolve the param and return types directly — preferring `baked`
+            // (M-1060 fix-cycle-4, above) over a fresh `resolve_ty` against this caller's registry.
             if fd.sig.params.is_empty() {
-                let (param_ty, _) =
-                    resolve_ty(self.site, self.types, &[], &fd.sig.value_params[0].ty)?;
-                let (ret_ty, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                let param_ty = match baked.and_then(|(params, _)| params.first()) {
+                    Some(w) => w.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.value_params[0].ty)?.0,
+                };
+                let ret_ty = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
             }
             // Generic callee: type arguments must be fixed by context (`expected`). Attempt to
             // solve them from the expected `Ty::Fn(a, r)` via unification; any unsolved variable
-            // is a never-silent refusal (G2/VR-5 — never a guessed default).
+            // is a never-silent refusal (G2/VR-5 — never a guessed default). `baked` (when present)
+            // still legitimately contains `Ty::Var(callee_var)` for a parameter mentioning the
+            // callee's own type variable — those resolve via `subst` exactly like the freshly
+            // resolved path (mirrors `check_app_generic_fn`'s baked-signature use, M-1060 fix-cycle-4).
             let callee_vars = fd.sig.param_names();
             let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
             if let Some(Ty::Fn(ea, er)) = expected {
-                let want_a = resolve_ty(
-                    self.site,
-                    self.types,
-                    &callee_vars,
-                    &fd.sig.value_params[0].ty,
-                )?
-                .0;
-                let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+                let want_a = match baked.and_then(|(params, _)| params.first()) {
+                    Some(w) => w.clone(),
+                    None => {
+                        resolve_ty(
+                            self.site,
+                            self.types,
+                            &callee_vars,
+                            &fd.sig.value_params[0].ty,
+                        )?
+                        .0
+                    }
+                };
+                let want_r = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+                };
                 // Best-effort: ignore unification errors here — unsolved vars are caught below.
                 let _ = unify(self.site, &want_a, ea, &mut subst);
                 let _ = unify(self.site, &want_r, er, &mut subst);
@@ -4447,14 +5457,22 @@ impl Cx<'_> {
                     ));
                 }
             }
-            let want_a = resolve_ty(
-                self.site,
-                self.types,
-                &callee_vars,
-                &fd.sig.value_params[0].ty,
-            )?
-            .0;
-            let want_r = resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0;
+            let want_a = match baked.and_then(|(params, _)| params.first()) {
+                Some(w) => w.clone(),
+                None => {
+                    resolve_ty(
+                        self.site,
+                        self.types,
+                        &callee_vars,
+                        &fd.sig.value_params[0].ty,
+                    )?
+                    .0
+                }
+            };
+            let want_r = match baked {
+                Some((_, ret)) => ret.clone(),
+                None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+            };
             let param_ty = subst_ty(&want_a, &subst);
             let ret_ty = subst_ty(&want_r, &subst);
             return Ok((Ty::Fn(Box::new(param_ty), Box::new(ret_ty)), e.clone()));
@@ -4562,8 +5580,12 @@ impl Cx<'_> {
         // collide with a user name; and it is scoped to the propagation arm only (never the `body`
         // arm), so it also cannot shadow anything `body` references.
         const ERRB: &str = "$try_err";
+        // DN-112 Rank 1 / M-1036: `Result`/`Option` are a per-nodule NAMING CONVENTION (any nodule
+        // may declare its own type literally named `Result`/`Option`), not a prelude type — so this
+        // recognizes the type's *local* name regardless of which nodule declared it (never quietly
+        // broken by the identity qualification; a nodule's own `Result` still desugars `$try`).
         let arms = match &ity {
-            Ty::Data(n, args) if n == "Result" && args.len() == 2 => vec![
+            Ty::Data(n, args) if ty_local_name(n) == "Result" && args.len() == 2 => vec![
                 Arm {
                     pattern: Pattern::Ctor("Ok".to_owned(), vec![Pattern::Ident(name.to_owned())]),
                     body: body.clone(),
@@ -4576,7 +5598,7 @@ impl Cx<'_> {
                     },
                 },
             ],
-            Ty::Data(n, args) if n == "Option" && args.len() == 1 => vec![
+            Ty::Data(n, args) if ty_local_name(n) == "Option" && args.len() == 1 => vec![
                 Arm {
                     pattern: Pattern::Ctor(
                         "Some".to_owned(),
@@ -5260,9 +6282,47 @@ impl Cx<'_> {
             }
             // Monomorphic callee — unchanged v0 path (exact bidirectional checking + error messages).
             if fd.sig.params.is_empty() {
+                // DN-112 Rank 1 / M-1036: prefer this callee's baked signature — resolved ONCE
+                // against its OWN declaring nodule ([`resolve_fn_sig`]) — over re-resolving `pm.ty`
+                // fresh against `self.types` (this caller's own registry). Without this, a foreign
+                // caller that shadows the callee's referenced type name locally (RFC-0006 §4.3 "own
+                // decls shadow imports") would re-derive the callee's parameter/return types against
+                // its OWN (wrong-home) declaration — precisely DN-104's CRITICAL-callout root cause,
+                // one level up. Absent (not every signature is bakeable — best-effort) falls back to
+                // the pre-existing re-resolution path, unchanged.
+                let baked = self.imports.resolved_fn_sigs.get(name);
+                // HOLE B closure (M-1060 fix-cycle-3, 2026-07-11, adversarial-verification finding):
+                // when `baked` is absent for a **cross-phylum** `name` (never intra-phylum — a
+                // same-phylum sibling fn's `resolve_ty` fallback below is safe, since `self.types`
+                // already carries every intra-phylum type under its qualified identity, M-1036), the
+                // fallback re-resolves `fd.sig`'s TypeRefs fresh against `self.types` (THIS caller's
+                // own registry) rather than the declaring phylum's — the exact M-1036/DN-112
+                // bare-name collapse this whole subsystem exists to prevent, one level up, for an
+                // un-bakeable fn signature rather than a ctor field. Refuse rather than silently
+                // re-resolve (mirrors `foreign_trait_sig_names_a_concrete_type`'s guard exactly, over
+                // an `FnSig` instead of a `TraitInfo`).
+                if baked.is_none() && self.imports.cross_phylum_fns.contains(name) {
+                    if let Some(concrete) = foreign_fn_sig_names_a_concrete_type(&fd.sig) {
+                        return self.err(format!(
+                            "`{name}` — the foreign (cross-phylum) fn's signature mentions a \
+                             concrete type `{concrete}` beyond its own generic parameter(s), and \
+                             its signature could not be pre-resolved against its declaring phylum \
+                             (`resolve_fn_sig` only bakes a signature that references no type the \
+                             declaring nodule itself imports — best-effort, never a hard error there); \
+                             a bare-name reference to `{concrete}` here cannot be verified against \
+                             the correct phylum's `{concrete}` and would risk the M-1036/DN-112 \
+                             bare-name collapse one level up (DN-113 §7 / DN-122 residual; refused \
+                             rather than silently resolved against a possibly-wrong phylum's \
+                             registry, G2/VR-5)."
+                        ));
+                    }
+                }
                 let mut rebuilt = Vec::with_capacity(args.len());
-                for (pm, a) in fd.sig.value_params.iter().zip(args) {
-                    let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                for (i, (pm, a)) in fd.sig.value_params.iter().zip(args).enumerate() {
+                    let want = match baked.and_then(|(params, _)| params.get(i)) {
+                        Some(w) => w.clone(),
+                        None => resolve_ty(self.site, self.types, &[], &pm.ty)?.0,
+                    };
                     let (got, a2) = self.check(scope, a, Some(&want))?;
                     if want != got {
                         return self.err(format!(
@@ -5273,7 +6333,10 @@ impl Cx<'_> {
                     }
                     rebuilt.push(a2);
                 }
-                let (ret, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                let ret = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 return Ok((ret, app_node(head, rebuilt)));
             }
             // Generic callee — extracted to a separate (non-inlined) method so `check_app`'s frame
@@ -5288,7 +6351,11 @@ impl Cx<'_> {
             // diagnostic wins over an incidental "takes N fields" message (G2).
             self.check_ctor_seal(name, &d.name)?;
             let arity = d.ctors[i].fields.len();
-            let dname = d.name.clone();
+            // DN-112 Rank 1 / M-1036: the constructed value's identity is the OWNER type's qualified
+            // name — threaded through `check_app_generic_ctor` too, so its own `en == dname` /
+            // `Ty::Data(dname, ..)` sites need no separate edit (both sides become qualified
+            // consistently by construction).
+            let dname = qualify_type_name(&d.home, &d.name);
             let params = d.params.clone();
             if arity != args.len() {
                 return self.err(format!(
@@ -5531,7 +6598,7 @@ impl Cx<'_> {
     }
 
     /// **M-1054 Stage 1b — expression-position sugar-rule call-site ACCEPT** (DN-110 §5-A;
-    /// DN-114, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
+    /// DN-116, Option B — the def-time RHS type-scheme). A `lower`-declared rule with **value**
     /// parameters ([`LowerDecl::value_params`] — distinct from the `derive`-facing *type*
     /// parameters in [`LowerDecl::params`]) is recognized at an ordinary call site `Name(args)`,
     /// arity- and type-matched exactly like a user-fn call (DRY with the fn branch above — same
@@ -5551,20 +6618,28 @@ impl Cx<'_> {
     /// ratified two-phase split: L1 check-phase for typing/def-site/affine, L0 elab-phase for the
     /// hygienic expansion (never doubly-expanding, never dragging `%`-freshening into the checker).
     ///
-    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-114:**
-    /// - **Stage 3 (OQ-H4, affine soundness).** Refuses any `Substrate`-typed value parameter, and
-    ///   (defensively) any RHS-local binding that is *structurally* affine-producing (a `let`-bound
-    ///   call to a fn whose declared return type is `Substrate`, or a bare `consume`). An ordinary
+    /// **Two honest, never-silent gates keep this accept sound (G2/VR-5) — see DN-116/DN-117:**
+    /// - **Stage 3 (OQ-H4, affine soundness — DN-117, real linear check, landed).** A value
+    ///   parameter (or RHS-local binding) with an affine surface no longer refuses *wholesale*.
+    ///   Instead: [`Self::ty_structurally_contains_substrate`] is retained only as a cheap
+    ///   **trigger** (DN-117 §3.2), together with a precise per-argument "did checking this
+    ///   argument touch the affine tracker at all" signal (a strict superset of the trigger DN-117
+    ///   §3.2's literal text names — needed to catch the "affine-hiding-non-affine-type" class,
+    ///   DN-117 §2/§5 R3, that no *type*-based trigger alone can see). When triggered, the real
+    ///   M-919 [`crate::affine::Tracker`] walks the **substituted** `Expr` — each argument spliced
+    ///   at every unshadowed occurrence of its value param, the check-time-only analogue of
+    ///   [`crate::elab::sugar_expand`]'s (B) substitution (see [`Self::stage3_substitute_expr`]) —
+    ///   and the call is accepted **iff no [`UseOutcome::DoubleUse`] is produced**. An ordinary
     ///   (non-affine) argument may safely be spliced into the RHS at more than one occurrence (see
-    ///   [`crate::elab::sugar_expand`] — re-evaluation, not a soundness hazard, for a pure v0
-    ///   value); an *affine* argument may not — [`crate::elab::Elab::app`]'s ordinary fn-call
-    ///   inlining `Let`-binds each argument **exactly once**, but Stage 1's (B) substitution
+    ///   [`crate::elab::sugar_expand`]'s own doc comment — re-evaluation, not a soundness hazard,
+    ///   for a pure v0 value); an *affine* argument may not — [`crate::elab::Elab::app`]'s ordinary
+    ///   fn-call inlining `Let`-binds each argument **exactly once**, but Stage 1's (B) substitution
     ///   splices the raw argument node verbatim at **every** RHS occurrence of its value param, so
-    ///   an affine value param could be double-consumed by expansion alone. Closing this at the
-    ///   value-parameter level removes the hazard entirely; the RHS-local-binding check is an
-    ///   additional structural safety net over the realistic "helper-fn-acquired `Substrate`" shape
-    ///   [`infer_expr_rule_rhs_type`]'s own doc comment names — not a full second affine-inference
-    ///   pass (that remains Stage 3's own job, the substituted-Expr affine re-check, M-919/OQ-H4).
+    ///   an affine value param genuinely used more than once would be double-consumed by expansion
+    ///   alone — this is exactly what the substituted-`Expr` walk now catches precisely (accept
+    ///   linear-or-dropped, refuse duplicated — DN-117 §4.3: **a dropped affine value param is
+    ///   ACCEPTED**, not refused; the static pass enforces only the use-at-most-once upper bound,
+    ///   the must-consume lower bound is an M-904 runtime concern, unchanged by this gate).
     /// - **Stage 2 (OQ-H1, def-site resolution).** Refuses an RHS identifier that is genuinely
     ///   **free** — neither a value parameter, an RHS-local binder, nor a same-nodule,
     ///   unambiguous top-level fn/constructor/`lower`-rule name (see [`Self::rhs_first_free_id`]).
@@ -5597,38 +6672,50 @@ impl Cx<'_> {
                 args.len()
             ));
         }
-        // Stage 3 (OQ-H4) gate, part 1 — a value parameter whose type **is, or structurally
-        // contains** (DN-114 §3.2), `Substrate` is refused outright (see the doc comment above for
-        // why, and `Self::ty_structurally_contains_substrate`'s own doc comment for the recursive
-        // walk): checked before the per-argument type walk so the dedicated affine diagnostic wins
-        // over an incidental argument-type mismatch (G2).
-        for pm in &rule.value_params {
-            let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
-            let mut visiting = BTreeSet::new();
-            if self.ty_structurally_contains_substrate(&pty, &mut visiting) {
-                return self.err(format!(
-                    "`{name}` (a `lower` sugar rule) has value parameter `{}` of type `{pty}`, \
-                     which is (or structurally contains — DN-114 §3.2) an affine (`Substrate`) \
-                     field — M-1054 Stage 1b accepts only the affine-free fragment: expansion \
-                     (`crate::elab::sugar_expand`'s (B) substitution) splices a use-site argument \
-                     node into every RHS occurrence of its value param, which would double-consume \
-                     an affine field referenced more than once (e.g. via two separate pattern \
-                     matches that each extract it). The substituted-Expr affine re-check over the \
-                     expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet (never a \
-                     silently-unchecked affine accept — G2).",
-                    pm.name
-                ));
-            }
-        }
+        // Stage 3 (OQ-H4) gate — TRIGGER, not decision (DN-117 §3.2, demoted from the earlier
+        // wholesale-refusal): does any value parameter's *declared* type structurally contain
+        // `Substrate` (DN-116 §3.2's recursive walk, retained verbatim as a cheap, sound-to-widen
+        // early signal)? This alone under-covers the "affine-hiding-non-affine-type" class (DN-117
+        // §2/§5 R3 — an `Int`-typed param whose *argument* nonetheless carries affine content via a
+        // side-effecting `consume`), so it is OR'd below with a precise per-argument signal computed
+        // while type-checking each argument (never a silent gap — see that loop's own comment).
+        let mut has_affine_surface = rule.value_params.iter().any(|pm| {
+            resolve_ty(self.site, self.types, &[], &pm.ty)
+                .map(|(pty, _)| {
+                    let mut visiting = BTreeSet::new();
+                    self.ty_structurally_contains_substrate(&pty, &mut visiting)
+                })
+                .unwrap_or(false)
+        });
         // Match + check each argument against its declared parameter type — the same bidirectional
         // discipline the user-fn branch (above, in `check_app`) uses, so a bare-decimal argument
         // still takes its parameter's width and a genuine mismatch is reported per-parameter, by
         // name (DRY with that branch's `edge_mismatch` diagnostic). Rebuilt args feed the accepted
         // call node below, mirroring the user-fn branch's own `rebuilt`.
+        //
+        // `pre_args_snapshot` — the affine tracker's state *before* any argument is examined. Each
+        // argument's own check below records ordinary "the caller passed this argument once"
+        // affine bookkeeping against `self.affine` (correct for an ordinary fn call's Let-bind-once
+        // semantics, which this loop's *shape* mirrors) — but that bookkeeping is the WRONG model
+        // for a value-parametric rule's actual expansion semantics, where the argument is evaluated
+        // once *per occurrence of its param in the RHS* (zero, one, or many — DN-117 §2). When the
+        // Stage-3 trigger fires below, the substituted-`Expr` walk restores this snapshot and
+        // becomes the *sole* source of truth for this call's affine ledger, discarding this loop's
+        // own (occurrence-blind) bookkeeping — see that block's own comment.
+        let pre_args_snapshot = self.affine.snapshot();
         let mut rebuilt = Vec::with_capacity(args.len());
         for (pm, a) in rule.value_params.iter().zip(args) {
             let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+            let pre_arg = self.affine.snapshot();
             let (got, a2) = self.check(scope, a, Some(&want))?;
+            // Precise per-argument trigger signal: did checking *this* argument touch the affine
+            // tracker at all (any slot's Live/Moved state changed)? This is exact, not a structural
+            // over-approximation — it fires exactly when the argument, as actually checked,
+            // references or produces affine content reachable through an existing scope slot (e.g.
+            // R3's `let _ = consume s in 0`), independent of the param's own declared type.
+            if self.affine.snapshot() != pre_arg {
+                has_affine_surface = true;
+            }
             if want != got {
                 return self.err(format!(
                     "`{name}` parameter `{}`: {}",
@@ -5638,16 +6725,13 @@ impl Cx<'_> {
             }
             rebuilt.push(a2);
         }
-        // Stage 3 (OQ-H4) gate, part 2 — a structurally affine RHS-local binding (see the doc
-        // comment above: a `let`-bound call to a `Substrate`-returning fn, or a bare `consume`).
-        if let Some(offender) = self.rhs_first_affine_binding(rhs, 0)? {
-            return self.err(format!(
-                "`{name}`'s RHS introduces an affine (`Substrate`)-typed local binding `{offender}` \
-                 — M-1054 Stage 1b accepts only the affine-free fragment; the substituted-Expr \
-                 affine re-check over the expanded RHS is Stage 3 work (M-919/OQ-H4), not built yet \
-                 (never a silently-unchecked affine accept — G2)."
-            ));
-        }
+        // Stage 3 (OQ-H4) gate, former "part 2" (an RHS-local `let`-bound affine acquisition) is
+        // SUBSUMED, not re-checked here (DN-117 §3.3, net DRY win): `infer_expr_rule_rhs_type`
+        // (below) already, unconditionally, walks the raw (unsubstituted) `rhs` with its own active
+        // seeded `Tracker` — an RHS-local affine binding used more than once is caught there
+        // directly (that check does not depend on value-parameter substitution at all), and a
+        // dropped-but-unused one is correctly accepted (DN-117 §4.3) rather than refused wholesale
+        // by a structural pre-check that could not tell "unused" from "used twice" apart.
         // Stage 2 (OQ-H1) gate — the first genuinely free RHS identifier, if any (see
         // `rhs_first_free_id`'s doc comment for the exact accepted-fragment boundary).
         let bound: Vec<String> = rule.value_params.iter().map(|p| p.name.clone()).collect();
@@ -5672,7 +6756,7 @@ impl Cx<'_> {
                 return self.err(format!(
                     "`{name}`'s RHS references the `lower`-rule `{free}` in value position — a \
                      `lower` rule has no L0 form of its own to fall through to (M-1054 Stage 1b \
-                     §5.2 wiring; DN-114) and resolves only when it is the head of a call \
+                     §5.2 wiring; DN-116) and resolves only when it is the head of a call \
                      (`{free}(...)`). Refused here, at check, with this specific diagnostic \
                      (DN-115 §4.2/G2) rather than falling through to a later, generic \"unknown \
                      name\" refusal from this rule's own RHS re-type-check — never-silent either \
@@ -5688,7 +6772,61 @@ impl Cx<'_> {
                  built yet (never a silent free-variable splice — G2)."
             ));
         }
-        // Both gates passed: type the RHS once (Option B, DN-114 — see the doc comment above) and
+        // Stage 3 (OQ-H4) real linear check — only when triggered (DN-117 §3.2): build the
+        // check-time-only substituted `Expr` (each argument spliced at every unshadowed occurrence
+        // of its value param) and walk it with the real M-919 `Tracker`, accepting iff no
+        // `UseOutcome::DoubleUse` is produced. See `Self::stage3_substitute_expr`'s doc comment for
+        // the shadowing/capture-avoidance discipline.
+        if has_affine_surface {
+            // Discard the per-argument loop's own (occurrence-blind) bookkeeping above — the
+            // substituted-`Expr` walk below re-derives it correctly, once, from scratch (see the
+            // `pre_args_snapshot` comment above for why the per-arg loop's own bookkeeping is not
+            // the right model here).
+            self.affine.restore(&pre_args_snapshot);
+            let params_for_subst: Vec<(String, Expr)> = rule
+                .value_params
+                .iter()
+                .map(|p| p.name.clone())
+                .zip(rebuilt.iter().cloned())
+                .collect();
+            let mut shadow: Vec<(String, String)> = Vec::new();
+            let mut fresh = Stage3Fresh::default();
+            #[cfg_attr(not(test), allow(unused_mut))]
+            let mut substituted =
+                self.stage3_substitute_expr(rhs, &params_for_subst, &mut shadow, &mut fresh, 0)?;
+            // Non-vacuity sabotage hook (`#[cfg(test)]`-only, DN-117 §5 item 2) — see
+            // `Cx::stage3_sabotage_skip_substitution`'s doc comment. No-op (and does not exist at
+            // all) outside a test build.
+            #[cfg(test)]
+            if self.stage3_sabotage_skip_substitution {
+                substituted = rhs.clone();
+            }
+            // Defensive completeness (DN-117 §2 step 2, mirroring `infer_expr_rule_rhs_type`'s own
+            // seeding): also push the rule's own declared value-param bindings on top of the real
+            // ambient scope, in case some occurrence was not spliced (should not happen under
+            // complete substitution — never a silent skip if it ever does, G2). These slots are
+            // never expected to be referenced by the substituted term.
+            let depth = scope.len();
+            for pm in &rule.value_params {
+                let (pty, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                scope.push((pm.name.clone(), pty.clone()));
+                self.affine.push(&pty);
+            }
+            let walk_result = self.check(scope, &substituted, None);
+            scope.truncate(depth);
+            self.affine.truncate(depth);
+            walk_result.map_err(|e| {
+                CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` (a `lower` sugar rule) rejects this call — M-1054 Stage 3 \
+                         (OQ-H4/DN-117) real affine re-check over the substituted expansion: {}",
+                        e.message
+                    ),
+                )
+            })?;
+        }
+        // Every gate passed: type the RHS once (Option B, DN-116 — see the doc comment above) and
         // accept, rebuilding the call node exactly like the ordinary user-fn branch does.
         let ret_ty = infer_expr_rule_rhs_type(
             rule,
@@ -5703,19 +6841,23 @@ impl Cx<'_> {
         Ok((ret_ty, app_node(head, rebuilt)))
     }
 
-    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 1's recursive core** — does `ty`
+    /// **M-1054 Stage 3 (OQ-H4/DN-117) gate — the Stage-3 *trigger*'s recursive core** — does `ty`
     /// **structurally contain** [`Ty::Substrate`] anywhere: at the top level, nested inside a
     /// registered [`Data`](Ty::Data) type's constructor fields (recursively, resolving each field's
     /// abstract [`Ty::Var`]s against `ty`'s own type arguments via [`subst_ty`]), or inside a
-    /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position. Closes the DN-114 §3.2
-    /// composite/nested-affine hazard part 1's earlier `matches!(pty, Ty::Substrate(_))` check
-    /// missed entirely: a `Data("Handle")` whose sole constructor wraps a `Substrate` field (e.g.
-    /// `Wrap(Substrate{gpu})`) is refused here even though `pty` itself is `Data("Handle", [])`, not
-    /// `Ty::Substrate` — because the RHS can still pattern-match the value twice to extract the
-    /// affine field at each occurrence, double-consuming it exactly as a bare `Substrate` parameter
-    /// would (part 2, [`Self::rhs_first_affine_binding`], is a defensive net over *some* of that
-    /// shape via `let`-bound extraction helpers, but never inspected match-arm patterns — this is
-    /// the primary, structural closure of the hazard, not a redundant second check).
+    /// [`Seq`](Ty::Seq) element / [`Fn`](Ty::Fn) argument-or-return position.
+    ///
+    /// **No longer the accept/refuse decision (DN-117 §3.2, superseding the earlier DN-116 §3.2
+    /// design).** This predicate used to *refuse outright* any value parameter it matched; it is now
+    /// one of two conditions [`Self::check_sugar_call`] OR's together to decide whether to run the
+    /// real substituted-`Expr` affine walk (the other being a precise per-argument tracker-touch
+    /// signal — that function's own doc comment) — the walk itself is what accepts or refuses. A
+    /// `Data("Handle")` whose sole constructor wraps a `Substrate` field (e.g. `Wrap(Substrate{gpu})`)
+    /// still matches here even though `pty` itself is `Data("Handle", [])`, not `Ty::Substrate` —
+    /// this is exactly what makes the composite/nested-affine case (a caller's argument
+    /// pattern-matched twice to extract the affine field) trigger the real walk, which then decides
+    /// linear-use (accept) vs. duplication (refuse) precisely, rather than refusing every composite
+    /// argument wholesale as the earlier design did.
     ///
     /// **Termination (never a silent infinite loop, G2).** `visiting` accumulates the [`Data`]
     /// **type names** currently on the walk's call stack (on-path cycle detection, not a permanent
@@ -5737,6 +6879,32 @@ impl Cx<'_> {
     /// is the single-nodule, concrete-argument fragment (OQ-H1's own scope note), so a genuinely
     /// abstract value-parameter type is not yet reachable through this gate in practice; if that
     /// ever changes, this is the seam to revisit (FLAG, not silently widened).
+    ///
+    /// **M-1036 residual-close audit (B).** The `lookup_data(self.types, name)` call below (in the
+    /// `Ty::Data` arm) is left unguarded — audited and confirmed **not exploitable** for a
+    /// wrong-value silent *accept*, because this fn is (per this doc comment's own opening
+    /// paragraph) only ever a **cheap pre-filter TRIGGER**, OR'd in [`Self::check_sugar_call`] with
+    /// a second, fully **independent** precise signal: whether checking the *actual argument
+    /// expression* at this call site touched the real affine tracker (`self.affine.snapshot() !=
+    /// pre_arg`, computed via the ordinary — already home-check-guarded, per `resolve_ty`/
+    /// `normalize_pattern`'s M-1036 fixes — `self.check` call, never through this fn's own lookup).
+    /// The two possible mismatch directions are both harmless:
+    /// - **Over-trigger** (a wrong `d` looks *more* Substrate-shaped than the real declared type):
+    ///   the real substituted-`Expr` walk just runs unnecessarily and still decides correctly from
+    ///   the real `Expr`, never this fn's structural read.
+    /// - **Under-trigger** (a wrong `d` — e.g. a same-nodule shadow's `DataInfo` — looks *less*
+    ///   Substrate-shaped, missing a field the real declared type has): the independent
+    ///   per-argument tracker-touch signal still fires whenever the call site actually passes a
+    ///   live affine value there, since that signal is computed from the argument's own real
+    ///   checked shape, not from this fn's `d`. A trigger this fn alone would miss is exactly the
+    ///   "affine-hiding-non-affine-type" class DN-117 already designed the OR'd signal to catch
+    ///   (see the class comment above `has_affine_surface`'s definition) — so a shadow-mismatch here
+    ///   is strictly narrower than a gap the design already covers, not a new one.
+    ///
+    /// Guarantee: `Declared` (reasoned, not mechanized) — this fn's own accept/refuse authority is
+    /// itself only `Declared`/heuristic by design (it is a trigger, not the decision — see this
+    /// comment's opening paragraph); the real decision (the substituted-`Expr` walk) carries its own
+    /// separate guarantee.
     fn ty_structurally_contains_substrate(&self, ty: &Ty, visiting: &mut BTreeSet<String>) -> bool {
         match ty {
             Ty::Substrate(_) => true,
@@ -5753,7 +6921,9 @@ impl Cx<'_> {
                     // this type's structure is found via its first, non-cyclic entry in this walk.
                     return false;
                 }
-                let found = match self.types.get(name) {
+                // DN-112 Rank 1 / M-1036: `name` is a field's already-resolved (possibly qualified)
+                // `Ty::Data` name; `self.types` is the bare-keyed surface registry.
+                let found = match lookup_data(self.types, name) {
                     Some(info) => {
                         let subst: BTreeMap<String, Ty> = info
                             .params
@@ -5998,158 +7168,353 @@ impl Cx<'_> {
         }
     }
 
-    /// **M-1054 Stage 1b Stage-3 gate helper (OQ-H4), part 2** — a **structural** (not fully
-    /// type-inferring) search for an RHS `let`-bound local whose bound expression is *syntactically*
-    /// affine-producing: a bare `consume <expr>` (always yields a `Substrate` value — see
-    /// [`crate::ast::Expr::Consume`]'s own doc comment), or a call `head(args)` where `head` is a
-    /// known top-level `fn` whose **declared** return type is `Substrate` (the exact
-    /// "helper-fn-acquired `Substrate`" shape [`infer_expr_rule_rhs_type`]'s own doc comment names).
-    /// Narrower than a full second affine-inference pass over the RHS (that remains Stage 3's own
-    /// job, M-919/OQ-H4) but sufficient to refuse the realistic shape rather than silently accept it
-    /// (G2) — see [`Self::check_sugar_call`]'s doc comment for why this is a defensive addition
-    /// alongside the value-parameter check, not the primary soundness gate. Exhaustively recurses
-    /// into every [`Expr`] child (no wildcard arm) so no subtree is silently skipped.
-    fn rhs_first_affine_binding<'e>(
+    /// **M-1054 Stage 3 (OQ-H4), DN-117 §2 step 1 — the check-time-only substituted `Expr`
+    /// builder.** The `Expr`-level analogue of [`crate::elab::sugar_expand`]'s (B) substitution
+    /// (which operates on L0 `Node`s at *elaboration* time): splices each `params[i].1` (an
+    /// already-checked argument `Expr`) at every **unshadowed** occurrence of `params[i].0` (a
+    /// value-parameter name) inside `e`. The result is discarded after the Stage-3 affine verdict
+    /// ([`Self::check_sugar_call`]) — Option B (DN-116) is untouched; `Elab::app` still re-derives
+    /// the real expansion independently at L0 (no double-expansion, DRY).
+    ///
+    /// **Shadowing (B).** An occurrence bound by an inner `let`/`match`-arm/`for`/`lambda` binder of
+    /// the same spelling as a value param is *not* substituted — it refers to that inner binder, not
+    /// the param (mirrors [`crate::elab::sugar_expand`]'s own unshadowed-occurrence logic,
+    /// `elab.rs:942`).
+    ///
+    /// **(A)-style fresh-renaming of RHS-local binders — a necessary refinement beyond DN-117 §2's
+    /// literal (B)-only text (flagged in this leaf's report/ratification, not silently added).**
+    /// Every RHS-local binder this walk introduces (`Let`/`Lambda`/`For`/match-arm pattern idents)
+    /// is renamed to a fresh, `%`-prefixed synthetic name (guaranteed disjoint from any surface
+    /// spelling — `%` is lexer-illegal, `is_ident_start`/`is_ident_continue`), exactly mirroring
+    /// [`crate::elab::sugar_expand`]'s own (A) step. **Why this is needed, not optional:** without
+    /// it, a spliced argument's own free variable (e.g. a caller's `s` inside `consume s`) could be
+    /// *captured* by an RHS-local binder that coincidentally shares its spelling (e.g.
+    /// `let s = 5 in p`) — the substituted term would then wrongly resolve the spliced `s` to the
+    /// RHS's own local `s`, producing a spurious type-mismatch refusal (a false REFUSE of a
+    /// linear-use ACCEPT case) rather than the correct verdict. This capture hazard cannot arise for
+    /// the *real*, elaboration-time expansion (Stage 1's own (A) freshening already prevents it
+    /// there) — it is specific to this check-time-only, separately-built substituted term, so it
+    /// needs its own (A) step. `%`-renaming a `Let`/`Lambda`/`For` binder is always unambiguously
+    /// safe (those never denote anything but a fresh binder); a match-arm pattern identifier that is
+    /// genuinely ambiguous between "binder" and "nullary constructor reference" without a scrutinee
+    /// type cannot be safely `%`-renamed either way — see
+    /// [`Self::stage3_substitute_pattern`]'s own doc comment: this ambiguous case now **refuses the
+    /// whole sugar call** (fixed 2026-07-11, a CRITICAL false-accept found by adversarial review;
+    /// FLAG-pattern-ctor-collision, DN-117 ratification note) rather than leaving the binder
+    /// unrenamed, which is exactly the capture hazard this paragraph describes.
+    ///
+    /// Depth-bounded by [`MAX_CHECK_DEPTH`] like every other recursive walk in this module (never a
+    /// silent stack overflow on a pathological RHS, G2).
+    #[allow(clippy::too_many_arguments)]
+    fn stage3_substitute_expr(
         &self,
-        e: &'e Expr,
+        e: &Expr,
+        params: &[(String, Expr)],
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
         depth: u32,
-    ) -> Result<Option<&'e str>, CheckError> {
+    ) -> Result<Expr, CheckError> {
         if depth > MAX_CHECK_DEPTH {
             return Err(CheckError::new(
                 self.site,
                 format!(
                     "expression nesting exceeds the checker depth budget ({MAX_CHECK_DEPTH}) — a \
-                     pathologically-nested `lower` rule RHS (M-1054 Stage 1b affine-binding walk)"
+                     pathologically-nested `lower` rule RHS (M-1054 Stage 3 substituted-Expr walk)"
                 ),
             ));
         }
         let d = depth + 1;
-        match e {
+        Ok(match e {
+            Expr::Path(p) if p.0.len() == 1 => {
+                let n = &p.0[0];
+                if let Some((_, f)) = shadow.iter().rev().find(|(orig, _)| orig == n) {
+                    Expr::Path(Path(vec![f.clone()]))
+                } else if let Some((_, arg)) = params.iter().find(|(pn, _)| pn == n) {
+                    arg.clone()
+                } else {
+                    e.clone()
+                }
+            }
+            Expr::Path(_) | Expr::Lit(_) => e.clone(),
             Expr::Let {
-                name, bound, body, ..
+                name,
+                ty,
+                bound,
+                body,
             } => {
-                if self.expr_is_structurally_affine(bound)? {
-                    return Ok(Some(name.as_str()));
+                let bound2 = self.stage3_substitute_expr(bound, params, shadow, fresh, d)?;
+                let f = fresh.mint();
+                shadow.push((name.clone(), f.clone()));
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                shadow.pop();
+                Expr::Let {
+                    name: f,
+                    ty: ty.clone(),
+                    bound: Box::new(bound2),
+                    body: Box::new(body2),
                 }
-                if let Some(f) = self.rhs_first_affine_binding(bound, d)? {
-                    return Ok(Some(f));
-                }
-                self.rhs_first_affine_binding(body, d)
             }
-            Expr::Path(_) | Expr::Lit(_) => Ok(None),
-            Expr::If { cond, conseq, alt } => {
-                for sub in [cond, conseq, alt] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
+            Expr::If { cond, conseq, alt } => Expr::If {
+                cond: Box::new(self.stage3_substitute_expr(cond, params, shadow, fresh, d)?),
+                conseq: Box::new(self.stage3_substitute_expr(conseq, params, shadow, fresh, d)?),
+                alt: Box::new(self.stage3_substitute_expr(alt, params, shadow, fresh, d)?),
+            },
             Expr::Match { scrutinee, arms } => {
-                if let Some(f) = self.rhs_first_affine_binding(scrutinee, d)? {
-                    return Ok(Some(f));
-                }
+                let scrutinee2 =
+                    self.stage3_substitute_expr(scrutinee, params, shadow, fresh, d)?;
+                let mut arms2 = Vec::with_capacity(arms.len());
                 for arm in arms {
-                    if let Some(f) = self.rhs_first_affine_binding(&arm.body, d)? {
-                        return Ok(Some(f));
-                    }
+                    arms2.push(self.stage3_substitute_arm(arm, params, shadow, fresh, d)?);
                 }
-                Ok(None)
+                Expr::Match {
+                    scrutinee: Box::new(scrutinee2),
+                    arms: arms2,
+                }
             }
-            Expr::For { xs, init, body, .. } => {
-                for sub in [xs.as_ref(), init.as_ref(), body.as_ref()] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
+            Expr::For {
+                x,
+                xs,
+                acc,
+                init,
+                body,
+            } => {
+                let xs2 = self.stage3_substitute_expr(xs, params, shadow, fresh, d)?;
+                let init2 = self.stage3_substitute_expr(init, params, shadow, fresh, d)?;
+                let fx = fresh.mint();
+                let facc = fresh.mint();
+                shadow.push((x.clone(), fx.clone()));
+                shadow.push((acc.clone(), facc.clone()));
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                shadow.pop();
+                shadow.pop();
+                Expr::For {
+                    x: fx,
+                    xs: Box::new(xs2),
+                    acc: facc,
+                    init: Box::new(init2),
+                    body: Box::new(body2),
                 }
-                Ok(None)
             }
-            Expr::Lambda { body, .. } => self.rhs_first_affine_binding(body, d),
-            Expr::App { head, args } => {
-                if let Some(f) = self.rhs_first_affine_binding(head, d)? {
-                    return Ok(Some(f));
-                }
-                for a in args {
-                    if let Some(f) = self.rhs_first_affine_binding(a, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Fuse { left, right } => {
-                for sub in [left, right] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Reclaim { policy, body } => {
-                for sub in [policy, body] {
-                    if let Some(f) = self.rhs_first_affine_binding(sub, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
-            Expr::Swap { value, .. } => self.rhs_first_affine_binding(value, d),
-            Expr::WithParadigm { body, .. }
-            | Expr::Wild(body)
-            | Expr::Spore(body)
-            | Expr::Wrapping(body)
-            | Expr::Consume(body)
-            | Expr::Try(body) => self.rhs_first_affine_binding(body, d),
-            Expr::Ascribe(inner, _) => self.rhs_first_affine_binding(inner, d),
-            Expr::TupleLit(items) => {
-                for it in items {
-                    if let Some(f) = self.rhs_first_affine_binding(it, d)? {
-                        return Ok(Some(f));
-                    }
-                }
-                Ok(None)
-            }
+            Expr::Swap {
+                value,
+                target,
+                policy,
+            } => Expr::Swap {
+                value: Box::new(self.stage3_substitute_expr(value, params, shadow, fresh, d)?),
+                target: target.clone(),
+                policy: policy.clone(),
+            },
+            Expr::WithParadigm { paradigm, body } => Expr::WithParadigm {
+                paradigm: *paradigm,
+                body: Box::new(self.stage3_substitute_expr(body, params, shadow, fresh, d)?),
+            },
+            Expr::Wild(b) => Expr::Wild(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Spore(b) => Expr::Spore(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Wrapping(b) => Expr::Wrapping(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Consume(b) => Expr::Consume(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
+            Expr::Try(b) => Expr::Try(Box::new(
+                self.stage3_substitute_expr(b, params, shadow, fresh, d)?,
+            )),
             Expr::Colony(hyphae) => {
+                let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
-                    if let Some(forage) = &h.forage {
-                        if let Some(f) = self.rhs_first_affine_binding(forage, d)? {
-                            return Ok(Some(f));
-                        }
-                    }
-                    if let Some(f) = self.rhs_first_affine_binding(&h.body, d)? {
-                        return Ok(Some(f));
-                    }
+                    let forage = match &h.forage {
+                        Some(f) => Some(Box::new(
+                            self.stage3_substitute_expr(f, params, shadow, fresh, d)?,
+                        )),
+                        None => None,
+                    };
+                    let body = self.stage3_substitute_expr(&h.body, params, shadow, fresh, d)?;
+                    out.push(Hypha { forage, body });
                 }
-                Ok(None)
+                Expr::Colony(out)
             }
-        }
+            Expr::Lambda {
+                params: lparams,
+                body,
+            } => {
+                let mut renamed = Vec::with_capacity(lparams.len());
+                for p in lparams {
+                    let f = fresh.mint();
+                    shadow.push((p.name.clone(), f.clone()));
+                    renamed.push(Param {
+                        name: f,
+                        ty: p.ty.clone(),
+                    });
+                }
+                let body2 = self.stage3_substitute_expr(body, params, shadow, fresh, d)?;
+                for _ in lparams {
+                    shadow.pop();
+                }
+                Expr::Lambda {
+                    params: renamed,
+                    body: Box::new(body2),
+                }
+            }
+            Expr::App { head, args } => {
+                let head2 = self.stage3_substitute_expr(head, params, shadow, fresh, d)?;
+                let mut args2 = Vec::with_capacity(args.len());
+                for a in args {
+                    args2.push(self.stage3_substitute_expr(a, params, shadow, fresh, d)?);
+                }
+                Expr::App {
+                    head: Box::new(head2),
+                    args: args2,
+                }
+            }
+            Expr::Fuse { left, right } => Expr::Fuse {
+                left: Box::new(self.stage3_substitute_expr(left, params, shadow, fresh, d)?),
+                right: Box::new(self.stage3_substitute_expr(right, params, shadow, fresh, d)?),
+            },
+            Expr::Reclaim { policy, body } => Expr::Reclaim {
+                policy: Box::new(self.stage3_substitute_expr(policy, params, shadow, fresh, d)?),
+                body: Box::new(self.stage3_substitute_expr(body, params, shadow, fresh, d)?),
+            },
+            Expr::Ascribe(inner, t) => Expr::Ascribe(
+                Box::new(self.stage3_substitute_expr(inner, params, shadow, fresh, d)?),
+                t.clone(),
+            ),
+            Expr::TupleLit(items) => {
+                let mut out = Vec::with_capacity(items.len());
+                for it in items {
+                    out.push(self.stage3_substitute_expr(it, params, shadow, fresh, d)?);
+                }
+                Expr::TupleLit(out)
+            }
+        })
     }
 
-    /// Is `e` *syntactically* an affine-producing expression — a bare `consume`, or a call to a
-    /// known top-level `fn` whose declared return type resolves to `Substrate`? Used only by
-    /// [`Self::rhs_first_affine_binding`]'s `let`-binding check (see that function's doc comment for
-    /// the full scope/honesty note). `Ok(false)` for every other shape — including a call to an
-    /// *unknown* name (already refused elsewhere by [`Self::rhs_first_free_id`]) or a generic `fn`
-    /// (its return type may depend on an uninstantiated type variable; not this structural check's
-    /// concern).
-    fn expr_is_structurally_affine(&self, e: &Expr) -> Result<bool, CheckError> {
-        match e {
-            Expr::Consume(_) => Ok(true),
-            Expr::App { head, .. } => {
-                let Expr::Path(p) = head.as_ref() else {
-                    return Ok(false);
-                };
-                if p.0.len() != 1 {
-                    return Ok(false);
-                }
-                let Some(fd) = self.fns.get(&p.0[0]) else {
-                    return Ok(false);
-                };
-                let (rty, _) =
-                    resolve_ty(self.site, self.types, &fd.sig.param_names(), &fd.sig.ret)?;
-                Ok(matches!(rty, Ty::Substrate(_)))
-            }
-            _ => Ok(false),
+    /// [`Self::stage3_substitute_expr`]'s `Arm` companion — renames the arm's pattern binders (see
+    /// [`Self::stage3_substitute_pattern`]) before substituting the body, popping exactly as many
+    /// shadow entries as the ORIGINAL (pre-rename) pattern bound.
+    fn stage3_substitute_arm(
+        &self,
+        arm: &Arm,
+        params: &[(String, Expr)],
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
+        depth: u32,
+    ) -> Result<Arm, CheckError> {
+        let mut binder_count = 0usize;
+        let pattern2 =
+            self.stage3_substitute_pattern(&arm.pattern, shadow, fresh, &mut binder_count)?;
+        let body2 = self.stage3_substitute_expr(&arm.body, params, shadow, fresh, depth)?;
+        for _ in 0..binder_count {
+            shadow.pop();
         }
+        Ok(Arm {
+            pattern: pattern2,
+            body: body2,
+        })
+    }
+
+    /// [`Self::stage3_substitute_expr`]'s `Pattern` companion — fresh-renames a pattern's binder
+    /// identifiers, pushing each `(orig, fresh)` pair onto `shadow` and incrementing `binder_count`
+    /// (so the caller pops exactly as many as were pushed).
+    ///
+    /// **`Pattern::Ident` ambiguity (FLAG-pattern-ctor-collision, DN-117 ratification note) — now a
+    /// refusal, not a silent "leave unrenamed" (fixed 2026-07-11, post-ratification adversarial
+    /// review — CRITICAL false-accept, see this note's own errata entry).** A bare
+    /// `Pattern::Ident(name)` is *either* a binder *or* a nullary-constructor reference,
+    /// disambiguated only at the real `Cx::check_match` (`Self::resolve_pattern`) against the
+    /// **scrutinee's type** — type information this pure `Expr`-level substitution walk does not
+    /// have (no scrutinee type is threaded through). [`Self::is_any_nullary_ctor`] — is `name` the
+    /// spelling of *any* registered nullary constructor, anywhere in the type registry (not
+    /// scrutinee-scoped)? — is the only conservative, type-independent test available here, and it
+    /// is genuinely ambiguous: `name` could be a binder for *this* pattern's (unrelated) scrutinee
+    /// type, or a real ctor reference. **The previously-shipped choice ("leave it unrenamed,
+    /// treating it as a possible ctor reference") was UNSOUND, not merely narrow:** when `name` is
+    /// actually a genuine binder here, leaving it unrenamed skips this walk's own capture-avoidance
+    /// discipline (see [`Self::stage3_substitute_expr`]'s doc comment on why every RHS-local binder
+    /// must be `%`-freshened) — a spliced argument's free variable of the same spelling (e.g. a
+    /// caller-outer local also named `name`) is then *captured* by this unrenamed pattern binder
+    /// instead of referring to the caller's value, so the tracker never sees the real double-consume
+    /// this produces. **Confirmed reproducible** (`stage3_pattern_ctor_collision_*` tests,
+    /// `src/tests/affine_stage3.rs`): a nullary ctor spelled `s`, a rule `Pick3(h: Handle, q:
+    /// Substrate) = match h { Wrap(s) => consume q }`, called as `(Pick3(Wrap(consume h_backing),
+    /// s), consume s)` with a caller-outer `s` — accepted a genuine double-consume of the outer `s`.
+    /// **Fix: refuse the whole sugar call** with a never-silent diagnostic (G2) rather than guess
+    /// which reading is meant — a conservative false-REFUSE here is sound; the false-ACCEPT was not.
+    /// The full close (scrutinee-type-directed disambiguation, mirroring `resolve_pattern`'s own
+    /// logic) is out of proportion to this fix's scope and remains open, tracked by
+    /// FLAG-pattern-ctor-collision.
+    fn stage3_substitute_pattern(
+        &self,
+        pat: &Pattern,
+        shadow: &mut Vec<(String, String)>,
+        fresh: &mut Stage3Fresh,
+        binder_count: &mut usize,
+    ) -> Result<Pattern, CheckError> {
+        Ok(match pat {
+            Pattern::Wildcard | Pattern::Lit(_) => pat.clone(),
+            Pattern::Ident(name) => {
+                if self.is_any_nullary_ctor(name) {
+                    // FLAG-pattern-ctor-collision — genuinely ambiguous without the scrutinee's
+                    // type (see this fn's own doc comment). Refuse rather than risk the capture
+                    // hazard a silent "leave unrenamed" produces (confirmed false-accept, fixed
+                    // 2026-07-11 — never a guess, G2/VR-5).
+                    return Err(CheckError::new(
+                        self.site,
+                        format!(
+                            "this `lower` sugar rule's RHS binds `{name}` in a match-arm pattern, \
+                             but `{name}` is also the spelling of a registered nullary \
+                             constructor elsewhere — ambiguous between \"binder\" and \
+                             \"constructor reference\" without the scrutinee's type, which this \
+                             check-time substitution walk does not have (M-1054 Stage 3 \
+                             (OQ-H4)/DN-117, FLAG-pattern-ctor-collision). Refused rather than \
+                             risk capturing a spliced argument's free variable of the same \
+                             spelling (a confirmed false-accept of a genuine double-consume) — \
+                             rename this binder, or the colliding constructor, to disambiguate \
+                             (never a silent guess, G2)."
+                        ),
+                    ));
+                }
+                let f = fresh.mint();
+                shadow.push((name.clone(), f.clone()));
+                *binder_count += 1;
+                Pattern::Ident(f)
+            }
+            Pattern::Ctor(name, fields) => Pattern::Ctor(
+                name.clone(),
+                fields
+                    .iter()
+                    .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            Pattern::Tuple(fields) => Pattern::Tuple(
+                fields
+                    .iter()
+                    .map(|f| self.stage3_substitute_pattern(f, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+            Pattern::Or(alts) => Pattern::Or(
+                alts.iter()
+                    .map(|a| self.stage3_substitute_pattern(a, shadow, fresh, binder_count))
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
+        })
+    }
+
+    /// Conservative, type-independent check: does `name` spell **any** registered nullary
+    /// constructor, anywhere in the type registry (not scoped to a particular scrutinee type)? Used
+    /// only by [`Self::stage3_substitute_pattern`]'s ambiguity gate — see that function's doc
+    /// comment for why a scrutinee-scoped `resolve_pattern`-style resolution is not available at
+    /// this (pure `Expr`, no type context) walk, and why the ambiguous case now refuses rather than
+    /// guesses.
+    fn is_any_nullary_ctor(&self, name: &str) -> bool {
+        self.types.values().any(|d| {
+            d.ctors
+                .iter()
+                .any(|c| c.name == name && c.fields.is_empty())
+        })
     }
 
     /// Check a call to a **generic** function (RFC-0007 §11.3): resolve the callee's signature with
@@ -6168,10 +7533,47 @@ impl Cx<'_> {
         args: &[Expr],
     ) -> Result<(Ty, Expr), CheckError> {
         let callee_vars = fd.sig.param_names();
+        // DN-112 Rank 1 / M-1036 (CRITICAL #1 fix): mirror `check_app`'s monomorphic-callee path —
+        // prefer this callee's baked signature (resolved ONCE against its OWN declaring nodule,
+        // `resolve_fn_sig`) over re-resolving `pm.ty` fresh against `self.types` (this caller's own
+        // registry). `resolve_fn_sig` is baked with the SAME `tyvars = sig.param_names()` as
+        // `callee_vars` here, so a baked param type lines up positionally with `fd.sig.value_params`
+        // and may itself still legitimately contain `Ty::Var(callee_var)` for a parameter that
+        // mentions the callee's own type variable — those resolve to a concrete type via `subst`
+        // exactly like the freshly-resolved path already does. Without this, a foreign caller with
+        // EVEN ONE unrelated generic parameter routed every FIXED parameter/return type back through
+        // the caller's own (possibly wrong-home, shadowed) registry — reopening the seal bypass one
+        // level up from the monomorphic fix (the DN-112 §10 item 2 exploit shape, generic-arity
+        // variant). Absent (not every signature is bakeable — best-effort, see `resolve_fn_sig`'s doc
+        // comment) falls back to the pre-existing fresh-resolution path, unchanged.
+        let baked = self.imports.resolved_fn_sigs.get(name);
+        // HOLE B closure (M-1060 fix-cycle-3, 2026-07-11, adversarial-verification finding): the
+        // generic-callee twin of `check_app`'s own guard, just above `baked`'s monomorphic use —
+        // see that guard's comment for the full rationale (same `foreign_fn_sig_names_a_concrete_type`
+        // helper, same `cross_phylum_fns` predicate; `fd.sig.params` here is the fn's own generic
+        // parameter set, so a genuinely generic-only foreign signature is unaffected).
+        if baked.is_none() && self.imports.cross_phylum_fns.contains(name) {
+            if let Some(concrete) = foreign_fn_sig_names_a_concrete_type(&fd.sig) {
+                return self.err(format!(
+                    "`{name}` — the foreign (cross-phylum) fn's signature mentions a concrete type \
+                     `{concrete}` beyond its own generic parameter(s), and its signature could not \
+                     be pre-resolved against its declaring phylum (`resolve_fn_sig` only bakes a \
+                     signature that references no type the declaring nodule itself imports — \
+                     best-effort, never a hard error there); a bare-name reference to `{concrete}` \
+                     here cannot be verified against the correct phylum's `{concrete}` and would \
+                     risk the M-1036/DN-112 bare-name collapse one level up (DN-113 §7 / DN-122 \
+                     residual; refused rather than silently resolved against a possibly-wrong \
+                     phylum's registry, G2/VR-5)."
+                ));
+            }
+        }
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
         let mut rebuilt = Vec::with_capacity(args.len());
-        for (pm, a) in fd.sig.value_params.iter().zip(args) {
-            let want = resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0;
+        for (i, (pm, a)) in fd.sig.value_params.iter().zip(args).enumerate() {
+            let want = match baked.and_then(|(params, _)| params.get(i)) {
+                Some(w) => w.clone(),
+                None => resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0,
+            };
             let want_now = subst_ty(&want, &subst);
             // A fully-concrete (post-substitution) expected type drives the argument's check (so a
             // bare decimal takes the width); a still-abstract one lets the argument synthesize.
@@ -6225,10 +7627,12 @@ impl Cx<'_> {
                 )?;
             }
         }
-        let ret = subst_ty(
-            &resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
-            &subst,
-        );
+        // Same baked-signature preference for the return type (CRITICAL #1 fix, see above).
+        let ret_base = match baked {
+            Some((_, ret)) => ret.clone(),
+            None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+        };
+        let ret = subst_ty(&ret_base, &subst);
         Ok((ret, app_node(head, rebuilt)))
     }
 
@@ -6351,6 +7755,37 @@ impl Cx<'_> {
                 sig.value_params.len(),
                 args.len()
             ));
+        }
+        // HOLE A/A2 closure (M-1060 fix-cycle-3, 2026-07-11, adversarial-verification finding): a
+        // trait-method call resolved through a **bound in scope** never registers an instance (that
+        // is exactly `require_instance`'s bound-discharge branch, below) — so `register_instances`'s
+        // sibling guard, which only ever runs at `impl`-registration time, never fires for this path.
+        // Below, `resolve_ty(self.site, self.types, trait_vars, &pm.ty/&sig.ret)` resolves `sig`'s
+        // TypeRefs against THIS (consumer) phylum's own registry; for a **cross-phylum** `tr` (never
+        // re-homed against its declaring phylum — the same DN-113 §7 / DN-122 residual
+        // `foreign_trait_sig_names_a_concrete_type`'s doc comment describes for the register-time
+        // guard) a concrete named type in `sig` collapses onto whatever bare name this phylum happens
+        // to bind — the M-1036/DN-112 bare-name collapse one level up, for a bound-discharged call
+        // rather than a registered instance. `self.imports.cross_phylum_traits` is exactly "this
+        // simple name's current binding is a cross-phylum import" (never intra-phylum — a same-phylum
+        // sibling trait is safe here, since `self.types` already carries every intra-phylum type
+        // under its qualified identity — M-1036); reuse (not fork) the same helper the register-time
+        // guard uses.
+        if self.imports.cross_phylum_traits.contains(&tr.name) {
+            if let Some(name) = foreign_trait_sig_names_a_concrete_type(tr) {
+                return self.err(format!(
+                    "trait-method call `{}` — the foreign (cross-phylum) trait `{}`'s signature \
+                     mentions a concrete type `{name}` beyond its own generic parameter(s); a \
+                     cross-phylum trait's signature is not yet re-homed against its declaring \
+                     phylum (DN-113 §7 / DN-122 residual — a bare-name reference to `{name}` here \
+                     cannot be verified against the correct phylum's `{name}` and would risk the \
+                     M-1036/DN-112 bare-name collapse one level up; refused rather than silently \
+                     resolved against a possibly-wrong phylum's declaration, G2/VR-5). Declare a \
+                     local wrapper trait instead, or await the tracked follow-up for full \
+                     cross-phylum trait-sig re-homing.",
+                    name, tr.name
+                ));
+            }
         }
         // 2. Unify the method's (abstract-over-the-trait-param) value-param types against the actual
         //    argument types to solve the trait parameter — never a guess (RFC-0007 §11.3).
@@ -6755,7 +8190,7 @@ impl Cx<'_> {
             // *scrutinee's own* data type; otherwise it is a binder (left as `Ident`).
             Pattern::Ident(name)
                 if matches!(expected, Ty::Data(tn, _)
-                    if self.types.get(tn).is_some_and(|d|
+                    if lookup_data(self.types, tn).is_some_and(|d|
                         d.ctors.iter().any(|c| c.name == *name && c.fields.is_empty()))) =>
             {
                 Pattern::Ctor(name.clone(), vec![])
@@ -6768,7 +8203,7 @@ impl Cx<'_> {
                     // The declared field types are abstract over the type's parameters; substitute
                     // the scrutinee's type arguments so a generic field recurses at its concrete
                     // type (RFC-0007 §11.2).
-                    Ty::Data(tn, targs) => self.types.get(tn).and_then(|d| {
+                    Ty::Data(tn, targs) => lookup_data(self.types, tn).and_then(|d| {
                         d.ctors
                             .iter()
                             .find(|c| c.name == *name)
@@ -6798,16 +8233,18 @@ impl Cx<'_> {
                 let tname = tuple_type_name(n);
                 // The expected type must be the matching Tuple$N.
                 let field_tys = match expected {
-                    Ty::Data(tn, targs) if *tn == tname => self.types.get(tn).and_then(|d| {
-                        d.ctors
-                            .iter()
-                            .find(|c| c.name == ctor_name)
-                            .filter(|c| c.fields.len() == subs.len())
-                            .map(|c| {
-                                let s = param_subst(&d.params, targs);
-                                c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
-                            })
-                    }),
+                    Ty::Data(tn, targs) if *tn == tname => {
+                        lookup_data(self.types, tn).and_then(|d| {
+                            d.ctors
+                                .iter()
+                                .find(|c| c.name == ctor_name)
+                                .filter(|c| c.fields.len() == subs.len())
+                                .map(|c| {
+                                    let s = param_subst(&d.params, targs);
+                                    c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
+                                })
+                        })
+                    }
                     _ => None,
                 };
                 let mut out = Vec::with_capacity(subs.len());
@@ -8083,7 +9520,11 @@ pub(crate) fn normalize_pattern(
             // A bare name is a nullary-constructor alternative iff it names one of the expected
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
             if let Ty::Data(tn, _) = expected {
-                let d = types.get(tn).expect("registered data type");
+                // DN-112 Rank 1 / M-1036: `tn` is checked (possibly qualified); `types` is bare-keyed.
+                // CRITICAL #2 fix: home-checked lookup — a same-nodule-shadow-plus-foreign-reach
+                // mismatch refuses explicitly here (G2) rather than silently resolving `tn` against
+                // the WRONG (locally-shadowed) `DataInfo` (see `lookup_data_home_checked`'s doc).
+                let d = lookup_data_home_checked(types, tn, site)?;
                 if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
                     if !c.fields.is_empty() {
                         return Err(CheckError::new(
@@ -8109,7 +9550,8 @@ pub(crate) fn normalize_pattern(
                     ),
                 ));
             };
-            let d = types.get(tn).expect("registered data type").clone();
+            // CRITICAL #2 fix: home-checked lookup (see the `Pattern::Ident` arm above).
+            let d = lookup_data_home_checked(types, tn, site)?.clone();
             let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
                 return Err(CheckError::new(
                     site,
@@ -8252,6 +9694,70 @@ pub(crate) fn infer_type(
         // would risk a false positive on a fragment that isn't the original walk, and the term
         // already passed the real check).
         affine: Tracker::inert(),
+        #[cfg(test)]
+        stage3_sabotage_skip_substitution: false,
+    };
+    cx.infer(scope, e)
+}
+
+/// **Test-only** twin of [`infer_type`] with an **active** affine tracker
+/// ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.
+/// a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate
+/// [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare
+/// call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no
+/// `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`
+/// tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`
+/// interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the
+/// per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a
+/// real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry
+/// point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).
+#[cfg(test)]
+pub(crate) fn infer_type_with_active_affine(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+) -> Result<Ty, CheckError> {
+    infer_type_with_active_affine_inner(env, scope, e, false)
+}
+
+/// **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,
+/// DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`
+/// runs its Stage-3 walk over the **unsubstituted** RHS (see
+/// `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating "the substituted-`Expr`
+/// splice never happened," to prove that splice is load-bearing: a fixture that must genuinely
+/// REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**
+/// here.
+#[cfg(test)]
+pub(crate) fn infer_type_with_active_affine_sabotaged(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+) -> Result<Ty, CheckError> {
+    infer_type_with_active_affine_inner(env, scope, e, true)
+}
+
+#[cfg(test)]
+fn infer_type_with_active_affine_inner(
+    env: &Env,
+    scope: &mut Vec<(String, Ty)>,
+    e: &Expr,
+    sabotage: bool,
+) -> Result<Ty, CheckError> {
+    let no_imports = NoduleImports::default();
+    let cx = Cx {
+        site: "<test:active-affine>",
+        types: &env.types,
+        fns: &env.fns,
+        traits: &env.traits,
+        instances: &env.instances,
+        imports: &no_imports,
+        lower_rules: &env.lower_rules,
+        tyvars: &[],
+        bounds: &[],
+        std_sys: true,
+        depth: Cell::new(0),
+        affine: Tracker::seeded(scope),
+        stage3_sabotage_skip_substitution: sabotage,
     };
     cx.infer(scope, e)
 }
@@ -8310,8 +9816,9 @@ fn linear_elem_ty(
     tname: &str,
     targs: &[Ty],
 ) -> Result<Ty, CheckError> {
-    let d = types
-        .get(tname)
+    // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name; `types` is
+    // the bare-keyed surface registry.
+    let d = lookup_data(types, tname)
         .ok_or_else(|| CheckError::new(site, format!("unknown type `{tname}`")))?;
     // The declared element type is abstract over the type's parameters; instantiate it at the
     // scrutinee's type arguments (RFC-0007 §11.2) so `for` over a `List<Binary{8}>` binds `Binary{8}`.

@@ -28,17 +28,48 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   `Ident type_args?` arm covers an ordinary named type, so this assumes a kernel/prelude
 ///   `Bool` exists — Declared, not verified against a symbol table).
 /// - unsigned integers (`u8`/`u16`/.../`u128`) -> `Binary{N}` (`base_type ::= 'Binary' '{' Int
-///   '}'`). `lib/std/cmp.myc`'s own comments describe `Binary{N}` as **unsigned magnitude** —
-///   so *signed* integers (`i8`.../`isize`) are intentionally NOT mapped here (would misrepresent
-///   twos-complement semantics as an unsigned-magnitude representation); they are a gap.
-/// - `isize`/`usize` -> gap (platform-dependent width has no fixed `Binary{N}`).
+///   '}'`).
+/// - **P4/P5 (trx2, DN-99 §8 ENB-6 / M-1029 / ADR-028) — signed integers (`i8`/`i16`/`i32`/`i64`/
+///   `i128`) -> `Binary{N}` at the SAME width as their unsigned counterpart.** The prior "unsigned
+///   magnitude" doc comment here was the STALE basis for gapping these (mitigation #14
+///   verify-first correction) — **ADR-028 (Accepted 2026-07-01) settles this**: "`Binary` **is**
+///   the bitvector; 'signed integer' is an *interpretation* imposed by the op set (or a higher
+///   typed view), not a property of the stored value." So `i32` and `u32` denote the exact same
+///   Mycelium type/content-address (`Binary{32}`) — signedness is carried entirely by *which
+///   operation* is applied (`add_s`/`sub_s`/`mul_s`/`neg_s`/`lt_s`; landed and confirmed `myc
+///   check`-clean against the real `target/debug/myc-check`, this leaf's verify-first probe —
+///   `crates/mycelium-l1/src/checkty.rs:8005-8040`, DN-72/M-767/M-887), never by a distinct
+///   `Repr`. This is the "typed-view above kernel dispatches to signed ops" DN-99 row #44
+///   describes ("ops need no work"); `crate::emit`'s `Expr::Binary`/`Expr::Unary` arms carry the
+///   *transpile-time-only* signedness bookkeeping (never emitted into the `.myc` text itself —
+///   `Binary` has no signed spelling) that picks the `_s`-suffixed op for a source-signed operand.
+/// - **P4/P5 — `isize`/`usize` -> `Binary{64}`, a canonicalized, never-silent, FLAGged platform
+///   width** (DN-99 §8 ENB-6 / row #22: "usize/uN -> domain Binary{N} + FLAG", "width choice
+///   recorded never-silent"). 64 bits is the modern-platform default (every `myc check`-clean
+///   probe this leaf ran was on a 64-bit host); it is a `Declared` context-free fallback, not a
+///   domain-fitted choice — a call site with a *known* tighter domain may still choose a narrower
+///   width by hand, as `lib/std/select.myc:76` already does (`Binary{8}` for a table index known
+///   to be `0..=255`). `usize` carries no signed marker (it *is* unsigned); `isize` maps to the
+///   same `Binary{64}` text but IS tracked signed by `crate::emit` for op routing (same mechanism
+///   as the `i8`../`i128` case above).
 /// - `f64` -> `Float` (`base_type ::= 'Float'`, `docs/spec/grammar/mycelium.ebnf:251` — a nullary
 ///   scalar-float type, "IEEE-754 binary64 only at introduction", ADR-040 FLAG-1/M-897; trx2 Lane C
-///   Deliverable 2 verify-first correction — `myc check`-confirmed). `f32`/`char` -> gap (`f32` has
-///   no confirmed representation, `Float` being binary64-only; `char` has no confirmed base_type
-///   arm in this grammar fragment). NOTE: `scalar` (`F16`/`BF16`/`F32`/`F64`) is a *different*,
-///   Dense-only production (`Dense{N, scalar}`/`ambient_params`) — unrelated to the bare `Float`
-///   value type.
+///   Deliverable 2 verify-first correction — `myc check`-confirmed). `f32` -> gap (no confirmed
+///   representation, `Float` being binary64-only). NOTE: `scalar` (`F16`/`BF16`/`F32`/`F64`) is a
+///   *different*, Dense-only production (`Dense{N, scalar}`/`ambient_params`) — unrelated to the
+///   bare `Float` value type.
+/// - **P4/P5 — `char` -> `Binary{32}`** (a Unicode-scalar-value codepoint, per DN-99 §8 ENB-6 row
+///   #45's "route char through the Bytes/std.text bridge" direction, resolved here toward the
+///   **codepoint** idiom rather than a UTF-8 `Bytes` encoding — consistency with row #25's own
+///   sanctioned char-*literal* idiom, "codepoint `0b…`/Int + `// 'x'` comment": a `char` value's
+///   natural Mycelium spelling is the scalar codepoint it already is (Rust represents `char`
+///   itself as a 4-byte scalar internally), not a variable-length UTF-8 byte sequence — `Bytes`
+///   stays reserved for `String`/`str` (a *sequence* of codepoints). 32 bits comfortably covers
+///   every Unicode Scalar Value (max `U+10FFFF`, 21 bits) with byte-aligned width, matching the
+///   `u32`/`i32` precedent. `Declared` — no reified codepoint-domain check (`<= U+10FFFF`,
+///   surrogate exclusion) is added by this mapping; a genuinely out-of-domain `char` value cannot
+///   arise from real Rust source (the `char` type itself guarantees the invariant), so none is
+///   needed here.
 /// - `String`/`str`/`&str` -> `Bytes` (RFC-0033 §3.2: the dedicated, never-silent UTF-8 text repr;
 ///   grammar `base_type` line 250; a `"…"` StrLit lowers to the same `Repr::Bytes` value form —
 ///   checkty.rs:6669). Verified `myc check`-clean (DN-34 §8.14). `&str` is erased to `str` by the
@@ -145,19 +176,20 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
             "u32" => Ok("Binary{32}".to_string()),
             "u64" => Ok("Binary{64}".to_string()),
             "u128" => Ok("Binary{128}".to_string()),
-            "i8" | "i16" | "i32" | "i64" | "i128" => Err(GapReason::new(
-                Category::Other,
-                format!(
-                    "signed integer `{name}` — Binary{{N}} is documented unsigned-magnitude \
-                     (lib/std/cmp.myc); mapping a signed type onto it would misrepresent \
-                     twos-complement semantics, so this is left an explicit gap rather than \
-                     guessed (VR-5)"
-                ),
-            )),
-            "isize" | "usize" => Err(GapReason::new(
-                Category::Other,
-                format!("`{name}` has a platform-dependent width; no fixed Binary{{N}} mapping"),
-            )),
+            // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028 — see this fn's doc for the full
+            // verify-first correction): `Binary{N}` is sign-free (ADR-028 Accepted); a signed
+            // integer maps to the SAME width `Binary{N}` as its unsigned counterpart. Signedness
+            // lives entirely in which op the transpiler emits (`crate::emit`'s signed-operand
+            // gate), never in this mapped type text.
+            "i8" => Ok("Binary{8}".to_string()),
+            "i16" => Ok("Binary{16}".to_string()),
+            "i32" => Ok("Binary{32}".to_string()),
+            "i64" => Ok("Binary{64}".to_string()),
+            "i128" => Ok("Binary{128}".to_string()),
+            // P4/P5 (DN-99 §8 ENB-6 row #22 — see this fn's doc): a canonicalized, FLAGged
+            // platform width — `Binary{64}` — for both `usize` and `isize` (`isize`'s signedness
+            // is tracked separately by `crate::emit`, exactly like the bare `i*` types above).
+            "usize" | "isize" => Ok("Binary{64}".to_string()),
             // trx2 Lane C Deliverable 2 (verify-first correction, mitigation #14): the prior
             // "no confirmed base_type arm" reason for `f32`/`f64` was STALE — the grammar DOES
             // have a nullary `Float` base_type (`docs/spec/grammar/mycelium.ebnf:251`: "first-
@@ -179,10 +211,10 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
                  introduction (ADR-040 FLAG-1/M-897); a width extension is a future, \
                  separately-decided append, never silently assumed (VR-5)",
             )),
-            "char" => Err(GapReason::new(
-                Category::Other,
-                "`char` has no confirmed base_type arm in this grammar fragment",
-            )),
+            // P4/P5 (DN-99 §8 ENB-6 row #45 — see this fn's doc): the Unicode-scalar-value
+            // codepoint idiom, `Binary{32}` — consistent with row #25's char-*literal* codepoint
+            // convention. Unsigned (never tracked signed).
+            "char" => Ok("Binary{32}".to_string()),
             // RFC-0033 §3.2 (grounded via tero, DN-34 §8.14): `Bytes` is the language's
             // *dedicated, never-silent UTF-8* text repr (grammar `base_type` line 250,
             // "first-class byte string"; a `"…"` StrLit lowers to the same `Repr::Bytes` value
@@ -375,14 +407,14 @@ impl crate::visit::TypeVisitor for FieldDepsVisitor<'_> {
             // `String`/`str` now map to `Bytes` (RFC-0033 §3.2 — DN-34 §8.14), so they join the
             // builtins here: a `String`-typed field no longer withholds its struct's emission.
             // `f64` now maps to `Float` (trx2 Lane C Deliverable 2 — see `map_type`'s doc); it
-            // joins the builtins here too, for the identical reason.
-            "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" | "f64" => {
+            // joins the builtins here too, for the identical reason. `i8..i128`/`isize`/`usize`/
+            // `char` now map too (P4/P5, DN-99 §8 ENB-6 — see `map_type`'s doc) and join here.
+            "bool" | "u8" | "u16" | "u32" | "u64" | "u128" | "String" | "str" | "f64" | "i8"
+            | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "char" => {
                 matches!(seg.arguments, PathArguments::None)
             }
             // Shapes `map_type` gaps outright ⇒ unmappable field.
-            "Self" | "i8" | "i16" | "i32" | "i64" | "i128" | "isize" | "usize" | "f32" | "char" => {
-                false
-            }
+            "Self" | "f32" => false,
             _ => {
                 // A reserved-word type name fails to lex ⇒ `map_type` gaps it (unmappable).
                 if crate::reserved::is_reserved(&name) {

@@ -3,6 +3,7 @@
 //! `use crate::<mod>::*` for white-box access to the logic module's `pub(crate)` items.
 
 mod affine;
+mod affine_stage3;
 mod ambient;
 mod ast;
 mod checkty;
@@ -17,6 +18,7 @@ mod compiler_stage5_semcore;
 mod compiler_stage5_typealg;
 mod compiler_stage5_tyref;
 mod compiler_stage5_unify;
+mod cross_phylum;
 mod decision;
 mod defsite_resolution_stage2;
 mod elab;
