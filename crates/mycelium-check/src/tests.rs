@@ -281,6 +281,41 @@ fn blocked_and_check_error_are_never_is_clean() {
     }
 }
 
+/// `NoduleVerdict::file` correlates each verdict back to its originating source label — the join key
+/// a consumer (the transpiler vet loop, Unit 2) needs to credit a specific emitted file's items off
+/// a nodule-keyed verdict (a nodule's dotted path need not equal its file's path/stem).
+#[test]
+fn nodule_verdict_carries_its_originating_file() {
+    let a = (
+        "out/a_file.myc".to_owned(),
+        "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
+    );
+    let b = (
+        "out/b_file.myc".to_owned(),
+        "nodule b;\nuse a.*;\nfn g(x: Binary{8}) => Binary{8} = helper(x);\n".to_owned(),
+    );
+    // Clean-phylum path.
+    let report = check_phylum_sources(&[a.clone(), b.clone()]);
+    assert!(report.ok, "{:?}", report.error);
+    let by_nodule: std::collections::BTreeMap<&str, &str> = report
+        .nodules
+        .iter()
+        .map(|v| (v.nodule.as_str(), v.file.as_str()))
+        .collect();
+    assert_eq!(by_nodule["a"], "out/a_file.myc");
+    assert_eq!(by_nodule["b"], "out/b_file.myc");
+
+    // Partial (failing) path — the file correlation must hold there too.
+    let broken = (
+        "out/broken_file.myc".to_owned(),
+        "nodule a;\nfn f() => Binary{8} = nope(0b0);\n".to_owned(),
+    );
+    let report2 = check_phylum_sources(&[broken]);
+    assert!(!report2.ok);
+    assert_eq!(report2.nodules.len(), 1);
+    assert_eq!(report2.nodules[0].file, "out/broken_file.myc");
+}
+
 /// A batch nodule that is genuinely independent (no `use` of any failing sibling) is `Clean` even
 /// though ITS OWN un-vetted single-file/oracle-mode check would have been fine anyway — the
 /// interesting case is the mixed-phylum credit, covered above; this fixture is the minimal two-file

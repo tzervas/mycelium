@@ -328,6 +328,12 @@ impl NoduleClass {
 pub struct NoduleVerdict {
     /// The nodule's dotted path (`a`, `core.binary`).
     pub nodule: String,
+    /// The originating source's file label (the `sources`/directory-walk key this nodule was parsed
+    /// from) — the join key a consumer needs to credit a specific **emitted file**'s items off a
+    /// nodule-keyed verdict (a nodule's dotted path need not equal its file's path/stem). Threaded
+    /// through 1:1 by construction: [`check_phylum_sources`] only reaches nodule-verdict computation
+    /// after every source has parsed, so `nodules[i]` and `sources[i]` share an index.
+    pub file: String,
     /// The verdict class.
     pub class: NoduleClass,
 }
@@ -377,10 +383,15 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
     let files_checked = sources.len();
 
     // 1. Parse each source. Any parse failure refuses the whole phylum (never a silent partial).
+    // `files` stays index-parallel to `nodules` — see [`NoduleVerdict::file`]'s doc.
     let mut nodules: Vec<mycelium_l1::Nodule> = Vec::with_capacity(files_checked);
+    let mut files: Vec<String> = Vec::with_capacity(files_checked);
     for (file, src) in sources {
         match parse(src) {
-            Ok(nodule) => nodules.push(nodule),
+            Ok(nodule) => {
+                nodules.push(nodule);
+                files.push(file.clone());
+            }
             Err(e) => {
                 return PhylumReport {
                     ok: false,
@@ -431,8 +442,10 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
             let verdicts = phylum
                 .nodules
                 .iter()
-                .map(|n| NoduleVerdict {
+                .zip(files.iter())
+                .map(|(n, file)| NoduleVerdict {
                     nodule: n.path.0.join("."),
+                    file: file.clone(),
                     class: NoduleClass::Clean,
                 })
                 .collect();
@@ -447,7 +460,7 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
             // P-A (DN-124 §2.2): the whole-phylum verdict stays exactly the faithful all-or-nothing
             // `PhylumError` it always was — but `nodules` is now populated via the driver-level
             // import-closure sub-phylum re-check, never fabricated.
-            let partial = compute_partial_verdicts(&phylum.nodules);
+            let partial = compute_partial_verdicts(&phylum.nodules, &files);
             PhylumReport {
                 ok: false,
                 files_checked,
@@ -550,14 +563,18 @@ fn site_owner(site: &str, closure_paths: &BTreeSet<String>) -> Option<String> {
 /// P-A (DN-124 §2.2): sound partial per-nodule verdicts via a driver-level import-closure sub-phylum
 /// re-check that reuses [`mycelium_l1::check_phylum`] **unchanged** (KC-3/DRY — zero kernel growth).
 /// Called only when the whole phylum did **not** check clean (see the call site for why the clean
-/// case needs no re-check).
-fn compute_partial_verdicts(nodules: &[mycelium_l1::Nodule]) -> Vec<NoduleVerdict> {
+/// case needs no re-check). `files` is index-parallel to `nodules` (see [`NoduleVerdict::file`]).
+fn compute_partial_verdicts(
+    nodules: &[mycelium_l1::Nodule],
+    files: &[String],
+) -> Vec<NoduleVerdict> {
     let edges = build_use_edges(nodules);
     let present: BTreeSet<String> = nodules.iter().map(|n| n.path.0.join(".")).collect();
 
     nodules
         .iter()
-        .map(|n| {
+        .zip(files.iter())
+        .map(|(n, file)| {
             let n_path = n.path.0.join(".");
             let closure = closure_of(&n_path, &edges, &present);
             let sub_nodules: Vec<mycelium_l1::Nodule> = nodules
@@ -588,6 +605,7 @@ fn compute_partial_verdicts(nodules: &[mycelium_l1::Nodule]) -> Vec<NoduleVerdic
             };
             NoduleVerdict {
                 nodule: n_path,
+                file: file.clone(),
                 class,
             }
         })

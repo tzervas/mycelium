@@ -140,9 +140,12 @@ fn run_phylum(dir: &Path, json: bool) -> ExitCode {
 /// `{"kind":"parse|duplicate|check","site":..,"message":..}` — the **whole-phylum** verdict,
 /// unchanged by P-A. `nodules` holds one row per nodule **whenever the phylum was successfully
 /// assembled** (P-A, DN-124 §2.3 — empty on a `parse`/`duplicate` refusal, where nodule identity
-/// itself is ambiguous/unknown; never a fabricated verdict, VR-5):
-/// `{"nodule":..,"class":"Clean"}` · `{"nodule":..,"class":"CheckError","site":..,"message":..}` ·
-/// `{"nodule":..,"class":"Blocked","on":..,"message":..}`.
+/// itself is ambiguous/unknown; never a fabricated verdict, VR-5). Every row carries `file` (the
+/// originating source's file label — the join key a consumer like the transpiler vet loop, Unit 2,
+/// needs to credit a specific emitted file's items off a nodule-keyed verdict):
+/// `{"nodule":..,"file":..,"class":"Clean"}` ·
+/// `{"nodule":..,"file":..,"class":"CheckError","site":..,"message":..}` ·
+/// `{"nodule":..,"file":..,"class":"Blocked","on":..,"message":..}`.
 fn phylum_report_json(report: &PhylumReport) -> String {
     let error = match &report.error {
         None => "null".to_owned(),
@@ -171,8 +174,9 @@ fn phylum_report_json(report: &PhylumReport) -> String {
                 ),
             };
             format!(
-                "{{\"nodule\":\"{}\",\"class\":\"{}\"{extra}}}",
+                "{{\"nodule\":\"{}\",\"file\":\"{}\",\"class\":\"{}\"{extra}}}",
                 json_escape(&n.nodule),
+                json_escape(&n.file),
                 n.class.label(),
             )
         })
