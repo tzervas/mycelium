@@ -2658,6 +2658,11 @@ fn decode_nodule_imports(v: &L1Value) -> NoduleImports {
         // DN-112 Rank 1 / M-1036, DoD item 8: same flagged residual — the `.myc` mirror does not
         // yet bake/carry a resolved-signature mechanism at all.
         resolved_fn_sigs: BTreeMap::new(),
+        // M-1060 fix-cycle-3: same flagged residual — the `.myc` mirror predates the cross-phylum
+        // subsystem entirely (DN-113/M-1060), so it carries no cross-phylum marker at all; the
+        // decoded value's cross-phylum sets are always empty.
+        cross_phylum_traits: std::collections::BTreeSet::new(),
+        cross_phylum_fns: std::collections::BTreeSet::new(),
     }
 }
 
