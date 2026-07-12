@@ -165,6 +165,14 @@ is the **lower-divergence** path from what is already built.
 
 ## §6 Proposed MEM-4 decomposition (incremental, swarm-sized)
 
+> **Forward cross-reference (2026-07-11, append-only note — no normative text changed).** The static
+> uniqueness proof this section builds toward interacts with content-addressed value identity
+> (RFC-0001 §4.6 / ADR-003) whenever a proven-unique value is reused in place: **DN-35 §5** is the
+> content-address-coherence answer (reuse fires only at rc==1 ⇒ no live alias of the old identity;
+> the intern/hash-cons table modeled as a weak map, evict-or-copy on reuse) that Increment 2's
+> `rc==1` reuse annotation composes with. **DN-120** records the verdict that this is solved-by-design
+> (`Draft`, pending ratification) — not a new mechanism to design here.
+
 Smallest sound increment first; each measured before the next (DN-32 §6b / §4.3).
 
 1. **Increment 1 — non-escaping borrow elision (smallest, highest-value).** At a call site whose
@@ -395,3 +403,7 @@ RFC-0027's status (append-only).
   IR, leaving `mycelium-core/src/node.rs` pristine. §6.1's prose is preserved verbatim as a historical
   snapshot; a `> Correction` callout after it neutralizes the standing claim. No status moves; no
   original text deleted (house rule #3, append-only; VR-5/G2).
+- **2026-07-11 — Forward cross-reference added (§6; append-only; no status move).** Pointed
+  Increment 2's `rc==1` reuse annotation to **DN-35 §5** (the content-address-coherence answer) and
+  **DN-120** (Draft verdict note: solved-by-design, not a new mechanism). Status remains **Accepted**;
+  no normative text changed. (Append-only; VR-5; G2.)
