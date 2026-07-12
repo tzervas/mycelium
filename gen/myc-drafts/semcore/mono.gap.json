@@ -212,13 +212,13 @@
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
-      "snippet": "# [doc = \" Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity\"] # [doc = \" (the fast pass-through). True iff **no** function is generic, **no** function has a fn-typed\"] # [doc = \" value parameter (which needs defunctionalization — RFC-0024 §4, M-687), **no** data type is\"] # [doc = \" generic, and there are **no** (user) traits / instances / retained impls.\"] # [doc = \"\"] # [doc = \" **M-965 note:** every `Env` now carries the built-in `Fuse` prelude trait\"] # [doc = \" ([`crate::fuse::TRAIT_NAME`]) even when the program never mentions `fuse`/`Fuse` — mirroring how\"] # [doc = \" every `Env` already carries the built-in `Bool` prelude *type* (which doesn't break this check,\"] # [doc = \" since `Bool` happens to have empty `params`). A trait registration with **zero** instances/impls\"] # [doc = \" contributes nothing to specialize (an unimplemented trait can't be called — `check_fuse`/generic\"] # [doc = \" dispatch always requires a resolved instance), so the trait-emptiness test here is *specifically*\"] # [doc = \" \\\"no **user-declared** trait\\\" — the always-present builtin is excluded, exactly as `Bool` is\"] # [doc = \" excluded from the phylum-wide coherence view (`checkty::check_phylum_inner`'s `name != \\\"Bool\\\"`\"] # [doc = \" guard). `env.instances`/`env.impls` being empty is unaffected and still does the real work: a\"] # [doc = \" program that actually declares `impl Fuse[T] for T` has a non-empty `instances`/`impls`, which\"] # [doc = \" correctly still forces the full (specializing) pass.\"] fn is_already_monomorphic (env : & Env) -> bool { env . fns . values () . all (| fd | { fd . sig . params . is_empty () && fd . sig . value_params . iter () . all (| p | ! param_has_fn_type (& env . types , & fd . sig . param_names () , & p . ty)) && ! body_has_lambda (& fd . body) && ! body_has_fn_value (env , & fd . body) }) && env . types . values () . all (| d | d . params . is_empty ()) && env . traits . keys () . all (| name | name == crate :: fuse :: TRAIT_NAME) && env . instances . is_empty () && env . impls . is_empty () }",
+      "snippet": "# [doc = \" Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity\"] # [doc = \" (the fast pass-through). True iff **no** function is generic, **no** function has a fn-typed\"] # [doc = \" value parameter (which needs defunctionalization — RFC-0024 §4, M-687), **no** data type is\"] # [doc = \" generic, and there are **no** (user) traits / instances / retained impls.\"] # [doc = \"\"] # [doc = \" **M-965 note:** every `Env` now carries the built-in `Fuse` prelude trait\"] # [doc = \" ([`crate::fuse::TRAIT_NAME`]) even when the program never mentions `fuse`/`Fuse` — mirroring how\"] # [doc = \" every `Env` already carries the built-in `Bool` prelude *type* (which doesn't break this check,\"] # [doc = \" since `Bool` happens to have empty `params`). A trait registration with **zero** instances/impls\"] # [doc = \" contributes nothing to specialize (an unimplemented trait can't be called — `check_fuse`/generic\"] # [doc = \" dispatch always requires a resolved instance), so the trait-emptiness test here is *specifically*\"] # [doc = \" \\\"no **user-declared** trait\\\" — the always-present builtin is excluded, exactly as `Bool` is\"] # [doc = \" excluded from the phylum-wide coherence view (`checkty::check_phylum_inner`'s `name != \\\"Bool\\\"`\"] # [doc = \" guard). `env.instances`/`env.impls` being empty is unaffected and still does the real work: a\"] # [doc = \" program that actually declares `impl Fuse[T] for T` has a non-empty `instances`/`impls`, which\"] # [doc = \" correctly still forces the full (specializing) pass.\"] fn is_already_monomorphic (env : & Env) -> bool { env . fns . values () . all (| fd | { fd . sig . params . is_empty () && fd . sig . value_params . iter () . all (| p | ! param_has_fn_type (& env . types , & fd . sig . param_names () , & p . ty)) && ! body_has_lambda (& fd . body) && ! body_has_fn_value (env , & fd . body) }) && env . types . values () . all (| d | d . params . is_empty ()) && env . traits . keys () . all (| name | name == crate :: fuse :: TRAIT_NAME || name == crate :: ord3 :: TRAIT_NAME) && env . instances . is_empty () && env . impls . is_empty () }",
       "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
       "item_name": "is_already_monomorphic"
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 241,
+      "line": 244,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -228,7 +228,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 290,
+      "line": 293,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -238,7 +238,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 322,
+      "line": 325,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -248,7 +248,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 349,
+      "line": 352,
       "col": 1,
       "category": "PayloadVariant",
       "rust_construct": "PayloadVariant",
@@ -258,7 +258,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 391,
+      "line": 394,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -268,7 +268,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 408,
+      "line": 411,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -278,7 +278,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 450,
+      "line": 453,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -288,7 +288,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 467,
+      "line": 470,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -298,7 +298,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 484,
+      "line": 487,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -308,7 +308,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 498,
+      "line": 501,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -318,7 +318,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2669,
+      "line": 2672,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -328,7 +328,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2674,
+      "line": 2677,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -338,7 +338,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2685,
+      "line": 2688,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -348,7 +348,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2695,
+      "line": 2698,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -358,7 +358,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2720,
+      "line": 2723,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -368,7 +368,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2852,
+      "line": 2855,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -378,7 +378,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2874,
+      "line": 2877,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -388,7 +388,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2917,
+      "line": 2920,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -398,7 +398,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2940,
+      "line": 2943,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -408,7 +408,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 2991,
+      "line": 2994,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -418,7 +418,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3006,
+      "line": 3009,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -428,7 +428,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3013,
+      "line": 3016,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -438,7 +438,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3022,
+      "line": 3025,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -448,7 +448,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3033,
+      "line": 3036,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -458,7 +458,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3097,
+      "line": 3100,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -468,7 +468,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3107,
+      "line": 3110,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -478,7 +478,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3117,
+      "line": 3120,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -488,7 +488,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3135,
+      "line": 3138,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -498,7 +498,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3142,
+      "line": 3145,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -508,7 +508,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3149,
+      "line": 3152,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -518,7 +518,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3158,
+      "line": 3161,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -528,7 +528,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3175,
+      "line": 3178,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -538,7 +538,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3204,
+      "line": 3207,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -548,7 +548,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3249,
+      "line": 3252,
       "col": 1,
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
@@ -558,7 +558,7 @@
     },
     {
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 3299,
+      "line": 3302,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
