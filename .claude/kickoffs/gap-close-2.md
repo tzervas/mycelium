@@ -56,25 +56,27 @@
    M-993 pattern; `/myc-dogfood` as the second witness). Long tail.
 
 **D. Distinct tracks (queue after A/B underway; scope when ready):**
-   - **Runtime & distributed concurrency** — the fungal runtime tier (hypha/colony/fuse/mesh/reclaim,
-     mostly ratified names not-yet-lexed). Basis RFC-0008/0009, DN-61/63, ADR-020, DN-58/59/67.
-   - **DX / QoL — M-1077**: loose/gradual typing mode (infer+hint on the fast interpreted path; strict
-     typing gates COMPILE) + the lexicon-alias layer. Design-reasoner first.
-   - **Python transpilation** — via the **Python→Rust→Mycelium** composition (maintainer's py2rust/
-     py-rust-bridge tooling). **Explicitly AFTER Rust-native is solid + py2rust matured** — not a near-term
-     lever. Its own future DN.
-   - **Security + accel backlog** — M-1073 (value-semantics-aware Mycelium scanning), M-1074 (extensible
-     capability-detected CPU+GPU hashing/crypto, portable fallback; first backends 14700K + 5080).
+
+- **Runtime & distributed concurrency** — the fungal runtime tier (hypha/colony/fuse/mesh/reclaim,
+  mostly ratified names not-yet-lexed). Basis RFC-0008/0009, DN-61/63, ADR-020, DN-58/59/67.
+- **DX / QoL — M-1077**: loose/gradual typing mode (infer+hint on the fast interpreted path; strict
+  typing gates COMPILE) + the lexicon-alias layer. Design-reasoner first.
+- **Python transpilation** — via the **Python→Rust→Mycelium** composition (maintainer's py2rust/
+  py-rust-bridge tooling). **Explicitly AFTER Rust-native is solid + py2rust matured** — not a near-term
+  lever. Its own future DN.
+- **Security + accel backlog** — M-1073 (value-semantics-aware Mycelium scanning), M-1074 (extensible
+  capability-detected CPU+GPU hashing/crypto, portable fallback; first backends 14700K + 5080).
 
 **E. Ops / hygiene (interleave):**
-   - **Steady-state branch prune** (memory branch-policy): reach core-three + backup/release only; file
-     the unmerged Draft DNs, land/archive the flagged branches, prune the docs-notebooklm-pdfs artifact.
-   - **Docs archive + stale-vocabulary audit** (compressed `zip`, incrementally updatable, to sanitize
-     tero) — audit the corpus against the ratified fungal lexicon; archive superseded material.
-   - **Desktop-held heavy verification** (don't run in cloud): durability tier / mutants / fuzz, VSA/GPU,
-     proof discharge (z3/LH/Lean) — collect into a desktop PR (`scripts/vsa-desktop-checks.sh`).
-   - **Fleet Wave-1/2 remainder** ([[workspace-tools-publish-contract]]) — publish as GitHub-Release
-     package artifacts, not containers.
+
+- **Steady-state branch prune** (memory branch-policy): reach core-three + backup/release only; file
+  the unmerged Draft DNs, land/archive the flagged branches, prune the docs-notebooklm-pdfs artifact.
+- **Docs archive + stale-vocabulary audit** (compressed `zip`, incrementally updatable, to sanitize
+  tero) — audit the corpus against the ratified fungal lexicon; archive superseded material.
+- **Desktop-held heavy verification** (don't run in cloud): durability tier / mutants / fuzz, VSA/GPU,
+  proof discharge (z3/LH/Lean) — collect into a desktop PR (`scripts/vsa-desktop-checks.sh`).
+- **Fleet Wave-1/2 remainder** ([[workspace-tools-publish-contract]]) — publish as GitHub-Release
+  package artifacts, not containers.
 
 ## Operating pattern (carry forward from gap-close-run — it earned its keep)
 - **Verify-first before building; adversarial-verify before landing.** In `gap-close-run` this caught a

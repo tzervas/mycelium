@@ -9346,9 +9346,16 @@ issues:
     epic: E18-1
     doc_refs:
       - corpus:DN-34
+      - "corpus:DN-122#132-disjoint-implementation-work-units-against-the-real-tree-property-tests"
       - corpus:DN-123
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
     body: |
+      **Append-only note (2026-07-12, DN-122 ratification close-out).** DN-122 (Accepted,
+      `docs/notes/DN-122-External-Trait-Impls-Across-The-Home-Boundary.md` SS13.2) names the
+      `Self`-in-trait-signature grammar gap (the two-type `Widen`-class witness, WU-C) as this
+      issue's residual sub-scope -- shared ownership confirmed via the doc_refs link above; see
+      **M-1080** for the MVP that this sub-gap is explicitly excluded from.
+
       **Append-only note (2026-07-11, integration close-out, FLAG-5 from DN-123).** The records/
       named-field sub-scope (item 5 below) now has a dedicated design: **DN-123**
       (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`, Draft) — sugar-over-positional
@@ -16575,3 +16582,113 @@ issues:
         DN-119 L3-G1) lands with usefulness/exhaustiveness green.
       - A differential witnesses round-trip name preservation before any `Empirical` upgrade past
         the sugar's `Declared` design status (VR-5).
+
+  - id: M-1079
+    title: "M-1079 -- vet-harness phylum visibility: partial PhylumReport verdicts + phylum-mode --vet wiring + dual-report measurement basis (DN-124)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1060]
+    doc_refs:
+      - corpus:DN-124
+      - src:crates/mycelium-check/src/lib.rs:267
+      - src:crates/mycelium-transpile/src/vet.rs:26
+      - src:gen/myc-drafts/regenerate.sh:58
+    body: |
+      Filed 2026-07-12 at the DN-124 ratification close-out (mitigation #1 -- verified M-1079 free
+      before minting; M-1078 was highest). DN-124 (Accepted 2026-07-12,
+      `docs/notes/DN-124-Vet-Harness-Phylum-Visibility-And-Measurement-Basis.md`) verified the
+      transpiler `--vet` loop and `gen/myc-drafts/regenerate.sh` check each emitted `.myc` in
+      oracle (single-file) mode, which has zero phylum-import visibility -- so a correctly-resolved
+      cross-nodule `use checkty.Width;` validates CLEAN under `myc check --phylum` but FAILS under
+      oracle mode, making the whole cross-nodule/cross-phylum lever family (Import, DN-122
+      external-trait impls, cross-phylum records) un-creditable even when the transpiler emits
+      correctly. NOTE: the Import gap-class lever leaf (`claude/leaf/gc2-imp1-cross-nodule-symtab`,
+      the finding's own source) is in-flight under the gap-close-2 wave and does not yet have its
+      own minted M-id -- not added to depends_on here (flagged, not guessed, per G2/VR-5); a
+      cross-reference should be added once that leaf's issue is filed.
+
+      This issue tracks DN-124's ratified build (P-A + M-A, DN-124 SS5.3 Units 1-3):
+
+      User stories (DN-124 SS10):
+      - As a port-lever author, I want a correctly-emitted cross-nodule `use checkty.Width;` to be
+        credited by `checked_fraction`, so that the Import / external-trait / cross-phylum levers I
+        build are measured on the semantics of the real phylum build, not a counterfactual
+        phylum-of-one.
+      - As a maintainer reading the SS8 series, I want the one-time jump when the vet basis switches
+        to be labeled a basis correction with its `Delta_basis`, so that I can trust every subsequent
+        delta is a real transpiler/lever gain and never a ruler change dressed as progress (VR-5).
+      - As a vet-harness consumer, I want a phylum with one gapped nodule to still credit its clean
+        nodules without ever crediting a nodule whose cleanliness depended on the gapped one, so that
+        the metric is both more informative and never false-clean (the import-closure invariant, G2).
+      - As a kernel maintainer, I want this fix to reuse `check_phylum` unchanged, so that the small
+        auditable kernel (KC-3) grows by zero and the driver composes the trusted resolver rather
+        than duplicating it (DRY).
+
+      Definition of Done (DN-124 SS8, restated as this issue's build gate):
+      - Unit 1 -- `mycelium-check` partial verdicts: `PhylumReport` per-nodule `Clean|CheckError|
+        Blocked` via the SS2.2 closure re-check, with the soundness / never-false-clean /
+        monotonicity / never-fabricate property tests green.
+      - Unit 2 -- `mycelium-transpile` phylum/directory vet mode (SS3.1): consumes the partial
+        verdicts, dual-reports both fractions over one denominator, with
+        `checked_fraction_phylum >= checked_fraction_oracle` and `Delta_basis` arithmetic verified.
+      - Unit 3 -- `regenerate.sh` + CLI batch glue (SS3.2): semcore transpiled + vetted as one phylum
+        with the cross-nodule `use checkty....` references resolving (the `lib.rs:530-560` witness,
+        at the harness level); stdlib crates gain partial verdicts.
+      - `vet.json`/manifest dual-report both fractions for the transition cycle with `Delta_basis`
+        labeled; the historical oracle SS8 series annotated, never rewritten (house rule #3).
+      - The emitted `.myc` stays `Declared` and the vet verdict `Empirical` (never upgraded past its
+        checked basis, VR-5).
+      - `mycelium-check` (and `mycelium-l1` if touched) is a base crate (DN-20) -- change-scoped
+        tests run in cloud (`cargo test -p mycelium-check`, `-p mycelium-transpile`); the full sweep
+        is desktop-held (`just check-canary` per-promotion; `just check-full` on the desktop).
+
+  - id: M-1080
+    title: "M-1080 -- external-trait-impls MVP: transpiler rule-swap (WU-A) + prelude-seed target-trait availability (WU-B) (DN-122)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1060, M-1079]
+    doc_refs:
+      - "corpus:DN-122#13-build-ready-mvp-re-verified-post-m-1060-2026-07-12-empirical-dev-b36ebdbe"
+      - src:crates/mycelium-transpile/src/emit.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Filed 2026-07-12 at the DN-122 ratification close-out (mitigation #1 -- verified M-1080 free
+      before minting; M-1079 was highest). DN-122 (Accepted 2026-07-12,
+      `docs/notes/DN-122-External-Trait-Impls-Across-The-Home-Boundary.md` SS13) ratified the
+      build-ready MVP: the single-parameter, param-only-signature foreign-trait-impl class
+      (prelude-scoped first, OQ-6 resolved as prelude-seed) via a transpiler rule-swap (WU-A) plus
+      target-trait availability (WU-B), riding the landed M-1060/M-1036 checker substrate with zero
+      new kernel or checker work (KC-3/DN-55). Depends on **M-1079** (the DN-124 vet-harness
+      phylum-mode fix) because this MVP's `checked_fraction` payoff needs phylum-mode credit to be
+      measurable -- oracle-mode vetting cannot see the emitted `use <trait-home>.<Trait>` import (a
+      cross-nodule/cross-phylum reference) as clean, per DN-124 SS1.5's finding that the whole
+      cross-phylum lever family is un-creditable under the current oracle-mode vet basis.
+
+      User stories (DN-122 SS13, restated):
+      - As a port-lever author, I want `impl ForeignTrait for LocalType` for a single-parameter,
+        param-only-signature foreign trait to check clean and transpile without hand-porting, so
+        that the P1 `checked_fraction` lever closes for the majority trait shape.
+      - As a kernel reviewer, I want the MVP to add zero new checker/kernel code, riding entirely on
+        the landed M-1060 cross-phylum soundness guard, so that the small auditable kernel (KC-3)
+        stays unchanged.
+      - As a maintainer, I want unsupported shapes (two-type/`Self`-needing traits, concrete-type-in-
+        sig) refused never-silently rather than fabricated, so that the honest gap (tracked as
+        M-1076/M-876) is visible, not silently dropped (G2).
+
+      Definition of Done (DN-122 SS13.2, restated as this issue's build gate):
+      - WU-A: `crates/mycelium-transpile/src/emit.rs` emits `use <trait-home>.<Trait>` ahead of a
+        single-param, param-only-sig foreign-trait impl (mirroring the checker's own
+        `foreign_trait_sig_names_a_concrete_type` recognizer so emit and check agree); otherwise
+        emits the honest gap (no fabricated def). Property tests T-A1 (positive control, upgrades
+        `tests/vet.rs:69`'s "unknown trait" expectation for this shape), T-A2 (negative control --
+        `Widen` two-type stays an honest gap), T-A3 (emit<->check agreement on a shared case table).
+      - WU-B: the single-param conversion/comparison target traits are prelude-seeded (OQ-6) so
+        `impl PreludeTrait for LocalType` needs no `use` at all. Property tests T-B1 (prelude-seeded
+        trait visible in every nodule without import) and T-B2 (std-phylum-declared trait resolves
+        via `use` through the M-1060 cross-phylum key, for the deferred std-phylum-declare path).
+      - The Phase-0 re-measure (run under M-1079's phylum-mode vet basis once landed) reports the
+        single-param-vs-two-type split (OQ-7) before the leverage tag moves off `Declared` (VR-5).
+      - WU-C (foreign-sig re-homing = M-1076; `Self`-in-trait-sig = M-876) stays explicitly out of
+        this issue's scope -- tracked separately, not built here.
