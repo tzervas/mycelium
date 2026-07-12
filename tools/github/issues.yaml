@@ -16251,3 +16251,157 @@ issues:
         load-bearing argument and Point 2 is either tightened to be precise on its own terms or
         reframed as a corroborating (not independently necessary) observation. No behavior change --
         doc-only.
+
+  - id: M-1073
+    title: "M-1073 -- value-semantics-aware security scanning + exploit hardening for Mycelium programs (BACKLOG)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:language, priority:P3, status:todo]
+    epic: E22-1
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-032
+      - corpus:ADR-003
+      - corpus:RFC-0035
+      - corpus:DN-30
+      - src:.claude/skills/security-review/SKILL.md
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). BACKLOG -- deferred until the core
+      zero-hand-port language/transpiler levers land (no single blocking M-id; the zero-hand-port
+      tree is a diffuse set of in-flight ports/transpiler-gap-closure work, not one dependency --
+      left undepended rather than fabricating a false edge, VR-5). Scope: determine the best
+      approaches to statically scan/analyze *Mycelium programs* (not the Rust kernel -- that is
+      M-1075) for security issues and harden against exploits, LEVERAGING Mycelium's value
+      semantics. This is the value-semantics-specific angle within the existing E22-1 Security
+      Scanning Toolkit epic (DN-30/RFC-0035, Proposed) -- E22-1's own body notes its leaves are
+      "scoped when the binding security-scanning RFC lands (the forward-epic pattern)"; this issue
+      is filed forward against that epic now, gated on RFC-0035's ratification and the zero-hand-port
+      levers, rather than left unrecorded.
+
+      Working hypothesis (to VALIDATE, not assume -- `Declared` until the scoping note checks it):
+      Mycelium's value-semantic nature -- immutable content-addressed values (ADR-003), no
+      aliasing-induced UB, never-silent representation swaps (G2), explicit `Option`/error on
+      out-of-range -- yields a SMALLER, more tractable attack surface than pointer-aliasing
+      languages (no use-after-free/double-free/data-race class by construction), so security
+      analysis over Mycelium programs should be *easier* and more decidable than the C/Rust
+      equivalent. This is a real, checkable claim, not a marketing assertion -- the scoping note
+      must ground it or refute it.
+
+      User stories:
+      - As a Mycelium developer, I want static security analysis of my program, so that I catch
+        exploitable patterns before shipping.
+      - As a security reviewer, I want the analysis to exploit value-semantics (no aliasing/UB) so
+        that it gives stronger, more decidable guarantees than a C/Rust equivalent.
+      - As the maintainer, I want a scoped recommendation of the best approach/tooling before we
+        build, so we don't over-invest prematurely on an unvalidated hypothesis.
+
+      Definition of Done:
+      - A design/scoping note (Draft DN, or a research note feeding a future DN) that: (a)
+        validates or refutes the value-semantics-eases-analysis hypothesis above with grounding
+        (cite ADR-003/ADR-032/G2, and the actual vuln classes RFC-0035 §2/D1 already enumerates,
+        rather than asserting in the abstract); (b) enumerates candidate approaches (e.g.
+        taint/flow analysis over the RFC-0035 inspectable-Core-IR substrate, provenance/audit-trail
+        leverage per ADR-032, capability/guarantee-tag checking against the Exact/Proven/
+        Empirical/Declared lattice); (c) recommends a ranked approach with honest guarantee tags
+        (no upgrade past the checked basis, VR-5); (d) names the deferred-until conditions
+        precisely (which zero-hand-port/transpiler milestones actually unblock this, once known).
+        NO implementation lands under this backlog item -- the note is the deliverable.
+
+  - id: M-1074
+    title: "M-1074 -- extensible CPU+GPU acceleration for identity hashing & crypto (BACKLOG)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:design, area:execution, priority:P3, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-003
+      - corpus:DN-93
+      - src:justfile
+      - src:scripts/vsa-desktop-checks.sh
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). BACKLOG -- deferred; no epic fits
+      cleanly (E15-1/E25-1, the Native-AOT-acceleration epics, are both `status:done` and
+      subsumed; filed standalone with no `epic:`, the same pattern already used for the adjacent
+      M-832/M-1014 desktop-held perf tracks -- FLAG: if this bucket grows, a live
+      "acceleration/perf" epic successor to E15-1/E25-1 may be warranted; not minted speculatively
+      here). Accelerate content-address identity hashing (ADR-003) and any encryption support to be
+      performant AND rock-solid, via an EXTENSIBLE, capability-detected accelerator-backend
+      abstraction with an ALWAYS-PRESENT portable fallback (never-silent capability swap -- G2, the
+      same discipline the runtime's representation swaps already use). First concrete backends
+      (directly in hand, maintainer's desktop): the i7-14700K (SHA-NI hardware SHA-256 as the
+      always-available low-latency + rock-solid tier; AES-NI for encryption; AVX2/AVX-VNNI for
+      vectorized hash-batch/VSA/dense ops; hybrid P/E-core + thread-director scheduling) AND the
+      RTX 5080 (batch-throughput tier). Designed as pluggable/extensible to FUTURE hardware (the
+      3090Ti, other CPUs/GPUs/accelerators) -- NOT hardcoded to today's box. Ties to the VSA/GPU
+      lane (M-832/M-1014, both desktop-held per the standing cloud-session policy), the AOT-perf
+      track (E15-1/E25-1), and DN-93's content-address rehash-settlement discipline (batch any
+      identity-changing change into one rehash, never piecemeal). Heavy perf verification is
+      desktop-held (per the standing "heavy checks run on the maintainer's desktop" policy,
+      `scripts/vsa-desktop-checks.sh`); this issue's own DoD is design-only.
+
+      User stories:
+      - As a Mycelium runtime, I want identity hashing accelerated by whatever the host CPU/GPU
+        offers, so content-addressing is fast without sacrificing correctness.
+      - As a user on a machine without a GPU (or without SHA-NI), I want a correct portable
+        fallback with a disclosed capability swap, so behavior is never silently degraded (G2).
+      - As the maintainer, I want the backend layer extensible to future hardware without rework.
+      - As a security-conscious user, I want crypto/hashing rock-solid (constant-time where it
+        matters, validated) regardless of backend.
+
+      Definition of Done:
+      - A design note specifying: the backend-abstraction + capability-detection +
+        never-silent-fallback contract; an initial 14700K (SHA-NI/AES-NI/AVX) + 5080 backend plan;
+        a differential/validation strategy (every accelerated path must be bit-identical to the
+        portable oracle -- VR-5, no correctness traded for speed); an explicit extensibility seam
+        for future hardware. Heavy perf verification stays desktop-held (unchanged policy).
+        Implementation is deferred past this backlog item -- no code lands here.
+
+  - id: M-1075
+    title: "M-1075 -- standard Rust-kernel security scans: establish + maintain a hardened baseline"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P1, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-44
+      - src:CONTRIBUTING.md
+      - src:.claude/skills/security-review/SKILL.md
+      - src:scripts/checks/deny.sh
+      - src:scripts/checks/unsafe-per-use.sh
+    body: |
+      Filed 2026-07-11 (maintainer direction, gap-close-run). NEAR-TERM PREP, not backlog --
+      ongoing hygiene, `status:todo` (the repo's real "not started / in the backlog" status; the
+      informal "near-term prep" framing is priority, not a distinct status label -- no `backlog`
+      status exists in this repo's vocabulary, `tools/github/labels.json`). No epic fits cleanly:
+      E22-1 (Security Scanning Toolkit) is scoped to scanning *Mycelium programs* (DN-30/RFC-0035),
+      not the Rust kernel's own dependency/license/unsafe hygiene; M-678 (the prior Rust-kernel
+      unsafe-hardening epic, DN-21) is `status:done` and narrower in scope (JIT-FFI unsafe only,
+      not supply-chain/license/advisory hygiene workspace-wide). FLAG: a dedicated
+      "hardened-baseline maintenance" epic may be warranted if this recurring-hygiene bucket grows
+      beyond this one issue -- not minted speculatively here; filed standalone with no `epic:`.
+
+      Because the zero-hand-port pipeline transpiles FROM the Rust reference implementation, run
+      standard Rust security scans -- `cargo-audit` for RUSTSEC advisories, `cargo-deny` for
+      licenses/bans/advisories/sources (`justfile`'s existing `deny`/`deny-net-fix` recipes,
+      `scripts/checks/deny.sh`), supply-chain (pinned deps + lockfile integrity + no curl|bash,
+      per CONTRIBUTING's licensing/security posture), secrets hygiene, and an `unsafe` audit
+      (`scripts/checks/unsafe-per-use.sh`, the ADR-014 `// SAFETY:`-adjacency gate already wired
+      into `just check`) -- to establish and MAINTAIN a solid hardened baseline that the
+      transpiled output inherits. This is ONGOING hygiene, not a one-off report. Heavy/periodic
+      runs stay desktop-held per the standing cloud-session policy; the light gates already run in
+      `just check`. DN-44 (Codebase Security Posture) is the existing consolidating reference this
+      issue's baseline report extends, not duplicates.
+
+      User stories:
+      - As the maintainer, I want a documented security baseline of the Rust kernel, so we
+        transpile from a hardened state.
+      - As a contributor, I want dependency advisories/license violations caught in the gate, so
+        regressions don't land.
+      - As a security reviewer, I want the `unsafe` surface inventoried + justified.
+
+      Definition of Done:
+      - A baseline security report of the current posture (advisories, license findings, `unsafe`
+        site inventory, secrets-scan result); `cargo-audit` + `cargo-deny` confirmed wired into the
+        gate config (already present per `scripts/checks/deny.sh` -- this issue verifies + documents
+        rather than assumes, house rule #14) with a documented policy; an `unsafe`-usage inventory
+        cross-checked against `scripts/checks/unsafe-per-use.sh`'s live gate; a recurring-scan
+        cadence documented (tied to the existing tier policy: light in `just check`, heavy
+        desktop-held). The first baseline report is this issue's initial deliverable; DN-44 is
+        updated (append-only) rather than superseded if this report sharpens its posture map.
