@@ -12,6 +12,75 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(l1): M-1036 ctor-seal capability-gate closure — nodule-qualified type identity (DN-112 Rank 1) (2026-07-11)
+
+`claude/leaf/m1036-ctor-seal` (5 cycles of self-verification; 4 soundness holes found and closed
+during the leaf's own audit, both final audit arguments proven sound before landing — mitigation #14
+(never rubber-stamped)). Closes the M-1027/DN-104 `priv` constructor-seal bypass DN-112 Rank 1
+designed: types/constructors were resolved by **bare name, re-resolved in the calling nodule's own
+scope**, so a foreign nodule could impersonate a sealed type by declaring its own same-named local
+(unsealed) type. `Ty::Data` now carries a **nodule-qualified identity** — `DataInfo::home` (the
+declaring nodule's dot-joined path, or `PRELUDE_HOME` for the single reserved builtin/prelude home,
+`checkty.rs`), stamped once at first registration and never re-derived per import — with
+`qualify_type_name`/`nodule_home` (`checkty.rs`) doing the qualification at `resolve_ty`.
+
+- **The differential is flipped, not just extended:** `crates/mycelium-l1/tests/ctor_seal.rs`'s
+  `known_gap_a_same_named_local_shadow_type_bypasses_the_seal` is renamed
+  `a_same_named_local_shadow_type_no_longer_bypasses_the_seal` and now asserts the refusal (was
+  asserting the exploit's `Ok`). 26 tests in `ctor_seal.rs`, all green.
+- **Two CRITICAL soundness holes found and closed during the leaf's own adversarial audit** (not by
+  an external reviewer — self-verification per mitigation #14): (1) a generic-callee variant that
+  reopened the same-nodule-shadow bypass through an unrelated type parameter; (2) a
+  shadow-plus-legitimate-cross-nodule-reach pattern match that let the checker bind a pattern's
+  field type to the WRONG (locally-shadowed) `DataInfo` — fixed by
+  `lookup_data_home_checked` (`checkty.rs`), a **conservative refuse-on-home-mismatch** variant of
+  `lookup_data` used at the pattern-normalization call sites (`normalize_pattern`, shared by
+  `Cx::check_pattern` at check-time and the elaborator).
+- **Four-site closure of the enumerated residual set:** `crate::mono` (`emit_data`/ctor emission),
+  the `resolve_ty` round-trip, `crate::fuse`, and the check-phase/`crate::elab` sites are each
+  audited against the same home-check discipline; `crate::decision`'s `compile_rows` and
+  `crate::usefulness`'s `signature` are audited and confirmed **not exploitable** for a
+  wrong-value silent accept via a "validated-by-construction" argument (every `Pat::Ctor` reaching
+  these fns was already home-checked by `normalize_pattern` upstream) rather than routed through
+  the checked variant, documented in-line (`decision.rs`, `usefulness.rs`).
+- **Honest, disclosed residuals (not silently closed — recorded as follow-up issues below):** (a)
+  the shipped fix is the **conservative (b) closure** — refuse-on-home-mismatch — not the full (a)
+  **correct-home resolution** (per-import-provenance-scoped lookup against the foreign type's own
+  `DataInfo`), which needs a materially larger `crate::mono` change (per-import registries, not one
+  merged bare-keyed map) and so is sound but over-refuses a legitimate shadow+cross-nodule-reach
+  program; (b) the pre-existing M-919/DN-71 affine-tracker gap (a `Handle`-typed local referenced
+  and destructured twice independently) is confirmed, by an equivalent hand-written non-sugar `fn`
+  fixture, to be a pre-existing limitation, not a regression introduced here; (c) a LOW-severity doc
+  imprecision in `decision.rs`'s `compile_rows` audit comment (its Point 2 argument is less precise
+  than Point 1's induction, which is the load-bearing sound argument) was flagged by a verify pass
+  and is left as a follow-up doc-polish item rather than blocking the landing.
+- **Verified:** `cargo test -p mycelium-l1` — 565 lib tests + 26 `ctor_seal.rs` tests, all green
+  (post pull-down merge with `dev`'s facility Stage 3/DN-117 affine work, confirming both mechanisms
+  coexist — see the merge commit); `cargo fmt` / `clippy -D warnings -p mycelium-l1` clean.
+- **`tools/github/issues.yaml`:** M-1036 → `done`. Three follow-up issues filed for the disclosed
+  residuals above (**M-1070**, **M-1071**, **M-1072** — see their entries). DN-112 stays `Accepted`
+  (design ratification; the implementation landing does not itself flip a design note past
+  `Accepted` without a dedicated Enacted review — house rule #3).
+
+### chore(docs): DN-118 P1 closure-emit — changelog + Doc-Index close-out (landed via PR #1500) (2026-07-11)
+
+`docs/Doc-Index.md` gains a **DN-118** row (was missing a Doc-Index entry despite landing on `dev`
+via PR #1500, `claude/leaf/dn118-p1-closure-emit`). **DN-118 — Closure-to-Value-Semantics
+Transpiler Enabler and Native-Conformance Contract** ratifies **Option A**: the Rust→Mycelium
+transpiler's closure gap is a **closure-EMIT gap**, not a defunctionalization gap (defunctionalization
+of env-capturing closures is already implemented in the language, RFC-0024 §4A/M-704, `done`), so
+`crates/mycelium-transpile` emits the Mycelium `lambda` surface and lets `mono.rs`'s whole-program
+`ClosureSpecialization` resolve captures — no transpiler-side defunctionalizer is built (KC-3/DRY).
+A closure that syntactically mutates a captured binding in place (FnMut/`&mut`-style — `syn` carries
+no borrowck facts) is conservatively FLAGGED (`Category::Closure`), never auto-emitted (DN-109
+D5/D7 ratchet); Phase 1 is single-parameter-closures-only (a verify-first narrowing of the note's
+own original plan). P1 (the emit pass, `crates/mycelium-transpile/src/{emit,visit,gap}.rs` +
+`src/tests/emit.rs`) lands with this note; P2 (a future RFC-0018-framework `@value_closures`
+native-conformance contract) and P3 (borrowck-backed capture-mutation checking) are scoped, not
+built. `Empirical` for claims checked against the real toolchain (myc-check-verified emission);
+`Declared` for the general semantic-faithfulness claim and the unbuilt P2/P3 scope (VR-5). Status:
+**Accepted**, explicitly NOT Enacted (house rule #3).
+
 ### feat(l1): M-1054 native metaprogramming facility Stage 1b + Stage 2 — check-phase accept, `Elab::app` dispatch, def-site resolution (DN-116/DN-115, M-1069) (2026-07-11)
 
 Two further staged increments of the DN-110 §5-A Rank-1 facility, on top of the landed Stage 0+1

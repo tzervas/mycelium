@@ -13995,9 +13995,11 @@ issues:
   - id: M-1036
     title: "nodule-qualified type identity — the real fix for M-1027's ctor-seal capability-gate bypass"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:bug, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:bug, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-1027]
+    landed_date: 2026-07-11
+    landed_basis: "landed on dev via claude/leaf/m1036-ctor-seal (5fe6471f), merged with dev's facility-Stage-3/DN-117 pull-down; verified: cargo test -p mycelium-l1 = 565 lib + 26 ctor_seal.rs tests green, clippy/fmt clean. DoD met: nodule-qualified identity (DataInfo::home, checkty.rs) closes the shadow-bypass; ctor_seal.rs's known_gap_a_same_named_local_shadow_type_bypasses_the_seal renamed + flipped to assert the refusal; the DN-112 SS10 item 9 builtin/prelude uniform-home-invariant regression test shipped (ctor_seal.rs L542+, tests/checkty.rs L1358-9). Two CRITICAL soundness holes found+fixed during the leaf's own adversarial audit (generic-callee shadow reopening; shadow-plus-cross-nodule-reach pattern-match type confusion via lookup_data_home_checked). Disclosed, NOT silently closed, residuals filed as follow-ups: M-1070 (full per-import-provenance correct-home resolution — the shipped fix is the conservative refuse-on-home-mismatch closure, not the full correct-home resolution), M-1071 (pre-existing M-919 affine-tracker prior-handle-alias gap, confirmed not a regression), M-1072 (LOW doc-nit in decision.rs's compile_rows audit comment)."
     doc_refs:
       - corpus:DN-104
       - corpus:DN-99
@@ -14065,6 +14067,25 @@ issues:
       `ctor_seal.rs` differential, the general same-name-collision property test, and this
       builtin-invariant test all land; `Declared` if a narrower point-patch is chosen instead (VR-5).
       Status stays `todo` here -- DN-112 ratifies the mechanism, it does not implement it.
+
+      Landed (2026-07-11, integration close-out for `claude/leaf/m1036-ctor-seal`, status
+      todo -> done, append-only). DN-112 Rank 1 implemented: `DataInfo::home` + `qualify_type_name`/
+      `nodule_home` (`checkty.rs`) stamp the nodule-qualified identity at `resolve_ty`; the flipped
+      `ctor_seal.rs` differential (26 tests) and the DN-112 SS10 item 9 builtin/prelude
+      uniform-home-invariant regression test both land, moving this issue's guarantee posture to
+      `Empirical` per the mechanism note's own stated condition above. Two CRITICAL soundness holes
+      (generic-callee shadow reopening; a shadow-plus-cross-nodule-reach pattern-match type
+      confusion) were found and closed during the leaf's own adversarial self-audit before landing
+      (mitigation #14 — verified, not rubber-stamped). Three residuals are explicitly disclosed, not
+      silently folded into "done": the shipped fix is the conservative refuse-on-home-mismatch
+      closure, not the full per-import-provenance correct-home resolution (filed as **M-1070**); the
+      pre-existing M-919 affine-tracker prior-handle-alias gap is confirmed not a regression (filed
+      as **M-1071**); a LOW doc-nit in `decision.rs`'s `compile_rows` audit comment is filed as
+      **M-1072**. DN-112 itself stays `Accepted` (design ratification) -- this landing is the
+      implementation the note's own DoD condition names, but stepping DN-112 to `Enacted` is a
+      separate, deliberate review this close-out does not perform (house rule #3: `Enacted` is
+      reserved for a decision confirmed fully complete and outside ongoing integration, and this
+      issue's own residuals above mean the identity-resolution story is not yet fully closed).
 
   - id: M-1028
     title: "enb ENB-5 — transcendental + eps/delta float numerics"
@@ -16118,3 +16139,115 @@ issues:
       - Guarantee tags move exactly as bounded: single-nodule resolution + G1/G2 fixtures
         `Declared -> Empirical`; cross-nodule/phylum resolution and reveal-provenance (routed to
         OQ-H3/M-1051) stay `Declared`/open -- no upgrade past the checked basis (VR-5). ✅
+
+  - id: M-1070
+    title: "M-1036 residual: full per-import-provenance correct-home type resolution (the (a) fix, not the shipped conservative (b) closure)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - corpus:DN-112
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out (`claude/leaf/
+      m1036-ctor-seal`), a disclosed residual named honestly rather than folded silently into
+      M-1036's `done` (G2/VR-5). M-1036 shipped `lookup_data_home_checked` (`checkty.rs`), the
+      **conservative (b) closure**: when the bare-local fallback would resolve a qualified name
+      against a `DataInfo` whose `home` disagrees with the qualifier, it refuses explicitly rather
+      than proceeding with the wrong declaration's shape. This is sound (a false-refuse is safe) but
+      is NOT the full **(a) correct-home resolution** -- a single bare-keyed registry (own decls
+      shadow imports, RFC-0006 §4.3) holds at most one `DataInfo` per bare name, so once a nodule
+      locally shadows a foreign type's bare name, the foreign type's own `DataInfo` is not reachable
+      from `types` at all. There is nothing correct to resolve against without a structurally larger
+      change.
+
+      User stories:
+      - As a `.myc` author with a legitimate same-named-but-unrelated local type that also
+        legitimately reaches (via a pattern match) a foreign nodule's same-named sealed type, I want
+        my program to type-check correctly rather than being conservatively refused, so that the
+        ctor-seal fix's soundness doesn't cost me an otherwise-valid shadow+cross-nodule-reach
+        program.
+
+      Definition of Done:
+      - `crate::mono` (or an equivalent resolution layer) gains **per-import-provenance-scoped**
+        type registries -- not one merged bare-keyed `BTreeMap<String, DataInfo>` -- so a qualified
+        name resolves against the FOREIGN type's own `DataInfo`, not merely refuses on a home
+        mismatch. The M-1036 conservative-refuse regression corpus (`ctor_seal.rs`) is extended with
+        the previously-refused-but-legitimate shadow+cross-nodule-reach cases now correctly
+        ACCEPTED. No regression on the existing refuse-on-genuine-mismatch cases. Guarantee posture
+        moves the affected resolution path `Empirical` once witnessed by the extended differential
+        (VR-5).
+
+  - id: M-1071
+    title: "Affine-tracker gap: a same, pre-existing Handle-typed local referenced+destructured twice is not tracked as a duplicated affine move (M-919/DN-71)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P3, status:todo]
+    epic: E30-1
+    depends_on: [M-919]
+    doc_refs:
+      - corpus:DN-71
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/src/tests/checkty.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out, surfacing a
+      **pre-existing** gap the M-1054 Stage-3 affine work's own regression corpus documents and the
+      ctor-seal leaf's soundness audit independently re-confirmed is NOT a regression from either of
+      those landings (mitigation #14 -- verified, not assumed). Pinned by
+      `crates/mycelium-l1/src/tests/checkty.rs::
+      stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap`: referencing the
+      *same* pre-existing `Handle`-typed local twice and destructuring each occurrence
+      independently (`match h { Wrap(s1) => s1 }` used alongside a second, independent `match h {
+      Wrap(s2) => s2 }` over the same `h`) is accepted by the landed M-919/DN-71 Model-S affine
+      `Tracker` -- and, confirmed by an equivalent ordinary hand-written (non-sugar) `fn` fixture in
+      the same test, is accepted identically with NO sugar/facility machinery involved at all. Each
+      `match`'s field-capture creates its own fresh, independent tracker slot (DN-71 §4.2), so the
+      tracker does not itself track a composite value's identity across separate binding sites.
+
+      User stories:
+      - As a `.myc` author relying on the affine tracker to catch a duplicated-move bug, I want a
+        genuinely duplicated consume of the same `Substrate`-carrying value to be caught even when
+        it is reached through two independent pattern-match sites on the same prior local, not just
+        within a single match's own arms.
+
+      Definition of Done:
+      - The `Tracker` (or its caller) gains composite-value identity tracking across independent
+        binding sites reached from the same prior local (or a documented, ratified decision that
+        this is out of scope, with a Draft DN recording why). A property test over generated
+        multi-site-destructure programs. The existing
+        `stage3_prior_handle_alias_destructured_twice_is_a_known_pre_existing_gap` regression is
+        updated to assert the refusal once closed (or is documented as an accepted, ratified
+        limitation if the DN scoping concludes fixing it is out of scope).
+
+  - id: M-1072
+    title: "Doc-nit: decision.rs's compile_rows M-1036 residual-close audit comment overstates Point 2 relative to the load-bearing Point 1 induction"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:docs, area:language, priority:P4, status:todo]
+    epic: E28-1
+    depends_on: [M-1036]
+    doc_refs:
+      - src:crates/mycelium-l1/src/decision.rs
+    body: |
+      Filed 2026-07-11 at the M-1036/DN-112 ctor-seal integration close-out -- a LOW-severity doc-nit
+      a verify pass flagged during self-audit and deliberately deferred rather than blocking the
+      landing (house rule #4 -- ground every claim, including this one's own severity assessment).
+      `crates/mycelium-l1/src/decision.rs`'s "M-1036 residual-close audit (B -- mirrors usefulness's
+      algorithm)" doc comment on `compile_rows` gives two numbered arguments for why the fn's
+      unguarded plain `lookup_data` calls are not exploitable: Point 1 (an induction over how `dn`
+      reaches this fn only via a `col` selection that requires an already-home-checked
+      `Pat::Ctor`/`Pat::Lit` entry) is the actual load-bearing, sound argument. Point 2 ("the emitted
+      `cases` never depend on a wrong `d` anyway") is comparatively imprecise -- worth tightening or
+      demoting to a supporting note rather than standing as a second independent argument of equal
+      weight, since Point 1 alone already establishes `dn` is never mismatched when this fn is
+      reached.
+
+      User story:
+      - As a future reader auditing this fn's soundness argument, I want the doc comment to name
+        clearly which point is load-bearing, so I don't have to re-derive that Point 1's induction is
+        sufficient on its own.
+
+      Definition of Done:
+      - `decision.rs`'s audit comment is reworded so Point 1 is clearly marked as the sufficient,
+        load-bearing argument and Point 2 is either tightened to be precise on its own terms or
+        reframed as a corroborating (not independently necessary) observation. No behavior change --
+        doc-only.
