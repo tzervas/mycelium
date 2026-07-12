@@ -2119,7 +2119,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 34,
+      "line": 39,
       "summary": "One aggregated diagnostic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2130,7 +2130,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Finding",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 52,
+      "line": 57,
       "summary": "Attach a baseline route, fluently (M-644 ergonomics).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2141,7 +2141,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 25,
+      "line": 30,
       "summary": "What kind of refusal a finding records.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2152,8 +2152,8 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 260,
-      "summary": "A per-nodule verdict, emitted **only** when the whole phylum checked clean (never fabricated).",
+      "line": 328,
+      "summary": "A per-nodule verdict.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2163,7 +2163,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 249,
+      "line": 268,
       "summary": "The single refusal that blocked a phylum (all-or-nothing — there is at most one).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2174,7 +2174,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 226,
+      "line": 245,
       "summary": "What kind of refusal blocked a phylum from checking clean.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2185,7 +2185,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::PhylumErrorKind",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 238,
+      "line": 257,
       "summary": "The stable lowercase tag used in the `--json` contract (`\"parse\"`/`\"duplicate\"`/`\"check\"`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2196,7 +2196,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 269,
+      "line": 343,
       "summary": "The result of checking a set of sources **as one phylum**.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2207,7 +2207,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 60,
+      "line": 65,
       "summary": "The aggregated result of checking a set of sources.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2218,7 +2218,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 91,
+      "line": 96,
       "summary": "The CI exit code: 2 if any parse error, else 3 if any check error, else 0.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2229,7 +2229,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 85,
+      "line": 90,
       "summary": "Whether the report is clean (no findings).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2240,7 +2240,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 78,
+      "line": 83,
       "summary": "Set the checked-file count, fluently (M-644 ergonomics).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2251,7 +2251,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check::Report",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 71,
+      "line": 76,
       "summary": "Push a finding, fluently (M-644 ergonomics).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2262,7 +2262,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 104,
+      "line": 109,
       "summary": "A project-resolution failure — no/ambiguous input (no sources, an unreadable file).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2273,7 +2273,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 391,
+      "line": 621,
       "summary": "Resolve and check every `.myc` under `dir` **as one phylum** (the FS wrapper over",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2284,7 +2284,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 303,
+      "line": 382,
       "summary": "Check an explicit set of `(path, contents)` sources **as one cross-resolving phylum** (the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2295,7 +2295,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 189,
+      "line": 194,
       "summary": "Resolve and check a whole project: every `.myc` under `dir`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2306,7 +2306,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 116,
+      "line": 121,
       "summary": "Check one source, appending any finding.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2317,7 +2317,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 162,
+      "line": 167,
       "summary": "Check one source under the **default baseline policy** — the M-644 ergonomic convenience for the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2328,7 +2328,7 @@
       "crate": "mycelium-check",
       "module": "mycelium_check",
       "file": "crates/mycelium-check/src/lib.rs",
-      "line": 170,
+      "line": 175,
       "summary": "Check an explicit set of `(path, contents)` sources, aggregating findings deterministically.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7850,7 +7850,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 487,
+      "line": 490,
       "summary": "RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8708,7 +8708,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2733,
+      "line": 2778,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8719,7 +8719,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1887,
+      "line": 1898,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8730,7 +8730,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2672,
+      "line": 2717,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8741,7 +8741,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1912,
+      "line": 1923,
       "summary": "Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8752,7 +8752,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1922,
+      "line": 1933,
       "summary": "Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8950,7 +8950,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10171,
+      "line": 10216,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8961,7 +8961,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10120,
+      "line": 10165,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8983,7 +8983,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10161,
+      "line": 10206,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9346,7 +9346,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 396,
+      "line": 399,
       "summary": "The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9500,7 +9500,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 59,
+      "line": 63,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9588,7 +9588,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 72,
+      "line": 76,
       "summary": "`reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9665,7 +9665,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 78,
+      "line": 82,
       "summary": "The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9775,7 +9775,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 79,
+      "line": 83,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9852,7 +9852,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 80,
+      "line": 84,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27188,7 +27188,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 119,
+      "line": 122,
       "summary": "The combined `summary.json` artifact for a batch/directory transpile run.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27254,7 +27254,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 321,
+      "line": 449,
       "summary": "How to invoke the `myc check` oracle: a command **prefix** (program + any leading args) to which",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27331,7 +27331,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 129,
+      "line": 132,
       "summary": "The combined `union.gap.json` artifact: every [`Gap`] from every file in the batch, plus the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27342,7 +27342,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 61,
+      "line": 89,
       "summary": "The classification of one `myc check` run over one emitted `.myc` file, keyed off the documented",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27353,7 +27353,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 419,
+      "line": 694,
       "summary": "One file's inputs to the vet loop: the emitted `.myc` to check, its originating source label, and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27364,7 +27364,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 122,
+      "line": 150,
       "summary": "One emitted `.myc` file's `myc check` outcome.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27375,7 +27375,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 165,
+      "line": 240,
       "summary": "The aggregate vet report for a batch/single-file vet run — the `vet.json` artifact.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27397,7 +27397,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 136,
+      "line": 139,
       "summary": "One file's parse/transpile outcome, kept alongside its report so the CLI can still write the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27408,7 +27408,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 76,
+      "line": 79,
       "summary": "One file's contribution to a [`BatchSummary`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27419,7 +27419,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 103,
+      "line": 106,
       "summary": "The batch-wide aggregate — same shape as [`FileSummary`] minus the per-file `file` name, so a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27441,7 +27441,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 27,
+      "line": 30,
       "summary": "Recursively discover every `*.rs` file under `root`, skipping test infrastructure: any",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27463,7 +27463,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 222,
+      "line": 263,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27474,7 +27474,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 241,
+      "line": 282,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27485,7 +27485,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 666,
+      "line": 707,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27496,7 +27496,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2232,
+      "line": 2273,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27507,7 +27507,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 869,
+      "line": 910,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27518,7 +27518,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2456,
+      "line": 2504,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27529,7 +27529,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2606,
+      "line": 2862,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27540,7 +27540,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2357,
+      "line": 2399,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27551,7 +27551,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2491,
+      "line": 2541,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27562,7 +27562,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 271,
+      "line": 312,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27573,7 +27573,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2112,
+      "line": 2153,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27584,7 +27584,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 261,
+      "line": 302,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27738,7 +27738,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 63,
+      "line": 66,
       "summary": "The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27848,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::reserved",
       "file": "crates/mycelium-transpile/src/reserved.rs",
-      "line": 30,
+      "line": 37,
       "summary": "The Mycelium reserved-word set — a verbatim snapshot of `mycelium-l1`'s `token::keyword` table",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27859,7 +27859,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::reserved",
       "file": "crates/mycelium-transpile/src/reserved.rs",
-      "line": 110,
+      "line": 123,
       "summary": "Guard an identifier the emitter is about to place into `.myc` surface text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27870,7 +27870,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::reserved",
       "file": "crates/mycelium-transpile/src/reserved.rs",
-      "line": 102,
+      "line": 115,
       "summary": "Whether `word` is a Mycelium reserved word (would not lex as an `Ident`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27881,7 +27881,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 168,
+      "line": 263,
       "summary": "Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27892,7 +27892,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 42,
+      "line": 43,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27903,7 +27903,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 146,
+      "line": 170,
       "summary": "Transpile every file in `files` (already-discovered `.rs` paths), collecting a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27914,7 +27914,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 20,
+      "line": 26,
       "summary": "Parse `path` and transpile every top-level item.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27925,7 +27925,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/transpile.rs",
-      "line": 32,
+      "line": 56,
       "summary": "Transpile already-read source text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27936,7 +27936,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
-      "line": 43,
+      "line": 44,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27947,7 +27947,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 161,
+      "line": 189,
       "summary": "Cap on a stored diagnostic line's length (report-size hygiene).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27958,7 +27958,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::MycChecker",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 333,
+      "line": 461,
       "summary": "The checker configured from the environment.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27969,7 +27969,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::MycChecker",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 362,
+      "line": 490,
       "summary": "Run `myc check` on one `.myc` file and classify the outcome.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27980,7 +27980,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetClass",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 88,
+      "line": 116,
       "summary": "Map a process exit code to a vet class.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27991,7 +27991,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetClass",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 101,
+      "line": 129,
       "summary": "Whether this class credits the checked numerator (only [`VetClass::Clean`] does).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28002,7 +28002,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetClass",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 107,
+      "line": 135,
       "summary": "A stable `&'static str` label for per-class counting/serialization.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28013,7 +28013,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetInput",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 428,
+      "line": 703,
       "summary": "Construct from a written `.myc` path plus the file's [`GapReport`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28024,7 +28024,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetRecord",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 150,
+      "line": 178,
       "summary": "Items this file contributes to the **checked-clean** numerator: all of its emitted items when",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28035,7 +28035,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetReport",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 207,
+      "line": 311,
       "summary": "**checked_fraction** — myc-check-clean coverage.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28046,7 +28046,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetReport",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 229,
+      "line": 357,
       "summary": "Companion **file-level** metric: `(clean_files, files_with_emissions)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28057,7 +28057,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetReport",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 218,
+      "line": 346,
       "summary": "**expressible_fraction** — emission-only coverage, recomputed here over the *same* denominator",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28068,7 +28068,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet::VetReport",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 183,
+      "line": 268,
       "summary": "Aggregate a set of per-file [`VetRecord`]s into a report.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28079,7 +28079,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::vet",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 244,
+      "line": 372,
       "summary": "Build a [`VetRecord`] from one completed `myc check` run's parts.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28090,7 +28090,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/vet.rs",
-      "line": 440,
+      "line": 715,
       "summary": "Vet a batch of emitted `.myc` files with `checker`, returning the aggregate [`VetReport`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -31699,7 +31699,7 @@
     },
     {
       "symbol": "mycelium_check::PhylumReport::exit_code",
-      "reason": "dedup-alias: same definition as `mycelium_check::Report::exit_code` at crates/mycelium-check/src/lib.rs:91 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_check::Report::exit_code` at crates/mycelium-check/src/lib.rs:96 — one canonical row kept"
     },
     {
       "symbol": "mycelium_check::PhylumReport::fmt",
@@ -36419,23 +36419,23 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:2733 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:2778 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1887 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1898 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:2672 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:2717 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1912 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1923 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1922 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1933 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::ElabError",
@@ -36835,7 +36835,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:487 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:490 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
@@ -50571,7 +50571,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:119 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:122 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary::clone",
@@ -50623,7 +50623,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:129 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:132 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport::clone",
@@ -50651,19 +50651,19 @@
     },
     {
       "symbol": "mycelium_transpile::batch::discover_rs_files",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:27 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:30 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::output_rel_path",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:63 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:66 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::summarize",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:168 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:263 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::transpile_batch",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:146 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:170 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Category",
@@ -51163,15 +51163,15 @@
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_file",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:20 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:26 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_source",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:32 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:56 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::MycChecker",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::MycChecker` at crates/mycelium-transpile/src/vet.rs:321 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::MycChecker` at crates/mycelium-transpile/src/vet.rs:449 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::MycChecker::clone",
@@ -51191,7 +51191,7 @@
     },
     {
       "symbol": "mycelium_transpile::vet::VetClass",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::VetClass` at crates/mycelium-transpile/src/vet.rs:61 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetClass` at crates/mycelium-transpile/src/vet.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::VetClass::clone",
@@ -51227,7 +51227,7 @@
     },
     {
       "symbol": "mycelium_transpile::vet::VetInput",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::VetInput` at crates/mycelium-transpile/src/vet.rs:419 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetInput` at crates/mycelium-transpile/src/vet.rs:694 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::VetInput::clone",
@@ -51247,7 +51247,7 @@
     },
     {
       "symbol": "mycelium_transpile::vet::VetRecord",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::VetRecord` at crates/mycelium-transpile/src/vet.rs:122 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetRecord` at crates/mycelium-transpile/src/vet.rs:150 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::VetRecord::clone",
@@ -51275,7 +51275,7 @@
     },
     {
       "symbol": "mycelium_transpile::vet::VetReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::VetReport` at crates/mycelium-transpile/src/vet.rs:165 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::VetReport` at crates/mycelium-transpile/src/vet.rs:240 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::vet::VetReport::clone",
@@ -51303,7 +51303,7 @@
     },
     {
       "symbol": "mycelium_transpile::vet::vet_batch",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::vet_batch` at crates/mycelium-transpile/src/vet.rs:440 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::vet_batch` at crates/mycelium-transpile/src/vet.rs:715 — one canonical row kept"
     },
     {
       "symbol": "mycelium_vsa::EmpiricalProfile::clone",

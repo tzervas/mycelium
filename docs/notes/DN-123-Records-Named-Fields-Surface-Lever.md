@@ -3,7 +3,9 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-123 |
-| **Status** | **Draft** (2026-07-11). Authored as a **design-forward reasoner note** working DN-121's **P2 lever** — the record / named-field surface (Struct, 80/10% of the `checked_fraction` type-vocabulary class) — forward to a **ranked recommendation**. It **works the decision forward and recommends, ranked**; it **enacts nothing**, **ratifies nothing**, and **moves no other doc's status** (house rule #3, append-only — the maintainer ratifies). It **does not edit** `crates/mycelium-l1/**` (semcore serial lane — read-only), `crates/mycelium-transpile/**`, `issues.yaml`, `CHANGELOG.md` beyond the append-only `[Unreleased]` entry for this note, or the DN-99 register — FLAGGED in §8. Tags are `Empirical` where read against the tree (dev tip `46006994`, 2026-07-11), `Declared` for any design not yet built/ratified (VR-5). |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — the maintainer authorized the orchestrator to "ratify based on objective reasoning and the project's needs/intents, keep to core principles, report results"; mirrors the DN-115/117/118/122/124/125 precedent). Was **Draft** (2026-07-11). **Accepted, not Enacted** (house rule #3) — it **builds nothing** yet; the sugar (Option A) stays `Declared`/unbuilt until the pre-existing build issue **M-1078** lands and is differential-witnessed. |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | **Option A (mechanically-lowering sugar over positional `Ctor`/`Data` plus the field-name↔index map) is the default per DN-106's ratified General Principle 2** (gap-closure default = the mechanically-lowering sugar, not a kernel primitive) **and General Principle 1** (surface-sugar transparency). **Option B (a first-class named-field kernel variant) stays REJECTED** — DN-106's own ratified fork (B); it would violate **KC-3** for no expressibility gain Option A lacks. **Identity stays positional/structural** (ADR-003) — names are inert metadata, never in the content-address hash (§7 OQ-1). The verify-first correction (§2) is accepted as the framing: records already emit positionally and check-clean when field *types* map, so the genuine residual is **faithfulness** (`NamedFieldDrop`) plus the **self-hosted `.myc` surface** (DN-119 L3-G1), not a new expressibility gap. The §7 open questions are accepted as build preconditions (OQ-1 canonicalize-to-declaration-order plus names-off-the-hash; OQ-3 spread affine treatment) and OQ-2 (cross-phylum name metadata) as a coordination dependency on DN-113/M-1060, not a ratification blocker. Ratified on the merits under maintainer delegation — the orchestrator reasoned the recommendation through and decided to ratify; this note's own reasoning (§1–§7) is not re-litigated, only executed and recorded (VR-5). |
+| **Status-note** | Authored as a **design-forward reasoner note** working DN-121's **P2 lever** — the record / named-field surface (Struct, 80/10% of the `checked_fraction` type-vocabulary class) — forward to a **ranked recommendation**. It **works the decision forward and recommends, ranked**; it **enacts nothing**, **ratifies nothing**, and **moves no other doc's status** (house rule #3, append-only — the maintainer ratifies). It **does not edit** `crates/mycelium-l1/**` (semcore serial lane — read-only), `crates/mycelium-transpile/**`, `issues.yaml`, `CHANGELOG.md` beyond the append-only `[Unreleased]` entry for this note, or the DN-99 register — FLAGGED in §8. Tags are `Empirical` where read against the tree (dev tip `46006994`, 2026-07-11), `Declared` for any design not yet built/ratified (VR-5). |
 | **Decides** | *Proposes, for ratification (does not self-ratify):* (1) the **verified state correction** — the record / named-field surface is **already substantially supported at the `checked_fraction` level**: the transpiler already carries a field-name↔index map (`StructLayout = Vec<Option<String>>`, `emit.rs:28`), already desugars Rust struct literals / field-projection / struct-update to positional `Data` (`struct_layout`-gated), and already emits named-field structs positionally with names **recorded, not lost**, as a never-silent `Category::NamedFieldDrop` sub-gap (`emit.rs:2200–2429`, `gap.rs:72`). The genuine residual is **not** expressibility but **(i) faithfulness** (dropped field names) and **(ii) the self-hosted `.myc` surface** (no named-field construction / `.field` access / `Foo { x, y }` pattern — the DN-119 **L3-G1** grammar residual). (2) The **ranked recommendation**: build the named-field surface as a **mechanically-lowering SUGAR** over the existing positional `Ctor`/`Data` machinery plus a field-name↔index map (**Option A**), exactly per DN-106's ratified **General Principle 2** (gap-closure default = the mechanically-lowering sugar, not a kernel primitive) and **General Principle 1** (surface-sugar transparency — reveal on demand). (3) The **do-not-reopen boundary**: a first-class named-field `CtorInfo`/`Ty` variant with its own resolver plus checker/eval/elab semantics (**Option B**) stays **rejected** — DN-106 §3 fork (B), KC-3, value-semantic positional design. (4) The **honest tag boundary + open questions** (§6/§7): content-addressed identity vs field order/names, cross-phylum name metadata (DN-112/DN-113), functional-update affine treatment (M-919), struct-pattern exhaustiveness plus the DN-104 ctor seal. |
 | **Feeds** | DN-121 §5 **lever P2** (records/named-field surface, `needs-design`, M-876) — this note is that design; DN-119 **L3-G1** (struct/named-field patterns, the genuine L1-grammar residual) plus DN-119 §"deliberate exclusions" (which listed named-field record *type* surface as excluded citing DN-106 — this note records that DN-106's **ratification** re-scoped the SUGAR into scope, §2); DN-106 (ratified General Principles 1 and 2 — the sugar-over-positional default this note applies); DN-99 register (Struct rows — the transpiler-lane `NamedFieldDrop` sub-gap); M-876 (surface completeness — records / external-trait impls / bounded generics, `needs-design`); DN-112 (M-1036, nodule-qualified home identity) plus DN-113 (M-1060, cross-phylum import/resolution) — the cross-phylum name-metadata interaction (§7 OQ-2); DN-104 (M-1027, per-constructor visibility seal — §7 OQ-4); M-919 (affine tracker — §7 OQ-3); DN-120 / ADR-003 (content-addressed identity — §7 OQ-1). |
 | **Grounds on** | **DN-106 GP2** (gap-closure default: build the mechanically-lowering sugar, not a kernel primitive — the ratified basis for Option A over B); **DN-106 GP1** (surface-sugar transparency — the sugar hides nothing, expands/reveals the lower positional grammar on demand; house rule #2, no black boxes); **KC-3** (small auditable kernel — zero L0/`Ty`/eval growth; the positional `Data` model is untouched); **KISS/YAGNI** (the transpiler half already exists; retain-vs-drop names is the only new bit, and runtime name retention is added only if a port driver needs it); **DRY** (reuse the existing `StructLayout` map plus `Match`/`App` destructure-and-reconstruct — no parallel resolver); **value semantics plus ADR-003 content-addressed identity** (identity stays **positional/structural**; names are inert metadata, never in the hash — §7 OQ-1); **G2/never-silent** (name-drop is recorded today; the sugar's desugaring is EXPLAIN-revealable; an unresolved field name is a never-silent refusal); **VR-5** (the whole proposed design is `Declared` until built plus differential-witnessed). |
@@ -228,6 +230,14 @@ readable round-trip* vs *how many gain check-cleanness* before any target is set
 - **FLAG-5 (issues.yaml):** M-876's records/named-field sub-scope should point `doc_refs` at DN-123.
   **Orchestrator/integration-owned — not edited here** (mitigation #1/#2, ID plus union-merge hygiene).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-123 row updated to status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1078** (already minted 2026-07-11 for this DN's residual build) is unchanged
+in number but its DoD item 1 ("DN-123 ratified Draft → Accepted") is now satisfied — the build
+precondition is cleared, the sugar implementation itself remains unbuilt/`Declared`. `M-876`'s
+records/named-field `doc_refs` already points at `corpus:DN-123` (added at the 2026-07-11 close-out);
+no further edit needed there.
+
 ## §9 Definition of Done (the gate for this DN)
 
 This DN is **ratifiable** (maintainer moves Draft → Accepted) when:
@@ -266,8 +276,9 @@ and the OQ-4 seal/duplicate refusals pinned as `*_reject` tests; and (if Option 
 
 ---
 
-*DN-123 — Draft. Works the decision forward and recommends, ranked; ratification is the maintainer's
-(house rule #3).*
+*DN-123 — Accepted (2026-07-12). Ratifies Option A (sugar-over-positional) as Mycelium's records/
+named-fields answer; builds nothing yet — implementation (M-1078) is a separate, unlanded step (house
+rule #3: Accepted is not Enacted).*
 
 ## Changelog
 
@@ -275,3 +286,16 @@ and the OQ-4 seal/duplicate refusals pinned as `*_reject` tests; and (if Option 
   (records already emit positionally; residual is faithfulness plus self-hosted surface), ranked
   recommendation (Option A sugar-over-positional then C YAGNI-gated then B rejected), adversarial OQ-1..5,
   DoD plus user stories. `Empirical` where read against dev tip `46006994`; `Declared` for the proposed design.
+- 2026-07-12 — **Accepted.** Ratified by the maintainer's explicit delegation to the orchestrator
+  ("ratify based on objective reasoning and the project's needs/intents, keep to core principles,
+  report results"; mirrors the DN-115/117/118/122/124/125 precedent). Ratifies **Option A**
+  (mechanically-lowering sugar over positional `Ctor`/`Data` plus the field-name↔index map) per
+  DN-106's ratified GP1/GP2, with **Option C** (inert `field_names` metadata) as the YAGNI-gated
+  faithfulness upgrade and **Option B** (first-class named-field kernel variant) recorded rejected.
+  Basis recorded verbatim in the header table's "Ratification basis" row: DN-106 GP2 is the default,
+  identity stays positional/structural (ADR-003), the verify-first framing (records already emit
+  positionally; residual is faithfulness plus self-hosted surface) is accepted, and §7's OQ-1/OQ-3 are
+  accepted as build preconditions with OQ-2 a coordination dependency on DN-113/M-1060. **Accepted, not
+  Enacted** (house rule #3) — the sugar is unbuilt; every tag stays `Declared` until implemented and
+  differential-witnessed. **M-1078** (already minted 2026-07-11) tracks the residual build; this
+  ratification clears its DoD item 1 precondition.
