@@ -3,8 +3,9 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-131 |
-| **Status** | **Draft** (2026-07-12). A design-reasoner note working the **bounded-generics** cluster gap (M-876 item 3) forward to a **ranked recommendation for maintainer ratification** (house rule #3 — enacts nothing, ratifies nothing, moves no other doc's status). Tags are `Empirical` where read against the tree at `dev@fa53dc46` with a `file:line` cite, `Declared` for any design not yet built or ratified (VR-5). |
-| **Verify-first reframing (mitigation #14 — the tracker/register lag the code)** | The naive framing — "bounded generics `fn f<T: Bound>` / `impl<T: Bound>` needs design (M-876, P3)" — is **half already landed**. **Trait-bounded generics on *functions* are Closed** (DN-99 register row #5 `generic-bound: closed`): `fn f[T: Cmp](…)` parses (`parse.rs:1164` `parse_type_params_bounded` → `parse_type_param` `:1174` → `parse_bound` `:1190`, multi-bound `+`), the bounds are checked (`checkty.rs:4850` `check_bounds`), and the call **monomorphizes dictionary-free** — witnessed by `tests/mono.rs:240`: `fn use_cmp[T: Cmp](a: T, b: T) => Binary{2}` lowers to `use_cmp$Binary8` + `cmp$Cmp$Binary8` with `no_reachable_var`. M-876's own body ("the bound slot on impl/fn generics is missing") is stale on the *fn* half. **The genuine residual is bounds on the _non-function_ sites**: the impl slot (`impl[T: Bound] Foo[T]`) and the `type`/`trait` decl heads — all three are today a **never-silent refusal** (`parse.rs:1145`–`1152` for `type`/`trait`/impl-slot via `parse_type_params_opt`). This note designs *only* that residual. |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — mirrors the DN-115/117/118/122/123/124/125/126/127/128/129/130 precedent). Was **Draft** (2026-07-12, same day). **Accepted, not Enacted** (house rule #3) — **builds nothing** yet; every mechanism stays `Declared`/unbuilt until the FLAGGED build issue (M-1088, minted at this close-out) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` are applied by this ratification's integration close-out (recorded here, append-only). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | An impl-slot bound `impl[T: Bound] Foo[T]` is discharged by **redistribution to the lifted methods** — DN-103's Phase-0 desugar already prepends the impl's params to each lifted method; the **only** change is carrying the bound instead of forcing `bounds: []`, so the **already-landed fn-bound path** (`check_bounds` + dictionary-free monomorphization, DN-99 register row #5, Closed) discharges impl-slot bounds with **zero new discharge code** (DRY/KC-3). **`type`/`trait` decl-head bounds are DECLINED in v1** — per RFC-0019 §4.2's own design intent ("bounds on the type itself are on the methods, not the decl"), a decl-head bound would add a use-site well-formedness check for no `checked_fraction` win the method-site bound doesn't already give (YAGNI, grounded in the RFC's own model, not mere convenience — the adversarial check in §7 confirms the decline drops no real runtime-meaningful program). **No `where`-clause** in v1 — inline `T: A + B` only, exactly as RFC-0019 §4.1 already defers `where` to L2 sugar. A duplicate bound re-bind (impl `T: A`, method `T: B`) is **refused, not unioned** — the conservative, never-silent choice. Alternative 1 (impl-slot bounds via the bounded parser + DN-103 desugar carrying bounds; decline decl-head + `where`) is ratified over decl-head-bounds-too (new checker surface, no win), full `where`-clauses (L2 sugar, deferred), and the status-quo (verbose/lossy). Gate PASS clean — ratified on the merits under maintainer delegation; this note's own reasoning (§1–§9) is not re-litigated, only executed and recorded (VR-5). |
+| **Verify-first reframing (mitigation #14 — the tracker/register lag the code)** | The naive framing — "bounded generics `fn f<T: Bound>` / `impl<T: Bound>` needs design (M-876, P3)" — is **half already landed**. **Trait-bounded generics on *functions* are Closed** (DN-99 register row #5 `generic-bound: closed`): `fn f[T: Cmp]​(…)` parses (`parse.rs:1164` `parse_type_params_bounded` → `parse_type_param` `:1174` → `parse_bound` `:1190`, multi-bound `+`), the bounds are checked (`checkty.rs:4850` `check_bounds`), and the call **monomorphizes dictionary-free** — witnessed by `tests/mono.rs:240`: `fn use_cmp[T: Cmp](a: T, b: T) => Binary{2}` lowers to `use_cmp$Binary8` + `cmp$Cmp$Binary8` with `no_reachable_var`. M-876's own body ("the bound slot on impl/fn generics is missing") is stale on the *fn* half. **The genuine residual is bounds on the *non-function* sites**: the impl slot (`impl[T: Bound] Foo[T]`) and the `type`/`trait` decl heads — all three are today a **never-silent refusal** (`parse.rs:1145`–`1152` for `type`/`trait`/impl-slot via `parse_type_params_opt`). This note designs *only* that residual. |
 | **Decides (proposes, for ratification)** | (1) the **native mechanism** — admit a `: bound` on the **inherent-impl** type-parameter slot (`impl[T: Bound] Foo[T] { … }`), discharged by **redistribution to the lifted methods**: at DN-103's Phase-0 desugar the impl's bounds ride onto each lifted method's own `fn` type-parameter, so the *already-landed* fn-bound path (`check_bounds` + dictionary-free mono, row #5) discharges them with **zero new discharge code**; (2) the **`type`/`trait` decl-head decision** — recommend **declining** decl-head bounds in v1 per RFC-0019 §4.2 ("bounds on the type itself are on the methods, not the decl"), keeping the existing never-silent refusal, because decl-head bounds add checker surface for no `checked_fraction` win the method-site bound does not already give (YAGNI); (3) the **surface** — inline `T: A + B` (multi-bound via `+`, the landed `parse_bound` grammar), **no `where`-clause** in v1 (L2 sugar, deferred exactly as RFC-0019 §4.1 already defers it); (4) the **build split** — a parse + Phase-0-desugar change reusing the landed `parse_type_params_bounded` and `check_bounds`, **zero L0/kernel/runtime/mono growth**. It does **not** edit `issues.yaml`, `CHANGELOG.md`, or `Doc-Index.md` (integration-owned — FLAGGED up). |
 | **Feeds** | M-876 item (3) trait-bounded generics `<T: Bound>` (this note is the design gate for the residual half); DN-103 §7 reject-(b) (the impl-slot bound refusal this note lifts); DN-99 register row #5 (generic-bound — the fn half already closed) + row #63 (impl-block); RFC-0019 §3.3/§4.1/§4.2/§4.3 (the bound model + dictionary translation this reuses). |
 | **Depends on** | RFC-0019 (Enacted — bounded type parameters `type_param ::= Ident (':' bound)?`, dictionary-free discharge via monomorphization/M-673, coherence unchanged, KC-3 node budget unchanged); **DN-103** (Accepted — the impl-level slot + Phase-0 desugar-prepend, the exact vehicle the bound rides); the landed fn-bound machinery (`parse_type_params_bounded` `parse.rs:1164`, `check_bounds` `checkty.rs:4850`, M-657/M-659/M-673). |
@@ -28,7 +29,7 @@ Read against `dev@fa53dc46`, "bounded generics" is not one gap but four sites, t
 
 | Site | State today | Evidence (`file:line` @ fa53dc46) |
 |---|---|---|
-| `fn f[T: Bound](…)` (function) | **LANDED / Closed** (row #5) | `parse.rs:1164/1174/1190`; `checkty.rs:4850` `check_bounds`; mono witness `tests/mono.rs:240` (`use_cmp$Binary8`, `cmp$Cmp$Binary8`) |
+| `fn f[T: Bound]​(…)` (function) | **LANDED / Closed** (row #5) | `parse.rs:1164/1174/1190`; `checkty.rs:4850` `check_bounds`; mono witness `tests/mono.rs:240` (`use_cmp$Binary8`, `cmp$Cmp$Binary8`) |
 | Multi-bound `[T: A + B]` | LANDED (parse+check) | `parse.rs:1190`–`1195` `parse_bound` (`+`-separated `TraitRef`s) |
 | Self-bound sugar `T: Cmp ≡ T: Cmp[T]` | LANDED | RFC-0019 §4.1; M-659 |
 | **`impl[T: Bound] Foo[T]` (impl slot)** | **REFUSED / deferred** | DN-103 §7 reject-(b); `parse.rs:1220` uses `parse_type_params_opt`, which refuses `: bound` (`:1145`–`1152`) |
@@ -150,7 +151,7 @@ everywhere."
   decl-head bound (never calling a `Cmp` method) would not be rejected in `.myc` — but such a program is a
   *type-checking-only* artifact with no runtime meaning; flagged as a (vanishingly rare) faithfulness
   residual (§8), not a silent accept of wrong behavior.
-- **Impl-slot bound vs method re-bind.** `impl[T: Cmp] Foo[T] { fn g[T: Ord](…) }`. **Verdict:** the method
+- **Impl-slot bound vs method re-bind.** `impl[T: Cmp] Foo[T] { fn g[T: Ord]​(…) }`. **Verdict:** the method
   re-binds `T` → the existing never-silent duplicate-type-parameter refusal (§4.2). Correct — no silent
   union, no silent shadow.
 - **Impl-slot bound the methods do not use.** `impl[T: Cmp] Foo[T] { fn id(x: Foo[T]) => Foo[T] = x }` — the
@@ -205,8 +206,8 @@ design is the native target for **both** Rust `impl<T: Bound>` and Python bounde
 
 ## §10 Definition of Done (what ratification + landing require)
 
-**For the maintainer to move DN-131 Draft → Accepted:** confirm (a) impl-slot bounds via the bounded parser
-+ DN-103 desugar carrying bounds, (b) the **decline** of `type`/`trait` decl-head bounds (RFC-0019 §4.2
+**For the maintainer to move DN-131 Draft → Accepted:** confirm (a) impl-slot bounds via the bounded parser +
+DN-103 desugar carrying bounds, (b) the **decline** of `type`/`trait` decl-head bounds (RFC-0019 §4.2
 grounds + §7 adversarial check), (c) inline `T: A + B` only, no `where` in v1, and (d) duplicate re-bind
 refused (not unioned) in v1.
 
@@ -226,6 +227,11 @@ refused (not unioned) in v1.
 - **Guarantee** — `Declared` until built; `Empirical` once the conformance + differential witnesses are
   green; **no `Proven`** claim (VR-5).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note):** `Doc-Index.md` DN-131 row added
+at status **Accepted**; `CHANGELOG.md` carries the ratification entry; **M-1088** minted (the impl-slot
+bounded-generics build — parse switch, desugar-carry, `check_bounds`/mono witnesses, transpiler emit,
+`depends_on: []` — reuses only landed machinery, no cross-note blocker).
+
 ## §11 Changelog
 
 - **2026-07-12** — DN-131 created (**Draft**). Designs bounds on the **non-function** type-parameter sites —
@@ -237,3 +243,8 @@ refused (not unioned) in v1.
   mechanism is `Declared` (unbuilt). Authored the READ + this DN only — no edit to `issues.yaml`,
   `CHANGELOG.md`, or `Doc-Index.md` (integration-owned; FLAGGED up). Append-only; status advances only by
   maintainer ratification (house rule #3).
+- **2026-07-12** — Ratified **Accepted** (delegated ratification, gap-close-2 batch). Status moved Draft
+  → Accepted under explicit maintainer delegation (mirrors DN-115/117/118/122/123/124/125/126/127/128/
+  129/130). The impl-slot-bound redistribution mechanism and the decline of decl-head bounds/`where`
+  clauses are accepted as designed. Builds nothing yet — **M-1088** minted for the implementation.
+  Append-only; VR-5/G2.

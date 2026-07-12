@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-127 |
-| **Status** | **Draft** (2026-07-12). A design note in the design-reasoner pattern (enumerate → evaluate → recommend-ranked → adversarially test); it **recommends, it does not ratify** (house rule #3 — Draft→Accepted is the maintainer's, never the reasoner's). **Builds nothing** — every mechanism/tag here is `Declared`/unbuilt until landed and differential-witnessed. Does not edit `crates/**` or any integration-tier shared file. |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — mirrors the DN-115/117/118/122/123/124/125/126 precedent). Was **Draft** (2026-07-12, same day). **Accepted, not Enacted** (house rule #3) — **builds nothing** yet; every mechanism/tag stays `Declared`/unbuilt until the FLAGGED build issue (M-1090, minted at this close-out) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` are applied by this ratification's integration close-out (recorded here, append-only). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | The `Display`/`write!`/`format!` PROBLEM's native answer is a **pure value-returning render** `render: T → Bytes` — Idiomatic Remapping of Rust's mutating `&mut Formatter` sink (no shared mutable sink is native to value semantics, ADR-003). The int→decimal primitive is **derivable in std from the already-landed prim set** (`div_u`/`rem_u`/`bytes_concat`/`width_cast`/recursion) — **NO new kernel primitive** (KC-3 held; the §3 crux correction to the inherited "needs a prim" premise). A single-parameter, param-only **`Show`** prelude trait provides generic dispatch, seeded conditionally exactly like the landed `Fuse`/`Ord3` (the shared seed mechanism DN-129 also rides). Alt B (std `to_dec` + `Show` + transpiler rule) is ratified over Alt A (a new kernel prim, rejected on KC-3) and Alt C (transpiler-only, literal-only, under-solves). Float rendering is an **honest residual** (OQ-1) — refused never-silently, not fabricated (ADR-040 — no shortest-decimal render exists yet). The DN-125 `&mut Formatter` *parameter*-threading cross-reference is real (DN-125 now Accepted and merged to `dev` in this same ratification batch, resolving DN-127's own cross-worktree-provenance caveat, §2). Gate PASS (after the H1/M1 strict-review patches already applied in this note's own history) — ratified on the merits under maintainer delegation; this note's own reasoning (§1–§8) is not re-litigated, only executed and recorded (VR-5). |
 | **Decides (proposes, for ratification)** | Mycelium's **native solution** to the problem Rust `impl Display { fn fmt(&self, f: &mut Formatter) }` + `write!(f, …)` / `format!(…)` solves — *turning a typed value into human-readable text, interpolating sub-values* — is a **pure value-returning render**: `render: T → Bytes`, with `write!`/`format!` interpolation lowering to `bytes_concat` of rendered fragments. The `&mut Formatter` receiver is **not** a native concept: it is a mutation-through-a-sink, remapped by value-threading (DN-125 — **Accepted, but on a parallel not-yet-merged worktree branch as of this note's base**; cross-referenced, not duplicated; see the §2 caveat). The primitive gap — int→decimal-`Bytes` — is resolved **in std, from existing kernel prims** (`div_u`/`rem_u`/`width_cast`/`bytes_concat` + recursion), **not** by growing the kernel (KC-3). A `Show`-shaped **prelude trait** provides generic dispatch for the interpolation of arbitrary types (seeded like `Fuse`/`Ord3`; the seeding mechanism is DN-129's, shared). |
 | **Native-solution class (DN-110/DN-111 taxonomy)** | **Idiomatic Remapping** for the `Display`/`write!` shape (the mutating `Formatter` sink → a pure `Bytes`-returning render; a different mechanism that solves the same PROBLEM) **+ Native Equivalent** for the int→decimal primitive (derivable exactly, on-grid, from the landed prim set — no approximation, no bridge). |
 | **Feeds** | DN-34 §8.22 (the 30/30 `&mut Formatter` + `write!`/`format!` gap this addresses — the single largest *pure* bucket in the transpile corpus); DN-128 (std-derive lowering — `derive Debug` / `derive Show` reuse this render surface); DN-129 (the prelude-seed mechanism this note's `Show` trait rides); `lib/std/fmt.myc` (the first-order rendering nodule this generalizes); the `mycelium-transpile` `write!`/`format!` lowering (new work, M-id FLAGGED §8). |
@@ -304,6 +305,15 @@ green and emit↔check agreement proven; (4) an M-1006 ladder / DN-124 vet re-me
   - **OQ-1 (float render)** — track as a residual issue (reified swap per ADR-040 §2.4, or a dedicated
     shortest-decimal fn), not part of the MVP.
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-127 row added at status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1090** minted (WU-1 `to_dec`/`Show` std + WU-2 prelude seed + WU-3 transpiler
+`write!`/`format!` lowering, one tracking issue, `depends_on: [M-1081]` — DN-125's own build, the
+merge-order dependency for the `&mut Formatter` parameter half); `M-1082` (the prior "design: Display
+kernel-prim" issue) gets an append-only close-out note recording that its design gate is now satisfied
+by this ratification (its own `status: needs-design` moves to `status: superseded-by-dn` pointing at
+M-1090 — the design question it posed is answered, no kernel prim needed, per §3's crux verdict).
+
 ---
 
 ## Meta — changelog
@@ -335,3 +345,8 @@ green and emit↔check agreement proven; (4) an M-1006 ladder / DN-124 vet re-me
   merged into this branch's ancestry, `origin/dev`, or `origin/main` — corrected to an explicit cross-
   worktree/in-flight-parallel-DN caveat with the merge-order dependency stated (§2). Both fixes are
   append-only edits to this still-Draft note; no status change. (VR-5; G2.)
+- **2026-07-12 — Ratified Accepted (delegated ratification, gap-close-2 batch).** Status moved Draft →
+  Accepted under explicit maintainer delegation (mirrors DN-115/117/118/122/123/124/125/126). The
+  mechanism (pure `render: T → Bytes`, no new kernel prim, `Show` prelude trait) is accepted as designed;
+  the DN-125 cross-worktree caveat above is resolved (DN-125 landed to `dev` in this same batch). Builds
+  nothing yet — **M-1090** minted for the implementation (`depends_on: [M-1081]`). Append-only; VR-5/G2.

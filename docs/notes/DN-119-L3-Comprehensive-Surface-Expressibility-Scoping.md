@@ -151,6 +151,7 @@ wrong literal target precisely here.
 | Rust construct | Ratified native solution | Why L3 grammar for it is *wrong* | Basis (`Empirical`) |
 |---|---|---|---|
 | `&mut` / in-place mutation | **value-threading** (return new `T`) | Mycelium is value-semantic (NFR-5); a mutable-reference production reintroduces aliasing `syn` cannot prove sound (delta-ledger §5 ceiling) | ADR-003; DN-109 D12; DN-99 #19/#46/#82 |
+| *(append-only forward pointer, applied 2026-07-12 per DN-125 §10's FLAG)* — the `&mut` surface stays excluded as above; the **problem** it solves now has a ratified native answer (value-threading, mechanism + transpiler application both scoped): **DN-125**. No normative text of this row changes. | | | |
 | unbounded `loop` / lazy infinite iterators | **recursion / bounded `for`-fold** | totality/termination is a language property; an unbounded-loop production defeats the recursion-budget guard (RFC-0041) | RFC-0007 §4.8; DN-99 #40/#83 |
 | shared mutability `Arc`/`Mutex`/`RefCell` | **runtime-tier value substrate** (`hypha`/`mesh`), post-Phase-7; no user-facing shared-mut | RT1 excludes shared mutable state by design; surface for it is out of the value-semantics model | DN-94; RFC-0008 RT1; DN-99 #56 |
 | silent numeric cast `x as T` | **explicit `swap(x, to:T, policy:…)`** | S1 forbids any inferred/silent representation change; an `as`-production is a black-box swap (rule #2/G2) | DN-109 D13; DN-99 #30 |

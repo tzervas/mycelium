@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-129 |
-| **Status** | **Draft** (2026-07-12). Design-reasoner pattern (enumerate → evaluate → recommend-ranked → adversarially test); **recommends, does not ratify** (house rule #3 — Draft→Accepted is the maintainer's). **Builds nothing** — every mechanism/tag is `Declared`/unbuilt until landed and differential-witnessed. Does not edit `crates/**` or any integration-tier shared file. |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — mirrors the DN-115/117/118/122/123/124/125/126/127/128 precedent). Was **Draft** (2026-07-12, same day). **Accepted, not Enacted** (house rule #3) — **builds nothing** yet; every mechanism/tag stays `Declared`/unbuilt until the FLAGGED build issue (M-1091, minted at this close-out) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` are applied by this ratification's integration close-out (recorded here, append-only). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | **`Init` prelude trait** (`Init[T] { fn init() => T; }`, method **not** `default` — a taken lowercase keyword, `token.rs:491`, so the method name is mandatory-renamed; final naming DN-02-gated), seeded conditionally exactly like the landed `Fuse`/`Ord3`. **`Error`** → errors-as-values (the already-ratified `Result[A,E]`/`Option[A]` story) + a thin `Fault` marker trait requiring a `Show` render (DN-127) — Idiomatic Remapping, **deliberately NOT** re-inventing `std::error::Error`'s `source()`/`dyn Error` boxing (ADR-033's dynamic-dispatch escape is the one sanctioned exception, not the default; a cause is carried as a transparent value field instead). Zero kernel growth (DN-55 static specialization — both traits monomorphize away). `Init` is justified **narrowly** — it earns its place via DN-128's `derive Default` target plus generic default-polymorphism, not as a universal mandate (a plain fn is the KISS answer for a one-off default). OQ-2 (does `Fault: Show`'s supertrait bound check under RFC-0019 stage-1?) stays honestly open — the MVP degrades to a bare marker if not. The shared `seed_prelude_trait` helper (factored from the landed `Fuse`/`Ord3` seeds, DRY) is ratified as the seeding spine `Show`/`Init`/`Fault` all ride. Gate PASS after the H2 strict-review citation fix — ratified on the merits under maintainer delegation; this note's own reasoning (§1–§6) is not re-litigated, only executed and recorded (VR-5). |
 | **Decides (proposes, for ratification)** | (1) **The `Default` problem** (a canonical zero/identity value of a type) → a **single-parameter, param-only prelude trait** — proposed name **`Init`** (`Init[T] { fn init() => T; }`) — **seeded conditionally in the linked env exactly like `Fuse`/`Ord3`** (`checkty.rs:1358`/`1372`), Native Equivalent. (2) **The `Error` problem** (a value that describes a failure, is renderable, and can chain) → **errors-as-values** (`Result[A,E]`/`Option[A]`, already the ratified story) with a **thin marker trait `Fault`** requiring a `Show` render (DN-127) for the *renderable* obligation — Idiomatic Remapping, **not** a re-invention of the `std::error::Error` supertrait/`source()` machinery. Both traits are prelude-seeded by **one shared mechanism** this note specifies once (DN-127's `Show` and DN-128's derived impls ride it). |
 | **Native-solution class (DN-110/DN-111)** | `Default` → **Native Equivalent** (a value-producing trait, exactly RFC-0019's single-param trait shape, monomorphized away by DN-55). `Error` → **Idiomatic Remapping** (Rust's `Error` *trait-object + `source()` chain* remapped onto Mycelium's already-native errors-as-values + a `Show`-bounded marker; the `dyn Error` boxing is deliberately **not** ported — ADR-033 dynamic dispatch is the one escape, not the default). |
 | **Feeds** | DN-34 §8.22 finding 3 (the 14 reserved-word `impl Default` sub-issues + the 12 empty `impl std::error::Error for X {}` markers — "no native `Default`/`Error` trait wall", grep-confirmed); DN-128 (`derive Default` lowers to an `Init` impl — this note supplies the trait it targets); DN-127 (`Fault`'s `Show` bound; the shared prelude-seed mechanism); DN-122 §13 (the single-param param-only admitted class this reuses). |
@@ -187,6 +188,14 @@ T-B1-style visibility test — `impl Init for LocalType` and `impl Fault for MyE
 - **DN-02** — the `Init`/`Fault` names need a T-map/T-illuminate/T-learn pass (flag to the lexicon owner; do
   not finalize here).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-129 row added at status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1091** minted (`Init` + `Fault` prelude traits + the shared `seed_prelude_trait`
+helper, `depends_on: []`); `M-1083` (the prior "design: native Default/Error prelude-trait decision"
+issue) gets an append-only close-out note recording that its design gate is now satisfied by this
+ratification (its own `status: needs-design` moves to `status: superseded-by-dn` pointing at M-1091).
+DN-02 naming pass FLAGged forward, not applied here (lexicon-owner scope).
+
 ---
 
 ## Meta — changelog
@@ -210,3 +219,8 @@ T-B1-style visibility test — `impl Init for LocalType` and `impl Fault for MyE
   substantive claim this citation supports (`impl Init[T] for LocalType` checks clean today, no new checker
   work) is unchanged and remains true — only the pointer was wrong. Append-only edit to this still-Draft
   note; no status change. (VR-5; G2.)
+- **2026-07-12 — Ratified Accepted (delegated ratification, gap-close-2 batch).** Status moved Draft →
+  Accepted under explicit maintainer delegation (mirrors DN-115/117/118/122/123/124/125/126/127/128). The
+  `Init` trait, the errors-as-values + `Fault: Show` marker design, and the shared `seed_prelude_trait`
+  spine are accepted as designed; OQ-2 stays an open build precondition. Builds nothing yet — **M-1091**
+  minted for the implementation. Append-only; VR-5/G2.

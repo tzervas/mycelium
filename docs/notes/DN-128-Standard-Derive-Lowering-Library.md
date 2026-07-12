@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-128 |
-| **Status** | **Draft** (2026-07-12). Design-reasoner pattern (enumerate → evaluate → recommend-ranked → adversarially test); **recommends, does not ratify** (house rule #3). **Builds nothing** — every mechanism/tag is `Declared`/unbuilt until landed and differential-witnessed. Does not edit `crates/**` or any integration-tier shared file. |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — mirrors the DN-115/117/118/122/123/124/125/126/127 precedent). Was **Draft** (2026-07-12, same day). **Accepted, not Enacted** (house rule #3) — **builds nothing** yet; every mechanism/tag stays `Declared`/unbuilt until the FLAGGED build issue (M-1086, minted at this close-out) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` are applied by this ratification's integration close-out (recorded here, append-only). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | Mycelium's native answer to `#[derive(...)]` is a **standard-derive lowering LIBRARY** — per-derive `lower` rules (DN-54, already landed/Accepted) as **structural folds** over the type's fields/variants (Native Equivalent, DN-111): `Clone` = a value-semantics identity no-op (ratified: the transpiler should *drop* `#[derive(Clone)]` as a satisfied no-op, not generate a trivial impl); `PartialEq`/`Eq` = field-wise `cmp.eq` conjunction; `Hash` = field-wise `hash.blake3` fold; `PartialOrd`/`Ord` = lexicographic `Ord3` fold; `Debug` = structural render via DN-127's `Show`; `Default` = field-wise `init()` via DN-129's `Init`. **A derived total `Eq` over a `Float` field is REFUSED never-silently** (NaN/ADR-040 — a derived `Eq` must use `flt.eq`'s partial semantics, matching Rust's own `derive(Eq)` refusal for `f64`). The load-bearing **OQ-1 (does a `lower` RHS have field reflection?) stays honestly OPEN** — Alt C (compiler-internal field-walk composed by `lower` rules) is ratified as the recommendation precisely because it survives either OQ-1 answer, over Alt A (pure `.myc` library, contingent on OQ-1 resolving positive) and Alt B (compiler-internal only, loses standard/user uniformity). Zero kernel growth beyond the already-landed DN-54 facility (KC-3). `Debug`/`Default` rules are explicitly sequenced **after** DN-127/DN-129 land; the dependency-free derives (`Eq`/`Ord`/`Hash`/`Clone`) are not blocked. Gate PASS clean — ratified on the merits under maintainer delegation; this note's own reasoning (§1–§6) is not re-litigated, only executed and recorded (VR-5). |
 | **Decides (proposes, for ratification)** | Mycelium's **native solution** to the problem Rust `#[derive(Debug, Clone, PartialEq, Default, …)]` solves — *auto-generating the mechanical, structural impls of standard traits* — is a **standard-derive lowering LIBRARY**: a set of `lower StdDerive[T] = <L0 RHS>` rules (the DN-54 facility, already landed) that generate the impls, plus the transpiler mapping `#[derive(D)]` → `derive D for T`. The **facility exists** (DN-54, `lower`/`derive` active, RHS→L0 elaboration landed); the **library of standard rules is unbuilt** — the transpiler today **drops** every `#[derive(...)]` as a `DeriveAttr` sub-gap (`emit.rs:2284/2406/2513/3003`). This note designs that library, per-derive, as **Native Equivalent**. |
 | **Native-solution class (DN-110/DN-111)** | **Native Equivalent** — Mycelium's `derive`/`lower` (DN-38/DN-54) *is* the native construct for generative lowering; `#[derive(D)]` maps to `derive D for T` and each standard `D` is a `lower` rule producing explicit, content-addressed, `reveal`-able L0 (no opacity, KC-3-clean by DN-54 §6). The per-derive faithfulness is itself classified below (some are exact structural equivalents; `Debug`/`Default` depend on DN-127/DN-129). |
 | **Feeds** | DN-34 §8.22 (the `DeriveAttr` drop-and-record sub-gaps + DN-99 register rows 3/50 "std-derive `lower` lib"); DN-54 (the generative-lowering facility this builds the standard rules on); DN-127 (`derive Debug`/`derive Show` target the `Show` render surface); DN-129 (`derive Default` targets the `Init` prelude trait); DN-99 rows 3 (derive-attr) + 50 (impl/derive-undefined-trait + std-derive `lower` lib). |
@@ -193,6 +194,14 @@ until run).
     cross-note dependency in the issue bodies.
 - **DN-99** — rows 3 + 50 should reference DN-128 as the owning design note (flag to the register owner).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-128 row added at status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1086** minted (OQ-1 resolution + the std-derive `lower` library — `Eq`/`Ord`/
+`Hash`/`Clone` first, dependency-free; `Debug`/`Default` rules sequenced after M-1090/DN-127 and
+M-1091/DN-129 land, `depends_on: []` since the dependency-free subset is not blocked) — the transpiler
+`#[derive]`→`derive` mapping is folded into the same tracking issue (WU-3). DN-99 rows 3/50
+cross-reference recorded as a follow-up (not applied to `DN-99` itself here — FLAGged forward).
+
 ---
 
 ## Meta — changelog
@@ -209,3 +218,8 @@ until run).
   NaN semantics), enum/sum-type field-walk scoped second. Cross-note deps: `Debug`→DN-127 (`Show`),
   `Default`→DN-129 (`Init`). All rules `Declared`; tree-facts `Empirical` + `file:line`. **Recommends, does
   not ratify** (house rule #3). Enacts nothing. (Append-only; VR-5; G2.)
+- **2026-07-12 — Ratified Accepted (delegated ratification, gap-close-2 batch).** Status moved Draft →
+  Accepted under explicit maintainer delegation (mirrors DN-115/117/118/122/123/124/125/126/127). The
+  per-derive design, Alt C (compiler-internal field-walk) recommendation, `Clone`-satisfied-no-op finding,
+  and float-`Eq` refusal gate are accepted as designed; OQ-1 stays an open build precondition. Builds
+  nothing yet — **M-1086** minted for the implementation. Append-only; VR-5/G2.

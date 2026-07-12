@@ -16517,6 +16517,7 @@ issues:
       - corpus:ADR-032
       - corpus:RFC-0034
       - corpus:RFC-0018
+      - corpus:DN-126
     body: |
       Filed 2026-07-11 at the gap-close-run integration close-out (backlog, P3 -- not gating the
       current wave). Proposes a **loose/gradual typing developer-experience mode** on the fast
@@ -16554,6 +16555,14 @@ issues:
       - A minimal py2rust-sourced Python fixture flows through Python -> Rust -> Mycelium end to end,
         using py2rust's inferred types as loose hints, with the honest `Declared`/`Empirical` boundary
         preserved (VR-5) -- no fabricated "full Python support" claim from a narrow fixture.
+
+      **Append-only note (2026-07-12, gap-close-2 ratification close-out).** DN-126 ratified
+      **Accepted** (delegated ratification) -- this issue's DoD item 1 ("a DN scoping the loose-mode
+      mechanism ... is ratified before implementation") is now satisfied: the two-mode model (loose =
+      non-refusing checker posture over the unchanged repr-dynamic evaluator; strict = demotion off),
+      the runnable-floor boundary, and the mechanical-strictification principality invariant are all
+      ratified. The build itself (the two fixtures plus the py2rust end-to-end fixture) remains
+      unbuilt; `status:todo` unchanged.
 
   - id: M-1078
     title: "M-1078 -- records/named-fields faithfulness + self-hosted struct-pattern surface (DN-123)"
@@ -16712,6 +16721,13 @@ issues:
       - WU-C (foreign-sig re-homing = M-1076; `Self`-in-trait-sig = M-876) stays explicitly out of
         this issue's scope -- tracked separately, not built here.
 
+      **Append-only note (2026-07-12, gap-close-2 ratification close-out).** DN-130 (Accepted, this
+      close-out) records a *second*, real landing-order dependency on this issue: DN-130's generic
+      trait-instance-impl coherence design needs this issue's home-qualified `CoherenceView` MVP to
+      land before its own build (**M-1087**) can implement coherence-keyed-on-constructor-head; the
+      *landed* `CoherenceView` today is phylum-wide/pub-blind, not home-qualified (VR-5 --
+      Accepted-but-unbuilt is not a landed reuse). `depends_on`/`status` here unchanged by this note.
+
   - id: M-1081
     title: "M-1081 -- transpiler &mut self / &mut T value-threading lowering: by-value receiver/param + call-site rebind, uniqueness-gated, differential-witnessed (DN-125)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -16774,12 +16790,13 @@ issues:
   - id: M-1082
     title: "M-1082 -- Display / int-to-string generic-Display kernel prim + write!/format! value-returning lowering (unblocks 26/30 &mut Formatter Impl gaps)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P2, status:superseded-by-dn]
     epic: E28-1
     depends_on: [M-875]
     doc_refs:
       - "corpus:DN-34#822-the-114-impl-gap-class-root-cause-breakdown-every-avenue-probed-is-design-heavy-cross-leaf-owned-or-zero-yield-gap-close-2-method-body-impl-lever-leaf-empirical"
       - src:crates/mycelium-core/src/prim.rs
+      - corpus:DN-127
     body: |
       Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1082 free
       before minting; M-1081 was highest), tracking the language-completeness gap inventory's row #3
@@ -16812,14 +16829,23 @@ issues:
         needed) -- append-only, honest tags, or an explicit deferral with rationale (M-876-style).
       - Design only; no build in this issue. Ratification is the maintainer's (house rule #3).
 
+      **Append-only note (2026-07-12, gap-close-2 ratification close-out).** DN-127 (Draft ->
+      Accepted, delegated ratification) answers this issue's design question: NO new kernel prim is
+      needed (int->decimal is derivable in std from the already-landed `div_u`/`rem_u`/`bytes_concat`/
+      `width_cast`/recursion prim set, KC-3 held) -- a pure `render: T -> Bytes` plus a `Show` prelude
+      trait is the native answer. This issue's design gate is satisfied; `status` moves
+      `needs-design -> superseded-by-dn`. The implementation is tracked fresh as **M-1090**
+      (`depends_on: [M-1081]`), not built here.
+
   - id: M-1083
     title: "M-1083 -- design: native Default / Error prelude-trait decision (ReservedWord `default` collisions + empty `impl Error` gaps)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    labels: [phase:5, type:design, area:language, priority:P3, status:superseded-by-dn]
     epic: E28-1
     doc_refs:
       - "corpus:DN-34#822-the-114-impl-gap-class-root-cause-breakdown-every-avenue-probed-is-design-heavy-cross-leaf-owned-or-zero-yield-gap-close-2-method-body-impl-lever-leaf-empirical"
       - corpus:language-completeness-gap-inventory
+      - corpus:DN-129
     body: |
       Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1083 free
       before minting; M-1082 was highest), tracking the language-completeness gap inventory's SS6
@@ -16838,6 +16864,14 @@ issues:
       - A Draft DN deciding whether Mycelium gains native `Default`/`Error` prelude traits (and if so,
         their minimal shape, DN-122-MVP-style, or explicit deferral with rationale). Design only, no
         build in this issue; ratification is the maintainer's (house rule #3).
+
+      **Append-only note (2026-07-12, gap-close-2 ratification close-out).** DN-129 (Draft -> Accepted,
+      delegated ratification) answers this issue's design question: YES -- a prelude-seeded
+      single-parameter `Init` trait (`Init[T] { fn init() => T; }`, method not `default` -- a taken
+      keyword) for the Default problem, and errors-as-values plus a `Show`-bounded `Fault` marker
+      (no `source()`, no `dyn Error` boxing) for the Error problem. This issue's design gate is
+      satisfied; `status` moves `needs-design -> superseded-by-dn`. The implementation is tracked
+      fresh as **M-1091** (`depends_on: []`), not built here.
 
   - id: M-1084
     title: "M-1084 -- Import gap-class lever: net-close cross-nodule/cross-phylum resolution (beyond the wave-2 symtab reclassification)"
@@ -16923,3 +16957,269 @@ issues:
         sugar-index self-test failure traced and fixed or re-scoped as its own issue if it proves
         unrelated to token.rs line drift from this same window.
       - `just check-canary` green on `dev` post-fix.
+
+  - id: M-1086
+    title: "M-1086 -- std-derive lowering library: resolve OQ-1 (field reflection) + Eq/Ord/Hash/Clone derive rules, Debug/Default gated on M-1090/M-1091 (DN-128)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-128
+      - corpus:DN-54
+      - src:crates/mycelium-transpile/src/emit.rs:2284
+      - src:crates/mycelium-transpile/src/emit.rs:2406
+      - src:crates/mycelium-transpile/src/emit.rs:2513
+      - src:crates/mycelium-transpile/src/emit.rs:3003
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1086 free
+      before minting; M-1085 was highest). DN-128 (Accepted 2026-07-12,
+      `docs/notes/DN-128-Standard-Derive-Lowering-Library.md`) ratified Mycelium's native answer to
+      `#[derive(Debug/Clone/PartialEq/Default/...)]`: a standard-derive `lower`-rule library over the
+      already-landed DN-54 facility. The transpiler today drops every `#[derive(...)]` as a
+      `DeriveAttr` sub-gap at four `emit.rs` sites.
+
+      User stories (DN-128 SS7, restated):
+      - As a port author, I want `#[derive(PartialEq)]`/`#[derive(Ord)]`/`#[derive(Hash)]` to lower
+        mechanically to a structural-fold `lower` rule, so common derive boilerplate ports without
+        hand-writing the impl.
+      - As a kernel reviewer, I want the library to add zero kernel primitives (structural folds over
+        `cmp.eq`/`Ord3`/`hash.blake3`, monomorphized away by DN-55), so KC-3 holds.
+      - As a maintainer, I want `#[derive(Clone)]` handled as a satisfied no-op under value semantics
+        (not a generated impl), and a derived total `Eq` over a `Float` field refused (ADR-040 NaN
+        semantics), so the honest per-derive faithfulness classes (DN-128 SS2) are preserved.
+
+      Definition of Done (DN-128 SS7, restated as this issue's build gate):
+      - OQ-1 resolved (does a `lower` RHS have field reflection?) -- picks Alt A (pure `.myc` library)
+        vs Alt C (compiler-internal field-walk composed by `lower` rules, the DN-128 recommendation,
+        designed to survive either OQ-1 answer).
+      - Dependency-free derive rules (`Eq`/`Ord`/`Hash`/`Clone`-as-no-op) land, `myc check`-clean and
+        three-way differential-witnessed; NOT blocked on M-1090/M-1091.
+      - `Debug` rule lands after **M-1090** (DN-127's `Show` render surface); `Default` rule lands
+        after **M-1091** (DN-129's `Init` trait) -- both sequenced, not built in this issue's first
+        increment.
+      - The transpiler four-site `#[derive]` -> `derive` mapping (`emit.rs:2284/2406/2513/3003`) with
+        emit<->check agreement + the `Clone`-no-op handling.
+      - An M-1006/DN-124 re-measure quantifies the `DeriveAttr`-class `checked_fraction` movement
+        (`Declared` until run, VR-5).
+
+  - id: M-1087
+    title: "M-1087 -- generic trait-instance impls (impl[T] Trait for Foo[T]): parse/AST lift + constructor-keyed coherence + per-instantiation mono synthesis + transpiler emit (DN-130)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1080]
+    doc_refs:
+      - corpus:DN-130
+      - corpus:DN-103
+      - corpus:DN-122
+      - src:crates/mycelium-l1/src/parse.rs:1234
+      - src:crates/mycelium-l1/src/checkty.rs:2252
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1087
+      free before minting; M-1086 was highest). DN-130 (Accepted 2026-07-12,
+      `docs/notes/DN-130-Generic-Trait-Instance-Impls.md`) ratified the generic trait-instance impl
+      `impl[T] Trait for Foo[T]` -- the one residual DN-103 explicitly deferred -- as a parametric
+      instance head, monomorphized as a family of concrete instances (M-673 alpha-substitution), zero
+      new L0/kernel node. **Real landing-order dependency (not a landed reuse, VR-5):** this build
+      needs **M-1080**'s home-qualified `CoherenceView` MVP to land first -- the landed `CoherenceView`
+      today (`checkty.rs:2252`) is phylum-wide/pub-blind, not home-qualified.
+
+      User stories (DN-130 SS9, restated):
+      - As a port author, I want `impl<T> Display for Wrap<T> { ... }` to port to a single Mycelium
+        `impl[T] Trait for Foo[T]` impl standing for the whole family, so I don't hand-expand one impl
+        per concrete type used.
+      - As a coherence-checker maintainer, I want overlap/orphan/duplicate-instance errors on a
+        parametric head to be explicit `CheckError`s (never a silent mis-accept), so the reject-overlap
+        rule (RFC-0019 SS4.5) stays confluent under the new head shape.
+      - As a kernel reviewer, I want the family to lower via the existing M-673 monomorphizer with zero
+        new kernel primitives, so KC-3 holds.
+
+      Definition of Done (DN-130 SS10, restated as this issue's build gate):
+      - Parse/AST: lift the trait-branch refusal (`parse.rs:1234`) for the single-parameter,
+        structurally-covering subset; `ImplDecl` gains `params`.
+      - Coherence: `(Trait, constructor-head)` uniqueness; overlap = head-unification, rejected;
+        orphan via M-1080's home-qualified closure. Each an explicit `CheckError` (G2).
+      - Mono: per-reachable-instantiation `InstanceDecl` synthesis (alpha-substitution, M-673); the
+        `no_reachable_var` closure invariant holds on emitted specializations.
+      - Witnesses: an accept (two type args -> two specializations, mirroring
+        `tests/check.rs:1493`), the rejects of DN-130 SS7 (overlap, blanket, nested, HKT,
+        bounded-parametric), a DN-26 Rust<->`.myc` differential.
+      - Transpiler emit arm: a Rust `impl<T> Trait for Foo<T>` -> the parametric `.myc` form;
+        `checked_fraction` is the number that moves (DN-124 phylum-mode basis).
+      - `Declared` until built; `Empirical` once witnessed; no `Proven` claim (coherence stays
+        `Declared`-with-argument, VR-5).
+
+  - id: M-1088
+    title: "M-1088 -- bounds on the inherent-impl type-parameter slot (impl[T: Bound] Foo[T]): bounded-parser switch + DN-103 desugar-carries-bounds (DN-131)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-131
+      - corpus:DN-103
+      - src:crates/mycelium-l1/src/parse.rs:1220
+      - src:crates/mycelium-l1/src/checkty.rs:2053
+      - src:crates/mycelium-l1/src/checkty.rs:4850
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1088
+      free before minting; M-1087 was highest). DN-131 (Accepted 2026-07-12,
+      `docs/notes/DN-131-Bounds-On-Non-Function-Type-Parameter-Sites.md`) ratified admitting a `: bound`
+      on the inherent-impl type-parameter slot, discharged by redistribution to the lifted methods --
+      DN-103's Phase-0 desugar already prepends the impl's params to each method; the only change is
+      carrying the bound instead of forcing `bounds: []`, so the already-landed fn-bound path
+      (`check_bounds` + dictionary-free monomorphization) discharges it with zero new discharge code.
+      `type`/`trait` decl-head bounds and `where`-clauses stay declined (RFC-0019 SS4.2 -- YAGNI,
+      grounded in the RFC's own model).
+
+      User stories (DN-131 SS9, restated):
+      - As a port author, I want `impl<T: Clone> Foo<T> { ... }` (several methods sharing one bound)
+        to port to `impl[T: Clone] Foo[T] { ... }` once, not repeated per method or widened to an
+        unbounded impl that loses the constraint.
+      - As a checker maintainer, I want the impl-slot bound to reuse `check_bounds` + the M-673
+        dictionary-free monomorphizer unchanged, so no new discharge path enters the trusted base.
+      - As a maintainer, I want decl-head bounds and `where`-clauses to stay a clear, honest refusal
+        (not silently accepted), so the v1 scope boundary is never ambiguous.
+
+      Definition of Done (DN-131 SS10, restated as this issue's build gate):
+      - Parse: DN-103's impl-slot call switches `parse_type_params_opt` -> `parse_type_params_bounded`
+        (inherent tail only); the trait-instance tail bound-refusal is unchanged (DN-130's scope).
+      - Desugar: DN-103's Phase-0 prepend (`checkty.rs:2053`) carries the impl param's `bounds` instead
+        of forcing `[]`.
+      - Check + mono: `check_bounds` validates the prepended bounds; monomorphization discharges them
+        dictionary-free (M-673). No new discharge path.
+      - Witnesses: an accept (`impl[T: Cmp] Foo[T]` whose method calls `cmp` -> the two-specialization
+        mono witness, mirroring `tests/mono.rs:240`); the rejects (decl-head bound still refused;
+        method re-bind duplicate; unsatisfiable bound at a call); a DN-26 differential.
+      - Transpiler: a Rust `impl<T: Bound>` emits the bounded `.myc` impl slot; a `struct Foo<T: Bound>`
+        emits unbounded `type Foo[T]` + bounded methods.
+      - `Declared` until built; `Empirical` once witnessed; no `Proven` claim (VR-5).
+
+  - id: M-1089
+    title: "M-1089 -- struct-variant pattern transpiler build: variant-aware StructLayout + Pat::Struct map_pattern arm (DN-132 P1, DN-34 SS8.22 finding #5 follow-on)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-132
+      - corpus:DN-34
+      - src:crates/mycelium-transpile/src/emit.rs:2159
+      - src:crates/mycelium-transpile/src/emit.rs:28
+      - src:crates/mycelium-transpile/src/transpile.rs:315
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1089
+      free before minting; M-1088 was highest). DN-132 (Accepted -- P1 only, 2026-07-12,
+      `docs/notes/DN-132-L3-Pattern-Surface-Cluster-Struct-Variant-Range-At-Binding.md`) ratified the
+      P1 struct-variant-pattern remapping -- the DN-34 SS8.22 finding #5 buildable follow-on (~6/114
+      Impl-class gaps): a `Pat::Struct` arm in `map_pattern_inner`, resolving each named field to its
+      declaration index via a **variant-aware** `StructLayout` (keyed by emitted ctor name, populated
+      from `Item::Enum` struct-variants too), emitting a positional `Pattern::Ctor`. Reuses the Maranget
+      usefulness pass unchanged -- zero kernel growth. **This issue tracks the transpiler half only**
+      (immediately actionable, no cross-DN dependency); the self-hosted `.myc` half is DN-123-dependent
+      and the P2/P3 `when`-guard-idiom emission depends on M-833/DN-79 landing -- both are FLAGged
+      follow-ups (DN-132 FLAG-5), not minted in this close-out to avoid filing issues that imply
+      actionability they do not have.
+
+      User stories (DN-132 SS12, restated):
+      - As a port author, I want `match f { Foo { x, y } => ... }` and `Self::NotFound { path, .. }` to
+        port mechanically, so the ~6/114 Impl-class struct-variant-pattern gaps close and the ported
+        `.myc` reads against field names, not brittle positions.
+      - As a maintainer, I want this to be a mechanically-lowering remapping with zero kernel growth
+        (reuses `Ctor` + the existing Maranget usefulness pass unchanged), so KC-3 and value-semantic
+        positional identity (ADR-003) are preserved.
+
+      Definition of Done (DN-132 SS5.1/SS5.2, restated as this issue's build gate):
+      - `StructLayout` variant-awareness: key layouts by emitted ctor name; `struct_layouts`
+        (`transpile.rs:315`) also walks `Item::Enum` variants with `Fields::Named`. A population change
+        to the existing `HashMap<String, Vec<Option<String>>>`, not a new type.
+      - `Pat::Struct` arm in `map_pattern_inner` (`emit.rs:2159`): resolve ctor name, fetch the layout
+        (`None` -> never-silent gap), resolve each named field to its index (unresolved name / duplicate
+        field name -> never-silent refusal), build the positional `subs` with wildcards at unmentioned
+        indices (`..` rest), emit `Ctor(name, subs)`.
+      - Never-silent tests: OQ-4 (`..`-rest arity from a confirmed layout only), OQ-5 (field-order
+        canonicalization to declaration order, inheriting DN-123 OQ-1), OQ-3(a) (pattern-position
+        matching on a DN-104-sealed ctor stays allowed).
+      - Differential-witnessed on the DN-34 SS8.22 struct-variant-pattern targets before any
+        `Empirical` upgrade past `Declared` (VR-5).
+
+  - id: M-1090
+    title: "M-1090 -- native formatting build: std to_dec/digit_byte + Show prelude trait + transpiler write!/format! lowering (DN-127)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E28-1
+    depends_on: [M-1081]
+    doc_refs:
+      - corpus:DN-127
+      - src:lib/std/fmt.myc
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1090
+      free before minting; M-1089 was highest). DN-127 (Accepted 2026-07-12,
+      `docs/notes/DN-127-Native-Formatting-Display-Write-Format-And-The-Value-To-Text-Primitive.md`)
+      ratified Mycelium's native answer to `Display`/`write!`/`format!`: a pure `render: T -> Bytes`
+      (no `&mut Formatter` sink), int->decimal derivable in std from the landed prim set (no new kernel
+      prim, KC-3), and a `Show` single-param prelude trait for generic dispatch. Depends on **M-1081**
+      (DN-125's `&mut Formatter`-parameter value-threading build) for the merge-order dependency DN-127
+      SS2 names.
+
+      User stories (DN-127 SS-user-stories via SS8, restated):
+      - As a port author, I want a `Display`/`Debug::fmt` body (`write!(f, "{}", n)`) to lower to a
+        `bytes_concat`-fragment render, so the single largest clean `Impl`-class bucket (30 pure gaps,
+        DN-34 SS8.22) ports mechanically instead of hard-gapping.
+      - As a kernel reviewer, I want int->decimal rendering built from the already-landed
+        `div_u`/`rem_u`/`bytes_concat`/`width_cast` prims, so KC-3 holds -- no new kernel primitive.
+      - As a maintainer, I want float rendering to stay an honest, flagged residual (OQ-1) rather than
+        a fabricated shortest-decimal render, so G2/VR-5 hold.
+
+      Definition of Done (DN-127 SS8, restated as this issue's build gate):
+      - WU-1 (std): `to_dec` (unsigned + signed, per supported width) + `digit_byte` + sign handling,
+        and `impl Show` for the primitive reprs, in `lib/std/fmt.myc`; `myc check`-clean and three-way
+        differential-witnessed.
+      - WU-2 (prelude): `Show` seeded conditionally (DN-129's `seed_prelude_trait` mechanism) with a
+        T-B1-style visibility test.
+      - WU-3 (transpiler): the `write!`/`format!` lowering rule (Alt C literals first, then `Show`
+        dispatch) with T-1/T-2/T-3 property tests green and emit<->check agreement proven.
+      - An M-1006/DN-124 re-measure quantifies the `checked_fraction` movement on the 30-body bucket
+        (`Declared` until run).
+      - Float render (OQ-1) and width-generic `to_dec` stay explicit residuals, not part of this MVP.
+
+  - id: M-1091
+    title: "M-1091 -- Init + Fault prelude traits + shared seed_prelude_trait helper (DN-129)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-129
+      - src:crates/mycelium-l1/src/checkty.rs:1358
+      - src:crates/mycelium-l1/src/checkty.rs:1372
+    body: |
+      Filed 2026-07-12 at the gap-close-2 ratification close-out (mitigation #1 -- verified M-1091
+      free before minting; M-1090 was highest). DN-129 (Accepted 2026-07-12,
+      `docs/notes/DN-129-Native-Default-And-Error-Prelude-Traits.md`) ratified: (1) a prelude-seeded
+      single-parameter `Init` trait (`Init[T] { fn init() => T; }`, method not `default` -- a taken
+      keyword) for the Default problem; (2) errors-as-values plus a `Show`-bounded `Fault` marker for
+      the Error problem (no `source()`, no `dyn Error` boxing -- deliberate divergences); (3) a shared
+      `seed_prelude_trait` helper factored from the landed `Fuse`/`Ord3` seeds (`checkty.rs:1358`/
+      `:1372`), which DN-127's `Show` also rides.
+
+      User stories (DN-129 SS7, restated):
+      - As a port author, I want `impl Default for T` to have a native `Init` target so `derive Default`
+        (DN-128) and the 14 reserved-word `impl Default` sub-issues (DN-34 SS8.22 finding 3) port
+        mechanically.
+      - As a port author, I want an empty `impl Error for X {}` marker to check clean because `X: Show`,
+        so the 12 empty-marker gaps close without re-inventing `source()`/`dyn Error` boxing.
+      - As a kernel reviewer, I want `Fuse`/`Ord3` migrated onto the same shared seed helper `Init`/
+        `Fault`/`Show` use, so the seeding mechanism is DRY across all four prelude traits.
+
+      Definition of Done (DN-129 SS7, restated as this issue's build gate):
+      - `Init` + `Fault` prelude builders + the shared `seed_prelude_trait` helper in `mycelium-l1`,
+        with `Fuse`/`Ord3` migrated to the helper (behavior-identical, tests green).
+      - A T-B1-style visibility test: `impl Init for LocalType` / `impl Fault for MyErr` check clean
+        with no `use`.
+      - OQ-2 resolved (supertrait bound `Fault: Show` admitted, or `Fault` shipped as a bare marker
+        with the boundary recorded).
+      - DN-128's `derive Default` witnessed lowering into an `Init` impl (the cross-note gate).
+      - `Declared` until built; `Empirical` once witnessed (VR-5).
