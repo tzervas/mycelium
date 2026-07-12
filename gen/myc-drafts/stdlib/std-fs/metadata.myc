@@ -16,14 +16,14 @@
 nodule std.fs.metadata;
 
 // The kind of filesystem entry.
-type FileKind = File | Directory | Symlink | Other;
+pub type FileKind = File | Directory | Symlink | Other;
 
 // Read/write/execute permission bits for owner, group, and others.
 //
 // Represented as a plain value; no implicit behavior. Stored as the Unix permission bits
 // (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should
 // interpret raw bits (C3: no opaque bit patterns).
-type Permissions = Permissions(Binary{32});
+pub type Permissions = Permissions(Binary{32});
 
 impl Permissions {
   // Construct from raw Unix mode bits.
@@ -54,7 +54,7 @@ impl Permissions {
 //
 // Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is
 // `std.time` (M-529), not `fs` (spec §2).
-type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
+pub type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
 
 impl Metadata {
   // Construct a metadata value directly (used by the in-memory substrate).

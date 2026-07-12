@@ -23,34 +23,82 @@
       "source_file": "crates/mycelium-std-io/src/io.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `read_all`: unknown type `Source`",
+      "diagnostic": "check-error: check error in `std.io.io.<use>`: `use std.io.error.IoError`: no such name `std.io.error.IoError` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 13,
-      "emitted_items": 1
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/lib.myc",
       "source_file": "crates/mycelium-std-io/src/lib.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.io.<use>`: `use std.io.error.ByteCount`: no such name `std.io.error.ByteCount` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 4,
-      "emitted_items": 0
+      "emitted_items": 3
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-io/serialize.myc",
       "source_file": "crates/mycelium-std-io/src/serialize.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `is_domain_error`: unknown function/constructor/prim `contains`",
+      "diagnostic": "check-error: check error in `std.io.serialize.<use>`: `use std.io.error.ByteOffset`: no such name `std.io.error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 17,
-      "emitted_items": 3
+      "emitted_items": 4
     }
   ],
   "total_non_test_items": 59,
-  "total_emitted_items": 13,
+  "total_emitted_items": 18,
   "total_checked_clean_items": 6,
   "class_counts": {
-    "CheckError": 3,
-    "Clean": 2
-  }
+    "CheckError": 4,
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.io.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "CheckError",
+        "site": "MatrixRow",
+        "on": null,
+        "message": "unknown type `GuaranteeTag`"
+      },
+      {
+        "nodule": "std.io.io",
+        "file": "io.myc",
+        "class": "CheckError",
+        "site": "read_all",
+        "on": null,
+        "message": "unknown type `Source`"
+      },
+      {
+        "nodule": "std.io",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "read_all",
+        "on": null,
+        "message": "unknown type `Source`"
+      },
+      {
+        "nodule": "std.io.serialize",
+        "file": "serialize.myc",
+        "class": "CheckError",
+        "site": "is_domain_error",
+        "on": null,
+        "message": "unknown function/constructor/prim `contains`"
+      }
+    ],
+    "diagnostic": "unknown type `GuaranteeTag`"
+  },
+  "total_checked_clean_items_phylum": 6
 }

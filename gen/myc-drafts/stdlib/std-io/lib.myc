@@ -115,4 +115,13 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.io;
 
+use std.io.error.ByteCount;
+use std.io.error.ByteOffset;
+use std.io.error.FieldPath;
+use std.io.error.IoError;
+use std.io.error.ReadValueError;
+use std.io.error.SerError;
 
+use std.io.serialize.Format;
+
+use std.io.io.read_all;

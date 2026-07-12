@@ -10,6 +10,7 @@ mod map;
 mod prim_map;
 mod remap;
 mod reserved;
+mod symtab;
 mod taxonomy;
 mod transpile;
 mod vet;

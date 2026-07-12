@@ -29,7 +29,7 @@ nodule std.fs.options;
 // - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).
 // - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).
 // - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).
-type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
+pub type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
 
 impl OpenOptions {
   // All-false options: pure open (no create, no truncate, no write).

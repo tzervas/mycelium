@@ -69,4 +69,5 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.runtime.scope_region;
 
-
+use std.runtime.region.ClosedRegion;
+use std.runtime.region.ScopeNodeId;

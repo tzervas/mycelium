@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-runtime/src/scope_region.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:ClosedRegion,ScopeNodeId"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-runtime/src/scope_region.rs",
@@ -9,7 +11,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -19,7 +21,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: reclamation :: ReclamationSink ;",
-      "reason": "`use` import (single path ending `ReclamationSink`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use reclamation::ReclamationSink` — `ReclamationSink` is not among sibling `reclamation`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -29,8 +31,8 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: region :: { ClosedRegion , Region , ScopeNodeId } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use region::Region` — `Region` is not among sibling `region`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:ClosedRegion,ScopeNodeId"
     },
     {
       "file": "crates/mycelium-std-runtime/src/scope_region.rs",

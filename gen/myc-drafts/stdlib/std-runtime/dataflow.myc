@@ -31,6 +31,8 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.runtime.dataflow;
 
+use std.runtime.task.Deadlock;
+
 // One non-blocking step of a communicating task.
 type Step = Done | Pending;
 

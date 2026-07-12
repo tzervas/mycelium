@@ -91,6 +91,10 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.content;
 
+use std.content.content_ref.RefKind;
+
+use std.content.error.MalformedDigest;
+
 // Identity equality by digest: two content hashes are **the same identity** iff their digests
 // are equal.
 //

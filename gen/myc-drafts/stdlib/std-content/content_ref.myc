@@ -21,8 +21,10 @@
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.content.content_ref;
 
+use std.content.error.MalformedDigest;
+
 // The role a [`ContentRef`] points to (the explicit kind tag).
 //
 // This is metadata **about the pointer**, not the pointed-to value. It lets cert / policy /
 // `spore` modules distinguish roles without parsing the digest.
-type RefKind = Value | Def | Operation | Policy | Spore | Other;
+pub type RefKind = Value | Def | Operation | Policy | Spore | Other;

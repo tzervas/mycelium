@@ -15,5 +15,21 @@
   "total_checked_clean_items": 0,
   "class_counts": {
     "CheckError": 1
-  }
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.time",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "as_nanos",
+        "on": null,
+        "message": "duplicate function"
+      }
+    ],
+    "diagnostic": "duplicate function"
+  },
+  "total_checked_clean_items_phylum": 0
 }

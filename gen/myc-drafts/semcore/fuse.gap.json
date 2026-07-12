@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-l1/src/fuse.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:CheckError"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-l1/src/fuse.rs",
@@ -9,7 +11,7 @@
       "category": "ReservedWord",
       "rust_construct": "ReservedWord",
       "snippet": "nodule l1.fuse;",
-      "reason": "derived nodule path `l1.fuse` has segment(s) [fuse] colliding with a Mycelium reserved word — emitting them verbatim would fail to parse (`nodule l1.fuse;` tokenizes the colliding word as a keyword, not an identifier); the colliding segment(s) are dropped from the emitted nodule path (now `l1`) rather than guessed at a rename (G2/VR-5)",
+      "reason": "derived nodule path `l1.fuse` has segment(s) [fuse] colliding with a Mycelium reserved word — emitting them verbatim would fail to parse (`nodule l1.fuse;` tokenizes the colliding word as a keyword, not an identifier); each colliding segment is escaped with the `_kw` suffix (now `l1.fuse_kw`) rather than dropped, so distinct source files whose only differing segment is a reserved word (e.g. `l1.fuse` vs `l1.nodule`) stay distinguishable instead of both collapsing onto the same nodule path (G2/VR-5)",
       "item_name": null
     },
     {
@@ -19,7 +21,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: collections :: BTreeMap ;",
-      "reason": "`use` import (single path ending `BTreeMap`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std.collections::BTreeMap` — `std.collections` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -29,7 +31,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: ast :: { BaseType , FnDecl , FnSig , Param , TypeRef , Vis } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use ast::BaseType` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::FnDecl` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::FnSig` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Param` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::TypeRef` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use ast::Vis` — `ast` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -39,8 +41,48 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use checkty::DataInfo` — `DataInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:CheckError"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 49,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
+      "reason": "`use checkty::Env` — `Env` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:CheckError"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 49,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
+      "reason": "`use checkty::InstanceInfo` — `InstanceInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:CheckError"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 49,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
+      "reason": "`use checkty::TraitInfo` — `TraitInfo` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:CheckError"
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "line": 49,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use crate :: checkty :: { CheckError , DataInfo , Env , InstanceInfo , TraitInfo , Ty } ;",
+      "reason": "`use checkty::Ty` — `Ty` is not among sibling `checkty`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:CheckError"
     },
     {
       "file": "crates/mycelium-l1/src/fuse.rs",
@@ -49,7 +91,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: eval :: Evaluator ;",
-      "reason": "`use` import (single path ending `Evaluator`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use eval::Evaluator` — `Evaluator` is not among sibling `eval`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {

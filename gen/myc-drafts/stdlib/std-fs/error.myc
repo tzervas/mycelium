@@ -22,7 +22,7 @@ nodule std.fs.error;
 // This is the RFC-0013 "errno-class" column in the diagnostic record. Each variant
 // maps a POSIX errno *class* to a typed value; the raw OS code is preserved in the
 // `Os` variant of `FsErr` for tooling, but is *never* the primary identifier.
-type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
+pub type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
 
 // The explicit, traceable filesystem error (RFC-0013 diagnostic record).
 //
@@ -39,4 +39,4 @@ type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADir
 // names the failing operation and the cause. The `Os` variant preserves the raw
 // errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*
 // identifier that a caller pattern-matches on.
-type FsErr = NotFound(Bytes, Bytes) | PermDenied(Bytes, Bytes) | AlreadyExists(Bytes, Bytes) | NotADirectory(Bytes, Bytes) | IsADirectory(Bytes, Bytes) | NotEmpty(Bytes, Bytes) | DiskFull(Bytes, Bytes) | CrossDevice(Bytes, Bytes, Bytes) | WouldBlock(Bytes, Bytes) | Interrupted(Bytes, Bytes) | Loop(Bytes, Bytes) | UseAfterConsume(Bytes, Bytes) | InvalidOptions(Bytes, Bytes) | Os(Bytes, ErrnoClass, Binary{32}, Bytes);
+pub type FsErr = NotFound(Bytes, Bytes) | PermDenied(Bytes, Bytes) | AlreadyExists(Bytes, Bytes) | NotADirectory(Bytes, Bytes) | IsADirectory(Bytes, Bytes) | NotEmpty(Bytes, Bytes) | DiskFull(Bytes, Bytes) | CrossDevice(Bytes, Bytes, Bytes) | WouldBlock(Bytes, Bytes) | Interrupted(Bytes, Bytes) | Loop(Bytes, Bytes) | UseAfterConsume(Bytes, Bytes) | InvalidOptions(Bytes, Bytes) | Os(Bytes, ErrnoClass, Binary{32}, Bytes);

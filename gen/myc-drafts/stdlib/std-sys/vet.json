@@ -79,5 +79,77 @@
   "class_counts": {
     "CheckError": 2,
     "Clean": 6
-  }
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.sys.fs",
+        "file": "fs.myc",
+        "class": "CheckError",
+        "site": "exists",
+        "on": null,
+        "message": "unknown type `Path`"
+      },
+      {
+        "nodule": "std.sys.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "CheckError",
+        "site": "MatrixRow",
+        "on": null,
+        "message": "unknown type `GuaranteeTag`"
+      },
+      {
+        "nodule": "std.sys.io",
+        "file": "io.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.sys",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.sys.math",
+        "file": "math.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.sys.rand",
+        "file": "rand.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.sys.sys",
+        "file": "sys.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.sys.time",
+        "file": "time.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": "unknown type `GuaranteeTag`"
+  },
+  "total_checked_clean_items_phylum": 16
 }
