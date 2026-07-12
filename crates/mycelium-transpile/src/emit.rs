@@ -228,6 +228,27 @@ fn struct_layout(name: &str) -> Option<StructLayout> {
     })
 }
 
+/// The M-1006 Lever 1 field-projection text for reading position `pos` of `sty` off `base`: a
+/// `match` binding exactly that position and wildcarding the rest, parenthesized so it composes
+/// as an operand subexpression (`(match self { Ty(p0, _, ..) => p0 })`). Shared by
+/// [`EmitVisitor::visit_field`] (`base == "self"`, an ordinary field READ) and (DN-125/M-1081)
+/// [`reconstruct_positional`] (reading every UNCHANGED field while rebuilding `sty` with one
+/// position replaced) — kept as one function so the two call sites can never emit a differently-
+/// shaped projection for what is semantically the same operation (DRY, house rule #5).
+fn field_projection_text(sty: &str, layout: &StructLayout, base: &str, pos: usize) -> String {
+    let bind = format!("p{pos}");
+    let pats: Vec<String> = (0..layout.len())
+        .map(|i| {
+            if i == pos {
+                bind.clone()
+            } else {
+                "_".to_string()
+            }
+        })
+        .collect();
+    format!("(match {base} {{ {sty}({}) => {bind} }})", pats.join(", "))
+}
+
 /// The gap-close-2 cross-nodule `pub`-propagation gate: `"pub "` when `name` is in this file's
 /// pub-needed set (at least one sibling in the batch resolved a `use` against it — see [`EmitCtx`]
 /// docs), else `""`. Context off ⇒ always `""` (byte-identical to pre-symtab emission).
@@ -548,6 +569,35 @@ struct MappedSig {
     /// the internal (never-emitted) [`TypeEnv`] marker `Expr::Binary`/`Expr::Unary`'s signed-gate
     /// reads. Never includes `"self"` (a receiver's type is a struct/`Self`, never numeric).
     signed_param_names: HashSet<String>,
+    /// DN-125 (M-1081) value-threading: non-empty exactly when this signature had a `&mut self`
+    /// receiver and/or one or more top-level `&mut T` parameters — Alt A, Rank 1 (the by-value
+    /// receiver/param + rebind lowering). `ret` already reflects the threaded tuple/type (see
+    /// [`map_signature`]'s receiver/param arms); body emission must go through
+    /// [`emit_mutating_block_as_expr`] instead of [`emit_block_as_expr`] whenever this is
+    /// non-empty. Ordered: the receiver first (if `&mut self`), then each `&mut T` parameter in
+    /// declaration order.
+    threaded: Vec<ThreadedBinding>,
+    /// DN-125 §5.1: `Some(mapped type text)` when, IN ADDITION to the threaded binding(s) above,
+    /// the ORIGINAL (pre-lowering) Rust return type carries a genuine extra value the body must
+    /// still produce (e.g. `fn incr(&mut self, by: u64) -> u64`) — `None` when the original
+    /// return was `()` or the `&mut Self` builder-chain shape ([`is_mut_self_return`]), in which
+    /// case the threaded binding(s) alone constitute the whole return value.
+    threaded_extra_ret: Option<String>,
+}
+
+/// DN-125 (M-1081) — one value-threaded `&mut self`/`&mut T` binding: the Mycelium name it keeps
+/// (unchanged from the Rust source — `"self"` for a receiver, else the parameter's own name), its
+/// mapped (erased-to-value) Mycelium type text, and — when resolvable — the in-file struct layout
+/// that enables FIELD-level reassignment (`self.<field> = ..`) reconstruction in
+/// [`emit_mutating_block_as_expr`]. `layout` is only ever consulted for `name == "self"` (field
+/// projection, `visit_field`/[`field_projection_text`], is wired for the `self` base only); a
+/// non-`self` threaded binding supports only WHOLE-VALUE reassignment (`*name = ..`), so its
+/// `layout` is carried for completeness but never read.
+#[derive(Clone)]
+struct ThreadedBinding {
+    name: String,
+    ty: String,
+    layout: Option<StructLayout>,
 }
 
 /// Build the body's initial [`TypeEnv`] from a mapped signature's `params` — the two body-emission
@@ -595,22 +645,33 @@ fn map_signature(
     let type_params = plain_type_params(generics)?;
     let mut params = Vec::with_capacity(inputs.len());
     let mut signed_param_names = HashSet::new();
+    let mut threaded: Vec<ThreadedBinding> = Vec::new();
     for arg in inputs {
         match arg {
             FnArg::Receiver(r) => {
-                if r.reference.is_some() && r.mutability.is_some() {
-                    return Err(GapReason::new(
-                        Category::Other,
-                        "`&mut self` conflicts with Mycelium's value semantics (ADR-003) — no \
-                         correspondence",
-                    ));
-                }
                 let ty = self_ty.ok_or_else(|| {
                     GapReason::new(
                         Category::Other,
                         "`self` parameter with no enclosing impl/trait context",
                     )
                 })?;
+                if r.reference.is_some() && r.mutability.is_some() {
+                    // DN-125 (M-1081), Alt A Rank 1: value-thread `&mut self` instead of the
+                    // pre-DN-125 hard gap — take the receiver BY VALUE (identical to the existing
+                    // `&self` erasure just below) and record it as threaded so the return type
+                    // (below) widens to carry the mutated value back out; the call-site rebind is
+                    // the driver's/caller's job (`emit_mutating_block_as_expr`'s body-level half,
+                    // and the corpus-level `x.f(a)` -> `x = f(x, a)` desugar this DN scopes to
+                    // in-body statement position — see that fn's module doc). `layout` is
+                    // `None` when `ty` isn't an emitted in-file single-ctor struct — value-
+                    // threading the WHOLE receiver still works then (a body ending in a full
+                    // reconstruction/replacement), only FIELD-level reassignment needs the layout.
+                    threaded.push(ThreadedBinding {
+                        name: "self".to_string(),
+                        ty: ty.to_string(),
+                        layout: struct_layout(ty),
+                    });
+                }
                 params.push(("self".to_string(), ty.to_string()));
             }
             FnArg::Typed(pt) => {
@@ -630,6 +691,30 @@ fn map_signature(
                 // an UNUSED param's body references never pass through Expr::Path — so the
                 // reserved-word guard must fire here, not only at use sites (PR #1207 review).
                 crate::reserved::guard_ident(&name, "fn parameter")?;
+                // DN-125 (M-1081) S2: a top-level `&mut T` PARAMETER value-threads exactly like
+                // the receiver above — erase to the referent's value type and record it as
+                // threaded, rather than the blanket `&mut T` gap `map_type`'s `visit_reference`
+                // still applies to every OTHER (nested) `&mut T` position (a return type, a
+                // generic argument, a struct field) — deliberately UNCHANGED there. That
+                // untouched gap is exactly what closes the DN-125 §6.2 interior-&mut-return
+                // narrowing "for free": a `&mut self` method returning `&mut Field` still fails
+                // to map its return type below (an interior mutable borrow is never faithfully a
+                // value), so it still gaps as a whole — never silently value-threaded.
+                if let syn::Type::Reference(r) = &*pt.ty {
+                    if r.mutability.is_some() {
+                        let ty = map_type(&r.elem, self_ty)?;
+                        if type_is_signed_int(&r.elem) {
+                            signed_param_names.insert(name.clone());
+                        }
+                        threaded.push(ThreadedBinding {
+                            name: name.clone(),
+                            ty: ty.clone(),
+                            layout: struct_layout(&ty),
+                        });
+                        params.push((name, ty));
+                        continue;
+                    }
+                }
                 let ty = map_type(&pt.ty, self_ty)?;
                 // P4/P5 (DN-99 §8 ENB-6): record signedness off the ORIGINAL `syn::Type` — the
                 // one place it is still legible before `map_type` erases it onto the shared,
@@ -641,22 +726,102 @@ fn map_signature(
             }
         }
     }
-    let ret = match output {
-        ReturnType::Default => {
-            return Err(GapReason::new(
-                Category::Other,
-                "function has no return type (implicit `()`) — no unit value is representable \
-                 in this grammar fragment",
-            ))
+    let (ret, threaded_extra_ret) = if threaded.is_empty() {
+        // Unchanged pre-DN-125 path.
+        let ret = match output {
+            ReturnType::Default => {
+                return Err(GapReason::new(
+                    Category::Other,
+                    "function has no return type (implicit `()`) — no unit value is \
+                     representable in this grammar fragment",
+                ))
+            }
+            ReturnType::Type(_, ty) => map_type(ty, self_ty)?,
+        };
+        (ret, None)
+    } else {
+        // DN-125 §5.1 return-type composition: the threaded binding(s) alone, OR — when the
+        // source genuinely returns an extra value — a tuple of the threaded binding(s) plus that
+        // value.
+        match output {
+            ReturnType::Default => (thread_ret_text(&threaded), None),
+            ReturnType::Type(_, ty) => {
+                if is_mut_self_return(ty, self_ty) {
+                    // DN-125 §1/§4 "builder methods": `-> &mut Self` returns the receiver ITSELF
+                    // for chaining, not an interior reference into self — value-semantically
+                    // identical to the `()` case (the mutated receiver alone), never gapped as
+                    // an interior-`&mut`-return residual (§6.2 is about returning a reference
+                    // INTO self, e.g. `get_mut`, not the receiver's own value).
+                    (thread_ret_text(&threaded), None)
+                } else {
+                    // A genuine extra return value. `map_type` still applies its EXISTING,
+                    // UNCHANGED `&mut T` gap here for any other reference-shaped return — the
+                    // §6.2 interior-&mut-return narrowing, falling out of code this DN does not
+                    // touch.
+                    let extra = map_type(ty, self_ty)?;
+                    (thread_ret_text_with_extra(&threaded, &extra), Some(extra))
+                }
+            }
         }
-        ReturnType::Type(_, ty) => map_type(ty, self_ty)?,
     };
     Ok(MappedSig {
         params,
         ret,
         type_params,
         signed_param_names,
+        threaded,
+        threaded_extra_ret,
     })
+}
+
+/// DN-125 §5.1: the threaded-binding-only return-type text — a single type when there is exactly
+/// one threaded binding, else a tuple of all of them in order.
+fn thread_ret_text(threaded: &[ThreadedBinding]) -> String {
+    if threaded.len() == 1 {
+        threaded[0].ty.clone()
+    } else {
+        format!(
+            "({})",
+            threaded
+                .iter()
+                .map(|t| t.ty.clone())
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+}
+
+/// [`thread_ret_text`] plus one extra (non-threaded) return value appended to the tuple.
+fn thread_ret_text_with_extra(threaded: &[ThreadedBinding], extra: &str) -> String {
+    let mut parts: Vec<String> = threaded.iter().map(|t| t.ty.clone()).collect();
+    parts.push(extra.to_string());
+    format!("({})", parts.join(", "))
+}
+
+/// DN-125 §1/§4: whether `ty` is `&mut Self` or `&mut <self_ty>` — the receiver's OWN type
+/// returned by (mutable) reference, the "builder method" chaining shape (`fn set_x(&mut self, ..)
+/// -> &mut Self { .. ; self }`). This is NOT an interior-`&mut`-return (§6.2's `get_mut`/
+/// `iter_mut`/`IndexMut` residual, which returns a reference into a *different*, unrelated part of
+/// self) — it is exactly the receiver's own mutated value, so it value-threads like the `()` case.
+/// `false` for every other shape (including `&mut` to any OTHER named type) — never a guess: only
+/// a syntactic match against the enclosing `self_ty` name (or the literal `Self` keyword).
+fn is_mut_self_return(ty: &syn::Type, self_ty: Option<&str>) -> bool {
+    let Some(sty) = self_ty else {
+        return false;
+    };
+    let syn::Type::Reference(r) = ty else {
+        return false;
+    };
+    if r.mutability.is_none() {
+        return false;
+    }
+    let syn::Type::Path(tp) = &*r.elem else {
+        return false;
+    };
+    let Some(seg) = tp.path.segments.last() else {
+        return false;
+    };
+    matches!(seg.arguments, PathArguments::None) && (seg.ident == "Self" || seg.ident == sty)
 }
 
 fn render_fn(name: &str, sig: &MappedSig, body: &str, doc: &[String], pub_prefix: &str) -> String {
@@ -704,6 +869,54 @@ fn render_fn_sig(name: &str, sig: &MappedSig) -> String {
 // MultiStmtBody gap — a KNOWN HARD GAP named in the kickoff brief.
 // ---------------------------------------------------------------------------------------------
 
+/// Emit one plain `let`-binding statement's `(name, value)` pair, extending `local_env` in place
+/// with the RHS's decidable type — the two shapes [`expr_env_type`]/[`known_struct_literal_ty`]
+/// cover (a bare-identifier alias, or an in-file struct literal), exactly mirroring
+/// [`emit_block_as_expr_inner`]'s pre-DN-125 inline logic (this is a pure extraction, no behavior
+/// change). Shared by [`emit_block_as_expr_inner`] and (DN-125/M-1081)
+/// [`emit_mutating_block_as_expr_inner`] so the plain `let`-binding rules never drift between the
+/// two body-emission paths (DRY, house rule #5).
+fn emit_local_binding(
+    local: &syn::Local,
+    self_ty: Option<&str>,
+    local_env: &mut TypeEnv,
+) -> Result<(String, String), GapReason> {
+    let name = match &local.pat {
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => pi.ident.to_string(),
+        _ => {
+            return Err(GapReason::new(
+                Category::MultiStmtBody,
+                "`let` binding uses an unsupported pattern (only simple `let x = e;` is \
+                 supported)",
+            ))
+        }
+    };
+    let init = local.init.as_ref().ok_or_else(|| {
+        GapReason::new(Category::MultiStmtBody, "`let` binding has no initializer")
+    })?;
+    if init.diverge.is_some() {
+        return Err(GapReason::new(
+            Category::MultiStmtBody,
+            "`let ... else` has no Mycelium equivalent",
+        ));
+    }
+    let value = emit_expr(&init.expr, self_ty, local_env)?;
+    // See `emit_block_as_expr_inner`'s original doc (preserved verbatim in intent): only the two
+    // decidable RHS shapes extend `local_env`; a shadowed stale entry is removed, never kept
+    // (VR-5).
+    match expr_env_type(&init.expr, local_env)
+        .or_else(|| known_struct_literal_ty(&init.expr, self_ty))
+    {
+        Some(ty) => {
+            local_env.insert(name.clone(), ty);
+        }
+        None => {
+            local_env.remove(&name);
+        }
+    }
+    Ok((name, value))
+}
+
 pub fn emit_block_as_expr(
     block: &Block,
     self_ty: Option<&str>,
@@ -750,53 +963,7 @@ fn emit_block_as_expr_inner(
     for s in lets {
         match s {
             Stmt::Local(local) => {
-                let name =
-                    match &local.pat {
-                        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
-                            pi.ident.to_string()
-                        }
-                        _ => return Err(GapReason::new(
-                            Category::MultiStmtBody,
-                            "`let` binding uses an unsupported pattern (only simple `let x = e;` \
-                             is supported)",
-                        )),
-                    };
-                let init = local.init.as_ref().ok_or_else(|| {
-                    GapReason::new(Category::MultiStmtBody, "`let` binding has no initializer")
-                })?;
-                if init.diverge.is_some() {
-                    return Err(GapReason::new(
-                        Category::MultiStmtBody,
-                        "`let ... else` has no Mycelium equivalent",
-                    ));
-                }
-                let value = emit_expr(&init.expr, self_ty, &local_env)?;
-                // Extend `local_env` for this name only when the RHS's type is trivially known —
-                // never a type-inference pass, just the two shapes this module can decide without
-                // guessing (VR-5): (a) the RHS is itself a bare identifier already in scope (copy
-                // its known type verbatim — a `let`-alias), or (b) the RHS is a struct literal of
-                // an in-file struct that actually emits (the same `struct_layout` gate
-                // `Expr::Struct`'s own emission already uses, so this never records a type for a
-                // struct that itself gapped). Any other RHS shape (a call, an arithmetic
-                // expression, a literal, …) leaves `name` absent from `local_env` — absence, not a
-                // wrong guess. Critically, when `name` **shadows** an existing binding and the new
-                // RHS's type is *not* known, the stale prior entry for `name` must be `remove`d —
-                // otherwise a shadow (e.g. `let x = a; let x = true;`) would leave the *old*
-                // binding's type in `local_env`, and `Expr::Binary`'s operand-type gate could then
-                // mis-fire on the shadowed `x` using a type that no longer applies to it (VR-5: a
-                // stale entry is exactly as wrong as a fabricated one — never guess, never keep a
-                // guess past its basis).
-                match expr_env_type(&init.expr, &local_env)
-                    .or_else(|| known_struct_literal_ty(&init.expr, self_ty))
-                {
-                    Some(ty) => {
-                        local_env.insert(name.clone(), ty);
-                    }
-                    None => {
-                        local_env.remove(&name);
-                    }
-                }
-                bindings.push((name, value));
+                bindings.push(emit_local_binding(local, self_ty, &mut local_env)?);
             }
             // A non-`let`, non-tail statement — name the actual kind so the gap reason is precise
             // (never-silent, G2). syn's `Stmt` is a plain 4-variant enum (`Local` handled above).
@@ -830,6 +997,540 @@ fn emit_block_as_expr_inner(
         result = format!("let {name} = {value} in {result}");
     }
     Ok(result)
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-125 (M-1081) — value-threaded `&mut self`/`&mut T` method/fn bodies.
+//
+// A mutating body's threaded binding(s) (`self` and/or a `&mut T` param, see `map_signature`) are
+// rebound via NESTED `let <name> = <new-value> in <rest>` shadowing — Mycelium's own lexical
+// scoping then implements DN-125 §5.2's sequential rebind (`x = h(x); …; x = k(x)`) for free: each
+// later statement's occurrences of `<name>` resolve to the nearest enclosing `let`, i.e. the most
+// recently threaded value, exactly mirroring Rust's own sequential in-place mutation.
+//
+// Deliberately NARROW (DN-125 §6.1 — never guess on an unprovable/aliased shape): only a FLAT
+// sequence of `self.<field> (=|+=|-=|..) <rhs>;` / `*<param> (=|+=|-=|..) <rhs>;` re-assignment
+// statements is recognized, optionally followed by one trailing value expression when the
+// method's original return type carried an extra value. This transpiler has no DN-33 static
+// uniqueness analysis to consult (that analysis is itself `Declared`/unbuilt, DN-125 §5.3) — so
+// the "conservative confident-uniqueness check" §6.1 calls for is implemented by EXCLUSION: any
+// body shape outside this flat sequence (control flow, an early return, a nested/aliasing use of
+// the threaded name, a call chaining another mutation) is refused outright rather than risked,
+// because a single function body with no aliasing construct in this grammar fragment at all
+// cannot introduce a second live alias to a `let`-shadowed name — the narrowness of what we DO
+// accept is what keeps every accepted body provably safe to rebind (never-silent G2/VR-5).
+// ---------------------------------------------------------------------------------------------
+
+fn emit_mutating_block_as_expr(
+    block: &Block,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+    threaded: &[ThreadedBinding],
+    want_extra: bool,
+) -> Result<String, GapReason> {
+    guarded(|| emit_mutating_block_as_expr_inner(block, self_ty, env, threaded, want_extra))
+}
+
+/// The recursion-guarded body of [`emit_mutating_block_as_expr`] — see that fn's + this module's
+/// doc. `want_extra` mirrors `MappedSig::threaded_extra_ret.is_some()`: whether the body must ALSO
+/// produce a genuine trailing value beyond the threaded binding(s).
+fn emit_mutating_block_as_expr_inner(
+    block: &Block,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+    threaded: &[ThreadedBinding],
+    want_extra: bool,
+) -> Result<String, GapReason> {
+    let stmts = &block.stmts;
+    if stmts.is_empty() {
+        return Err(GapReason::new(
+            Category::MultiStmtBody,
+            "empty function body (no expression)",
+        ));
+    }
+    // CRITICAL fix (strict review of PR #1527, DN-125/M-1081): a plain `let` binding whose
+    // pattern name SHADOWS a threaded `&mut` binding's own name (only reachable for a `&mut T`
+    // PARAMETER — Rust forbids `let self`) introduces a genuinely new, ordinarily-scoped local
+    // (Rust lexical shadowing) with NO effect on the referent. Naively folding both the threaded
+    // reassignment(s) AND this unrelated same-named local into ONE nested `let <name> = .. in ..`
+    // chain (the pre-fix behavior) let the shadow silently intercept the fold's tail reference,
+    // returning the shadow's value instead of the actually-threaded one — a silent-corruption bug
+    // that still `myc check`-cleaned. Fix: for exactly the threaded names a `let` in THIS body
+    // shadows, route the tail reference through a synthetic internal alias
+    // (`synth_thread_name`, `__myc_thread_<name>`) that a source-level `let <name> = ..` can never
+    // intercept, seeded before the first statement and re-captured immediately after every
+    // threaded reassignment (`fold_threaded_tail`'s doc has the full nesting argument). A body
+    // with no such shadow is completely unaffected — `shadow_risk` is empty and every emission is
+    // byte-identical to pre-fix (no unnecessary verbosity).
+    let shadow_risk = shadowed_threaded_names(block, threaded);
+    if !shadow_risk.is_empty() {
+        // Never-silent collision guard (VR-5): if the source already spells the exact synthetic
+        // carrier name this fix needs, routing through it would defeat the whole point — refused
+        // outright (Category::Other) rather than risked. Astronomically unlikely for real Rust
+        // source (the `__myc_thread_` prefix is an internal convention, not a reserved word), but
+        // checked rather than assumed.
+        for name in threaded
+            .iter()
+            .map(|t| &t.name)
+            .filter(|n| shadow_risk.contains(*n))
+        {
+            let synth = synth_thread_name(name);
+            let collides = env.contains_key(&synth)
+                || threaded.iter().any(|t| t.name == synth)
+                || block.stmts.iter().any(|s| {
+                    matches!(
+                        s,
+                        Stmt::Local(l)
+                            if local_binding_simple_name(l).as_deref() == Some(synth.as_str())
+                    )
+                });
+            if collides {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "source already uses the internal synthetic carrier name `{synth}` — \
+                         `{name}`'s DN-125 shadow-safe value-threading needs this name \
+                         internally and refuses to risk a collision with a source binding of \
+                         the same spelling (VR-5)",
+                    ),
+                ));
+            }
+        }
+    }
+    // Seed a synthetic capture for every shadow-risked threaded binding BEFORE any statement is
+    // processed, so the tail always has a well-defined synthetic value even when the body never
+    // explicitly reassigns that binding at all (it then simply carries the original parameter
+    // through, unaffected by any later same-named `let` shadow).
+    let mut bindings: Vec<(String, String)> = threaded
+        .iter()
+        .filter(|t| shadow_risk.contains(&t.name))
+        .map(|t| (synth_thread_name(&t.name), t.name.clone()))
+        .collect();
+    let mut local_env = env.clone();
+    let mut touched: HashSet<String> = HashSet::new();
+
+    for (idx, s) in stmts.iter().enumerate() {
+        let is_final = idx + 1 == stmts.len();
+        match s {
+            Stmt::Local(local) => {
+                bindings.push(emit_local_binding(local, self_ty, &mut local_env)?);
+            }
+            Stmt::Expr(e, semi) => {
+                if let Some((name, value)) = try_threaded_assign(e, self_ty, &local_env, threaded)?
+                {
+                    touched.insert(name.clone());
+                    bindings.push((name.clone(), value));
+                    if shadow_risk.contains(&name) {
+                        // Re-capture the just-updated value under the synthetic carrier,
+                        // immediately after the reassignment it belongs to (see this fn's
+                        // CRITICAL-fix doc + `fold_threaded_tail`'s nesting argument) — a later
+                        // same-named capture shadows an earlier one exactly like the real
+                        // `<name>` chain does, so the LAST reassignment always wins, unaffected
+                        // by any later unrelated `let <name> = ..` shadow.
+                        bindings.push((synth_thread_name(&name), name));
+                    }
+                    continue;
+                }
+                if is_final && semi.is_none() {
+                    // Bare-name shortcut: the tail is literally one of the threaded bindings' own
+                    // name — Rust's explicit "return the (already mutated) receiver/arg" tail
+                    // (DN-125 §1/§4's builder-method shape spelled with an explicit `self` at the
+                    // end rather than via `-> &mut Self`). No extra value; nothing left to do.
+                    if let Expr::Path(p) = e {
+                        if p.qself.is_none() && p.path.segments.len() == 1 {
+                            let nm = p.path.segments[0].ident.to_string();
+                            if threaded.iter().any(|t| t.name == nm) {
+                                return Ok(fold_threaded_tail(
+                                    bindings,
+                                    threaded,
+                                    None,
+                                    &shadow_risk,
+                                ));
+                            }
+                        }
+                    }
+                    if want_extra {
+                        let tail_text = emit_expr(e, self_ty, &local_env)?;
+                        return Ok(fold_threaded_tail(
+                            bindings,
+                            threaded,
+                            Some(tail_text),
+                            &shadow_risk,
+                        ));
+                    }
+                    // No assignment statement touched the (sole) threaded binding at all — the
+                    // tail expression may be its whole replacement value (e.g. a full `Self { .. }`
+                    // literal reconstruction written directly, DN-125 §5.1's `{ self with n = .. }`
+                    // illustration, spelled the way this grammar fragment's existing struct-literal
+                    // desugar, M-1006 Lever 1, already supports). Deliberately NARROW (never guess,
+                    // VR-5): this is only accepted when the tail is SYNTACTICALLY a struct literal
+                    // whose resolved type is EXACTLY the threaded binding's own type — an arbitrary
+                    // well-typed-but-unrelated tail expression (e.g. a call to some other `()`-typed
+                    // fn) is refused rather than silently mistaken for "the new self", which could
+                    // otherwise (rarely, if the unrelated expression happened to type-check as the
+                    // same shape) emit a semantically WRONG rebind instead of merely a check-failing
+                    // one — the case DN-125 §6.1 exists to rule out.
+                    if threaded.len() == 1
+                        && !touched.contains(&threaded[0].name)
+                        && known_struct_literal_ty(e, self_ty).as_deref()
+                            == Some(threaded[0].ty.as_str())
+                    {
+                        let tail_text = emit_expr(e, self_ty, &local_env)?;
+                        let name = &threaded[0].name;
+                        if shadow_risk.contains(name) {
+                            bindings.push((synth_thread_name(name), tail_text));
+                        } else {
+                            bindings.push((name.clone(), tail_text));
+                        }
+                        return Ok(fold_threaded_tail(bindings, threaded, None, &shadow_risk));
+                    }
+                    return Err(GapReason::new(
+                        Category::Other,
+                        "mutating method's tail expression is neither a threaded-binding \
+                         field/whole-value re-assignment nor (with the method's original return \
+                         type already `()`/self-chain, and either multiple threaded bindings or \
+                         one already assigned) an extra value — value-threading only supports a \
+                         flat sequence of `self.<field> = ..`/`*<param> = ..` re-assignments plus, \
+                         when the source return type is non-unit, one trailing value expression \
+                         (DN-125 §5, conservative scope per §6.1)",
+                    ));
+                }
+                return Err(GapReason::new(
+                    Category::Other,
+                    "mutating method body statement is neither a `let`, a supported \
+                     `self.<field>`/`*<param>` re-assignment, nor (in tail position) the \
+                     method's own return value — value-threading deliberately refuses any shape \
+                     outside a flat re-assignment sequence rather than risk an unsound rebind \
+                     (DN-125 §6.1, never-silent G2/VR-5)",
+                ));
+            }
+            Stmt::Item(_) => {
+                return Err(GapReason::new(
+                    Category::MultiStmtBody,
+                    "function body contains a nested item declaration — unsupported in a \
+                     value-threaded mutating body exactly as in the ordinary body form",
+                ))
+            }
+            Stmt::Macro(_) => {
+                return Err(GapReason::new(
+                    Category::MultiStmtBody,
+                    "function body contains a macro-invocation statement — unsupported in a \
+                     value-threaded mutating body exactly as in the ordinary body form",
+                ))
+            }
+        }
+    }
+    // Every statement was consumed as a `let`/threaded re-assignment — no genuine tail expression
+    // (the source fn's body ended in a semicolon-terminated re-assignment, or is a `()`-typed fn
+    // whose last statement never needed one).
+    if want_extra {
+        return Err(GapReason::new(
+            Category::Other,
+            "mutating method's original return type expects an extra value but the body has no \
+             trailing value expression",
+        ));
+    }
+    Ok(fold_threaded_tail(bindings, threaded, None, &shadow_risk))
+}
+
+/// Best-effort extraction of a `let` binding's simple `Pat::Ident` name — `None` for any other
+/// pattern shape (destructuring, etc.), which `emit_local_binding` itself refuses when the body
+/// is actually processed. Used only by the CRITICAL-fix shadow-detection pre-scan below (a
+/// non-`Pat::Ident` pattern can't textually collide with a threaded binding's bare name anyway).
+fn local_binding_simple_name(local: &syn::Local) -> Option<String> {
+    match &local.pat {
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Some(pi.ident.to_string()),
+        _ => None,
+    }
+}
+
+/// CRITICAL fix (DN-125/M-1081, strict review of PR #1527): the set of threaded-binding names
+/// this body's `let`-bindings SHADOW anywhere in the flat statement sequence — see
+/// `emit_mutating_block_as_expr_inner`'s doc for the full corruption this pre-scan exists to
+/// prevent. Only a plain `let <name> = ..;` (simple `Pat::Ident`) counts; any other pattern shape
+/// is a separate, pre-existing gap (`emit_local_binding`) the moment it is actually processed.
+fn shadowed_threaded_names(block: &Block, threaded: &[ThreadedBinding]) -> HashSet<String> {
+    let mut out = HashSet::new();
+    for s in &block.stmts {
+        if let Stmt::Local(local) = s {
+            if let Some(name) = local_binding_simple_name(local) {
+                if threaded.iter().any(|t| t.name == name) {
+                    out.insert(name);
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The synthetic internal carrier name used to route a shadow-risked threaded binding's true
+/// final value safely through to the tail, immune to a source-level `let <name> = ..` shadow of
+/// the same name (see `emit_mutating_block_as_expr_inner`'s CRITICAL-fix doc). `__myc_thread_`
+/// is an internal convention, never emitted for an ordinary source binding — and
+/// `emit_mutating_block_as_expr_inner` additionally refuses outright (never-silent, VR-5) rather
+/// than risk a collision if the source itself already spells this exact name.
+fn synth_thread_name(name: &str) -> String {
+    format!("__myc_thread_{name}")
+}
+
+/// Fold the accumulated `(name, value)` re-assignment bindings into nested `let name = value in
+/// ..` shadows (identical fold direction to [`emit_block_as_expr_inner`]'s, so sequential
+/// re-assignments to the SAME name compose as sequential rebinds — see this section's module
+/// doc), seeded with the threaded binding(s)' own reference (plus `extra`, if any) as the
+/// innermost tail — a single bare reference when there is exactly one threaded binding and no
+/// extra value, else a tuple. **CRITICAL-fix (DN-125/M-1081):** for a threaded binding whose name
+/// is in `shadow_risk` (i.e. some plain `let` in this body shadows it), the seeded reference is
+/// its synthetic carrier ([`synth_thread_name`]) rather than its bare source name — the carrier
+/// is seeded/re-captured by `emit_mutating_block_as_expr_inner` so it always resolves to the
+/// LAST threaded reassignment's value, never to an unrelated same-named `let` shadow that appears
+/// later in the body (the silent-corruption bug this fix closes). A binding NOT in `shadow_risk`
+/// is completely unaffected — same bare-name reference as before this fix, byte-identical output.
+fn fold_threaded_tail(
+    bindings: Vec<(String, String)>,
+    threaded: &[ThreadedBinding],
+    extra: Option<String>,
+    shadow_risk: &HashSet<String>,
+) -> String {
+    let mut parts: Vec<String> = threaded
+        .iter()
+        .map(|t| {
+            if shadow_risk.contains(&t.name) {
+                synth_thread_name(&t.name)
+            } else {
+                t.name.clone()
+            }
+        })
+        .collect();
+    if let Some(e) = extra {
+        parts.push(e);
+    }
+    let mut tail = if parts.len() == 1 {
+        parts.into_iter().next().unwrap_or_default()
+    } else {
+        format!("({})", parts.join(", "))
+    };
+    for (name, value) in bindings.into_iter().rev() {
+        tail = format!("let {name} = {value} in {tail}");
+    }
+    tail
+}
+
+/// If `lhs` is `EXACTLY <name>.<member>` where `<name>` is a bare, single-segment identifier
+/// naming one of `threaded`'s bindings — return that binding + the member. Does NOT recurse
+/// through nested field access (`self.inner.field`) or any other wrapper — only a single,
+/// direct-on-the-threaded-name projection is a supported reassignment target (DN-125 §6.1's
+/// narrow, structurally-safe scope).
+fn threaded_field_lhs<'a>(
+    e: &Expr,
+    threaded: &'a [ThreadedBinding],
+) -> Option<(&'a ThreadedBinding, syn::Member)> {
+    let Expr::Field(f) = e else { return None };
+    let Expr::Path(p) = &*f.base else { return None };
+    if p.qself.is_some() || p.path.segments.len() != 1 {
+        return None;
+    }
+    let name = p.path.segments[0].ident.to_string();
+    threaded
+        .iter()
+        .find(|t| t.name == name)
+        .map(|t| (t, f.member.clone()))
+}
+
+/// If `lhs` is `EXACTLY *<name>` where `<name>` is one of `threaded`'s bindings — return that
+/// binding. The whole-value counterpart of [`threaded_field_lhs`]: supported for ANY threaded
+/// binding (not just `self`), since it replaces the entire value rather than projecting a field.
+fn threaded_deref_lhs<'a>(
+    e: &Expr,
+    threaded: &'a [ThreadedBinding],
+) -> Option<&'a ThreadedBinding> {
+    let Expr::Unary(u) = e else { return None };
+    if !matches!(u.op, syn::UnOp::Deref(_)) {
+        return None;
+    }
+    let Expr::Path(p) = &*u.expr else { return None };
+    if p.qself.is_some() || p.path.segments.len() != 1 {
+        return None;
+    }
+    let name = p.path.segments[0].ident.to_string();
+    threaded.iter().find(|t| t.name == name)
+}
+
+/// The ten Rust compound-assignment operators desugar (syn 2, no separate `ExprAssignOp`) to
+/// `Expr::Binary` with a `*Assign` [`syn::BinOp`] — this maps each to its PLAIN (non-assigning)
+/// counterpart so the new field/whole value can be composed via a synthetic `Expr::Binary` node
+/// re-using [`emit_expr`]'s existing, fully-tested binary-op emission (signed/unsigned prim
+/// selection, bitwise word-forms, …) rather than duplicating any of that logic (DRY).
+fn compound_to_plain_bin_op(op: &syn::BinOp) -> Option<syn::BinOp> {
+    use syn::BinOp;
+    Some(match op {
+        BinOp::AddAssign(_) => BinOp::Add(Default::default()),
+        BinOp::SubAssign(_) => BinOp::Sub(Default::default()),
+        BinOp::MulAssign(_) => BinOp::Mul(Default::default()),
+        BinOp::DivAssign(_) => BinOp::Div(Default::default()),
+        BinOp::RemAssign(_) => BinOp::Rem(Default::default()),
+        BinOp::BitXorAssign(_) => BinOp::BitXor(Default::default()),
+        BinOp::BitAndAssign(_) => BinOp::BitAnd(Default::default()),
+        BinOp::BitOrAssign(_) => BinOp::BitOr(Default::default()),
+        BinOp::ShlAssign(_) => BinOp::Shl(Default::default()),
+        BinOp::ShrAssign(_) => BinOp::Shr(Default::default()),
+        _ => return None,
+    })
+}
+
+/// Build a bare-identifier `syn::Expr::Path` node naming `name` — used to synthesize the "current
+/// value" operand of a compound whole-value reassignment (`*y += v` needs `y`'s current value as
+/// the synthetic binary's LHS; `y` textually, since `y` is already the value under this module's
+/// `&mut T`-erasure model, never `*y`). `name` is always either the literal `"self"` or a Rust
+/// identifier `map_signature` already accepted via `guard_ident`, so this never panics on
+/// unparseable input in practice.
+fn ident_path_expr(name: &str) -> Expr {
+    let ident = syn::Ident::new(name, proc_macro2::Span::call_site());
+    let mut segments = syn::punctuated::Punctuated::new();
+    segments.push(syn::PathSegment {
+        ident,
+        arguments: syn::PathArguments::None,
+    });
+    Expr::Path(syn::ExprPath {
+        attrs: vec![],
+        qself: None,
+        path: syn::Path {
+            leading_colon: None,
+            segments,
+        },
+    })
+}
+
+/// If `e` is a supported threaded-binding re-assignment (`self.<field> (=|OP=) rhs` or
+/// `*<param> (=|OP=) rhs`), return `Some((binding-name, new-value-text))` — the caller folds this
+/// into a `let <name> = <new-value> in ..` rebind. `Ok(None)` for any expression that is not one
+/// of these two shapes at all (the caller then tries the tail-expression / generic-gap paths).
+/// Once the LHS is confirmed to target a threaded binding, every subsequent failure (unresolvable
+/// field, unsupported non-`self` field target, RHS emission failure) is a real `Err` — never
+/// silently reinterpreted as "not an assignment" (G2).
+fn try_threaded_assign(
+    e: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+    threaded: &[ThreadedBinding],
+) -> Result<Option<(String, String)>, GapReason> {
+    let (lhs, rhs, plain_op): (&Expr, &Expr, Option<syn::BinOp>) = match e {
+        Expr::Assign(a) => (&a.left, &a.right, None),
+        Expr::Binary(b) if is_compound_assign_op(&b.op) => {
+            let op = compound_to_plain_bin_op(&b.op).ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    "compound-assignment operator has no plain-operator counterpart for \
+                     value-threading",
+                )
+            })?;
+            (&b.left, &b.right, Some(op))
+        }
+        _ => return Ok(None),
+    };
+
+    if let Some((tb, member)) = threaded_field_lhs(lhs, threaded) {
+        if tb.name != "self" {
+            return Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "field assignment `{}.<field> = ..` on a threaded `&mut` parameter (not the \
+                     method receiver) has no supported reconstruction — only whole-value \
+                     re-assignment (`*{} = ..`) is supported for a non-`self` threaded binding \
+                     (field-level projection is only wired for `self`, see `visit_field`)",
+                    tb.name, tb.name
+                ),
+            ));
+        }
+        let sty = self_ty.ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                "`self` field assignment with no enclosing impl/trait `self` type",
+            )
+        })?;
+        let layout = tb.layout.clone().ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                format!(
+                    "field assignment `self.{} = ..` on `{sty}` — not an in-file single-ctor \
+                     struct that emits (no constructor to rebuild)",
+                    member_text(&member)
+                ),
+            )
+        })?;
+        let pos = match &member {
+            syn::Member::Named(id) => {
+                let n = id.to_string();
+                layout.iter().position(|f| f.as_deref() == Some(n.as_str()))
+            }
+            syn::Member::Unnamed(idx) => {
+                let i = idx.index as usize;
+                (i < layout.len()).then_some(i)
+            }
+        }
+        .ok_or_else(|| {
+            GapReason::new(
+                Category::Other,
+                format!(
+                    "field `{}` not found on struct `{sty}`",
+                    member_text(&member)
+                ),
+            )
+        })?;
+        let new_field_val = match plain_op {
+            None => emit_expr(rhs, self_ty, env)?,
+            Some(op) => {
+                let synth = Expr::Binary(syn::ExprBinary {
+                    attrs: vec![],
+                    left: Box::new(lhs.clone()),
+                    op,
+                    right: Box::new(rhs.clone()),
+                });
+                emit_expr(&synth, self_ty, env)?
+            }
+        };
+        let recon = reconstruct_positional(sty, &layout, "self", pos, &new_field_val);
+        return Ok(Some(("self".to_string(), recon)));
+    }
+
+    if let Some(tb) = threaded_deref_lhs(lhs, threaded) {
+        let new_val = match plain_op {
+            None => emit_expr(rhs, self_ty, env)?,
+            Some(op) => {
+                let synth = Expr::Binary(syn::ExprBinary {
+                    attrs: vec![],
+                    left: Box::new(ident_path_expr(&tb.name)),
+                    op,
+                    right: Box::new(rhs.clone()),
+                });
+                emit_expr(&synth, self_ty, env)?
+            }
+        };
+        return Ok(Some((tb.name.clone(), new_val)));
+    }
+
+    Ok(None)
+}
+
+/// Build the positional constructor text for `sty` after replacing the field at `pos` with
+/// `new_val_text`, reading every OTHER field via the existing self-field-access projection
+/// ([`field_projection_text`]) against `base`'s CURRENT (pre-this-assignment) value.
+fn reconstruct_positional(
+    sty: &str,
+    layout: &StructLayout,
+    base: &str,
+    pos: usize,
+    new_val_text: &str,
+) -> String {
+    let args: Vec<String> = (0..layout.len())
+        .map(|i| {
+            if i == pos {
+                new_val_text.to_string()
+            } else {
+                field_projection_text(sty, layout, base, i)
+            }
+        })
+        .collect();
+    format!("{sty}({})", args.join(", "))
 }
 
 /// Re-encode a Rust string value into a Mycelium `StrLit` (grammar `literal ::= … | StrLit`,
@@ -1511,21 +2212,10 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         })?;
         // Bind the accessed position to `p{pos}` (a guaranteed-valid, non-reserved ident),
         // wildcard the rest, and return the binding. Parenthesized so it composes as a binary /
-        // application operand subexpression.
-        let bind = format!("p{pos}");
-        let pats: Vec<String> = (0..layout.len())
-            .map(|i| {
-                if i == pos {
-                    bind.clone()
-                } else {
-                    "_".to_string()
-                }
-            })
-            .collect();
-        Ok(format!(
-            "(match self {{ {sty}({}) => {bind} }})",
-            pats.join(", ")
-        ))
+        // application operand subexpression. (DN-125/M-1081: factored into
+        // `field_projection_text` so `reconstruct_positional`'s OTHER-fields read uses the exact
+        // same projection text this arm emits for a direct `self.<field>` read.)
+        Ok(field_projection_text(sty, &layout, "self", pos))
     }
 
     // M-1006 Lever 1 — struct-literal construction `Ty { a: x, b: y }` / `Self { .. }` -> the
@@ -2505,7 +3195,19 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
     guard_ident(&item.sig.ident.to_string(), "function name")?;
     check_fn_modifiers(&item.sig)?;
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
-    let body = emit_block_as_expr(&item.block, None, &sig_type_env(&sig))?;
+    // DN-125 (M-1081): a free fn's `&mut T` parameter(s) route through the value-threading body
+    // emitter instead of the ordinary one (a free fn has no receiver, so only S2 applies here).
+    let body = if sig.threaded.is_empty() {
+        emit_block_as_expr(&item.block, None, &sig_type_env(&sig))?
+    } else {
+        emit_mutating_block_as_expr(
+            &item.block,
+            None,
+            &sig_type_env(&sig),
+            &sig.threaded,
+            sig.threaded_extra_ret.is_some(),
+        )?
+    };
     let mut sub_gaps = Vec::new();
     let non_doc = non_doc_attrs(&item.attrs);
     if !non_doc.is_empty() {
@@ -2987,13 +3689,38 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                     Some(&self_ty_text),
                 ) {
                     Ok(sig) => {
-                        let body_result = match &width_cast_body {
-                            Some(body) => Ok(body.clone()),
-                            None => emit_block_as_expr(
+                        // DN-125 (M-1081): a `&mut self`/`&mut T`-value-threaded method's body
+                        // routes through `emit_mutating_block_as_expr` instead of the ordinary
+                        // let-chain emitter. MEDIUM fix (strict review of PR #1527):
+                        // `sig.threaded.is_empty()` is checked FIRST — a threaded signature's
+                        // return type is the mutated-value tuple/type, which `width_cast_body`
+                        // (a `Widen`-shaped, non-threaded `Self`-return convention) never
+                        // accounts for, so a threaded signature must never let `width_cast_body`
+                        // win even if `try_width_cast_widen_body` happened to also fire for the
+                        // same method name/trait shape.
+                        let body_result = if sig.threaded.is_empty() {
+                            match &width_cast_body {
+                                Some(body) => Ok(body.clone()),
+                                None => emit_block_as_expr(
+                                    &f.block,
+                                    Some(&self_ty_text),
+                                    &sig_type_env(&sig),
+                                ),
+                            }
+                        } else {
+                            debug_assert!(
+                                width_cast_body.is_none(),
+                                "a width_cast Widen-shaped body should never coincide with a \
+                                 DN-125 threaded &mut signature — the two body conventions are \
+                                 mutually exclusive by construction (see this match's doc)"
+                            );
+                            emit_mutating_block_as_expr(
                                 &f.block,
                                 Some(&self_ty_text),
                                 &sig_type_env(&sig),
-                            ),
+                                &sig.threaded,
+                                sig.threaded_extra_ret.is_some(),
+                            )
                         };
                         match body_result {
                             Ok(body) => {

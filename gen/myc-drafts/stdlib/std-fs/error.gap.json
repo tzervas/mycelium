@@ -32,7 +32,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ErrnoClass { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { Self :: NotFound => write ! (f , \"NotFound\") , Self :: PermDenied => write ! (f , \"PermDenied\") , Self :: AlreadyExists => write ! (f , \"AlreadyExists\") , Self :: NotADirectory => write ! (f , \"NotADirectory\") , Self :: IsADirectory => write ! (f , \"IsADirectory\") , Self :: NotEmpty => write ! (f , \"NotEmpty\") , Self :: DiskFull => write ! (f , \"DiskFull\") , Self :: CrossDevice => write ! (f , \"CrossDevice\") , Self :: WouldBlock => write ! (f , \"WouldBlock\") , Self :: Interrupted => write ! (f , \"Interrupted\") , Self :: Loop => write ! (f , \"Loop\") , Self :: Other => write ! (f , \"Other\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ErrnoClass"
     },
     {
@@ -202,7 +202,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for FsErr { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { Self :: CrossDevice { from , to , why } => { write ! (f , \"CrossDevice(from={from:?}, to={to:?}): {why}\") } Self :: UseAfterConsume { path , why } => { write ! (f , \"UseAfterConsume(path={path:?}): {why}\") } Self :: InvalidOptions { path , why } => { write ! (f , \"InvalidOptions(path={path:?}): {why}\") } Self :: Os { path , errno_class , raw , why , } => { write ! (f , \"Os(path={path:?}, errno={errno_class}, raw={raw}): {why}\") } err => { let class = err . errno_class () . map (| c | c . to_string ()) . unwrap_or_else (| | \"Unknown\" . to_owned ()) ; write ! (f , \"{class}(path={:?}): {}\" , err . path () , err . why ()) } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "FsErr"
     },
     {

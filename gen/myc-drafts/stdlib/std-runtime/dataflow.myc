@@ -45,3 +45,7 @@ type SweepDir = Ascending | Descending;
 // real task is always swapped back before the next sweep), but must type-check as a valid
 // [`PollTask`] to occupy the slot.
 type AlreadyDone = AlreadyDone;
+
+impl PollTask for AlreadyDone {
+  fn poll(self: AlreadyDone) => (AlreadyDone, Step) = (self, Done);
+};

@@ -19,6 +19,8 @@ impl TaskCtx {
   fn TaskCtx__new() => TaskCtx = TaskCtx(False);
   // Returns `true` if this task's scope has been cancelled.
   fn is_cancelled(self: TaskCtx) => Bool = (match self { TaskCtx(p0) => p0 });
+  // Cancel this context (used by `Scope` when cancellation is requested).
+  fn cancel(self: TaskCtx) => TaskCtx = let self = TaskCtx(True) in self;
 };
 
 // Poll result for an async task step.

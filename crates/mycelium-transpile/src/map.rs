@@ -341,17 +341,29 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
         if r.mutability.is_none() {
             map_type(&r.elem, self.self_ty)
         } else {
-            // A **mutable** reference `&mut T` is NOT erased. In-place mutation through a `&mut` has
-            // no value-semantic correspondence (ADR-003) — the same stance the `&mut self` receiver
-            // already takes in `emit::map_signature` — so erasing it to a plain value type would
-            // silently drop the mutation. Left an explicit gap rather than a misrepresentation
-            // (VR-5/G2).
+            // A **mutable** reference `&mut T` is NOT erased HERE. In-place mutation through a
+            // `&mut` still has no value-semantic correspondence for a plain type-position ERASURE
+            // (ADR-003) — erasing it to a bare value type would silently drop the mutation
+            // (VR-5/G2). DN-125 (M-1081) gave `&mut self`/a TOP-LEVEL `&mut T` fn/method
+            // PARAMETER a real native answer (value-threading, Alt A Rank 1) — but that lowering
+            // needs the ENCLOSING signature/return-type context this type-mapping visitor does
+            // not have (it maps one `Type` node in isolation), so `emit::map_signature`
+            // intercepts those TWO specific positions (the receiver, and a param's OWN top-level
+            // type) BEFORE ever calling `map_type` on them, and value-threads there instead. This
+            // arm is the honest residual: every OTHER `&mut T` position — a return type, a struct
+            // field, nested inside a generic argument — is NOT a value-threadable receiver/param,
+            // so it stays gapped exactly as before. This is also what closes DN-125 §6.2's
+            // interior-`&mut`-return narrowing "for free": a `&mut self` method returning
+            // `&mut Field` still hits this arm on its RETURN type and gaps as a whole, never
+            // silently value-threaded as if it returned a value (VR-5).
             Err(GapReason::new(
                 Category::Other,
                 format!(
                     "`{}` is a mutable reference `&mut T` — in-place mutation through a borrow has no \
-                     value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it \
-                     is left an explicit gap rather than silently erased to a value type (VR-5)",
+                     value-semantic correspondence (ADR-003) in this (non-receiver, non-top-level- \
+                     parameter) type position; cf. DN-125 (M-1081), which value-threads the `&mut self` \
+                     receiver and a fn/method's own `&mut T` parameters instead of gapping them, at \
+                     `emit::map_signature` — but only those two positions, never this one",
                     tokens_to_string(ty)
                 ),
             ))

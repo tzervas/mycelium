@@ -7,11 +7,11 @@
       "exit_code": 3,
       "diagnostic": "check-error: check error in `as_nanos`: duplicate function",
       "non_test_items": 37,
-      "emitted_items": 13
+      "emitted_items": 14
     }
   ],
   "total_non_test_items": 37,
-  "total_emitted_items": 13,
+  "total_emitted_items": 14,
   "total_checked_clean_items": 0,
   "class_counts": {
     "CheckError": 1

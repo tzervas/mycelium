@@ -187,7 +187,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ReadCappedError"
     },
     {
@@ -417,7 +417,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for EntropyError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { EntropyError :: Unavailable (msg) => write ! (f , \"entropy unavailable: {msg}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "EntropyError"
     },
     {
@@ -437,7 +437,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`).\"] # [doc = \"\"] # [doc = \" Never-silent: returns `Err(EntropyError::Unavailable(...))` on any failure (open error,\"] # [doc = \" short read, EOF, or platform without `/dev/urandom`). Never panics. Never zero-fills\"] # [doc = \" silently (G2).\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — source is the kernel CSPRNG via `/dev/urandom`, a genuine OS entropy source,\"] # [doc = \" but no statistical quality audit has been conducted. Promotion to `Empirical` requires\"] # [doc = \" documented trials with measured statistical quality (VR-5). Do not use for\"] # [doc = \" security-sensitive purposes until retagged.\"] # [doc = \"\"] # [doc = \" # Platform\"] # [doc = \"\"] # [doc = \" Unix/Linux/macOS only. Returns `Err(EntropyError::Unavailable(...))` on platforms that\"] # [doc = \" do not expose `/dev/urandom`. Use the `getrandom` crate (FLAG-GETRANDOM) for\"] # [doc = \" cross-platform OS entropy.\"] pub fn fill_bytes (buf : & mut [u8]) -> Result < () , EntropyError > { if buf . is_empty () { return Ok (()) ; } let mut f = std :: fs :: File :: open (\"/dev/urandom\") . map_err (| e | EntropyError :: Unavailable (format ! (\"open /dev/urandom: {e}\"))) ? ; f . read_exact (buf) . map_err (| e | EntropyError :: Unavailable (format ! (\"read /dev/urandom: {e}\"))) }",
-      "reason": "`& mut [u8]` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unsupported Rust type form `[u8]`",
       "item_name": "fill_bytes"
     },
     {
@@ -497,7 +497,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl std :: fmt :: Display for NonUtf8Arg { fn fmt (& self , f : & mut std :: fmt :: Formatter < '_ >) -> std :: fmt :: Result { write ! (f , \"command-line argument at index {} is not valid UTF-8 (lossy: {:?})\" , self . index , self . lossy) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut std :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `std :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "NonUtf8Arg"
     },
     {
