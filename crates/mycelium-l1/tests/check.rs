@@ -1541,15 +1541,63 @@ fn generic_trait_instance_slot_is_refused() {
     );
 }
 
-/// A `: bound` inside the impl-level slot is refused — bounds live only on `fn` type-parameters
-/// (RFC-0019 §4.1), the same never-silent refusal as on a `type`/`trait` head (DN-103 §2; G2).
+/// A `: bound` inside the impl-level slot is now **accepted** (DN-131 / M-1088 — the impl slot no
+/// longer forces `parse_type_params_opt`'s unbounded refusal; it uses the same bounded parser the
+/// `fn` slot already uses, RFC-0019 §4.1). `peek` never calls a `Cmp` operation, so this also pins
+/// the DN-131 §7 "dead bound" case: the bound is registry-validated by `check_bounds` but costs
+/// nothing at monomorphization (dictionary-free — M-673). Superseded (DN-131) the prior
+/// `impl_slot_bound_is_refused` refusal-pin; see `mono.rs` for the discharge witness and
+/// `decl_head_bound_is_still_refused_after_dn131` below for the still-refused sibling site.
 #[test]
-fn impl_slot_bound_is_refused() {
-    let err = parse(
-        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntype Box[A] = Bx(A);\nimpl[T: Cmp] Box[T] { fn peek(b: Box[T]) => Box[T] = b; };",
+fn impl_slot_bound_is_accepted() {
+    check(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntype Box[A] = Bx(A);\nimpl[T: Cmp] Box[T] { fn peek(b: Box[T]) => Box[T] = b; };\nfn main() => Box[Binary{8}] = Bx(0b0000_0001);",
     )
-    .expect_err("a bound on an impl-level type-parameter must be refused");
-    assert!(err.to_string().contains("bound"), "got: {err}");
+    .expect("a bound on an impl-level type-parameter now checks (DN-131)");
+}
+
+/// An unsatisfiable impl-slot bound — `T: Cmp` with no `Cmp` instance for the concrete call type —
+/// is the existing never-silent "no instance" refusal from `check_bounds`/resolution (DN-131 §4
+/// point 3; the same discharge path a bounded `fn` already uses).
+#[test]
+fn impl_slot_bound_without_an_instance_is_an_explicit_error() {
+    let err = check(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntype Box[A] = Bx(A);\nimpl[T: Cmp] Box[T] { fn peek(b: Box[T]) => Binary{2} = cmp(b, b); };\nfn main() => Binary{2} = peek(Bx(0b0000_0001));",
+    )
+    .unwrap_err();
+    assert!(
+        err.message.contains("no instance") && err.message.contains("Cmp"),
+        "got: {}",
+        err.message
+    );
+}
+
+/// A duplicate bound *source* — the impl slot binds `T: Cmp`, a method re-binds the same `T` to a
+/// different (or the same) trait — resolves via the existing duplicate-type-parameter refusal, not
+/// a silent union of bounds (DN-131 §4 point 2 / §7 — the conservative, never-silent choice).
+#[test]
+fn impl_slot_bound_and_method_rebind_is_refused_not_unioned() {
+    let err = check(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntrait Ord[A] { fn lt(a: A, b: A) => Binary{2}; };\ntype Box[A] = Bx(A);\nimpl[T: Cmp] Box[T] { fn dup[T: Ord](b: Box[T]) => Box[T] = b; };\nfn main() => Box[Binary{8}] = Bx(0b0000_0001);",
+    )
+    .expect_err("a param name shared by a bounded impl slot and a bounded method must be refused");
+    assert!(
+        err.message.contains("duplicate") && err.message.contains("T"),
+        "got: {}",
+        err.message
+    );
+}
+
+/// `type`/`trait` **decl-head** bounds stay a never-silent parse refusal after DN-131 — only the
+/// impl slot was lifted; the decl head is explicitly declined (DN-131 §5/§6, RFC-0019 §4.2: "bounds
+/// on the type itself are on the methods, not the decl").
+#[test]
+fn decl_head_bound_is_still_refused_after_dn131() {
+    let err = parse(
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\ntype Box[T: Cmp] = Bx(T);",
+    )
+    .expect_err("a bound on a `type` decl head must still be refused");
+    assert!(err.message.contains("deferred"), "got: {}", err.message);
 }
 
 /// A duplicate between an impl-level param and a method's own `fn` type-parameter is caught by the
