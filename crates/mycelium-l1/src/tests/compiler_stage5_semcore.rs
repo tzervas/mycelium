@@ -230,6 +230,7 @@ fn opt2_registry() -> BTreeMap<String, DataInfo> {
     m.insert(
         "Opt2".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Opt2".to_owned(),
             params: vec![],
             ctors: vec![
@@ -254,6 +255,7 @@ fn optlist_registry() -> BTreeMap<String, DataInfo> {
     m.insert(
         "OptList".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "OptList".to_owned(),
             params: vec![],
             ctors: vec![

@@ -227,19 +227,23 @@ fn via_clauses_for_different_traits_on_the_same_object_are_not_ambiguous() {
     assert!(e
         .instances
         .keys()
-        .any(|(tr, head)| tr == "Wrap" && head == "Data:Dual"));
+        .any(|(tr, head)| tr == "Wrap" && head == "Data:not_ambiguous.different_traits::Dual"));
     assert!(e
         .instances
         .keys()
-        .any(|(tr, head)| tr == "Peek" && head == "Data:Dual"));
+        .any(|(tr, head)| tr == "Peek" && head == "Data:not_ambiguous.different_traits::Dual"));
     assert_eq!(
-        e.via_provenance
-            .get(&("Wrap".to_owned(), "Data:Dual".to_owned())),
+        e.via_provenance.get(&(
+            "Wrap".to_owned(),
+            "Data:not_ambiguous.different_traits::Dual".to_owned()
+        )),
         Some(&(0, "Dual".to_owned()))
     );
     assert_eq!(
-        e.via_provenance
-            .get(&("Peek".to_owned(), "Data:Dual".to_owned())),
+        e.via_provenance.get(&(
+            "Peek".to_owned(),
+            "Data:not_ambiguous.different_traits::Dual".to_owned()
+        )),
         Some(&(1, "Dual".to_owned()))
     );
 }

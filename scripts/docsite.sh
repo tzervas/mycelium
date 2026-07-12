@@ -34,15 +34,41 @@ cd "$REPO_ROOT" || exit 1
 
 section "docsite (local browsable site — advisory, not a gate)"
 
-# Shared REAL dark-mode override (a genuine `prefers-color-scheme: dark` media query, not a
-# capture-time-only patch) for this script's own hand-rolled pages (landing index.html, the
-# lang-ref page, the api-index HTML wrapper). One named constant so all three agree (DRY within
-# this script) — mirrors the corpus/book renderer's approach (crates/mycelium-doc/src/theme.rs)
-# of declaring light + dark palettes explicitly, though this script emits independent pages built
-# from a different custom-property set (`--fg`/`--bg`/`--accent`/`--dim`/`--code`), so it carries
-# its own small dark palette rather than importing the Rust crate's. Exported so the Python
-# api-index-wrapper heredoc below (a separate `python3` process) can read it too.
-export DOCSITE_DARK_CSS='@media (prefers-color-scheme: dark){:root{--fg:#e6e6f0;--bg:#12121a;--accent:#6fe0a0;--dim:#9494ab;--code:#1d1d29}.browse{background:#16241b;border-color:var(--accent)}.missing{background:#241c14;border-color:#c93}footer{border-top-color:#2a2a38}}'
+# Shared REAL, SWITCHABLE light/dark theme for this script's own hand-rolled pages (landing
+# index.html, the lang-ref page, the api-index HTML wrapper). One set of named constants so all
+# three agree (DRY within this script) — mirrors the corpus/book renderer's approach
+# (crates/mycelium-doc/src/theme.rs: both palettes declared explicitly, `prefers-color-scheme`
+# default + a persisted `data-theme` override + a toggle button/JS), though this script emits
+# independent pages built from a different custom-property set (`--fg`/`--bg`/`--accent`/`--dim`/
+# `--code`/`--callout-*`/`--warn-*`), so it carries its own small palette rather than importing the
+# Rust crate's. Exported so the Python api-index-wrapper heredoc below (a separate `python3`
+# process) can read them too.
+#
+# Fixes the 2026-07 readability report: the `.note`/`.warn` callout boxes (the "Sources of truth" /
+# "Normative oracle" boxes in lang-ref) used to hard-code a light-mint/peach `background` with no
+# dark override, while `color` was inherited from `body` — which the old dark media query DID flip
+# to near-white. Result: near-white text on an unchanged light-mint box in dark mode (washed-out,
+# near-unreadable). Now every colour — including the callout backgrounds/foregrounds/borders — is a
+# themed custom property, so both themes stay high-contrast (WCAG AA target, `Empirical/Declared`:
+# tuned for legibility, not machine-verified in this script).
+export DOCSITE_THEME_CSS=':root{--bg:#fdfdfd;--fg:#1a1a2e;--dim:#5a5a72;--accent:#2e7d4f;--link:#2e7d4f;--code:#f4f4f8;--border:#dddde6;--callout-bg:#eaf6ec;--callout-fg:#173d24;--callout-border:#2e7d4f;--warn-bg:#fdf1e0;--warn-fg:#5c3300;--warn-border:#c98a2c}
+:root[data-theme="light"]{--bg:#fdfdfd;--fg:#1a1a2e;--dim:#5a5a72;--accent:#2e7d4f;--link:#2e7d4f;--code:#f4f4f8;--border:#dddde6;--callout-bg:#eaf6ec;--callout-fg:#173d24;--callout-border:#2e7d4f;--warn-bg:#fdf1e0;--warn-fg:#5c3300;--warn-border:#c98a2c}
+:root[data-theme="dark"]{--bg:#12121a;--fg:#e6e6f0;--dim:#9494ab;--accent:#6fe0a0;--link:#6fe0a0;--code:#1d1d29;--border:#2a2a38;--callout-bg:#173a24;--callout-fg:#c9f2d6;--callout-border:#3f9a6c;--warn-bg:#3a2712;--warn-fg:#ffd9a0;--warn-border:#c98a2c}
+@media (prefers-color-scheme: dark){:root{--bg:#12121a;--fg:#e6e6f0;--dim:#9494ab;--accent:#6fe0a0;--link:#6fe0a0;--code:#1d1d29;--border:#2a2a38;--callout-bg:#173a24;--callout-fg:#c9f2d6;--callout-border:#3f9a6c;--warn-bg:#3a2712;--warn-fg:#ffd9a0;--warn-border:#c98a2c}}
+@media (prefers-color-scheme: light){:root{--bg:#fdfdfd;--fg:#1a1a2e;--dim:#5a5a72;--accent:#2e7d4f;--link:#2e7d4f;--code:#f4f4f8;--border:#dddde6;--callout-bg:#eaf6ec;--callout-fg:#173d24;--callout-border:#2e7d4f;--warn-bg:#fdf1e0;--warn-fg:#5c3300;--warn-border:#c98a2c}}
+.theme-toggle{position:fixed;top:.85rem;right:1.1rem;z-index:20;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--fg);border-radius:8px;padding:.4rem .65rem;font-size:1.05rem;line-height:1}
+.theme-toggle:hover{border-color:var(--accent)}'
+
+# The `<head>` no-flash bootstrap (mirrors `mycelium_doc::theme::HEAD_THEME_INIT`): applies a
+# persisted `localStorage` choice to `data-theme` before first paint; an unreadable/absent value
+# just falls back to the `prefers-color-scheme` default (never-silent: caught, never thrown).
+export DOCSITE_THEME_HEAD_INIT='<script>(function(){try{var t=localStorage.getItem("myc-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();</script>'
+
+# The toggle control (fixed top-right on every hand-rolled page) and its wiring (mirrors
+# `mycelium_doc::theme::THEME_TOGGLE_BUTTON`/`THEME_TOGGLE_JS`): flips the *effective* theme
+# (honouring the OS default when nothing is stored yet) and persists the choice.
+export DOCSITE_THEME_TOGGLE_BUTTON='<button class="theme-toggle" id="theme-toggle" type="button" aria-label="Toggle light or dark theme" title="Toggle light/dark">&#9680;</button>'
+export DOCSITE_THEME_TOGGLE_JS='<script>(function(){var btn=document.getElementById("theme-toggle");if(!btn)return;function effective(){var a=document.documentElement.getAttribute("data-theme");if(a)return a;return window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}btn.addEventListener("click",function(){var next=effective()==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",next);try{localStorage.setItem("myc-theme",next);}catch(e){}});})();</script>'
 
 OUT="$REPO_ROOT/target/docsite"
 rm -rf "$OUT"
@@ -103,10 +129,13 @@ import os, sys, re, html, pathlib
 
 src = pathlib.Path(sys.argv[1]).read_text()
 out_path = pathlib.Path(sys.argv[2])
-# Real prefers-color-scheme dark override, shared with this script's other hand-rolled pages —
-# see DOCSITE_DARK_CSS in scripts/docsite.sh (passed through the environment; this heredoc runs
-# as a separate `python3` process, not bash, so it cannot read the shell variable directly).
-dark_css = os.environ.get("DOCSITE_DARK_CSS", "")
+# Real, switchable light/dark theme shared with this script's other hand-rolled pages — see
+# DOCSITE_THEME_* in scripts/docsite.sh (passed through the environment; this heredoc runs as a
+# separate `python3` process, not bash, so it cannot read the shell variables directly).
+theme_css = os.environ.get("DOCSITE_THEME_CSS", "")
+theme_head_init = os.environ.get("DOCSITE_THEME_HEAD_INIT", "")
+theme_toggle_button = os.environ.get("DOCSITE_THEME_TOGGLE_BUTTON", "")
+theme_toggle_js = os.environ.get("DOCSITE_THEME_TOGGLE_JS", "")
 
 # Minimal Markdown-to-HTML: headings, tables, code spans, bold, paragraphs.
 def md2html(text):
@@ -166,27 +195,29 @@ page = f"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Agent Code Index — Mycelium</title>
 <style>
-:root{{--fg:#1a1a2e;--bg:#fdfdfd;--accent:#3a5;--dim:#667;--code:#f4f4f8}}
+{theme_css}
 *{{box-sizing:border-box}}
 body{{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}}
 header,main,footer{{max-width:70rem;margin:0 auto;padding:1rem 1.25rem}}
 header{{border-bottom:2px solid var(--accent)}}
-a{{color:var(--accent)}}
+a{{color:var(--link)}}
 h1,h2,h3,h4,h5,h6{{line-height:1.25}}
 table{{border-collapse:collapse;width:100%;font-size:.9em}}
-th,td{{border:1px solid #ddd;padding:.4rem .6rem;text-align:left}}
-th{{background:#f0f4f0}}
+th,td{{border:1px solid var(--border);padding:.4rem .6rem;text-align:left}}
+th{{background:var(--code)}}
 code{{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:.1em .3em;border-radius:3px}}
 blockquote{{border-left:3px solid var(--accent);margin:1rem 0;padding:.5rem 1rem;color:var(--dim)}}
-footer{{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}}
-{dark_css}
+footer{{color:var(--dim);font-size:.85rem;border-top:1px solid var(--border);margin-top:2rem}}
 </style>
+{theme_head_init}
 </head>
 <body>
+{theme_toggle_button}
 <header><h1>Mycelium — Agent Code Index</h1>
 <p><a href="../index.html">← Back to docsite landing</a></p></header>
 <main>{body}</main>
 <footer>Empirical/Declared — line/regex heuristic; source is ground truth. Use this index to find where to Read, not as an authoritative reference.</footer>
+{theme_toggle_js}
 </body></html>"""
 out_path.write_text(page)
 PYEOF
@@ -215,10 +246,57 @@ else
   if cargo doc --no-deps --workspace --quiet 2>&1; then
     if [[ -d "$RUSTDOC_SRC" ]]; then
       RUSTDOC_OUT="$OUT/rustdoc"
-      # Symlink target/doc into the site (avoids copying GBs; both are gitignored).
+      # Symlink target/doc into the site (avoids copying GBs; both are gitignored). The Pages
+      # publish workflow (actions/upload-pages-artifact) tars with --dereference, so this symlink
+      # is materialized into real files in the deployed artifact — verified against the action's
+      # own docs (it dereferences symlinks + hard links precisely so a layout like this one works).
       ln -sfn "$RUSTDOC_SRC" "$RUSTDOC_OUT"
       ok "rustdoc → $RUSTDOC_OUT/ (symlink → $RUSTDOC_SRC)"
       HAS_RUSTDOC=1
+
+      # `cargo doc --workspace` (no `-p`) never emits a root target/doc/index.html — only
+      # target/doc/<crate_underscored>/index.html per crate (verified: a workspace build here
+      # produced 60+ crate dirs plus crates.js/help.html/settings.html at the root, but no
+      # index.html) — so a bare rustdoc/index.html request 404s even though the docs built fine.
+      # Never-silent fix: write a landing redirect ourselves rather than leaving that 404. Written
+      # straight into $RUSTDOC_SRC (target/doc/), which $RUSTDOC_OUT symlinks to, so it resolves
+      # both from the site (rustdoc/index.html) and from a local `cd target/doc`.
+      RUSTDOC_ENTRY_CRATE="mycelium_core"
+      if [[ -f "$RUSTDOC_SRC/$RUSTDOC_ENTRY_CRATE/index.html" ]]; then
+        : # entry crate present — the expected case.
+      else
+        # Fallback: entry crate missing (e.g. a partial/scoped doc build) — redirect to whatever
+        # crate dir actually exists rather than writing a redirect that itself 404s.
+        FALLBACK_CRATE="$(find "$RUSTDOC_SRC" -mindepth 1 -maxdepth 1 -type d -name 'mycelium_*' -print -quit)"
+        if [[ -n "$FALLBACK_CRATE" ]]; then
+          RUSTDOC_ENTRY_CRATE="$(basename "$FALLBACK_CRATE")"
+          skip "rustdoc entry crate mycelium_core/ not found — falling back to $RUSTDOC_ENTRY_CRATE/ for the landing redirect"
+        else
+          RUSTDOC_ENTRY_CRATE=""
+        fi
+      fi
+
+      if [[ -n "$RUSTDOC_ENTRY_CRATE" ]]; then
+        cat > "$RUSTDOC_SRC/index.html" <<REDIRECTEOF
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="0; url=${RUSTDOC_ENTRY_CRATE}/index.html">
+<link rel="canonical" href="${RUSTDOC_ENTRY_CRATE}/index.html">
+<title>Mycelium — rustdoc</title>
+</head>
+<body>
+<p>Redirecting to the <a href="${RUSTDOC_ENTRY_CRATE}/index.html"><code>${RUSTDOC_ENTRY_CRATE}</code></a>
+rustdoc (Ring-0 kernel-adjacent crate — the natural entry point; see the full per-crate list at
+<a href="../lang-ref/index.html">../lang-ref/</a> or <code>crates.js</code> in this directory).</p>
+</body>
+</html>
+REDIRECTEOF
+        ok "rustdoc landing redirect → rustdoc/index.html (-> ${RUSTDOC_ENTRY_CRATE}/index.html)"
+      else
+        skip "rustdoc built but no mycelium_* crate dir found — no landing redirect written (rustdoc/index.html would 404)"
+      fi
     else
       skip "cargo doc succeeded but target/doc not found — rustdoc section skipped"
     fi
@@ -283,7 +361,7 @@ if [[ $HAS_CORPUS -eq 1 ]]; then
     fi
   done
 
-  # Unquoted delimiter (was quoted 'LANGREF_CSS') so ${DOCSITE_DARK_CSS} below expands — this
+  # Unquoted delimiter (was quoted 'LANGREF_CSS') so ${DOCSITE_THEME_CSS} below expands — this
   # block otherwise has no `$`/backtick content, so interpolation is safe.
   cat > "$LANG_REF_OUT/index.html" <<LANGREF_CSS
 <!DOCTYPE html>
@@ -293,30 +371,31 @@ if [[ $HAS_CORPUS -eq 1 ]]; then
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mycelium &mdash; Language Reference</title>
 <style>
-:root{--fg:#1a1a2e;--bg:#fdfdfd;--accent:#3a5;--dim:#667;--code:#f4f4f8}
+${DOCSITE_THEME_CSS}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}
 header,main,footer{max-width:70rem;margin:0 auto;padding:1rem 1.25rem}
 header{border-bottom:2px solid var(--accent)}
-a{color:var(--accent)}
+a{color:var(--link)}
 h1,h2,h3,h4,h5,h6{line-height:1.25}
 ul{padding-left:1.5rem}
 li{margin:.4rem 0}
 table{border-collapse:collapse;width:100%;font-size:.9em;margin:1rem 0}
-th,td{border:1px solid #ddd;padding:.4rem .7rem;text-align:left;vertical-align:top}
-th{background:#f0f4f0;font-weight:600}
+th,td{border:1px solid var(--border);padding:.4rem .7rem;text-align:left;vertical-align:top}
+th{background:var(--code);font-weight:600}
 code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:.1em .3em;border-radius:3px}
 pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto;font-size:.9em}
-.note{background:#f0f8f0;border:1px solid var(--accent);border-radius:6px;padding:.75rem 1rem;margin:1.5rem 0;font-size:.9em}
-.warn{background:#fff8f0;border:1px solid #c93;border-radius:6px;padding:.75rem 1rem;margin:.75rem 0;font-size:.9em}
-footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}
-${DOCSITE_DARK_CSS}
+.note{background:var(--callout-bg);color:var(--callout-fg);border:1px solid var(--callout-border);border-radius:6px;padding:.75rem 1rem;margin:1.5rem 0;font-size:.9em}
+.warn{background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-border);border-radius:6px;padding:.75rem 1rem;margin:.75rem 0;font-size:.9em}
+footer{color:var(--dim);font-size:.85rem;border-top:1px solid var(--border);margin-top:2rem}
 </style>
+${DOCSITE_THEME_HEAD_INIT}
 </head>
 LANGREF_CSS
   # Append the body with shell-expanded variables (separate heredoc, no single-quoting)
   cat >> "$LANG_REF_OUT/index.html" <<LANGREFBODY
 <body>
+${DOCSITE_THEME_TOGGLE_BUTTON}
 <header>
   <h1>Mycelium &mdash; Language Reference</h1>
   <p>Grammar, reserved-word lexicon, and per-module standard-library specifications.
@@ -469,6 +548,7 @@ Normative ground truth: <code>docs/spec/grammar/mycelium.ebnf</code>, <code>crat
 <code>docs/spec/stdlib/</code> (the EBNF + lexer + specs decide; <code>.claude/memory/lang-lexicon-syntax.md</code> is a non-normative maintenance note). This page is a hand-curated orientation snapshot (Empirical/Declared);
 verify normative claims in the corpus source files. ADR-003/G11: a projection of the corpus, never a parallel truth.
 </footer>
+${DOCSITE_THEME_TOGGLE_JS}
 </body>
 </html>
 LANGREFBODY
@@ -534,24 +614,25 @@ cat > "$OUT/index.html" <<HTMLEOF
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Mycelium — Local Docsite</title>
 <style>
-:root{--fg:#1a1a2e;--bg:#fdfdfd;--accent:#3a5;--dim:#667;--code:#f4f4f8}
+${DOCSITE_THEME_CSS}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--fg);background:var(--bg)}
 header,main,footer{max-width:54rem;margin:0 auto;padding:1rem 1.25rem}
 header{border-bottom:2px solid var(--accent)}
-a{color:var(--accent)}
+a{color:var(--link)}
 h1,h2,h3,h4,h5,h6{line-height:1.25}
 ul{padding-left:1.5rem}
 li{margin:.5rem 0}
-.browse{background:#f0f8f0;border:1px solid var(--accent);border-radius:6px;padding:1rem 1.25rem;margin:1.5rem 0}
-.missing{background:#fff8f0;border:1px solid #c93;border-radius:6px;padding:1rem 1.25rem;margin:1.5rem 0}
+.browse{background:var(--callout-bg);color:var(--callout-fg);border:1px solid var(--callout-border);border-radius:6px;padding:1rem 1.25rem;margin:1.5rem 0}
+.missing{background:var(--warn-bg);color:var(--warn-fg);border:1px solid var(--warn-border);border-radius:6px;padding:1rem 1.25rem;margin:1.5rem 0}
 code{font:0.9em ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);padding:.15em .4em;border-radius:3px}
 pre{background:var(--code);padding:.75rem 1rem;border-radius:6px;overflow:auto}
-footer{color:var(--dim);font-size:.85rem;border-top:1px solid #ddd;margin-top:2rem}
-${DOCSITE_DARK_CSS}
+footer{color:var(--dim);font-size:.85rem;border-top:1px solid var(--border);margin-top:2rem}
 </style>
+${DOCSITE_THEME_HEAD_INIT}
 </head>
 <body>
+${DOCSITE_THEME_TOGGLE_BUTTON}
 <header>
   <h1>Mycelium — Local Docsite</h1>
   <p>A unified, locally-browsable view of the Mycelium corpus and codebase. Generated ${DATE_NOW}.</p>
@@ -583,11 +664,47 @@ python3 -m http.server 8080</pre>
   Advisory output — not committed, not gated. Output is in <code>target/docsite/</code> (gitignored).
   Corpus projection is honest: a projection of the cited corpus, never a parallel truth (ADR-003/G11).
 </footer>
+${DOCSITE_THEME_TOGGLE_JS}
 </body>
 </html>
 HTMLEOF
 
 ok "landing page → $OUT/index.html"
+
+# ── Theme self-check (never-silent, G2) ──────────────────────────────────────────────────────────
+# This script's hand-rolled pages (landing/lang-ref/api-index — NOT the myc-doc corpus pages, which
+# are already covered by crates/mycelium-doc/src/tests/html.rs) have no other test harness, since
+# `docsite.sh` is advisory tooling outside `just check`. So the regression this section fixed (a
+# real, switchable light/dark toggle; theme-token callout boxes instead of hard-coded
+# `#f0f8f0`/`#fff8f0` mint/peach fills that go washed-out under dark text) gets a guard here,
+# inline, rather than silently regressing next time someone edits a heredoc. A failure here is a
+# real bug in this script, not a skip — so it exits non-zero rather than warning.
+section "theme self-check (switchable light/dark + no hard-coded callout colours)"
+THEME_CHECK_FAILED=0
+check_theme_page() {
+  local label="$1" path="$2"
+  [[ -f "$path" ]] || return 0
+  local missing=()
+  grep -q 'id="theme-toggle"' "$path" || missing+=("theme-toggle button")
+  grep -q ':root\[data-theme="dark"\]' "$path" || missing+=('data-theme="dark" override')
+  grep -q ':root\[data-theme="light"\]' "$path" || missing+=('data-theme="light" override')
+  grep -q '@media (prefers-color-scheme: dark)' "$path" || missing+=("prefers-color-scheme: dark media query")
+  grep -q '@media (prefers-color-scheme: light)' "$path" || missing+=("prefers-color-scheme: light media query")
+  grep -qE '#f0f8f0|#fff8f0' "$path" && missing+=("hard-coded mint/peach callout colour reintroduced")
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    fail "$label ($path): ${missing[*]}"
+    THEME_CHECK_FAILED=1
+  else
+    ok "$label — real toggle + themed callouts present"
+  fi
+}
+check_theme_page "landing page" "$OUT/index.html"
+check_theme_page "lang-ref page" "$LANG_REF_OUT/index.html"
+check_theme_page "api-index HTML wrapper" "$API_INDEX_OUT/index.html"
+if [[ $THEME_CHECK_FAILED -ne 0 ]]; then
+  fail "docsite theme self-check failed — see above"
+  exit 1
+fi
 
 # ── Done ──────────────────────────────────────────────────────────────────────────────────────────
 echo

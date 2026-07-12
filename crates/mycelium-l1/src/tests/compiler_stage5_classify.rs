@@ -261,7 +261,13 @@ fn paradigm_name_marshal_discriminates() {
 
 #[test]
 fn cons_list_ctors_marshal_discriminates() {
-    let reg = fixture_registry();
+    // DN-112 Rank 1 / M-1036 (DoD item 8, flagged `.myc`-parity residual — see
+    // `marshal_support::unqualify_types_map`): `MyList`'s self-recursive ctor field is nodule-
+    // qualified on the Rust side (`FIXTURE_SRC`'s home is `test.classify_fixture`), but the `.myc`
+    // mirror does not yet compare qualified names — strip qualification from the encoded registry
+    // so this `.myc`-only structural test still exercises `cons_list_ctors`'s recursion-detection
+    // shape (a bare query against a bare-recursion-encoded registry, exactly as before this fix).
+    let reg = unqualify_types_map(fixture_registry());
     let got = decode_driver(
         "Option[Pair[Bytes, Bytes]]",
         &format!(

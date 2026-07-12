@@ -57,6 +57,12 @@ pub mod lexer;
 pub mod mono;
 pub mod nodule;
 pub mod parse;
+/// **DN-113 Rank 1 / M-1060** — the multi-phylum dependency-graph builder: [`phyla::PhylumNode`] +
+/// [`phyla::build_phyla_graph`] resolve a named graph of phyla bottom-up into checked, linked
+/// [`checkty::ResolvedPhylum`]s, refusing a cyclic graph before checking anything (DN-113 §9.3). The
+/// single-phylum resolution mechanism (`Phyla`/`ResolvedPhylum`/`check_phylum_with_deps`) it layers
+/// over lives in [`checkty`] itself (crate-internal access to `Exports`/`Env`/`DataInfo` needed).
+pub mod phyla;
 /// `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;
 /// DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3). The E3-enabling core: [`reveal::reveal_l0`]
 /// (the shown L0 term), [`reveal::render_surface`] (the honestly-labelled surface pretty-printer),
@@ -83,7 +89,8 @@ pub use ambient::{
 pub use ast::{Nodule, Phylum, UsePath, Vis};
 pub use checkty::{
     check_and_resolve, check_nodule, check_nodule_matured, check_phylum, check_phylum_matured,
-    CheckError, Env, PhylumEnv, Ty,
+    check_phylum_matured_with_deps, check_phylum_with_deps, CheckError, Env, Phyla, PhylumEnv,
+    ResolvedPhylum, Ty,
 };
 pub use elab::{
     elaborate, elaborate_colony, elaborate_direct, elaborate_lower_rule,

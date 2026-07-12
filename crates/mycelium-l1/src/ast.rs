@@ -55,17 +55,30 @@ impl Vis {
     }
 }
 
-/// A `use` import target (`use a.b.Item` or the glob `use a.b.*`; M-662; RFC-0006 §4.3). A `use`
-/// binds a name (or, for a glob, every `pub` name under a path) from another nodule of the phylum into
-/// the local scope, keyed by the qualified name. Resolution is **never-silent** (G2): an unknown /
-/// private / ambiguous import is an explicit `CheckError`, never a silent winner.
+/// A `use` import target (`use a.b.Item` or the glob `use a.b.*`; M-662; RFC-0006 §4.3) — or, with
+/// the DN-113 Rank 1 `::` phylum-boundary head, a **cross-phylum** reference (`use dep::a.b.Item`;
+/// M-1060). A `use` binds a name (or, for an intra-phylum glob, every `pub` name under a path) from
+/// another nodule — of this phylum, or of a declared dependency phylum — into the local scope, keyed
+/// by the qualified name. Resolution is **never-silent** (G2): an unknown/private/ambiguous import,
+/// an unknown dependency, or a v1-deferred cross-phylum glob is an explicit `CheckError`, never a
+/// silent winner.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UsePath {
+    /// **DN-113 Rank 1 / M-1060.** The dependency's local name (the `[dependencies]` key) when this
+    /// is a **cross-phylum** reference (`use dep::a.b.Item` — the `::` head), or `None` for an
+    /// ordinary intra-phylum `use` (unchanged from M-662; every pre-existing `use` parses to `None`
+    /// here, so intra-phylum resolution is byte-identical). `::` is lexically distinct from the `.`
+    /// path separator, so a cross-phylum reference is self-evident by construction (never ambiguous
+    /// with an intra-phylum one — G2).
+    pub phylum: Option<String>,
     /// The imported path. For a specific import it names the item (`a.b.Item`); for a glob it names
-    /// the *prefix* whose `pub` names are imported (`a.b` from `use a.b.*`).
+    /// the *prefix* whose `pub` names are imported (`a.b` from `use a.b.*`). For a cross-phylum
+    /// reference this is the path **within** the dependency (`a.b` in `use dep::a.b.Item`).
     pub path: Path,
     /// `true` for a glob `use a.b.*` (import all `pub` names under `path`); `false` for a specific
-    /// `use a.b.Item`.
+    /// `use a.b.Item`. **DN-113 v1**: a cross-phylum glob (`phylum.is_some() && glob`) is parsed but
+    /// refused at check time — v1 requires an explicit cross-phylum import (DN-113 §7/§8; the
+    /// disambiguation glob folds into M-982).
     pub glob: bool,
 }
 

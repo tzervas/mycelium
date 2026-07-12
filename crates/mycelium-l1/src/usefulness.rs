@@ -44,7 +44,8 @@ pub(crate) enum Pat {
 /// `Ternary` — never a complete signature, so a literal column always needs a default).
 fn signature<'a>(ty: &Ty, types: &'a BTreeMap<String, DataInfo>) -> Option<&'a DataInfo> {
     match ty {
-        Ty::Data(n, _) => types.get(n),
+        // DN-112 Rank 1 / M-1036: `n` is a checked (possibly qualified) `Ty::Data` name.
+        Ty::Data(n, _) => crate::checkty::lookup_data(types, n),
         _ => None,
     }
 }

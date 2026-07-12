@@ -25,15 +25,18 @@ fn corpus() -> Vec<&'static str> {
     vec![
         // All-expressible file.
         "enum Ordering { Less, Equal, Greater }\nfn is_lt(o: bool) -> bool { o }",
-        // All-gapped file (every known hard gap, several items). The struct carries a `char` field
+        // All-gapped file (every known hard gap, several items). The struct carries an `f32` field
         // so it still gaps under M-1006: a named-field struct with all-*mappable* fields now emits
-        // positionally (and `String` maps to `Bytes` as of §8.14), so an all-gapped fixture must use
-        // a field type that has no mapping — `char` has no confirmed base_type arm.
-        "trait Foo { fn bar(&self) -> bool; }\nmacro_rules! m { () => {}; }\nstruct S { c: char }",
+        // positionally (and `String` maps to `Bytes` as of §8.14; `char`/`i8..i128`/`isize`/`usize`
+        // now map too, as of P4/P5 — DN-99 §8 ENB-6), so an all-gapped fixture must use a field
+        // type that has no mapping — `f32` still has no confirmed base_type arm (`Float` is
+        // binary64-only, ADR-040 FLAG-1/M-897).
+        "trait Foo { fn bar(&self) -> bool; }\nmacro_rules! m { () => {}; }\nstruct S { c: f32 }",
         // Mixed: some expressible, some gapped, in one file (mirrors the real target crate).
         "enum E { A(u8), B }\ntrait T { fn f(&self) -> bool; }\nfn g(x: bool) -> bool { x }",
-        // A single unmappable-type fn (signed int) plus a working one.
-        "fn h(x: i32) -> i32 { x }\nfn ok(x: bool) -> bool { x }",
+        // A single unmappable-type fn (`f32`, still gapped — P4/P5 mapped `i32`, so this fixture
+        // was updated to keep exercising a genuinely still-unmapped scalar) plus a working one.
+        "fn h(x: f32) -> f32 { x }\nfn ok(x: bool) -> bool { x }",
         // An unbounded-generic fn (this one is actually expressible — `type_params` allows bare
         // identifiers) beside a `type` *alias* (which always gaps regardless of generics — see
         // `dispatch_item`'s `Item::Type` arm: `type_item` always introduces a new sum type, so a

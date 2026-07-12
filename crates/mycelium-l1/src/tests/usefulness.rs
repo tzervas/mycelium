@@ -6,6 +6,7 @@ fn nat_registry() -> std::collections::BTreeMap<String, DataInfo> {
     m.insert(
         "Nat".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Nat".to_owned(),
             params: vec![],
             ctors: vec![
@@ -213,6 +214,7 @@ fn wide_registry(n: usize) -> std::collections::BTreeMap<String, DataInfo> {
     m.insert(
         "Wide".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Wide".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
