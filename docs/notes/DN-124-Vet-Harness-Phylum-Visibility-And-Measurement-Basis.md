@@ -3,7 +3,8 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-124 |
-| **Status** | **Draft** (2026-07-12). Authored as a **design-forward reasoner note** working the gap-close-2 wave-2 vet-harness phylum-blindness finding forward to a **ranked recommendation**. It **works the decision forward and recommends, ranked**; it **enacts nothing**, **ratifies nothing**, **builds nothing**, and **moves no other doc's status** (house rule #3, append-only — the maintainer ratifies Draft→Accepted). It **does not edit** `crates/**` source, `gen/myc-drafts/**`, `tools/github/issues.yaml`, `CHANGELOG.md`, or `docs/Doc-Index.md` — those additions are **FLAGGED** in §9 for the integrating parent. Tags are `Empirical` where read against the tree (verification base `dev`/worktree `b36ebdbe`; the finding's leaf `claude/leaf/gc2-imp1-cross-nodule-symtab` @ `4f346da3` on `dev@12f0632b` — the four cited harness files are byte-identical across both bases, checked), `Declared` for any proposed-but-unbuilt mechanism (VR-5). |
+| **Status** | **Accepted** (2026-07-12, ratified under explicit maintainer delegation — "ratify based on objective reasoning and the project's needs/intents, keep to core principles, report results"). Was **Draft** (2026-07-12, same day). Ratifies **P-A** (partial per-nodule verdicts via import-closure sub-phylum re-check, reusing `check_phylum` unchanged) and **M-A** (dual-report both measurement bases one transition cycle, then re-baseline with `Δ_basis` attributed; annotate — never rewrite — the historical oracle §8 series). **Accepted, not Enacted** (house rule #3) — it **builds nothing** yet; every mechanism/verdict tag stays `Declared` until Units 1–3 (§5.3) land and are differential-witnessed. Tags are `Empirical` where read against the tree (verification base `dev`/worktree `b36ebdbe`; the finding's leaf `claude/leaf/gc2-imp1-cross-nodule-symtab` @ `4f346da3` on `dev@12f0632b` — the four cited harness files are byte-identical across both bases, checked), `Declared` for any proposed-but-unbuilt mechanism (VR-5). |
+| **Ratification basis (recorded verbatim, 2026-07-12)** | **Phylum-mode is the demonstrably-correct basis** — oracle-mode false-fails valid cross-nodule uses a real build accepts, proven in-tree by `phylum_cross_nodule_reference_resolves` (`crates/mycelium-check/src/lib.rs:530-560`). **P-A is KC-3** (zero kernel growth — reuses `check_phylum` unchanged; the driver only composes it over sub-phyla). **The import-closure invariant adversarially prevents false-clean** (§2.1, §6 — a nodule is `Clean` only if its whole import closure is clean; VR-5, never fabricated). **M-A is VR-5 plus append-only applied to the metric itself** — the basis-change jump is disclosed, recovered-vs-earned is explicit, and the historical §8 series is annotated, never rewritten (house rule #3). Ratified on objective/core-principle grounds under explicit maintainer delegation, not by the design-reasoner self-ratifying. |
 | **Decides** | *Proposes, for ratification (does not self-ratify):* (1) the **verified problem statement** — the transpiler `--vet` loop and `gen/myc-drafts/regenerate.sh` check each emitted `.myc` in **oracle (single-file) mode**, which has **zero phylum-import visibility**, so a correctly-resolved cross-nodule `use checkty.Width;` validates CLEAN under `myc check --phylum` but FAILS under oracle mode (`checkty.Width` unresolved) — making the whole cross-nodule/cross-phylum lever family (Import, DN-122 external-trait impls, cross-phylum records) **un-creditable even when the transpiler emits correctly**. (2) The **ranked recommendation**: **P-A** — add **sound partial per-nodule verdicts** to `PhylumReport` via **driver-level import-closure sub-phylum checking that re-uses the kernel `check_phylum` unchanged** (zero kernel growth, KC-3), then **switch the vet path to `myc check --phylum <dir>`** consuming those verdicts. Partial verdicts are a **precondition, not polish**: an all-or-nothing phylum-mode switch would **regress mixed phyla** (§3.3). (3) The **measurement-basis decision (the crux, §4)**: phylum-mode is the **more correct basis** (it matches the real phylum build; oracle mode checks a counterfactual phylum-of-one no build ever performs) — but the `checked_fraction` number will **JUMP** on the switch by recovering falsely-failed items, which is a **basis correction, NOT lever progress**. Recommend **M-A** — **dual-report both bases for a transition cycle, then re-baseline with the one-time `Δ_basis` explicitly attributed**, never retroactively rewriting the historical oracle §8 series (append-only). (4) The **rejected alternatives + soundness invariant**: a first-class kernel per-nodule-verdict rewrite (**P-B**) and a hard un-annotated switch (**M-B**) are rejected; the **import-closure soundness invariant** (a nodule is credited `Clean` **only if its whole import closure checks clean**) is the load-bearing guard against the false-clean failure mode. |
 | **Feeds** | The gap-close-2 lever program (`.claude/kickoffs/README.md` gap-close-2 wave); the **Import** gap-class lever (DN-34 §8.19/§8.20, the leaf `symtab.rs`); **DN-122** (external-trait impls across the home boundary — un-creditable today for the same reason); **DN-113 / M-1060** (cross-phylum import resolution, `check_phylum_with_deps`, `checkty.rs:1935` — the cross-phylum dep-vetting interaction, §7 OQ-2); **DN-112 / M-1036** (nodule-qualified home identity — the home-qualified `use <nodule>.<Item>;` emission the leaf's `symtab.rs` produces); **DN-101** (cross-nodule runtime link) and **DN-20** (the three test tiers — base-crate touches desktop-held for the full sweep); **M-1000/M-1001** (the transpile→`myc check` vet loop this note extends); **M-1006** (the phylum-check mode and the ladder this feeds); the DN-99 register (the ENB/Import rows whose `checked_fraction` this un-blinds). |
 | **Grounds on** | **KC-3** (small auditable kernel — the recommended P-A re-uses `check_phylum` unchanged; **zero L0/kernel growth**); **KISS/YAGNI** (driver-level closure re-check over a new kernel per-nodule verdict path); **DRY** (the kernel `check_phylum` stays the single source of truth for what "checks clean" IS; the driver only *composes* it over sub-phyla); **G2 / never-silent** (partial verdicts are strictly more informative and never fabricate a verdict — a blocked nodule is reported `Blocked`, never guessed `Clean`; the report carries BOTH per-nodule verdicts AND the whole-phylum verdict so the two are never conflated); **VR-5** (the `checked_fraction` basis change is disclosed, the recovered-vs-earned split is explicit, and the emitted `.myc` stays `Declared` until a differential upgrades it — the vet *verdict* stays `Empirical`); **house rule #3 append-only** (the historical oracle-mode §8 series is annotated, never rewritten); **house rule #4** (the honest finding — a naïve phylum-mode switch *regresses* mixed phyla — is surfaced, not glossed). |
@@ -407,6 +408,11 @@ append-only); I did **not** touch `Doc-Index.md`, `CHANGELOG.md`, or `issues.yam
   `corpus:DN-124`, `src:crates/mycelium-check/src/lib.rs:267`, `src:crates/mycelium-transpile/src/vet.rs:26`,
   `src:gen/myc-drafts/regenerate.sh:58`. Status **todo** (design-ratification-gated on this DN).
 
+**Applied at the 2026-07-12 ratification close-out (append-only note, original FLAGs above left
+as-authored):** `Doc-Index.md` DN-124 row added at status **Accepted**; `CHANGELOG.md` carries the
+ratification entry; **M-1079** minted for the harness build (`depends_on: [M-1060]`; the Import-lever
+leaf's own M-id does not yet exist — flagged, not guessed, see the M-1079 issue body).
+
 ---
 
 ## §10 User stories
@@ -426,8 +432,8 @@ append-only); I did **not** touch `Doc-Index.md`, `CHANGELOG.md`, or `issues.yam
 
 ---
 
-*DN-124 — Draft. Works the decision forward and recommends, ranked; ratification is the maintainer's
-(house rule #3). Enacts nothing, builds nothing, moves no other doc's status.*
+*DN-124 — Accepted (2026-07-12). Ratifies P-A + M-A; builds nothing yet — implementation (the
+FLAGGED M-id, §9) is a separate, unlanded step (house rule #3: Accepted is not Enacted).*
 
 ## Changelog
 
@@ -439,3 +445,16 @@ append-only); I did **not** touch `Doc-Index.md`, `CHANGELOG.md`, or `issues.yam
   append-only), adversarial stress-test (held with two narrowings — real-phylum-boundary constraint +
   dual-signal report), DoD + user stories. `Empirical` where read against `b36ebdbe` / leaf
   `4f346da3`; `Declared` for the proposed mechanism until built + differential-witnessed.
+- 2026-07-12 — **Accepted.** Ratified by the maintainer's explicit delegation to the orchestrator
+  ("ratify based on objective reasoning and the project's needs/intents, keep to core principles,
+  report results"). Ratifies **P-A** (partial per-nodule verdicts via import-closure sub-phylum
+  re-check, reusing `check_phylum` unchanged — KC-3, zero kernel growth) and **M-A** (dual-report both
+  measurement bases one transition cycle, then re-baseline with `Δ_basis` attributed; annotate, never
+  rewrite, the historical oracle §8 series). Basis recorded verbatim in the header table's
+  "Ratification basis" row: phylum-mode is the demonstrably-correct basis (proven in-tree by
+  `phylum_cross_nodule_reference_resolves`); P-A is KC-3; the import-closure invariant adversarially
+  prevents false-clean (VR-5); M-A is VR-5 plus append-only applied to the metric. **Accepted, not
+  Enacted** (house rule #3) — Units 1–3 (§5.3) are unbuilt; every verdict/mechanism tag stays
+  `Declared` until implemented and differential-witnessed. Minted **M-1079** (vet-harness phylum
+  visibility build) this close-out, `depends_on: [M-1060]` (the Import-lever leaf work is in-flight
+  under the gap-close-2 wave with no minted M-id yet — flagged, not guessed).

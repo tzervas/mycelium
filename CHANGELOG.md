@@ -12,6 +12,45 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn-124): ratify vet-harness phylum-visibility and measurement-basis note (Accepted, 2026-07-12)
+
+**DN-124** (`docs/notes/DN-124-Vet-Harness-Phylum-Visibility-And-Measurement-Basis.md`) moves
+**Draft to Accepted** under explicit maintainer delegation to the orchestrator ("ratify based on
+objective reasoning and the project's needs/intents, keep to core principles, report results").
+Ratifies **P-A** — sound partial per-nodule verdicts on `PhylumReport` via a driver-level
+import-closure sub-phylum re-check that reuses the kernel `check_phylum` unchanged (zero kernel
+growth, KC-3), then switches the vet path to `myc check --phylum <dir>` — and **M-A** — phylum-mode
+is the demonstrably-correct measurement basis (a real build's semantics; proven in-tree by
+`phylum_cross_nodule_reference_resolves`), with the one-time `checked_fraction` jump on the switch
+dual-reported and labeled a **basis correction, not lever progress**, then re-baselined with
+`Δ_basis` attributed (the historical oracle §8 series is annotated, never rewritten per house
+rule #3). The **import-closure invariant** is the load-bearing false-clean guard, adversarially
+verified against four attack scenarios (§6). **Accepted, not Enacted** — every mechanism/verdict tag stays
+`Declared` until Units 1–3 (§5.3) land and are differential-witnessed. Minted **M-1079** (harness
+build: `PhylumReport` partial verdicts, `--phylum` vet wiring, `regenerate.sh` semcore batching;
+`depends_on: [M-1060]`).
+
+### docs(dn-122): ratify external-trait-impls MVP note (Accepted, 2026-07-12)
+
+**DN-122** (`docs/notes/DN-122-External-Trait-Impls-Across-The-Home-Boundary.md`) moves **Draft to
+Accepted** under the same maintainer delegation. Ratifies the **§13 build-ready MVP**: the
+single-parameter, param-only-signature foreign-trait-impl class (prelude-scoped first) via a
+**transpiler rule-swap (WU-A) plus target-trait availability (WU-B)**, riding the now-landed
+M-1060/M-1036 checker substrate with zero new kernel or checker work. Soundness argument: the MVP
+admits exactly the complement of the landed M-1060 cross-phylum bare-name-collapse guard, so it
+cannot reopen that collapse by construction (the verified `{carrier}×{position}` surface). Resolves
+**OQ-6 (target-trait availability) as prelude-seed** over std-phylum-declare — KISS/YAGNI plus
+least-soundness-surface grounds, since the prelude-scoped closure is a single uniform home with no
+cross-phylum import, diamond, or separate-compilation tension for v1; std-phylum-declare is
+deferred to the M-1076/WU-C cross-phylum follow-up. **OQ-7 (single-param vs two-type split of the
+114-gap/12.4% class) stays an open, honest residual** — unmeasured until the WU-A Phase-0
+re-measure runs under DN-124's phylum-mode vet basis; the leverage tag stays `Declared`. Unsupported
+shapes (two-type/`Self`-needing traits, incl. the canonical `Widen` witness; concrete-type-in-sig)
+are refused never-silently, tracked as M-1076/M-876 (WU-C, out of v1 scope). **Accepted, not
+Enacted** (house rule #3). Minted **M-1080** (MVP build: WU-A emit `use <trait-home>.<Trait>` for
+single-param param-only traits, plus WU-B prelude-seed target-trait availability;
+`depends_on: [M-1060, M-1079]`).
+
 ### fix(l1): M-1060 cross-phylum type-identity soundness closure — 4 fix cycles (2026-07-11)
 
 Adversarial-verification follow-through on the M-1060/DN-113 v1 cross-phylum landing (PR #1503):
