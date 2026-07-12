@@ -157,6 +157,7 @@ fn register_handle(e: &mut Env) {
     e.types.insert(
         "Handle".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Handle".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {
@@ -173,6 +174,7 @@ fn register_coin(e: &mut Env) {
     e.types.insert(
         "Coin".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Coin".to_owned(),
             params: vec![],
             ctors: vec![
@@ -593,6 +595,7 @@ fn register_sentinel_s(e: &mut Env) {
     e.types.insert(
         "Sentinel".to_owned(),
         DataInfo {
+            home: String::new(), // DN-112/M-1036: test fixture, unqualified/bare identity
             name: "Sentinel".to_owned(),
             params: vec![],
             ctors: vec![CtorInfo {

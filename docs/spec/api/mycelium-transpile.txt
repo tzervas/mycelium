@@ -115,6 +115,7 @@ pub fn mycelium_transpile::emit::non_doc_attrs(&[syn::attr::Attribute]) -> alloc
 pub mod mycelium_transpile::gap
 pub enum mycelium_transpile::gap::Category
 pub mycelium_transpile::gap::Category::AssocConst
+pub mycelium_transpile::gap::Category::Closure
 pub mycelium_transpile::gap::Category::Conversion
 pub mycelium_transpile::gap::Category::DeriveAttr
 pub mycelium_transpile::gap::Category::GenericBound
@@ -592,6 +593,7 @@ pub fn mycelium_transpile::vet::classify_run(alloc::string::String, alloc::strin
 pub fn mycelium_transpile::vet::vet_batch(&mycelium_transpile::vet::MycChecker, &[mycelium_transpile::vet::VetInput]) -> mycelium_transpile::vet::VetReport
 pub enum mycelium_transpile::Category
 pub mycelium_transpile::Category::AssocConst
+pub mycelium_transpile::Category::Closure
 pub mycelium_transpile::Category::Conversion
 pub mycelium_transpile::Category::DeriveAttr
 pub mycelium_transpile::Category::GenericBound

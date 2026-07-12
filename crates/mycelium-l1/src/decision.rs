@@ -136,6 +136,38 @@ pub(crate) fn compile(
     compile_rows(&budget, types, &rows, occ, tys)
 }
 
+/// **M-1036 residual-close audit (B — "mirrors usefulness's algorithm").** This fn's two
+/// `crate::checkty::lookup_data(types, …)` calls below (the `complete` check and the ctor-emission
+/// loop) are deliberately left **unguarded** (not routed through `lookup_data_home_checked`) —
+/// audited and confirmed **not exploitable** for a wrong-value silent accept, by the same
+/// "validated-by-construction" argument [`crate::usefulness::signature`] already relies on (that fn
+/// is the enumerated inventory's own DO-NOT-TOUCH precedent for this exact shape):
+///
+/// 1. **`lookup_data` here is only ever reached for a `dn` some row has already validated.** `ty0`
+///    is only looked up once `col` is selected, and `col` selection (`rows.iter().any(|r|
+///    !matches!(r.pats[i], Pat::Wild))`) REQUIRES some row to carry a non-`Pat::Wild` entry at that
+///    exact occurrence — and every `Pat::Ctor`/nullary-`Pat::Ctor` in `rows` was produced by
+///    [`crate::checkty::normalize_pattern`]'s **home-checked** (`lookup_data_home_checked`)
+///    resolution of that exact occurrence, using the same `types` map. So whenever this fn's own
+///    plain `lookup_data(types, dn)` call is reached, `dn` was already proven non-mismatched — it
+///    resolves to the identical [`DataInfo`] `lookup_data_home_checked` would return (the two agree
+///    on every `Ok`/`Some` case; they differ only in how they report a miss).
+/// 2. **The emitted `cases` never depend on a wrong `d` anyway.** `ctor_heads` (which constructors
+///    actually get a `Head::Ctor` case + subtree) is built purely from `rows`'s own validated
+///    `Pat::Ctor` entries, never from `d.ctors` — `d` only decides `complete` (whether a `default`
+///    is also emitted) and case-emission *order*. A wrongly-`false` `complete` (the only direction a
+///    mismatched `d` could in principle produce, and only in the unreached wild-column case above)
+///    would at worst add a spurious `default` branch that specializes to an already-fully-covered,
+///    now-empty row set — `compile_rows`'s own base case turns that into `Tree::Fail`, which
+///    [`has_reachable_fail`] (checked by every caller — `checkty.rs`'s `Cx::check` and
+///    `elab.rs`'s `elab_match`) catches and **refuses** (G2) rather than silently emitting an
+///    unsound tree. So even a hypothetical mismatch here fails CLOSED, never open.
+///
+/// Guarantee: `Declared` (a reasoned structural argument, not a mechanized proof) — empirically
+/// exercised by `tests/ctor_seal.rs`'s `a_shadow_plus_foreign_reach_pattern_match_no_longer_type_confuses`
+/// / `a_wildcard_shielded_shadow_plus_foreign_field_no_longer_silently_misregisters` (both route
+/// through this fn via `Cx::check`'s match-arm handling and pass without a spurious refusal or a
+/// silently-accepted wrong tree).
 fn compile_rows(
     budget: &RecursionBudget,
     types: &BTreeMap<String, DataInfo>,
@@ -184,7 +216,8 @@ fn compile_rows(
     let mut cases: Vec<(Head, Tree)> = Vec::new();
     // Whether the cases cover the column's whole signature (so no default is needed).
     let complete = match &ty0 {
-        Ty::Data(n, _) => types.get(n).is_some_and(|d| {
+        // DN-112 Rank 1 / M-1036: `n` is a checked (possibly qualified) `Ty::Data` name.
+        Ty::Data(n, _) => crate::checkty::lookup_data(types, n).is_some_and(|d| {
             // Iterate constructors in signature order for a stable, complete switch.
             d.ctors
                 .iter()
@@ -195,7 +228,7 @@ fn compile_rows(
     };
 
     if let Ty::Data(dn, _) = &ty0 {
-        if let Some(d) = types.get(dn) {
+        if let Some(d) = crate::checkty::lookup_data(types, dn) {
             let d = d.clone();
             for ci in &d.ctors {
                 if ctor_heads.iter().any(|(m, _)| *m == ci.name) {

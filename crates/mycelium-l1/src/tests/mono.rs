@@ -116,8 +116,8 @@ fn first_or_monomorphizes_to_closed_l0() {
     );
     // Its mangled data type `List$Binary8` exists with empty params and mangled ctors.
     let lst = mono
-        .type_info("List$Binary8")
-        .expect("List$Binary8 emitted");
+        .type_info("d$H$List$Binary8")
+        .expect("d$H$List$Binary8 emitted (DN-112/M-1036: nodule d qualifies List identity)");
     assert!(lst.params.is_empty());
     let ctor_names: BTreeSet<&str> = lst.ctors.iter().map(|c| c.name.as_str()).collect();
     assert!(ctor_names.contains("Cons$Binary8") && ctor_names.contains("Nil$Binary8"));
@@ -145,7 +145,7 @@ fn a_generic_returning_a_datum_monomorphizes() {
         "{LIST}fn main() => List[Binary{{8}}] = Cons(0b0000_0001, Nil);"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
-    assert!(mono.type_info("List$Binary8").is_some());
+    assert!(mono.type_info("d$H$List$Binary8").is_some());
     assert!(no_reachable_var(&mono));
     // Elaborates + runs (a data result).
     let node = crate::elaborate(&env, "main").expect("elaborates");
@@ -164,19 +164,19 @@ fn nested_generics_enqueue_inner_and_outer_instances() {
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(
-        mono.type_info("List$Binary8").is_some(),
-        "inner List$Binary8 emitted"
+        mono.type_info("d$H$List$Binary8").is_some(),
+        "inner d$H$List$Binary8 emitted (DN-112/M-1036: nodule d)"
     );
     let outer = mono
-        .type_info("List$List$Binary8")
-        .expect("outer List$List$Binary8 emitted");
+        .type_info("d$H$List$d$H$List$Binary8")
+        .expect("outer d$H$List$d$H$List$Binary8 emitted");
     // The outer's `Cons` field-0 is the inner mangled-nullary data type.
     let cons = outer
         .ctors
         .iter()
-        .find(|c| c.name == "Cons$List$Binary8")
+        .find(|c| c.name == "Cons$d$H$List$Binary8")
         .expect("outer Cons");
-    assert_eq!(cons.fields[0], Ty::Data("List$Binary8".into(), vec![]));
+    assert_eq!(cons.fields[0], Ty::Data("d$H$List$Binary8".into(), vec![]));
     assert!(no_reachable_var(&mono));
     // It elaborates to closed L0 and runs to a datum.
     let node = crate::elaborate(&env, "main").expect("elaborates");
@@ -196,7 +196,7 @@ fn a_for_fold_over_a_generic_spine_instance_monomorphizes_and_runs() {
              fn main() => Binary{{8}} = checksum(Cons(0b1111_0000, Cons(0b0000_1111, Nil)));"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
-    assert!(mono.type_info("List$Binary8").is_some());
+    assert!(mono.type_info("d$H$List$Binary8").is_some());
     assert!(no_reachable_var(&mono));
     // Elaborates to a closed L0 fold and runs: xor(xor(0b0000_0000, 0b1111_0000), 0b0000_1111).
     let node = crate::elaborate(&env, "main").expect("elaborates");
@@ -267,7 +267,10 @@ fn two_widths_emit_two_distinct_specializations() {
         mono.fn_decl("first_or$Binary4"),
         "the two specializations are distinct fns"
     );
-    assert!(mono.type_info("List$Binary8").is_some() && mono.type_info("List$Binary4").is_some());
+    assert!(
+        mono.type_info("d$H$List$Binary8").is_some()
+            && mono.type_info("d$H$List$Binary4").is_some()
+    );
 }
 
 // ---- property: determinism ----------------------------------------------------------------
@@ -308,8 +311,9 @@ fn recursion_and_mutual_recursion_emit_a_finite_set() {
     assert!(mono.fn_decl("len_$Binary8").is_some());
     assert!(mono.fn_decl("ping$Binary8").is_some());
     assert!(mono.fn_decl("pong$Binary8").is_some());
+    // DN-112/M-1036: the mangled key is now d$H$List$Binary8 (nodule d qualifies List).
     assert_eq!(
-        mono.types.keys().filter(|k| k.starts_with("List")).count(),
+        mono.types.keys().filter(|k| k.contains("List")).count(),
         1,
         "List specialized once at Binary8"
     );

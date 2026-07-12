@@ -247,8 +247,21 @@ pub struct CtorInfo {
 /// type arguments when a value is constructed or matched.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DataInfo {
-    /// Type name.
+    /// Type name — the **bare/local** (simple) name, unchanged from v0 (the registry-lookup key
+    /// this crate has always used; DN-112 Rank 1 / M-1036 does not qualify this field, only the
+    /// [`Ty::Data`] identity string derived from it via [`qualify_type_name`]).
     pub name: String,
+    /// **Nodule-qualified type identity — the home** (DN-112 Rank 1 / M-1036): the declaring
+    /// nodule's home string (`nodule.path` dot-joined, e.g. `"a"`, `"a.b"`), or [`PRELUDE_HOME`]
+    /// for a prelude/synthetic type (`Bool`, `Tuple$N`) that must resolve identically under every
+    /// nodule (the §9 uniform-home invariant). Stamped **once**, at first registration
+    /// ([`register_types`]), from the **declaring** nodule — never the use-site (§9 invariant ii):
+    /// an imported [`DataInfo`] clone carries its original declaring nodule's home unchanged
+    /// through the export/import pipeline. [`qualify_type_name`] combines this with [`Self::name`]
+    /// to produce the identity string embedded in a fresh [`Ty::Data`] (e.g. `"a::T"`); the
+    /// registry KEY (this map's `String` key) stays bare/simple throughout — only the `Ty::Data`
+    /// identity is qualified (KC-3 — the ~79 destructuring arms DN-112 §3 counts need no change).
+    pub home: String,
     /// Type parameters, in declaration order (empty for a monomorphic type). `List<A>` ⇒ `["A"]`.
     pub params: Vec<String>,
     /// Constructors, in declaration order (the index is the `#type#i` of RFC-0007 §4.2). Field types
@@ -314,6 +327,193 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
         Ty::Var(_) | Ty::Fn(_, _) => return None,
     })
+}
+
+// ---- DN-112 Rank 1 / M-1036: nodule-qualified type identity (the ctor-seal capability boundary) ----
+//
+// The mechanism (ratified DN-112 §4 Alt 1 / §10): a [`Ty::Data`] name carries the **declaring
+// nodule's home**, qualified into the existing `String` slot (`"a::T"` for `T` declared in nodule
+// `a`), so two same-named-different-home types are **structurally distinct** — `PartialEq`,
+// `subst_ty`, and mangling (`mono::mangle_ty`) all stay collision-free "for free" (no change to
+// their own logic — DN-112 §4/§7). [`DataInfo::home`]/`::name` and the registry `BTreeMap` **key**
+// stay bare/simple throughout (the checking-time surface-lookup scheme, unchanged); only the
+// identity **stamped into a freshly-constructed `Ty::Data`** is qualified. Prelude/synthetic types
+// (`Bool`, `Tuple$N`) stay under the single [`PRELUDE_HOME`] and are **never** qualified (§9's
+// uniform-home invariant — every nodule must see the *same* builtin).
+
+/// The single reserved home for prelude/synthetic types (`Bool`, `Tuple$N`) that must resolve
+/// **identically** under every nodule (DN-112 §9 invariant i). A type registered under this home is
+/// never qualified by [`qualify_type_name`] — its `Ty::Data` identity stays the bare name, exactly
+/// as before this fix, so every nodule sees the same builtin regardless of which nodule's
+/// registration pass happened to seed it (`Bool` is re-seeded per nodule via [`prelude`]; `Tuple$N`
+/// is synthesized on demand per nodule via [`synthetic_tuple_data`]).
+pub(crate) const PRELUDE_HOME: &str = "<prelude>";
+
+/// A nodule's **home** string for type-identity qualification (DN-112 Rank 1): its dot-joined path
+/// (`"a"`, `"a.b"`), or `""` for a path-less (anonymous, header-less) nodule. An empty home is
+/// treated as bare/unqualified by [`qualify_type_name`] (the same "stay bare" treatment as
+/// [`PRELUDE_HOME`]) — a documented, narrow residual: two distinct anonymous nodules in one phylum
+/// would share the empty home, but the pre-existing [`PhylumEnv::link`] cross-nodule bare-name
+/// collision refusal already rejects that shape independent of this fix, and every multi-nodule
+/// fixture in this crate's test corpus uses an explicit `nodule NAME;` header.
+#[must_use]
+pub(crate) fn nodule_home(path: &Path) -> String {
+    path.0.join(".")
+}
+
+/// Qualify a type's bare/local name with its declaring nodule's `home` (DN-112 Rank 1 / M-1036) —
+/// the identity embedded in a freshly-constructed [`Ty::Data`]. A [`PRELUDE_HOME`] (or empty) home
+/// stays **bare** (the single-reserved-home exemption, §9 invariant i) — so `Bool`/`Tuple$N` mangle
+/// and compare exactly as they did before this fix, and every existing bare-name literal comparison
+/// against them (`n == "Bool"`) is unaffected.
+#[must_use]
+pub(crate) fn qualify_type_name(home: &str, bare: &str) -> String {
+    if home.is_empty() || home == PRELUDE_HOME {
+        bare.to_owned()
+    } else {
+        format!("{home}::{bare}")
+    }
+}
+
+/// The **local/bare** segment of a (possibly nodule-qualified) `Ty::Data` identity — the part after
+/// the last `::` separator, or the whole string if unqualified (DN-112 Rank 1). `::` is not a legal
+/// Mycelium surface-identifier character, so this split is unambiguous and never mistakes a real
+/// identifier for a qualified one. Used wherever a heuristic or lookup needs the type's simple name
+/// regardless of which nodule declared it — the `$try` postfix's `Result`/`Option` naming
+/// convention (any nodule may declare its own type literally named `Result`), or the L0 bridge in
+/// `crate::elab` (which stays bare/nodule-agnostic by design — DN-112 §3, no runtime change).
+#[must_use]
+pub(crate) fn ty_local_name(qualified_or_bare: &str) -> &str {
+    qualified_or_bare
+        .rsplit_once("::")
+        .map_or(qualified_or_bare, |(_, local)| local)
+}
+
+/// Look up a data type by its `Ty::Data` identity string, which may be **qualified** (any consumer
+/// downstream of the checker — `crate::mono`/`crate::elab`/`crate::decision`/`crate::usefulness`/
+/// `crate::fuse` — sees the checked, home-stamped name) or **bare** (the checking-time surface
+/// registry `resolve_ty` itself consults, always keyed by simple name; DN-112 Rank 1 / M-1036).
+/// Tries the exact key first — the common case, and the *only* case for a genuinely bare surface
+/// name, so this is a pure passthrough for every pre-existing (single-nodule) call site — then
+/// falls back to the local/bare segment, which is what the (unchanged, simple-name-keyed) registry
+/// `BTreeMap` is keyed by. Never *wrongly* matches within a single-registry lookup: the registry
+/// keys are bare, so the fallback only ever succeeds when the qualified input's local part is
+/// genuinely registered *in that registry*.
+///
+/// **CORRECTED (CRITICAL #2, post-landing — the claim below was FALSE; VR-5 downgrade).** The
+/// original doc text here claimed *"the static check stays sound... this cannot admit an unsound
+/// accept... an unwitnessed elaboration-time misresolution risk... out of DN-112 Rank 1's stated
+/// check-time scope."* That is **wrong**: this exact fallback is also reached from **inside the
+/// checker itself** — [`normalize_pattern`] is called from `Cx::check_pattern` (check-time, not
+/// merely elaboration), and a same-nodule-shadow-plus-legitimate-cross-nodule-reach program was
+/// reproduced type-checking a pattern binder to the SHADOW's `DataInfo` (a `Binary{4}` local decoy)
+/// while the scrutinee's real runtime value was the FOREIGN type's shape (`Binary{8}`) — a
+/// checker-accepted static/runtime type mismatch, unsealed, no `priv` needed. Closed at the
+/// pattern-normalization call sites via [`lookup_data_home_checked`] (conservative refuse — see its
+/// own doc comment for why the full correct-home resolution is not reachable from a single
+/// bare-keyed registry). **Every other consumer of this plain `lookup_data`** (`crate::mono`,
+/// `crate::elab`'s non-pattern paths, `crate::decision`, `crate::usefulness`, `crate::fuse`) is
+/// **unaudited by this fix** — the same latent risk this doc originally (mis)claimed was merely an
+/// elaboration-time curiosity may be reachable through them too; treat as an **open, disclosed
+/// residual**, not re-asserted-safe (G2/VR-5 — downgrade honestly, never claim more than checked).
+///
+/// **Original (uncorrected) framing, kept for the historical record — DO NOT treat as current:**
+/// *"the consulted registry is a single nodule's own `Env.types`... if that nodule (a) declares its
+/// own local type of the same bare name as a foreign type and (b) legitimately reaches a value of
+/// the foreign type... this fallback resolves the foreign qualified name to the local shadow's
+/// `DataInfo`... The static check stays sound... this cannot admit an unsound accept."* This framing
+/// is superseded by the correction above.
+#[must_use]
+pub(crate) fn lookup_data<'a>(
+    types: &'a BTreeMap<String, DataInfo>,
+    name: &str,
+) -> Option<&'a DataInfo> {
+    types.get(name).or_else(|| types.get(ty_local_name(name)))
+}
+
+/// **Home-checked** variant of [`lookup_data`] (CRITICAL #2 fix, DN-112 Rank 1 / M-1036 residual
+/// close). Used at the pattern-normalization call sites ([`normalize_pattern`], shared by
+/// `Cx::check_pattern` at check-time and the elaborator) — the sites where [`lookup_data`]'s own
+/// bare-keyed fallback was found to be reachable from **inside the checker itself**, not merely
+/// elaboration, making the type/runtime mismatch **checker-accepted** rather than an elaboration-only
+/// curiosity (see the corrected doc comment on [`lookup_data`] above).
+///
+/// When the exact-key lookup misses and the bare-local fallback would resolve a **qualified** `name`
+/// (one with a `home::` prefix) against a `DataInfo` whose own [`DataInfo::home`] is **different**
+/// from that prefix — the exact same-nodule-shadow-plus-legitimate-cross-nodule-reach shape — this
+/// **refuses explicitly** (G2) rather than silently proceeding with the wrong declaration's
+/// ctors/field-shape. This is the **conservative (b) closure**, not the full (a) correct-home
+/// resolution: a single bare-keyed registry (own decls shadow imports, RFC-0006 §4.3) holds at most
+/// ONE `DataInfo` per bare name, so once a nodule locally shadows a foreign type's bare name, the
+/// foreign type's own `DataInfo` is not reachable from `types` at all — there is nothing correct to
+/// resolve against here. **The full (a) fix — resolving against the foreign type's own `DataInfo`
+/// via per-import-provenance-scoped resolution — needs a materially larger change in `crate::mono`
+/// (per-import registries, not one merged bare-keyed map) and is an explicit, disclosed residual, not
+/// silently deferred (G2/VR-5).** A false-refuse of the legitimate shadow+cross-nodule-pattern shape
+/// is sound (conservative); the prior false-accept was not.
+///
+/// # Errors
+/// A [`CheckError`] iff `name` is not registered at all under its own bare key (an internal
+/// consistency violation — the same condition [`lookup_data`]'s callers previously `.expect()`ed,
+/// now surfaced never-silently instead of panicking), or iff `name` is nodule-qualified and its home
+/// prefix does not match the resolved [`DataInfo::home`] (the shadow/home-mismatch case above).
+pub(crate) fn lookup_data_home_checked<'a>(
+    types: &'a BTreeMap<String, DataInfo>,
+    name: &str,
+    site: &str,
+) -> Result<&'a DataInfo, CheckError> {
+    if let Some(info) = types.get(name) {
+        return Ok(info);
+    }
+    let local = ty_local_name(name);
+    let Some(info) = types.get(local) else {
+        return Err(CheckError::new(
+            site,
+            format!(
+                "internal: data type `{name}` is not registered in this nodule's own type \
+                 registry — a checked type escaped registration (report this; never a silent \
+                 default, G2)"
+            ),
+        ));
+    };
+    if let Some(home) = data_home_mismatch(name, info) {
+        return Err(CheckError::new(
+            site,
+            data_home_mismatch_message(name, home, info),
+        ));
+    }
+    Ok(info)
+}
+
+/// The qualifier-home mismatch, if any: `Some(home)` iff `name` is nodule-qualified (has a `::`
+/// separator) and that qualifier `home` differs from `info`'s own declared [`DataInfo::home`] — the
+/// same-nodule-shadow-plus-legitimate-cross-nodule-reach shape [`lookup_data_home_checked`] refuses
+/// (DN-112 Rank 1 / M-1036). `name`'s qualifier prefix is everything before the LAST `::` (home
+/// strings use `.` as their OWN internal separator — `nodule_home` — so a single `::` unambiguously
+/// splits home from bare name; see [`ty_local_name`]'s doc comment). An unqualified `name` (no `::`)
+/// never mismatches — the common own-type / single-nodule surface-syntax case, structurally
+/// unaffected. Shared by [`lookup_data_home_checked`] (the checker-side pattern-normalization sites)
+/// and [`resolve_ty`]'s own `BaseType::Named` arm (the re-resolution round-trip a *qualified* name
+/// can reach via `crate::mono`'s `ty_to_source_ref`, DN-112 Rank 1 residual close, KC-3/DRY: one
+/// mismatch predicate, not two divergent copies).
+fn data_home_mismatch<'a>(name: &'a str, info: &DataInfo) -> Option<&'a str> {
+    let (home, _) = name.rsplit_once("::")?;
+    (home != info.home).then_some(home)
+}
+
+/// The shared home-mismatch [`CheckError`] message — identical wording regardless of which caller
+/// ([`lookup_data_home_checked`] or [`resolve_ty`]) detected the mismatch, so an `EXPLAIN`/audit
+/// reader sees one consistent diagnostic for this exploit class (G2 — never silent, and never two
+/// subtly-different refusal texts for the same underlying shape).
+fn data_home_mismatch_message(name: &str, home: &str, info: &DataInfo) -> String {
+    format!(
+        "type-identity mismatch: `{name}` resolves, in this nodule's own type registry, to a \
+         DIFFERENT declaration of the same bare name — `{}` is declared in `{}`, not the expected \
+         `{home}` (a local type shadows a foreign-home type of the same name, and this position \
+         legitimately reaches a value of the foreign type — CRITICAL #2 / DN-112 Rank 1 residual \
+         close; refused rather than silently checked against the wrong declaration's shape, G2/VR-5)",
+        info.name, info.home
+    )
 }
 
 /// Substitute type arguments for the abstract parameters in a stage-1 type (RFC-0007 §11.2): replace
@@ -624,6 +824,9 @@ impl Env {
 pub(crate) fn prelude() -> DataInfo {
     DataInfo {
         name: "Bool".to_owned(),
+        // DN-112 §9 invariant i: the single reserved home so `Bool` resolves identically under
+        // every nodule (never qualified — its `Ty::Data` identity stays bare `"Bool"`).
+        home: PRELUDE_HOME.to_owned(),
         params: vec![],
         ctors: vec![
             CtorInfo {
@@ -686,9 +889,27 @@ pub(crate) fn resolve_ty(
             if args.is_empty() && tyvars.iter().any(|v| v == name) {
                 Ty::Var(name.clone())
             } else {
-                let Some(decl) = types.get(name) else {
+                // DN-112 Rank 1 / M-1036: `lookup_data` tries the exact (bare, surface-syntax) key
+                // first — the only case for ordinary surface code — then falls back to the local
+                // part, so a *re-resolved* already-qualified name (e.g. `crate::mono`'s re-inference
+                // round-trip via `ty_to_source_ref`) still resolves correctly.
+                let Some(decl) = lookup_data(types, name) else {
                     return Err(CheckError::new(site, format!("unknown type `{name}`")));
                 };
+                // M-1036 residual close (the `resolve_ty` re-inference round-trip site named in the
+                // exhaustive re-verify inventory): ordinary surface `TypeRef`s are always BARE (the
+                // parser never emits `::`), so this can only fire when `name` was re-fed in already
+                // QUALIFIED — exactly `crate::mono::ty_to_source_ref`'s round-trip. In that case the
+                // bare-local fallback above may have resolved to a DIFFERENT (locally-shadowing)
+                // declaration than `name`'s own qualifier names; refuse explicitly (G2) rather than
+                // silently stamping `qname` from the WRONG `decl.home` below (the same shape
+                // `lookup_data_home_checked` closes for the checker-side pattern sites).
+                if let Some(home) = data_home_mismatch(name, decl) {
+                    return Err(CheckError::new(
+                        site,
+                        data_home_mismatch_message(name, home, decl),
+                    ));
+                }
                 // Arity is checked — never a guess (§11.3). A type parameter cannot be applied.
                 if args.len() != decl.params.len() {
                     return Err(CheckError::new(
@@ -700,11 +921,17 @@ pub(crate) fn resolve_ty(
                         ),
                     ));
                 }
+                // DN-112 Rank 1 / M-1036: the identity stamp — the **declaring** nodule's home
+                // (`decl.home`, read from the registry, never the use-site), qualified onto the
+                // type's bare/local name. Both `types` and `Ty::Var` skip this arm (arity-checked
+                // above), and `decl.home` is the same regardless of whether `decl` was found via the
+                // exact key or the local-name fallback.
+                let qname = qualify_type_name(&decl.home, ty_local_name(name));
                 let mut resolved = Vec::with_capacity(args.len());
                 for a in args {
                     resolved.push(resolve_ty(site, types, tyvars, a)?.0);
                 }
-                Ty::Data(name.clone(), resolved)
+                Ty::Data(qname, resolved)
             }
         }
         BaseType::Ambient(_) => {
@@ -755,6 +982,47 @@ pub(crate) fn resolve_ty(
     Ok((base, t.guarantee))
 }
 
+/// **DN-112 Rank 1 / M-1036 (a required piece of the mechanism, not an optional hardening).**
+/// Pre-resolve a `pub fn`'s value-parameter and return types against its **own declaring nodule's**
+/// registry, exactly once, at export time — the function-signature analogue of how a constructor's
+/// field types are already baked once at `register_types`/`resolve_ctors` time.
+///
+/// **Why this is load-bearing, not cosmetic.** `FnDecl.sig` stores *surface* [`TypeRef`]s
+/// (never a resolved [`Ty`]); every call site re-resolves a callee's parameter/return types fresh
+/// via `resolve_ty(caller_site, caller_types, …, &pm.ty)` — using the **caller's own** merged
+/// registry (own decls shadow imports, RFC-0006 §4.3). Without baking, a foreign caller that
+/// shadows a name locally would re-resolve the callee's signature against *its own* (wrong-home)
+/// declaration — reintroducing, one level up, exactly the bare-name conflation DN-104's CRITICAL
+/// callout named as M-1036's root cause. Baking here closes it for the DN-112 §10 item 2 exploit
+/// shape (`use a.use_t; type T = Mk(..); use_t(forge())`): `use_t`'s parameter type is permanently
+/// `a::T`, never re-derived from whichever nodule happens to be checking the call.
+///
+/// **Scoped, honest best-effort (VR-5) — never a spurious refusal.** Resolved against the
+/// declaring nodule's **own** registered types only (no cross-nodule imports it itself might use —
+/// resolving those would need the whole phylum's imports settled first, a larger change). A
+/// signature that itself references a type the declaring nodule imports from elsewhere fails to
+/// resolve here; the caller (`Exports`-building loop) treats that as "not bakeable" and leaves the
+/// entry absent — `check_app` then falls back to the pre-existing (unbaked) re-resolution path for
+/// that one function, unchanged from before this fix (never a hard error from this best-effort
+/// step). This is a disclosed, narrower residual, not a silent gap.
+///
+/// # Errors
+/// A [`CheckError`] iff a value-parameter or return `TypeRef` does not resolve against `types` —
+/// the caller treats this as "not bakeable" rather than propagating it.
+pub(crate) fn resolve_fn_sig(
+    types: &BTreeMap<String, DataInfo>,
+    sig: &FnSig,
+) -> Result<(Vec<Ty>, Ty), CheckError> {
+    let tyvars = sig.param_names();
+    let mut params = Vec::with_capacity(sig.value_params.len());
+    for p in &sig.value_params {
+        let (ty, _) = resolve_ty(&sig.name, types, &tyvars, &p.ty)?;
+        params.push(ty);
+    }
+    let (ret, _) = resolve_ty(&sig.name, types, &tyvars, &sig.ret)?;
+    Ok((params, ret))
+}
+
 /// The synthetic name for a tuple type of arity `n` (M-826, KC-3). Injective over n; `$` is not
 /// a surface-identifier character, so this name cannot collide with user-defined types.
 /// `Tuple$2` = the 2-tuple (pair), `Tuple$3` = the 3-tuple, etc.
@@ -778,6 +1046,9 @@ pub(crate) fn synthetic_tuple_data(n: usize) -> DataInfo {
     let fields: Vec<Ty> = params.iter().map(|p| Ty::Var(p.clone())).collect();
     DataInfo {
         name: tuple_type_name(n),
+        // DN-112 §9 invariant i: `Tuple$N` is synthesized on demand per nodule but must resolve to
+        // the same identity everywhere — the single reserved home, never qualified.
+        home: PRELUDE_HOME.to_owned(),
         params: params.clone(),
         ctors: vec![CtorInfo {
             name: tuple_ctor_name(n),
@@ -1226,6 +1497,10 @@ pub(crate) struct Exports {
     /// ([`NoduleImports::sealed`]). Only `pub` types appear here (a private type is unimportable, so its
     /// seal is moot). Empty for a phylum with no sealed constructors (backward-compatible).
     pub(crate) sealed_ctors: BTreeMap<String, BTreeSet<String>>,
+    /// **DN-112 Rank 1 / M-1036:** each `pub` fn's [`resolve_fn_sig`]-baked `(param types, return
+    /// type)`, keyed by qualified name — best-effort (absent if the signature could not resolve
+    /// against the declaring nodule's own registry; see [`resolve_fn_sig`]'s doc comment).
+    pub(crate) resolved_fn_sigs: BTreeMap<String, (Vec<Ty>, Ty)>,
 }
 
 /// The resolved imports available to **one** nodule while its bodies are checked (M-662): the
@@ -1266,7 +1541,21 @@ pub(crate) struct NoduleImports {
     /// enforced capability/security boundary against an adversarial or accidentally-colliding
     /// same-named local declaration; it only ever refuses a well-behaved caller that goes through
     /// `use home.Ctor`. A real fix needs nodule-qualified type identity (tracked as M-1036).
+    ///
+    /// **DN-112 Rank 1 / M-1036 — CLOSED.** Type/ctor identity is now nodule-qualified
+    /// ([`qualify_type_name`]), and each imported `pub` fn's signature is pre-resolved against its
+    /// **declaring** nodule ([`Exports::resolved_fn_sigs`] / [`Self::resolved_fn_sigs`]) rather than
+    /// re-resolved fresh against the caller's own (possibly shadowing) registry — so the exploit
+    /// this comment described is a never-silent type mismatch, not a values-forged pass. Pinned by
+    /// `tests/ctor_seal.rs`.
     pub(crate) sealed: BTreeSet<String>,
+    /// **DN-112 Rank 1 / M-1036:** this nodule's imported `pub` fns' [`resolve_fn_sig`]-baked
+    /// `(param types, return type)`, keyed by **simple** name (mirroring [`Self::fns`]) — the
+    /// mechanism that closes the M-1036 exploit for plain function calls (see [`resolve_fn_sig`]'s
+    /// doc comment). This nodule's **own** fn names are subtracted (own decls shadow imports,
+    /// mirroring [`Self::sealed`]'s own-ctor subtraction) so a local fn of the same name is never
+    /// wrongly resolved through a foreign baked signature.
+    pub(crate) resolved_fn_sigs: BTreeMap<String, (Vec<Ty>, Ty)>,
 }
 
 impl NoduleImports {
@@ -1489,6 +1778,12 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
             exports.declared.insert(qual(name), fd.vis.is_pub());
             if fd.vis.is_pub() {
                 exports.fns.insert(qual(name), fd.clone());
+                // DN-112 Rank 1 / M-1036: bake this fn's signature against ITS OWN declaring
+                // nodule's registry now (best-effort — see `resolve_fn_sig`'s doc comment; an
+                // `Err` here just leaves this fn's entry absent, never a phylum-wide failure).
+                if let Ok(resolved) = resolve_fn_sig(&regs.types, &fd.sig) {
+                    exports.resolved_fn_sigs.insert(qual(name), resolved);
+                }
             }
         }
         for (name, info) in &regs.traits {
@@ -1834,6 +2129,20 @@ pub(crate) fn resolve_imports(
         .flat_map(|td| td.ctors.iter().map(|c| c.name.clone()))
         .collect();
     imp.sealed.retain(|c| !own_ctors.contains(c));
+    // DN-112 Rank 1 / M-1036: an own fn always shadows an imported one of the same simple name
+    // (RFC-0006 §4.3), so its baked signature must never linger under that name in `imp.fns` —
+    // mirroring the own-ctor subtraction above (`imp.fns.remove` happens implicitly via the merge
+    // in `check_nodule_with`; this subtracts the *baked-signature* twin so `Cx::resolved_fn_sigs`
+    // never wrongly attributes a foreign signature to a name this nodule's own decl shadows).
+    let own_fns: BTreeSet<String> = nodule
+        .items
+        .iter()
+        .filter_map(|it| match it {
+            Item::Fn(fd) => Some(fd.sig.name.clone()),
+            _ => None,
+        })
+        .collect();
+    imp.resolved_fn_sigs.retain(|n, _| !own_fns.contains(n));
     Ok(imp)
 }
 
@@ -1875,6 +2184,12 @@ fn insert_export(imp: &mut NoduleImports, exports: &Exports, qual: &str, simple:
     }
     if let Some(fd) = exports.fns.get(qual) {
         imp.fns.insert(simple.to_owned(), fd.clone());
+        // DN-112 Rank 1 / M-1036: carry the baked signature too (own-fn-name subtraction happens
+        // once at the end of `resolve_imports`, mirroring `imp.sealed`'s own-ctor subtraction).
+        if let Some(resolved) = exports.resolved_fn_sigs.get(qual) {
+            imp.resolved_fn_sigs
+                .insert(simple.to_owned(), resolved.clone());
+        }
     }
     if let Some(info) = exports.traits.get(qual) {
         imp.traits.insert(simple.to_owned(), info.clone());
@@ -1887,6 +2202,7 @@ fn remove_import(imp: &mut NoduleImports, simple: &str) {
     imp.types.remove(simple);
     imp.fns.remove(simple);
     imp.traits.remove(simple);
+    imp.resolved_fn_sigs.remove(simple); // DN-112 Rank 1 / M-1036: keep in sync with `imp.fns`.
 }
 
 /// Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,
@@ -1987,11 +2303,16 @@ pub(crate) fn register_types(
             if types.contains_key(&td.name) {
                 return Err(CheckError::new(&td.name, "duplicate type declaration"));
             }
-            // Insert a shell first so recursive field references resolve.
+            // Insert a shell first so recursive field references resolve. DN-112 Rank 1 / M-1036:
+            // stamp this type's home from the **declaring** nodule now, at first registration — an
+            // imported clone of this `DataInfo` (via `Exports`/`NoduleImports`) carries this exact
+            // home unchanged through the whole export/import pipeline (§9 invariant ii: home is
+            // always the declaring nodule, never the use-site).
             types.insert(
                 td.name.clone(),
                 DataInfo {
                     name: td.name.clone(),
+                    home: nodule_home(&nodule.path),
                     params: td.params.clone(),
                     ctors: vec![],
                 },
@@ -2253,15 +2574,18 @@ fn check_nodule_with(
     // EXPLAIN provenance (M-966, DN-53 §A.3.3): record which `via` clause produced each generated
     // forwarding impl, the `via` analogue of `derived_provenance` below. The coherence key matches
     // `register_instances`'s `(trait_name, type_head)`: for an `object`, `type_head` always resolves
-    // to `Data:<name>` (an object's own declared type name is never itself a bound type-variable —
-    // `resolve_ty`'s `Ty::Var` branch only fires for names in `tyvars`, which an object's own type
-    // name is not), so this can be built directly without a `resolve_ty` round-trip. Only reached
+    // to `Data:<qualified name>` (an object's own declared type name is never itself a bound
+    // type-variable — `resolve_ty`'s `Ty::Var` branch only fires for names in `tyvars`, which an
+    // object's own type name is not), so this can be built directly without a `resolve_ty`
+    // round-trip. **DN-112 Rank 1 / M-1036:** the qualified name is `od.name`'s home stamped from
+    // *this* (declaring) nodule — `type_head` now embeds the home, so the key must too. Only reached
     // when `expand_object_via_decls` above did **not** refuse for ambiguity, so at most one `via`
     // entry per `(trait, object)` ever lands here (never overwritten silently).
     let via_provenance: BTreeMap<(String, String), (u32, String)> = {
         let mut all = BTreeMap::new();
+        let this_home = nodule_home(&nodule.path);
         for od in via_objects {
-            let head = format!("Data:{}", od.name);
+            let head = format!("Data:{}", qualify_type_name(&this_home, &od.name));
             for via in &od.via_decls {
                 all.insert(
                     (via.trait_name.clone(), head.clone()),
@@ -3601,7 +3925,11 @@ pub(crate) fn register_instances(
         // type are both outside the phylum still orphan-rejects.
         let trait_local = phylum_traits.contains(id.trait_name.as_str());
         let type_local = match &for_ty {
-            Ty::Data(n, _) => phylum_types.contains(n.as_str()),
+            // DN-112 Rank 1 / M-1036: `n` is now nodule-qualified, but `phylum_types` (the
+            // pub-blind coherence view) is still keyed by bare/local name — the locality test is
+            // "declared *somewhere* in the phylum", independent of qualification, so compare the
+            // local part.
+            Ty::Data(n, _) => phylum_types.contains(ty_local_name(n)),
             // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5) — the
             // RFC-0032 sequence/byte-string reprs and the M-892 VSA repr included.
             Ty::Binary(_)
@@ -3983,7 +4311,11 @@ struct Cx<'a> {
     /// in by ≥2 globs and not shadowed). Imported `pub` decls themselves are already merged into
     /// `types`/`fns`/`traits` (by simple name), so ordinary resolution sees them directly; this field
     /// only carries the `ambiguous` set so a reference to an ambiguous name is refused, never a silent
-    /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one.
+    /// winner (G2). Empty (`ambiguous` empty) in re-inference and in a phylum-of-one. **Also**
+    /// carries [`NoduleImports::resolved_fn_sigs`] (DN-112 Rank 1 / M-1036) — [`Self::check_app`]'s
+    /// monomorphic-callee path consults it in preference to re-resolving a callee's signature
+    /// fresh against `self.types` (the caller's own registry), so an imported function's
+    /// parameter/return types stay the *declaring* nodule's, never re-derived at the call site.
     imports: &'a NoduleImports,
     /// **M-1054 Stage 0** — the nodule's registered `lower` rules (DN-110 §5-A), consulted **only**
     /// after every existing call-resolution path (fn/HOF/ctor/trait-method/prim families) has
@@ -4051,7 +4383,9 @@ pub(crate) fn cons_list_ctors(
     let Ty::Data(name, _args) = expected else {
         return None;
     };
-    let di = types.get(name)?;
+    // DN-112 Rank 1 / M-1036: `expected` is a checked (possibly qualified) type; `types` is the
+    // bare-keyed surface registry.
+    let di = lookup_data(types, name)?;
     if di.ctors.len() != 2 {
         return None;
     }
@@ -4358,12 +4692,15 @@ impl Cx<'_> {
                 // Nullary constructor as a value. A **generic** type has no fields to infer its type
                 // arguments from, so they must come from `expected` (bidirectional) — an absent or
                 // mismatched context is an explicit "ascribe it" error, never a guess (§11.3).
+                // DN-112 Rank 1 / M-1036: the constructed value's identity is the OWNER type's
+                // qualified name (its home is where the ctor is *declared*, never the call site).
+                let qname = qualify_type_name(&d.home, &d.name);
                 let targs = if d.params.is_empty() {
                     vec![]
                 } else {
                     match expected {
                         Some(Ty::Data(en, eargs))
-                            if en == &d.name && eargs.len() == d.params.len() =>
+                            if *en == qname && eargs.len() == d.params.len() =>
                         {
                             eargs.clone()
                         }
@@ -4377,7 +4714,7 @@ impl Cx<'_> {
                         }
                     }
                 };
-                return Ok((Ty::Data(d.name.clone(), targs), e.clone()));
+                return Ok((Ty::Data(qname, targs), e.clone()));
             }
             return self.err(format!(
                 "constructor `{name}` takes {} field(s) — apply it (W6 saturation)",
@@ -4600,8 +4937,12 @@ impl Cx<'_> {
         // collide with a user name; and it is scoped to the propagation arm only (never the `body`
         // arm), so it also cannot shadow anything `body` references.
         const ERRB: &str = "$try_err";
+        // DN-112 Rank 1 / M-1036: `Result`/`Option` are a per-nodule NAMING CONVENTION (any nodule
+        // may declare its own type literally named `Result`/`Option`), not a prelude type — so this
+        // recognizes the type's *local* name regardless of which nodule declared it (never quietly
+        // broken by the identity qualification; a nodule's own `Result` still desugars `$try`).
         let arms = match &ity {
-            Ty::Data(n, args) if n == "Result" && args.len() == 2 => vec![
+            Ty::Data(n, args) if ty_local_name(n) == "Result" && args.len() == 2 => vec![
                 Arm {
                     pattern: Pattern::Ctor("Ok".to_owned(), vec![Pattern::Ident(name.to_owned())]),
                     body: body.clone(),
@@ -4614,7 +4955,7 @@ impl Cx<'_> {
                     },
                 },
             ],
-            Ty::Data(n, args) if n == "Option" && args.len() == 1 => vec![
+            Ty::Data(n, args) if ty_local_name(n) == "Option" && args.len() == 1 => vec![
                 Arm {
                     pattern: Pattern::Ctor(
                         "Some".to_owned(),
@@ -5298,9 +5639,21 @@ impl Cx<'_> {
             }
             // Monomorphic callee — unchanged v0 path (exact bidirectional checking + error messages).
             if fd.sig.params.is_empty() {
+                // DN-112 Rank 1 / M-1036: prefer this callee's baked signature — resolved ONCE
+                // against its OWN declaring nodule ([`resolve_fn_sig`]) — over re-resolving `pm.ty`
+                // fresh against `self.types` (this caller's own registry). Without this, a foreign
+                // caller that shadows the callee's referenced type name locally (RFC-0006 §4.3 "own
+                // decls shadow imports") would re-derive the callee's parameter/return types against
+                // its OWN (wrong-home) declaration — precisely DN-104's CRITICAL-callout root cause,
+                // one level up. Absent (not every signature is bakeable — best-effort) falls back to
+                // the pre-existing re-resolution path, unchanged.
+                let baked = self.imports.resolved_fn_sigs.get(name);
                 let mut rebuilt = Vec::with_capacity(args.len());
-                for (pm, a) in fd.sig.value_params.iter().zip(args) {
-                    let (want, _) = resolve_ty(self.site, self.types, &[], &pm.ty)?;
+                for (i, (pm, a)) in fd.sig.value_params.iter().zip(args).enumerate() {
+                    let want = match baked.and_then(|(params, _)| params.get(i)) {
+                        Some(w) => w.clone(),
+                        None => resolve_ty(self.site, self.types, &[], &pm.ty)?.0,
+                    };
                     let (got, a2) = self.check(scope, a, Some(&want))?;
                     if want != got {
                         return self.err(format!(
@@ -5311,7 +5664,10 @@ impl Cx<'_> {
                     }
                     rebuilt.push(a2);
                 }
-                let (ret, _) = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?;
+                let ret = match baked {
+                    Some((_, ret)) => ret.clone(),
+                    None => resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0,
+                };
                 return Ok((ret, app_node(head, rebuilt)));
             }
             // Generic callee — extracted to a separate (non-inlined) method so `check_app`'s frame
@@ -5326,7 +5682,11 @@ impl Cx<'_> {
             // diagnostic wins over an incidental "takes N fields" message (G2).
             self.check_ctor_seal(name, &d.name)?;
             let arity = d.ctors[i].fields.len();
-            let dname = d.name.clone();
+            // DN-112 Rank 1 / M-1036: the constructed value's identity is the OWNER type's qualified
+            // name — threaded through `check_app_generic_ctor` too, so its own `en == dname` /
+            // `Ty::Data(dname, ..)` sites need no separate edit (both sides become qualified
+            // consistently by construction).
+            let dname = qualify_type_name(&d.home, &d.name);
             let params = d.params.clone();
             if arity != args.len() {
                 return self.err(format!(
@@ -5850,6 +6210,32 @@ impl Cx<'_> {
     /// is the single-nodule, concrete-argument fragment (OQ-H1's own scope note), so a genuinely
     /// abstract value-parameter type is not yet reachable through this gate in practice; if that
     /// ever changes, this is the seam to revisit (FLAG, not silently widened).
+    ///
+    /// **M-1036 residual-close audit (B).** The `lookup_data(self.types, name)` call below (in the
+    /// `Ty::Data` arm) is left unguarded — audited and confirmed **not exploitable** for a
+    /// wrong-value silent *accept*, because this fn is (per this doc comment's own opening
+    /// paragraph) only ever a **cheap pre-filter TRIGGER**, OR'd in [`Self::check_sugar_call`] with
+    /// a second, fully **independent** precise signal: whether checking the *actual argument
+    /// expression* at this call site touched the real affine tracker (`self.affine.snapshot() !=
+    /// pre_arg`, computed via the ordinary — already home-check-guarded, per `resolve_ty`/
+    /// `normalize_pattern`'s M-1036 fixes — `self.check` call, never through this fn's own lookup).
+    /// The two possible mismatch directions are both harmless:
+    /// - **Over-trigger** (a wrong `d` looks *more* Substrate-shaped than the real declared type):
+    ///   the real substituted-`Expr` walk just runs unnecessarily and still decides correctly from
+    ///   the real `Expr`, never this fn's structural read.
+    /// - **Under-trigger** (a wrong `d` — e.g. a same-nodule shadow's `DataInfo` — looks *less*
+    ///   Substrate-shaped, missing a field the real declared type has): the independent
+    ///   per-argument tracker-touch signal still fires whenever the call site actually passes a
+    ///   live affine value there, since that signal is computed from the argument's own real
+    ///   checked shape, not from this fn's `d`. A trigger this fn alone would miss is exactly the
+    ///   "affine-hiding-non-affine-type" class DN-117 already designed the OR'd signal to catch
+    ///   (see the class comment above `has_affine_surface`'s definition) — so a shadow-mismatch here
+    ///   is strictly narrower than a gap the design already covers, not a new one.
+    ///
+    /// Guarantee: `Declared` (reasoned, not mechanized) — this fn's own accept/refuse authority is
+    /// itself only `Declared`/heuristic by design (it is a trigger, not the decision — see this
+    /// comment's opening paragraph); the real decision (the substituted-`Expr` walk) carries its own
+    /// separate guarantee.
     fn ty_structurally_contains_substrate(&self, ty: &Ty, visiting: &mut BTreeSet<String>) -> bool {
         match ty {
             Ty::Substrate(_) => true,
@@ -5866,7 +6252,9 @@ impl Cx<'_> {
                     // this type's structure is found via its first, non-cyclic entry in this walk.
                     return false;
                 }
-                let found = match self.types.get(name) {
+                // DN-112 Rank 1 / M-1036: `name` is a field's already-resolved (possibly qualified)
+                // `Ty::Data` name; `self.types` is the bare-keyed surface registry.
+                let found = match lookup_data(self.types, name) {
                     Some(info) => {
                         let subst: BTreeMap<String, Ty> = info
                             .params
@@ -6476,10 +6864,27 @@ impl Cx<'_> {
         args: &[Expr],
     ) -> Result<(Ty, Expr), CheckError> {
         let callee_vars = fd.sig.param_names();
+        // DN-112 Rank 1 / M-1036 (CRITICAL #1 fix): mirror `check_app`'s monomorphic-callee path —
+        // prefer this callee's baked signature (resolved ONCE against its OWN declaring nodule,
+        // `resolve_fn_sig`) over re-resolving `pm.ty` fresh against `self.types` (this caller's own
+        // registry). `resolve_fn_sig` is baked with the SAME `tyvars = sig.param_names()` as
+        // `callee_vars` here, so a baked param type lines up positionally with `fd.sig.value_params`
+        // and may itself still legitimately contain `Ty::Var(callee_var)` for a parameter that
+        // mentions the callee's own type variable — those resolve to a concrete type via `subst`
+        // exactly like the freshly-resolved path already does. Without this, a foreign caller with
+        // EVEN ONE unrelated generic parameter routed every FIXED parameter/return type back through
+        // the caller's own (possibly wrong-home, shadowed) registry — reopening the seal bypass one
+        // level up from the monomorphic fix (the DN-112 §10 item 2 exploit shape, generic-arity
+        // variant). Absent (not every signature is bakeable — best-effort, see `resolve_fn_sig`'s doc
+        // comment) falls back to the pre-existing fresh-resolution path, unchanged.
+        let baked = self.imports.resolved_fn_sigs.get(name);
         let mut subst: BTreeMap<String, Ty> = BTreeMap::new();
         let mut rebuilt = Vec::with_capacity(args.len());
-        for (pm, a) in fd.sig.value_params.iter().zip(args) {
-            let want = resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0;
+        for (i, (pm, a)) in fd.sig.value_params.iter().zip(args).enumerate() {
+            let want = match baked.and_then(|(params, _)| params.get(i)) {
+                Some(w) => w.clone(),
+                None => resolve_ty(self.site, self.types, &callee_vars, &pm.ty)?.0,
+            };
             let want_now = subst_ty(&want, &subst);
             // A fully-concrete (post-substitution) expected type drives the argument's check (so a
             // bare decimal takes the width); a still-abstract one lets the argument synthesize.
@@ -6533,10 +6938,12 @@ impl Cx<'_> {
                 )?;
             }
         }
-        let ret = subst_ty(
-            &resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
-            &subst,
-        );
+        // Same baked-signature preference for the return type (CRITICAL #1 fix, see above).
+        let ret_base = match baked {
+            Some((_, ret)) => ret.clone(),
+            None => resolve_ty(self.site, self.types, &callee_vars, &fd.sig.ret)?.0,
+        };
+        let ret = subst_ty(&ret_base, &subst);
         Ok((ret, app_node(head, rebuilt)))
     }
 
@@ -7063,7 +7470,7 @@ impl Cx<'_> {
             // *scrutinee's own* data type; otherwise it is a binder (left as `Ident`).
             Pattern::Ident(name)
                 if matches!(expected, Ty::Data(tn, _)
-                    if self.types.get(tn).is_some_and(|d|
+                    if lookup_data(self.types, tn).is_some_and(|d|
                         d.ctors.iter().any(|c| c.name == *name && c.fields.is_empty()))) =>
             {
                 Pattern::Ctor(name.clone(), vec![])
@@ -7076,7 +7483,7 @@ impl Cx<'_> {
                     // The declared field types are abstract over the type's parameters; substitute
                     // the scrutinee's type arguments so a generic field recurses at its concrete
                     // type (RFC-0007 §11.2).
-                    Ty::Data(tn, targs) => self.types.get(tn).and_then(|d| {
+                    Ty::Data(tn, targs) => lookup_data(self.types, tn).and_then(|d| {
                         d.ctors
                             .iter()
                             .find(|c| c.name == *name)
@@ -7106,16 +7513,18 @@ impl Cx<'_> {
                 let tname = tuple_type_name(n);
                 // The expected type must be the matching Tuple$N.
                 let field_tys = match expected {
-                    Ty::Data(tn, targs) if *tn == tname => self.types.get(tn).and_then(|d| {
-                        d.ctors
-                            .iter()
-                            .find(|c| c.name == ctor_name)
-                            .filter(|c| c.fields.len() == subs.len())
-                            .map(|c| {
-                                let s = param_subst(&d.params, targs);
-                                c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
-                            })
-                    }),
+                    Ty::Data(tn, targs) if *tn == tname => {
+                        lookup_data(self.types, tn).and_then(|d| {
+                            d.ctors
+                                .iter()
+                                .find(|c| c.name == ctor_name)
+                                .filter(|c| c.fields.len() == subs.len())
+                                .map(|c| {
+                                    let s = param_subst(&d.params, targs);
+                                    c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
+                                })
+                        })
+                    }
                     _ => None,
                 };
                 let mut out = Vec::with_capacity(subs.len());
@@ -8391,7 +8800,11 @@ pub(crate) fn normalize_pattern(
             // A bare name is a nullary-constructor alternative iff it names one of the expected
             // data type's constructors; otherwise it binds the whole position (at this occurrence).
             if let Ty::Data(tn, _) = expected {
-                let d = types.get(tn).expect("registered data type");
+                // DN-112 Rank 1 / M-1036: `tn` is checked (possibly qualified); `types` is bare-keyed.
+                // CRITICAL #2 fix: home-checked lookup — a same-nodule-shadow-plus-foreign-reach
+                // mismatch refuses explicitly here (G2) rather than silently resolving `tn` against
+                // the WRONG (locally-shadowed) `DataInfo` (see `lookup_data_home_checked`'s doc).
+                let d = lookup_data_home_checked(types, tn, site)?;
                 if let Some(c) = d.ctors.iter().find(|c| c.name == *n) {
                     if !c.fields.is_empty() {
                         return Err(CheckError::new(
@@ -8417,7 +8830,8 @@ pub(crate) fn normalize_pattern(
                     ),
                 ));
             };
-            let d = types.get(tn).expect("registered data type").clone();
+            // CRITICAL #2 fix: home-checked lookup (see the `Pattern::Ident` arm above).
+            let d = lookup_data_home_checked(types, tn, site)?.clone();
             let Some(c) = d.ctors.iter().find(|c| c.name == *n) else {
                 return Err(CheckError::new(
                     site,
@@ -8682,8 +9096,9 @@ fn linear_elem_ty(
     tname: &str,
     targs: &[Ty],
 ) -> Result<Ty, CheckError> {
-    let d = types
-        .get(tname)
+    // DN-112 Rank 1 / M-1036: `tname` is a checked (possibly qualified) `Ty::Data` name; `types` is
+    // the bare-keyed surface registry.
+    let d = lookup_data(types, tname)
         .ok_or_else(|| CheckError::new(site, format!("unknown type `{tname}`")))?;
     // The declared element type is abstract over the type's parameters; instantiate it at the
     // scrutinee's type arguments (RFC-0007 §11.2) so `for` over a `List<Binary{8}>` binds `Binary{8}`.
