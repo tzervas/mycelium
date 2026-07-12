@@ -35,6 +35,7 @@ mod marshal_support;
 mod mono;
 mod mono_tag;
 mod nodule;
+mod ord3;
 mod parse;
 mod reachability_stage1b;
 mod reveal;
