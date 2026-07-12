@@ -12,6 +12,63 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(dn): ratify DN-126–DN-132 — language-completeness planning batch (Accepted, 2026-07-12)
+
+Batch-ratifies **seven Draft DNs** to **Accepted** under explicit maintainer delegation ("ratify based
+on objective reasoning and the project's needs/intents, keep to core principles, report results";
+mirrors the DN-115/117/118/122/123/124/125 precedent). Every mechanism/guarantee tag stays `Declared`
+(unbuilt) — **Accepted, not Enacted** (house rule #3) for all seven.
+
+- **DN-126** (two-mode typing, M-1077) — loose mode = the existing bidirectional checker in a
+  non-refusing posture over the unchanged repr-dynamic evaluator; strict mode = the same checker with
+  demotion off (compilation gate unconditional, as today). Ratifies the **three-axis verdict**
+  (type-strictness is a genuinely new axis, distinct from ADR-032/RFC-0034 cert-depth and RFC-0018
+  guarantee-grade), the **runnable-floor boundary** (name/arity/parse/FFI stay hard in loose mode),
+  and mechanical strictification's **principality invariant** (writes down only a *principal* inferred
+  type — sound-by-conservatism, VR-5). Zero kernel growth. `doc_refs: corpus:DN-126` added to the
+  already-filed **M-1077**.
+- **DN-127** (native formatting) — `Display`/`write!`/`format!` → a pure `render: T → Bytes`; a
+  `Show` prelude trait for dispatch. Int→decimal is derivable **in std from landed prims**
+  (`div_u`/`rem_u`/`bytes_concat`/`width_cast`) — **no new kernel primitive** (KC-3). Float render
+  stays an honest residual (OQ-1). Note the merge-order dependency on DN-125 (`&mut Formatter` param) —
+  DN-125 is already Accepted and landed on this same base. Minted **M-1090** (`depends_on: [M-1081]`);
+  the prior design issue **M-1082** gets an append-only close-out note, `status: superseded-by-dn`.
+- **DN-128** (std-derive lowering library) — per-derive `lower` rules as structural folds (DN-54).
+  `Clone` = a value-semantics identity no-op (drop as satisfied, don't generate); a derived total
+  `Eq` over a `Float` field is **refused** (NaN/ADR-040). OQ-1 (field reflection in a `lower` RHS)
+  stays honestly open; Alt C (compiler-internal field-walk) recommended because it survives either
+  answer. Minted **M-1086**.
+- **DN-129** (Default/Error) — `Init` prelude trait (method **not** `default` — a taken keyword);
+  `Error` = errors-as-values + a `Fault: Show` marker; `source()`/`dyn Error` boxing deliberately not
+  ported (ADR-033's escape, not the default). Zero kernel growth (DN-55). Minted **M-1091**
+  (`depends_on: []`); the prior design issue **M-1083** gets an append-only close-out note,
+  `status: superseded-by-dn`.
+- **DN-130** (generic trait-instance impls, `impl[T] Trait for Foo[T]`) — a parametric instance head
+  monomorphized as a family (M-673 α-substitution); coherence keyed on the constructor head, reusing
+  DN-122's home-qualified `CoherenceView`. Scoped to single-parameter, structurally-covering,
+  non-overlapping heads; out-of-scope shapes refused never-silently. **Real landing-order dependency
+  on M-1080** (honestly stated — not a landed reuse, VR-5). Minted **M-1087**
+  (`depends_on: [M-1080]`); M-1080's own body gets an append-only note recording the second dependency.
+- **DN-131** (bounds on non-fn sites, impl-slot bounds) — the impl-slot bound rides DN-103's
+  desugar-prepend plus the already-landed `check_bounds` + dictionary-free mono — **zero new
+  discharge code**. Declines `type`/`trait` decl-head bounds and `where`-clauses per RFC-0019 §4.2's
+  own design intent (YAGNI, not convenience). Minted **M-1088**.
+- **DN-132** (L3 pattern-surface cluster) — **ratifies P1 (struct-variant patterns)** as the
+  buildable mechanism (variant-aware `StructLayout` + a `Pat::Struct` arm, reusing Maranget usefulness
+  unchanged, KC-3). **P2/P3 (range/`@`-binding via the `when`-guard idiom) are explicitly
+  PREREQUISITE-GATED on M-833/DN-79 landing** — recorded as a documented conditional, **not**
+  "already served" (the note's own load-bearing self-correction: `Arm` has no guard field today and
+  the transpiler refuses every guard). The B2/C2 dedicated-grammar decline is Accepted regardless of
+  that timeline. Status recorded as **Accepted — P1 only** (taking FLAG-6's split as offered). Minted
+  **M-1089** for exactly the P1 transpiler build (`depends_on: []`); the self-hosted P1 half and the
+  P2/P3 idiom emission stay FLAGged follow-ups, not minted here (avoid filing a blocked issue that
+  implies near-term actionability it does not have).
+
+Reconciled `docs/Doc-Index.md` (seven new rows, all Accepted 2026-07-12) and `tools/github/issues.yaml`
+(six fresh M-ids **M-1086..M-1091**, plus `doc_refs`/append-only notes on **M-1077**, **M-1080**,
+**M-1082**, **M-1083**). Regenerated `docs/api-index/` and `docs/tero-index/` where doc_refs changed.
+`doc_refs_check.py`, markdownlint, `structured.sh`, `links.sh`, `secrets.sh` green.
+
 ### chore(gates): flag pre-existing `just check-canary` drift on `dev` from PR #1521 (2026-07-12)
 
 Running `just check-canary` (leaf→`dev` gate) during the gap-close-2 integration close-out surfaced

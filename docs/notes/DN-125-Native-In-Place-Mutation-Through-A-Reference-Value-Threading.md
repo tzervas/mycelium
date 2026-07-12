@@ -344,6 +344,11 @@ src:crates/mycelium-transpile/src/map.rs:344`. DN-119/DN-118 forward-pointer row
 follow-up append-only edit (not applied in this close-out — no normative text of either note changes;
 tracked so the reconciliation isn't lost).
 
+**Follow-up applied (2026-07-12, at the DN-126–DN-132 ratification close-out):** the DN-119/DN-118
+forward-pointer rows FLAGGED above are now applied — an append-only row added to DN-119's exclusion-set
+table (the `&mut` row) and an append-only paragraph added to DN-118 §5, both pointing at this note
+(DN-125) as the ratified native answer. No normative text of either note changes.
+
 ## §11 Grounding
 
 - **ADR-003** (`docs/Mycelium_Project_Foundation.md:365-370`) — content-addressed identity; value
