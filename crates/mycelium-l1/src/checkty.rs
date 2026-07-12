@@ -1355,29 +1355,16 @@ impl PhylumEnv {
     /// instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have
     /// refused).
     pub fn link(&self) -> Result<Env, CheckError> {
-        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and the built-in
-        // `Fuse` trait iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding).
+        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and every
+        // built-in prelude trait (`Fuse`/`Ord3`/`Show`/`Init`/`Fault`) iff any nodule uses it
+        // (mirrors `register_nodule_decls`' conditional seeding; DN-129 §5 DRY factoring — one loop
+        // over [`PRELUDE_TRAIT_SEEDS`] instead of a hand-copied `if` per trait).
         let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
         let p = prelude();
         types.insert(p.name.clone(), p);
         let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
-        if self
-            .nodules
-            .iter()
-            .any(|(_, e)| e.traits.contains_key(crate::fuse::TRAIT_NAME))
-        {
-            traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
-        }
-        // DN-122 §13 (M-1080; WU-B): seed the built-in `Ord3` trait the same conditional way as
-        // `Fuse` just above — present in the linked env iff some nodule actually declared an
-        // `impl Ord3[...] for ...` (never unconditionally; see `register_nodule_decls`'s Fuse doc
-        // comment for the `mono::is_already_monomorphic` fast-path rationale this mirrors).
-        if self
-            .nodules
-            .iter()
-            .any(|(_, e)| e.traits.contains_key(crate::ord3::TRAIT_NAME))
-        {
-            traits.insert(crate::ord3::TRAIT_NAME.to_owned(), crate::ord3::prelude());
+        for seed in PRELUDE_TRAIT_SEEDS {
+            seed.seed_for_link(&mut traits, &self.nodules);
         }
         let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
         let mut totality: BTreeMap<String, crate::totality::Totality> = BTreeMap::new();
@@ -2176,8 +2163,9 @@ fn check_phylum_inner(
     let mut own = Vec::with_capacity(resolved.len());
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
         // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
-        // `regs` is consumed below. Exclude the injected prelude `Bool` and the conditionally-seeded
-        // built-in `Fuse` trait — they are identical everywhere and are seeded once by `link`, never a
+        // `regs` is consumed below. Exclude the injected prelude `Bool` and every conditionally-
+        // seeded built-in prelude trait (DN-129 §5: `PRELUDE_TRAIT_SEEDS` — `Fuse`/`Ord3`/`Show`/
+        // `Init`/`Fault`) — they are identical everywhere and are seeded once by `link`, never a
         // per-nodule collision.
         own.push(OwnDecls {
             types: regs
@@ -2190,11 +2178,7 @@ fn check_phylum_inner(
             traits: regs
                 .traits
                 .keys()
-                // DN-122 §13 (M-1080; WU-B): exclude `Ord3` too — it is seeded once by `link`,
-                // like `Fuse`, never a per-nodule collision.
-                .filter(|n| {
-                    n.as_str() != crate::fuse::TRAIT_NAME && n.as_str() != crate::ord3::TRAIT_NAME
-                })
+                .filter(|n| !PRELUDE_TRAIT_SEEDS.iter().any(|s| s.name == n.as_str()))
                 .cloned()
                 .collect(),
         });
@@ -2272,6 +2256,19 @@ pub(crate) struct NoduleRegs {
     pub(crate) traits: BTreeMap<String, TraitInfo>,
 }
 
+/// DN-129 §5 — every built-in, conditionally-seeded prelude trait, in one place: `Fuse` (M-965
+/// F-A1), `Ord3` (DN-122 §13 / M-1080 WU-B), `Show` (DN-127 WU-2), `Init`/`Fault` (DN-129). The
+/// three call sites that used to hand-copy a `Fuse`/`Ord3` conditional — [`register_nodule_decls`],
+/// [`PhylumEnv::link`], and the [`OwnDecls`] exclusion filter — all iterate this one array instead
+/// (DRY; adding a sixth prelude trait is one array entry, not three new copy-pasted blocks).
+pub(crate) const PRELUDE_TRAIT_SEEDS: [crate::preseed::PreludeTraitSeed; 5] = [
+    crate::fuse::SEED,
+    crate::ord3::SEED,
+    crate::show::SEED,
+    crate::init::SEED,
+    crate::fault::SEED,
+];
+
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
 /// function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the
 /// single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build
@@ -2286,82 +2283,37 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
     types.insert(p.name.clone(), p);
     register_types(&mut types, nodule)?;
     let mut traits = register_traits(&types, nodule)?;
-    // M-965 (DN-58 §A F-A1): seed the built-in `Fuse` trait — the trait analogue of the `Bool`
-    // prelude type above — but only when this nodule actually declares an `impl Fuse[...] for
-    // ...` (never unconditionally). A nodule that tries to redeclare it gets an explicit refusal
-    // (never a silent shadow of the built-in — G2), exactly as redeclaring `Bool` would collide in
-    // `types`.
+    // DN-129 §5 (M-1091): every built-in prelude trait — `Fuse` (M-965 F-A1), `Ord3` (DN-122 §13 /
+    // M-1080 WU-B), `Show` (DN-127 WU-2), `Init`/`Fault` (DN-129) — is seeded into this nodule's
+    // trait registry **iff** this nodule's own items declare an `impl <Trait>[...] for ...` (never
+    // unconditionally). A nodule that tries to redeclare one gets an explicit refusal (never a
+    // silent shadow of the built-in — G2), exactly as redeclaring `Bool` would collide in `types`.
     //
     // **Why conditional (unlike `Bool`, which is always seeded):** `mono::is_already_monomorphic`
     // (the "is this program already closed — no generics/traits/instances?" fast-path test) and a
     // wide swath of the existing test corpus assert `env.traits.is_empty()` / `mono.traits.is_empty()`
     // for any program that never mentions traits at all. Bool is harmless there (it has empty
     // `params`, so it never trips the *type*-genericity half of that test); an unconditionally
-    // seeded `Fuse` trait would trip the *trait*-emptiness half for **every** program, including
-    // ones with no `fuse`/`Fuse` in sight — a real regression, not just a test artifact (it would
-    // force every trait-free program through mono's slow specializing pass). So `Fuse` is seeded
-    // **iff** this nodule's own items need it (an `impl Fuse[...] for ...`) — never based on
-    // whether `fuse(a, b)` is *called* (the repr-type fast path in `check_fuse` never touches the
-    // trait registry at all, and a Data-type `fuse` call always requires a prior `impl`, which is
-    // exactly what this scan detects).
+    // seeded prelude trait would trip the *trait*-emptiness half for **every** program, including
+    // ones with no use of it in sight — a real regression, not just a test artifact (it would force
+    // every trait-free program through mono's slow specializing pass). So each prelude trait is
+    // seeded **iff** this nodule's own items need it (a textual `impl <Trait>[...] for ...`) — never
+    // based on whether the trait's operation is merely *called*.
     //
-    // FLAG (M-965, narrow, honest residual): a nodule that delegates `Fuse` **only** via `via idx :
-    // Fuse` sugar (DN-53) — with no textual `impl Fuse[...] for ...` — is not detected here, because
-    // `via`-generated impls are expanded later (`check_nodule_with` Phase 0b, after imports/coherence
-    // are available) and are not yet in `nodule.items` at this registration pass. Such a program
-    // would see "impl for unknown trait `Fuse`" at via-expansion time — a never-silent refusal, not a
-    // silent misbehavior, but a real gap the scan below doesn't yet close (deferred, not hidden).
-    let fuse_used = nodule
-        .items
-        .iter()
-        .any(|item| matches!(item, Item::Impl(id) if id.trait_name == crate::fuse::TRAIT_NAME));
-    if fuse_used {
-        if traits.contains_key(crate::fuse::TRAIT_NAME) {
-            return Err(CheckError::new(
-                crate::fuse::TRAIT_NAME,
-                "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
-                 lawful-merge `join` contract is already provided by the prelude; remove this \
-                 declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
-            ));
-        }
-        traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
-    } else if traits.contains_key(crate::fuse::TRAIT_NAME) {
-        return Err(CheckError::new(
-            crate::fuse::TRAIT_NAME,
-            "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
-             lawful-merge `join` contract is already provided by the prelude; remove this \
-             declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
-        ));
-    }
-    // DN-122 §13 (M-1080; WU-B): seed the built-in `Ord3` trait — the MVP's single-param,
-    // param-only-sig target trait — the exact same conditional way as `Fuse` just above (never
-    // unconditionally; same `mono::is_already_monomorphic` fast-path rationale, same FLAG residual
-    // for a hypothetical `via`-only delegation with no textual `impl Ord3[...] for ...`). Named
-    // `Ord3`, not DN-122 §13.1's own illustrative `Cmp`, to avoid colliding with the pre-existing
-    // `trait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; }` generic-trait-dispatch fixture already
-    // used by `tests/{mono,mono_tag,elab,parse}.rs` (verify-first, mitigation #14 — found only by
-    // actually running the change-scoped test suite, not by re-reading the DN).
-    let ord3_used = nodule
-        .items
-        .iter()
-        .any(|item| matches!(item, Item::Impl(id) if id.trait_name == crate::ord3::TRAIT_NAME));
-    if ord3_used {
-        if traits.contains_key(crate::ord3::TRAIT_NAME) {
-            return Err(CheckError::new(
-                crate::ord3::TRAIT_NAME,
-                "cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — \
-                 its `cmp` contract is already provided by the prelude; remove this declaration \
-                 and `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly",
-            ));
-        }
-        traits.insert(crate::ord3::TRAIT_NAME.to_owned(), crate::ord3::prelude());
-    } else if traits.contains_key(crate::ord3::TRAIT_NAME) {
-        return Err(CheckError::new(
-            crate::ord3::TRAIT_NAME,
-            "cannot redeclare the built-in prelude trait `Ord3` (DN-122 §13 / M-1080 WU-B) — its \
-             `cmp` contract is already provided by the prelude; remove this declaration and \
-             `impl Ord3[T] for T { fn cmp(a: T, b: T) => Binary{8} = … }` directly",
-        ));
+    // FLAG (M-965, narrow, honest residual, unchanged by this DRY refactor): a nodule that delegates
+    // a prelude trait **only** via `via idx : Trait` sugar (DN-53) — with no textual
+    // `impl Trait[...] for ...` — is not detected here, because `via`-generated impls are expanded
+    // later (`check_nodule_with` Phase 0b, after imports/coherence are available) and are not yet in
+    // `nodule.items` at this registration pass. Such a program would see "impl for unknown trait
+    // `<Trait>`" at via-expansion time — a never-silent refusal, not a silent misbehavior, but a
+    // real gap this scan doesn't yet close (deferred, not hidden).
+    //
+    // This loop is the DN-129 §5 DRY factoring of the `Fuse`/`Ord3` copy-pasted conditionals that
+    // used to be hand-duplicated here — one call per trait through
+    // [`crate::preseed::PreludeTraitSeed::seed_for_nodule`], behavior byte-identical for `Fuse`/
+    // `Ord3` (pinned by `tests/fuse.rs`/`tests/ord3.rs`, unchanged by this refactor).
+    for seed in PRELUDE_TRAIT_SEEDS {
+        seed.seed_for_nodule(&mut traits, nodule)?;
     }
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
