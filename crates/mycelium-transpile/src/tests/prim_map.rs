@@ -133,18 +133,24 @@ fn wrapping_add_on_unknown_receiver_type_keeps_generic_desugar() {
     );
 }
 
-/// WIRED (L4, DN-136 Phase-2, M-1100): `.clone()` on a receiver whose type resolves (any known
-/// type — value-semantic identity holds regardless of the concrete type, `ReceiverGate::AnyKnown`)
-/// emits the receiver UNCHANGED via the documented `myc_prim: ""` parenthesized-passthrough
-/// convention (`(recv)`, grammar `primary ::= ... | '(' expr ')'`) — never a fabricated bare
-/// `clone(recv)` call (the exact fabrication class `is_unmappable_conversion_method` exists to
-/// prevent — see `src/tests/emit.rs::conversion_noop_method_gaps_never_fabricates_unknown_prim`,
-/// unaffected by this leaf since it only ever exercises `.to_owned()`/`.deref()`, not `.clone()`).
+/// WIRED (L4, DN-136 Phase-2, M-1100), narrowed by the PR #1552 review CRITICAL fix: `.clone()` on
+/// a receiver whose mapped type is a fixed **builtin/primitive scalar**
+/// (`ReceiverGate::AnyBuiltinScalar` — `Bool`/`Bytes`/some concrete `Binary{N}`) emits the receiver
+/// UNCHANGED via the documented `myc_prim: ""` parenthesized-passthrough convention (`(recv)`,
+/// grammar `primary ::= ... | '(' expr ')'`) — never a fabricated bare `clone(recv)` call (the
+/// exact fabrication class `is_unmappable_conversion_method` exists to prevent — see
+/// `src/tests/emit.rs::conversion_noop_method_gaps_never_fabricates_unknown_prim`, unaffected by
+/// this leaf since it only ever exercises `.to_owned()`/`.deref()`, not `.clone()`). A builtin
+/// receiver's `Clone` impl is std's own, fixed, field-copy behavior (Rust's orphan rule forbids a
+/// downstream `impl Clone for u64`/`bool`/`String`), so identity is sound here — see
+/// `clone_on_user_named_type_receiver_never_fires_identity_and_gaps` below for the converse
+/// (user-named-type) case, which must NOT fire this row.
 #[test]
-fn clone_on_known_receiver_emits_identity_passthrough() {
+fn clone_on_known_builtin_receiver_emits_identity_passthrough() {
     let cases = [
         ("fn f(x: u64) -> u64 { x.clone() }", "(x)"),
-        ("fn f(x: Thing) -> Thing { x.clone() }", "(x)"),
+        ("fn f(x: bool) -> bool { x.clone() }", "(x)"),
+        ("fn f(x: String) -> String { x.clone() }", "(x)"),
     ];
     for (rust, needle) in cases {
         let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
@@ -163,11 +169,96 @@ fn clone_on_known_receiver_emits_identity_passthrough() {
     }
 }
 
+/// **CRITICAL regression (PR #1552 review, reproduced against the compiled transpiler).** A
+/// receiver whose mapped type is a user-named type (here: a `struct` with a hand-written, NON-
+/// derived `Clone` impl whose body does more than a field-for-field copy) must NEVER fire the
+/// `.clone()` identity row — that would silently drop the custom `clone` body's actual effect,
+/// reporting a clean success while producing behaviorally wrong output (G2's central anti-pattern:
+/// a silent swap). The exact reviewer repro: `struct Ticket{id,gen}` + a custom `clone` that bumps
+/// `gen` by one; `fn bump(t: Ticket) -> Ticket { t.clone() }` must GAP (never emit `bump` as bare
+/// `(t)`, which would drop the `+1`).
+///
+/// **This test is non-vacuous by construction:** it asserts the FAILURE mode (no `bump` in
+/// `emitted_items`, no `(t)`/no bare `t` passthrough text for `bump`) — under the pre-fix
+/// `ReceiverGate::AnyKnown` gate this assertion FAILS (that gate fires on any resolvable receiver,
+/// including `Ticket`, silently emitting `bump` as `(t)`); under the fixed
+/// `ReceiverGate::AnyBuiltinScalar` gate (this leaf's change) it PASSES, because `Ticket` is not a
+/// builtin/primitive mapped type and so the row's gate never matches, and `.clone()` falls through
+/// to the pre-existing `is_unmappable_conversion_method` gap exactly as it did before L4 existed.
+#[test]
+fn clone_on_user_named_type_receiver_never_fires_identity_and_gaps() {
+    let rust = "struct Ticket { id: u32, gen: u32 }\n\
+                impl Clone for Ticket {\n\
+                    fn clone(&self) -> Ticket { Ticket { id: self.id, gen: self.gen + 1 } }\n\
+                }\n\
+                fn bump(t: Ticket) -> Ticket { t.clone() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "bump"),
+        "CRITICAL: a `.clone()` on a user-named-type receiver (a struct with a custom Clone impl) \
+         must NEVER emit `bump` as a clean identity passthrough — that silently bypasses the \
+         custom clone body. Got emitted_items={:?}, gaps={:?}, myc=\n{myc}",
+        report.emitted_items,
+        report.gaps
+    );
+    // `bump` itself must never appear as an emitted item at all (a gapped function is never
+    // partially emitted, G2) — note `myc` legitimately DOES contain the text "clone" here, from
+    // the user's own hand-written `impl Clone for Ticket` block (a *different*, faithfully
+    // emitted item this fixture also declares) — so the assertion is scoped to `bump`'s own
+    // declaration, not a blanket "clone" substring ban.
+    assert!(
+        !myc.contains("fn bump"),
+        "CRITICAL: no `fn bump` declaration of any shape (identity passthrough or otherwise) may \
+         ever be emitted, got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "expected `bump` to gap via the pre-existing `is_unmappable_conversion_method` catch-all \
+         (unchanged by this fix), got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// Direct unit-level pin on the gate itself (belt-and-suspenders alongside the end-to-end
+/// transpile test above): `ReceiverGate::AnyBuiltinScalar` matches exactly `Bool`/`Bytes`/any
+/// `Binary{N}`, and explicitly does NOT match an arbitrary user-named type's mapped text (a bare
+/// passed-through identifier, e.g. `"Ticket"`) even though that text is `Some` (i.e. "known" in the
+/// `AnyKnown` sense) — pins the CRITICAL fix's exact boundary independent of the transpile
+/// pipeline.
+#[test]
+fn any_builtin_scalar_gate_excludes_user_named_types() {
+    use crate::prim_map::{receiver_gate_matches, ReceiverGate};
+
+    for builtin in ["Bool", "Bytes", "Binary{8}", "Binary{64}", "Binary{128}"] {
+        assert!(
+            receiver_gate_matches(ReceiverGate::AnyBuiltinScalar, Some(builtin)),
+            "expected AnyBuiltinScalar to match builtin mapped type `{builtin}`"
+        );
+    }
+    for user_named in ["Ticket", "Thing", "Ordering", "Float"] {
+        assert!(
+            !receiver_gate_matches(ReceiverGate::AnyBuiltinScalar, Some(user_named)),
+            "expected AnyBuiltinScalar to EXCLUDE non-builtin mapped text `{user_named}` (a \
+             user-named type, or — for `Float` — a builtin this gate deliberately does not cover, \
+             see the gate's own doc)"
+        );
+    }
+    assert!(
+        !receiver_gate_matches(ReceiverGate::AnyBuiltinScalar, None),
+        "expected AnyBuiltinScalar to never fire on a wholly-unresolved receiver (VR-5)"
+    );
+}
+
 /// NOT gated: `.clone()` on a receiver whose type does NOT resolve at all (here, the result of a
 /// nested call expression — [`crate::emit::expr_env_type`] only resolves a bare identifier, or a
 /// paren/reference wrapper around one) never fires the identity row on an unresolved receiver
 /// (VR-5: no guess), same receiver-gate discipline as `is_nan`/`wrapping_add` above, applied to
-/// `AnyKnown`. Unlike those two (which fall through to the OLD generic bare-call desugar), `clone`
+/// `AnyBuiltinScalar` (an unresolved receiver has no mapped-type text at all, so it fails this
+/// gate the same way it would have failed the original `AnyKnown`). Unlike those two (which fall
+/// through to the OLD generic bare-call desugar), `clone`
 /// falls through to the PRE-EXISTING `is_unmappable_conversion_method` gap instead (`crate::emit`,
 /// unchanged by this leaf) — `clone` was already in that gap's method list before this leaf, so an
 /// un-gated `.clone()` still refuses cleanly rather than emitting a fabricated bare `clone(...)`

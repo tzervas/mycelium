@@ -45,18 +45,33 @@
 //!
 //! # L4 (DN-136 Phase-2, M-1100) — conversion-method mapping, verify-first findings
 //!
-//! **`clone` ADDED (identity, `wired: true`).** `Clone::clone`'s sole effect (per Rust's own
-//! contract) is producing an owned copy with **no representation change** — in a value-semantic
-//! grammar (ADR-003) that is exactly identity. The frozen [`crate::emit`] call-emission format is
-//! always `"{myc_prim}({args})"` (`emit.rs`'s `visit_method_call`, unchanged by this leaf); a row
-//! with `myc_prim: ""` therefore emits `"(recv)"` — a **parenthesized-grouping** expression
-//! (`primary ::= ... | '(' expr ')'`, `docs/spec/grammar/mycelium.ebnf:406`), confirmed
-//! `myc-check`-clean and semantically identical to the bare receiver by direct probe against
-//! `target/debug/myc-check` for a `Binary{64}`, `Bool`, `Bytes`, and a user struct receiver, and for
-//! a receiver expression that is itself a `match` block (this leaf's own `src/tests/prim_map.rs`
-//! carries the committed regression + a live-oracle witness). Gated on
-//! [`ReceiverGate::AnyKnown`] (any receiver whose type resolves at all — never a guess on an
-//! unresolved receiver, VR-5) since identity holds regardless of the concrete type.
+//! **`clone` ADDED (identity, `wired: true`), narrowed post-hoc by the PR #1552 review
+//! (CRITICAL soundness fix).** `Clone::clone`'s sole effect (per Rust's own contract) is producing
+//! an owned copy with **no representation change** — in a value-semantic grammar (ADR-003) that is
+//! exactly identity, **but only when the receiver's type cannot itself carry a user-written,
+//! non-derived `impl Clone`** that does something other than a field-for-field copy (Rust allows
+//! exactly that on any local type — the review's reproduced repro: a `struct Ticket{id,gen}` with a
+//! hand-written `clone` that bumps `gen`; the original `ReceiverGate::AnyKnown` gate silently fired
+//! on it, dropping the bump and reporting a clean success). The frozen [`crate::emit`]
+//! call-emission format is always `"{myc_prim}({args})"` (`emit.rs`'s `visit_method_call`,
+//! unchanged by this leaf); a row with `myc_prim: ""` therefore emits `"(recv)"` — a
+//! **parenthesized-grouping** expression (`primary ::= ... | '(' expr ')'`,
+//! `docs/spec/grammar/mycelium.ebnf:406`), confirmed `myc-check`-clean and semantically identical
+//! to the bare receiver by direct probe against `target/debug/myc-check` for a `Binary{64}`,
+//! `Bool`, and `Bytes` receiver (this leaf's own `src/tests/prim_map.rs` carries the committed
+//! regression + a live-oracle witness covering exactly those three receiver types — `u64`/`bool`/
+//! `String`). A user struct receiver and a `match`-block receiver expression were manually probed
+//! against `target/debug/myc-check` during development (both also emit clean, unchanged, syntax)
+//! but that probe is **not** committed as a live-oracle case, and is no longer this row's live
+//! behavior anyway — see below. Gated on [`ReceiverGate::AnyBuiltinScalar`] (the receiver's mapped
+//! type must be exactly `Bool`/`Bytes`/some concrete `Binary{N}` — i.e. a Rust *primitive* source
+//! type, whose `Clone` impl is std's own fixed field-copy and categorically cannot be a user
+//! override, per Rust's orphan rule) rather than [`ReceiverGate::AnyKnown`]: a user-named-type
+//! receiver (a `struct`/`enum` that resolves but isn't a builtin) now **gaps** — never-silent
+//! (G2), never a guessed identity — instead of silently assuming its `Clone` is trivial. See
+//! `src/tests/prim_map.rs`'s `clone_on_user_named_type_receiver_never_fires_identity_and_gaps` for
+//! the reviewer's exact repro as a regression (confirmed to fail under the pre-fix `AnyKnown`
+//! gate, confirmed to pass under `AnyBuiltinScalar`).
 //!
 //! **`to_owned` DELIBERATELY WITHHELD (found, not guessed away — mitigation #14).** Same semantic
 //! bucket as `clone` (`crate::emit::is_unmappable_conversion_method`'s own doc comment groups both
@@ -130,11 +145,26 @@ pub enum ReceiverGate {
     /// The receiver's mapped type text must be some concrete `Binary{N}` (any width).
     AnyBinaryWidth,
     /// The receiver's type must resolve at all (any concrete mapped type) — no further
-    /// constraint. Added by L4 (DN-136 Phase-2, M-1100) for ownership/representation-identity
-    /// conversions (`.clone()`, …) whose identity holds regardless of the concrete type; still
-    /// requires *some* known type (never fires on a wholly-unresolved receiver — VR-5, the same
-    /// no-guess discipline `Exact`/`AnyBinaryWidth` already apply).
+    /// constraint. **CAUTION (post-hoc CRITICAL fix, PR #1552 review):** this gate fires on ANY
+    /// resolvable receiver, including a **user-named type** — sound only for a row whose identity
+    /// claim holds regardless of what code the type's author wrote (there is none such among this
+    /// leaf's rows any more; see [`AnyBuiltinScalar`](ReceiverGate::AnyBuiltinScalar) for the
+    /// gate `clone` actually needs). Kept in the enum for any future row that is genuinely
+    /// receiver-type-independent; not used by any row in [`TABLE`] as of this fix.
     AnyKnown,
+    /// The receiver's mapped type text must be one of the **fixed builtin/primitive** mapped
+    /// types — `"Bool"`, `"Bytes"`, or some concrete `Binary{N}` — i.e. exactly the types
+    /// `crate::type_map::TABLE` produces for a Rust *primitive* source type (`bool`, `u8..u128`/
+    /// `i8..i128`/`usize`/`isize`/`char`, `String`/`str`). Added by the PR #1552 review fix
+    /// (CRITICAL, `.clone()`-identity soundness hole): unlike [`AnyKnown`](ReceiverGate::AnyKnown),
+    /// this gate **excludes any user-named type** — a bare passed-through identifier (a `struct`/
+    /// `enum` name that fell through `type_map::lookup` to `map.rs`'s ordinary-named-type
+    /// passthrough arm) never matches, because Rust's orphan rule lets a user crate write its own
+    /// `impl Clone` for such a type (and often does, non-trivially — see `clone`'s row doc). A
+    /// receiver mapped from an actual Rust primitive can **never** carry a user `impl Clone`
+    /// (orphan rule: `bool`/`u8`../`String`/… are foreign types whose `Clone` impl is std's own,
+    /// fixed, field-copy behavior) — so identity is sound for exactly this set, never a guess.
+    AnyBuiltinScalar,
 }
 
 /// One forward-mapped Rust `Expr::MethodCall` pattern (see module docs).
@@ -281,17 +311,36 @@ pub const TABLE: &[PrimMapping] = &[
         rust_method: "clone",
         myc_prim: "",
         wired: true,
-        receiver_gate: ReceiverGate::AnyKnown,
+        // CRITICAL fix (PR #1552 review, post-hoc): was `ReceiverGate::AnyKnown`, which fires on
+        // ANY resolvable receiver INCLUDING a user-named type with a hand-written, non-derived
+        // `impl Clone` (repro: `struct Ticket{id,gen}` + a custom `clone` that bumps `gen` --
+        // `AnyKnown` silently emitted `bump`'s `t.clone()` as bare `(t)`, dropping the `+1`, as a
+        // clean success). `Clone::clone`'s "no representation change" claim is only true when the
+        // type CANNOT carry a user override -- i.e. a fixed builtin/primitive mapped type, never a
+        // user-named one (Rust's orphan rule is exactly what makes a foreign primitive's `Clone`
+        // impl non-overridable; a local struct/enum has no such guarantee). Narrowed to
+        // `AnyBuiltinScalar`; a user-named-type receiver now GAPS (never-silent, VR-5/G2) instead
+        // of silently assuming identity. See `src/tests/prim_map.rs`'s
+        // `clone_on_user_named_type_receiver_never_fires_identity_and_gaps` regression (the
+        // reviewer's exact repro, confirmed to FAIL under the pre-fix `AnyKnown` gate).
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
         bridge_binary1_to_bool: false,
         pending_category: Category::Other,
         slug: "M-1100",
-        citation: "DN-136 Phase-2 §4 L4 (this leaf); ADR-003 (value semantics — no reference/\
-                   ownership distinction); Clone::clone's own contract (\"returns a duplicate of \
-                   the value\", no representation change); grammar primary ::= ... | '(' expr \
-                   ')' (docs/spec/grammar/mycelium.ebnf:406); confirmed myc-check-clean by direct \
-                   probe against target/debug/myc-check for Binary{64}/Bool/Bytes/a user struct \
-                   receiver and a match-block receiver expression (see \
-                   src/tests/prim_map.rs's committed regression + live-oracle witness)",
+        citation: "this leaf's L4 lane (DN-136 Phase-2 worklist, M-1100) narrowed by the PR #1552 \
+                   review fix; ADR-003 (value semantics — no reference/ownership distinction); \
+                   Clone::clone's own contract (\"returns a duplicate of the value\", no \
+                   representation change) — sound here only because `AnyBuiltinScalar` restricts \
+                   the receiver to a fixed builtin/primitive mapped type (`Bool`/`Bytes`/some \
+                   `Binary{N}`), which Rust's orphan rule guarantees can never carry a \
+                   user-written `impl Clone` (a user-named-type receiver GAPS instead — see the \
+                   gate's own doc); grammar primary ::= ... | '(' expr ')' \
+                   (docs/spec/grammar/mycelium.ebnf:406); confirmed myc-check-clean by direct \
+                   probe against target/debug/myc-check for a Binary{64}/Bool/Bytes receiver (see \
+                   src/tests/prim_map.rs's committed regression + live-oracle witness — the \
+                   witness covers exactly u64/bool/String, matching this gate's scope; a prior \
+                   claim of user-struct/match-block live-oracle coverage was inaccurate and is \
+                   corrected here, PR #1552 review MEDIUM finding)",
     },
 ];
 
@@ -311,6 +360,9 @@ pub fn receiver_gate_matches(gate: ReceiverGate, receiver_ty: Option<&str>) -> b
         (ReceiverGate::Exact(want), Some(got)) => want == got,
         (ReceiverGate::AnyBinaryWidth, Some(got)) => crate::emit::binary_width(got).is_some(),
         (ReceiverGate::AnyKnown, Some(_)) => true,
+        (ReceiverGate::AnyBuiltinScalar, Some(got)) => {
+            got == "Bool" || got == "Bytes" || crate::emit::binary_width(got).is_some()
+        }
         (_, None) => false,
     }
 }
