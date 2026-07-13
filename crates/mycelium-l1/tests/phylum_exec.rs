@@ -209,3 +209,48 @@ fn phylum_of_one_link_runs_identically_to_check_nodule() {
     let via_nodule = run_single(src);
     assert_eq!(via_link, via_nodule);
 }
+
+// ---------------------------------------------------------------------------------------------
+// DN-138 §8 WU-2 review finding: two DIFFERENT nodules each hand-declaring the SAME seeded
+// primitive instance (`impl Show[Binary{64}] for Binary{64}`) with DIFFERENT bodies. Each nodule
+// checks fine independently — `register_instances`' global-uniqueness check is per-nodule, and a
+// seeded primitive instance is deliberately excluded from `OwnDecls`'s per-nodule collision set
+// (the same reason a SINGLE nodule triggering the seed AND hand-declaring the identical instance is
+// accepted, `prelude_instance_seed.rs::an_identical_self_provided_primitive_instance_is_not_a_redeclare_conflict`).
+// Only `PhylumEnv::link`'s `impls` map merge (never the `instances` seed-skip loop, which this is
+// NOT — the two bodies are DIFFERENT, hand-written impls, not a repeated seed fact) catches this:
+// two conflicting method-body lists at the same `(trait, head)` key must never silently pick one.
+// Pinned here so a future DRY refactor of the `impls` loop (see its warning comment in
+// `PhylumEnv::link`) cannot silently reintroduce a two-nodule coherence-masking bug.
+// ---------------------------------------------------------------------------------------------
+#[test]
+fn two_nodules_hand_declaring_the_same_seeded_instance_with_different_bodies_still_collide() {
+    let zero64 = format!("0b{:064b}", 0u64);
+    let src = format!(
+        "phylum p\n\
+         nodule b;\n\
+         impl Show[Binary{{64}}] for Binary{{64}} {{\n\
+           fn render(x: Binary{{64}}) => Bytes = \"b\";\n\
+         }};\n\
+         pub fn show_b() => Bytes = render({zero64});\n\
+         nodule a;\n\
+         impl Show[Binary{{64}}] for Binary{{64}} {{\n\
+           fn render(x: Binary{{64}}) => Bytes = \"a\";\n\
+         }};\n\
+         fn main() => Bytes = render({zero64});"
+    );
+    let penv = check_phylum(&parse_phylum(&src).expect("parse"))
+        .expect("each nodule's own hand-written Show[Binary{64}] impl is locally coherent");
+    // Mutant witness: if the `impls` merge loop in `link` ever gained the same seed-skip pattern
+    // the `instances` loop has, this would wrongly return `Ok` (first-wins), silently masking a
+    // genuine two-nodule coherence conflict.
+    let err = penv.link().expect_err(
+        "two nodules hand-declaring the SAME seeded instance with DIFFERENT bodies must collide \
+         at link time (the `impls` map merge), never silently pick one",
+    );
+    assert!(
+        err.message.contains("collision") && err.message.contains("impl"),
+        "expected a never-silent `impl` collision refusal, got: {}",
+        err.message
+    );
+}

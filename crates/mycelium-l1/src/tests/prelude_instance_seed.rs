@@ -12,6 +12,22 @@
 //! `TraitInfo` is a fixed Rust constant) — so this `InstanceInfo` diff is not merely a name check,
 //! it is the full signature pin DN-138 §5 obligation 1 demands. Instance EXISTENCE is subsumed: no
 //! real body ⇒ `real_env.instances.get(&key)` is `None` ⇒ the test fails (never a false pass).
+//!
+//! **CRITICAL fix (strict-review mutation test, this leaf).** The claim in the previous paragraph
+//! was FALSE as originally implemented: the sig-pin test used to build its oracle `Env`s via the
+//! ORDINARY `check_nodule` pipeline, which unconditionally re-runs the
+//! [`crate::checkty::PRELUDE_INSTANCE_SEEDS`] seeding step on every nodule it checks — so a seed
+//! naming a head the real body does NOT provide self-inserts into its own empty `instances` slot
+//! while the "real" oracle is being built, and the comparison then diffs the seed against ITSELF
+//! (a trivial, silent pass). Proof: mutating `seed_init_bool()`'s `for_ty` to a nonexistent head
+//! still passed all 9 entries. Drift on an ALREADY-EXISTING head is still caught correctly (the
+//! real declaration registers first, so the seed's `entry().or_insert()` is a no-op and the
+//! comparison is genuine) — only a NOVEL nonexistent head was silently masked. The fix: the
+//! sig-pin test now builds its oracles via [`fmt_env_clean`]/[`derive_prelude_env_clean`], which
+//! engage [`crate::checkty::SuppressInstanceSeedingForTest`] so the returned `Env` reflects ONLY
+//! what the real source body itself declares — proven non-vacuous by
+//! [`a_seed_naming_a_head_absent_from_the_real_body_is_caught_by_the_clean_oracle`] and
+//! [`seed_instance_for_nodule_self_inserts_a_fact_at_an_otherwise_unoccupied_key`], below.
 
 use crate::checkty::*;
 use crate::parse;
@@ -36,33 +52,38 @@ const DERIVE_PRELUDE_SRC: &str = include_str!(concat!(
     "/../../lib/std/derive_prelude.myc"
 ));
 
-fn fmt_env() -> Env {
+/// **THE sig-pin oracle builder (DN-138 §5 obligation 1, CRITICAL fix).** Builds `Show`'s real
+/// `lib/std/fmt.myc` oracle with [`SuppressInstanceSeedingForTest`] engaged, so the returned `Env`
+/// carries ONLY what `fmt.myc` itself actually declares — never a seed's own self-insertion. This
+/// is what makes a seed naming a nonexistent head genuinely resolve to `None` below, instead of a
+/// trivial self-comparison.
+fn fmt_env_clean() -> Env {
+    let _guard = SuppressInstanceSeedingForTest::engage();
     env(FMT_SRC)
 }
 
-fn derive_prelude_env() -> Env {
+/// **THE sig-pin oracle builder (DN-138 §5 obligation 1, CRITICAL fix)** — the `Init`/`Ord3`
+/// analogue of [`fmt_env_clean`], over `lib/std/derive_prelude.myc`.
+fn derive_prelude_env_clean() -> Env {
+    let _guard = SuppressInstanceSeedingForTest::engage();
     env(DERIVE_PRELUDE_SRC)
 }
 
-/// **THE sig-pin differential (DN-138 §5 obligation 1).** Every entry of
-/// [`crate::checkty::PRELUDE_INSTANCE_SEEDS`] is diffed against the real `lib/std` body it claims
-/// to mirror. Non-vacuous: 9 entries, each independently looked up; a drift in ANY one of them
-/// (wrong width, wrong method name, a body that stops existing) fails this test at the specific
-/// failing entry, naming it.
-#[test]
-fn every_seed_sig_pins_to_its_real_lib_std_body() {
-    let fmt = fmt_env();
-    let prelude = derive_prelude_env();
-    let mut checked = 0usize;
-    for seed in PRELUDE_INSTANCE_SEEDS {
+/// The sig-pin core check, factored out so both the real (9-seed, all-real-heads) test and the
+/// adversarial (fabricated-head) regression test below exercise the IDENTICAL comparison logic —
+/// the only variable is which seed list and which oracle `Env`s are passed in. Panics on the first
+/// divergence, exactly like the original inline loop; the adversarial test observes that with
+/// `std::panic::catch_unwind`.
+fn assert_every_seed_pins(seeds: &[crate::preseed::PreludeInstanceSeed], fmt: &Env, prelude: &Env) {
+    for seed in seeds {
         let seeded = (seed.instance)();
         let head = type_head(&seeded.for_ty)
             .unwrap_or_else(|| panic!("seed for `{}` has no concrete head", seed.trait_name));
         let key = (seed.trait_name.to_owned(), head.clone());
         let real_env = if seed.trait_name == "Show" {
-            &fmt
+            fmt
         } else {
-            &prelude
+            prelude
         };
         let real = real_env.instances.get(&key).unwrap_or_else(|| {
             panic!(
@@ -79,29 +100,102 @@ fn every_seed_sig_pins_to_its_real_lib_std_body() {
              here is exactly the check-passes/eval-fails hazard DN-138 §5 obl. 1 exists to catch",
             seed.trait_name
         );
-        checked += 1;
     }
+}
+
+/// **THE sig-pin differential (DN-138 §5 obligation 1).** Every entry of
+/// [`crate::checkty::PRELUDE_INSTANCE_SEEDS`] is diffed against the real `lib/std` body it claims
+/// to mirror, built via the CLEAN (seeding-suppressed) oracle — see the module doc's CRITICAL fix.
+/// Non-vacuous: 9 entries, each independently looked up; a drift in ANY one of them (wrong width,
+/// wrong method name, a body that stops existing) fails this test at the specific failing entry,
+/// naming it — and, per the sibling adversarial tests below, a head absent from the real body is
+/// now genuinely caught, never silently masked by seed self-insertion.
+#[test]
+fn every_seed_sig_pins_to_its_real_lib_std_body() {
+    let fmt = fmt_env_clean();
+    let prelude = derive_prelude_env_clean();
+    assert_every_seed_pins(&PRELUDE_INSTANCE_SEEDS, &fmt, &prelude);
     assert_eq!(
-        checked, 9,
+        PRELUDE_INSTANCE_SEEDS.len(),
+        9,
         "expected exactly the 9 DN-138 increment-1 seeds (Show/Init/Ord3 x Binary{{64}}/Bytes/Bool)"
     );
 }
 
-/// Adversarial witness for the sig-pin test's own non-vacuousness: if a seed's claimed `for_ty`
-/// does NOT exist as a real instance in the cited oracle file, the lookup is `None` and the test
-/// panics — instance existence is subsumed by the sig-pin differential, not a separate check. This
-/// is asserted here directly (rather than only trusted from the passing test above) by probing a
-/// deliberately-wrong head against the real environments.
+/// A fabricated `InstanceInfo` at a head neither `lib/std/fmt.myc` nor
+/// `lib/std/derive_prelude.myc` ever declares an instance of, and which `PRELUDE_INSTANCE_SEEDS`
+/// itself never seeds — used only by the adversarial tests below to reproduce the strict-review
+/// mutation-testing finding (mutating a real seed's `for_ty` to a nonexistent head) without
+/// touching the real, private seed table.
+fn bogus_absent_head_instance() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Data("AdversarialNotReal".to_owned(), vec![])],
+        for_ty: Ty::Data("AdversarialNotReal".to_owned(), vec![]),
+        methods: vec!["init".to_owned()],
+    }
+}
+
+const BOGUS_SEED: crate::preseed::PreludeInstanceSeed = crate::preseed::PreludeInstanceSeed {
+    trait_name: "Init",
+    impl_hint: "impl Init[AdversarialNotReal] for AdversarialNotReal { … } (test-only, fabricated \
+                — never a real prelude seed)",
+    instance: bogus_absent_head_instance,
+};
+
+/// **The real adversarial proof of the CRITICAL fix (DN-138 §5 obl. 1).** A seed naming a head
+/// ABSENT from both real oracle files must make [`assert_every_seed_pins`] genuinely fail against
+/// the CLEAN (seeding-suppressed) oracle: the bogus seed's head is truly absent from what
+/// `fmt.myc`/`derive_prelude.myc` themselves declare, so the lookup is `None` and the check panics.
+/// This is the non-vacuous proof that DN-138 §5 obligation 1's guardrail now actually catches a
+/// nonexistent-head seed, rather than being able to pass by re-diffing a self-inserted fact against
+/// itself (the exact hazard the module doc's CRITICAL fix note describes).
 #[test]
-fn a_seed_whose_head_does_not_exist_in_the_real_body_is_never_silently_accepted() {
-    let fmt = fmt_env();
-    // `Show` has no `Binary{32}` instance in the real file (only `Binary{64}` — the width-erased
-    // head is `"Binary"`, so this looks up the SAME slot `Binary{64}` occupies, and it IS present;
-    // this probes a head that is not present at all instead).
+fn a_seed_naming_a_head_absent_from_the_real_body_is_caught_by_the_clean_oracle() {
+    let clean_fmt = fmt_env_clean();
+    let clean_prelude = derive_prelude_env_clean();
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        assert_every_seed_pins(&[BOGUS_SEED], &clean_fmt, &clean_prelude);
+    }));
     assert!(
-        !fmt.instances
-            .contains_key(&("Show".to_owned(), "Data:NotReal".to_owned())),
-        "a fabricated head must never resolve in the real oracle"
+        caught.is_err(),
+        "a seed naming a head absent from BOTH real oracle files must make the sig-pin check FAIL \
+         against the clean (seeding-suppressed) oracle — non-vacuous proof the guardrail actually \
+         catches a nonexistent-head seed, not merely a re-diff of a self-inserted fact"
+    );
+}
+
+/// **Mutation-witnessed proof of the bug this leaf fixes** (pinned so the contamination hole can
+/// never silently return). Directly exercises the mechanism the strict review's mutation test
+/// found: [`crate::preseed::PreludeInstanceSeed::seed_instance_for_nodule`] — the exact function
+/// `check_nodule`'s per-nodule pass loops over `PRELUDE_INSTANCE_SEEDS` to call — self-inserts its
+/// OWN fabricated fact into an otherwise-empty `instances` map for any nodule that merely triggers
+/// the seed's trait, with no regard for whether a real declaration exists anywhere. This is why
+/// building the sig-pin oracle via the ORDINARY (seeded) `check_nodule` pipeline could never
+/// distinguish "a real declaration already filled this slot" from "nothing did, and the seed just
+/// fabricated one" — the reason the sig-pin oracle above must be built with seeding suppressed.
+#[test]
+fn seed_instance_for_nodule_self_inserts_a_fact_at_an_otherwise_unoccupied_key() {
+    use std::collections::BTreeMap;
+    // A nodule that triggers `Init` (any `impl Init[...] for ...`) but declares NOTHING at the
+    // bogus seed's own head — the real-world shape of "a seed whose head the real body doesn't
+    // provide".
+    let nodule = crate::parse(
+        "nodule d;\n\
+         type Wrap = Wrap(Bytes);\n\
+         impl Init[Wrap] for Wrap {\n\
+           fn init() => Wrap = Wrap(init());\n\
+         };",
+    )
+    .expect("parses");
+    let mut instances: BTreeMap<(String, String), InstanceInfo> = BTreeMap::new();
+    BOGUS_SEED.seed_instance_for_nodule(&mut instances, &nodule);
+    assert_eq!(
+        instances.get(&("Init".to_owned(), "Data:AdversarialNotReal".to_owned())),
+        Some(&bogus_absent_head_instance()),
+        "seed_instance_for_nodule must have self-inserted its own fabricated fact at its own \
+         empty key — this is the exact self-insertion mechanism the CRITICAL fix works around by \
+         building the sig-pin oracle with seeding suppressed instead of via the ordinary pipeline"
     );
 }
 
