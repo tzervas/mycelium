@@ -41,6 +41,7 @@ pub mod remap;
 pub mod reserved;
 pub(crate) mod symtab;
 pub mod transpile;
+pub mod type_map;
 pub mod vet;
 pub(crate) mod visit;
 
