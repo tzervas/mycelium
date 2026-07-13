@@ -4,12 +4,12 @@
 |---|---|
 | **Note** | DN-133 |
 | **Status** | **Draft** (2026-07-12). Authored as **READ + a new DN only** by the design-reasoner: enacts nothing, ships no code, moves no other doc's status (house rule #3, append-only). **The design-reasoner does not self-ratify** — the maintainer / the automated DN-review gate ratifies **Draft → Accepted**. This note is **soundness-sensitive** (the wave-1 "D4" mis-emit lesson, DN-34 §8.2); its core is a *never-mis-emit* discipline, not a permissive one. Every claim is **`Declared`** except code facts read against the tree (`Empirical` at `file:line`, verification base `origin/dev@08d8fc21`). |
-| **Decides** | *Proposes, for ratification (does not self-ratify):* (1) the **verified problem** — `crates/mycelium-transpile/src/emit.rs`'s `visit_call` **unconditionally gaps every** `Type::method(...)` qualified/associated call (`emit.rs:1271-1294`, `Empirical`), even though the *declaration* side already mints a deterministic mangled name for no-`self` associated fns (`mangled_inherent_fn_name` → **`{Type}__{method}`**, `emit.rs:2689-2691`; applied `emit.rs:3029-3046`). DN-99 register **row 18** records the closure *direction* (`Type::m`→`type_m`, `use`+dotted App; `map.rs:85`, M-664/M-662, P2) but **not** the emission discipline. (2) The **name reconciliation (a real discrepancy this note settles)** — DN-99 row 18's `type_m` and the landed decl-side `Type__method` **disagree**; the call side MUST emit the *identical* string the decl side emits or it desyncs — so ratify **`Type__method`** (the landed decl-side form) as canonical and correct DN-99 row 18's shorthand. (3) The **ranked recommendation** — close the loop **only under a resolution gate**: emit `Type__method(args)` **iff** the callee type resolves (same-file inherent impl, or a batch sibling via the DN-113 / M-1084 symtab) **and** that nodule actually emitted the mangled decl; **otherwise gap** — never a bare last-segment (the D4 fabrication). (4) The **hard exclusions** — a primitive/std associated fn with no emitted decl (`i128::try_from`, `.from(...)`) **always gaps**; a cross-*module free-function* path (`a::b::c()`) routes through Import/symtab (M-1084), not this path. It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, grammar, or `crates/**` — §FLAGs lists the rows. |
-| **Feeds** | **std-sys-host vertical slice** (`OsClock` impl — `mono_now`/`wall_now`/`logical_now` gap on qualified calls: `DeclaredTime::new`, `MonoInstant::from_nanos`, `mycelium_std_sys::time::mono_nanos`, `i128::try_from`, `WallInstant::from_nanos_since_epoch`, `LogicalInstant::from_tick`, `DeclaredTimeEntropy::new` — `gen/myc-drafts/stdlib/std-sys-host/lib.gap.json` gap @ line 45, `Empirical`); **DN-34 §8.13/8.14 "D4"** (inherent-impl associated-fn name mangling — the *declaration* half this note completes on the *call* half; §8.2 `from(self)` fabrication precedent); **DN-99 register row 18** (`qualified-fn-call (T::m)`); **DN-113 / M-1060** (cross-phylum import resolution) and **M-1084** (cross-nodule import net-close — the symtab this note's resolution gate consumes); **DN-124** (phylum-mode measurement basis); **DN-125 / M-1081** (the `&mut self`/`&mut [u8]` half of the `fill_bytes` residual — a *different* blocker, noted for scope honesty). |
+| **Decides** | *Proposes, for ratification (does not self-ratify):* (1) the **verified problem** — `crates/mycelium-transpile/src/emit.rs`'s `visit_call` **unconditionally gaps every** `Type::method(...)` qualified/associated call (`emit.rs:2071-2094`, `Empirical`), even though the *declaration* side already mints a deterministic mangled name for no-`self` associated fns (`mangled_inherent_fn_name` → **`{Type}__{method}`**, `emit.rs:3490-3491`; applied `emit.rs:3849-3872`). DN-99 register **row 18** records the closure *direction* (`Type::m`→`type_m`, `use`+dotted App; `map.rs:85`, M-664/M-662, P2) but **not** the emission discipline. (2) The **name reconciliation (a real discrepancy this note settles)** — DN-99 row 18's `type_m` and the landed decl-side `Type__method` **disagree**; the call side MUST emit the *identical* string the decl side emits or it desyncs — so ratify **`Type__method`** (the landed decl-side form) as canonical and correct DN-99 row 18's shorthand. (3) The **ranked recommendation** — close the loop **only under a resolution gate**: emit `Type__method(args)` **iff** the callee type resolves (same-file inherent impl, or a batch sibling via the DN-113 / M-1084 symtab) **and** that nodule actually emitted the mangled decl; **otherwise gap** — never a bare last-segment (the D4 fabrication). (4) The **hard exclusions** — a primitive/std associated fn with no emitted decl (`i128::try_from`, `.from(...)`) **always gaps**; a cross-*module free-function* path (`a::b::c()`) routes through Import/symtab (M-1084), not this path. It does **not** edit `issues.yaml`, `CHANGELOG.md`, `Doc-Index.md`, grammar, or `crates/**` — §FLAGs lists the rows. |
+| **Feeds** | **std-sys-host vertical slice** (`OsClock` impl — `mono_now`/`wall_now`/`logical_now` gap on qualified calls: `DeclaredTime::new`, `MonoInstant::from_nanos`, `mycelium_std_sys::time::mono_nanos`, `i128::try_from`, `WallInstant::from_nanos_since_epoch`, `LogicalInstant::from_tick`, `DeclaredTimeEntropy::new` — `gen/myc-drafts/stdlib/std-sys-host/lib.gap.json` gap @ lines 74-75, `Empirical`); **DN-34 §8.13/8.14 "D4"** (inherent-impl associated-fn name mangling — the *declaration* half this note completes on the *call* half; §8.2 `from(self)` fabrication precedent); **DN-99 register row 18** (`qualified-fn-call (T::m)`); **DN-113 / M-1060** (cross-phylum import resolution) and **M-1084** (cross-nodule import net-close — the symtab this note's resolution gate consumes); **DN-124** (phylum-mode measurement basis); **DN-125 / M-1081** (the `&mut self`/`&mut [u8]` half of the `fill_bytes` residual — a *different* blocker, noted for scope honesty). |
 | **Grounds on** | **VR-5 / G2 (never-silent, no fabrication)** — a call target is emitted **only** when its referent is proven present, else an explicit gap; **the wave-1 D4 lesson** (call-site receiver-type resolution can silently mis-emit — the reason `visit_call` gaps today); **DN-34 §8.14** (the flat-namespace `M-664` desugar that makes `Type__method` collision-free *by construction*); **DRY** (one canonical mangled name shared by decl + call side — a desync is a soundness hole); **KISS/YAGNI** (mangle only the receiver-less associated-fn class the decl side already mangles); **house rule #4** (surface the finding: this unblocks `mono_now`/`logical_now`, only *partially* `wall_now`, nothing cross-crate without M-1084). |
 | **Date** | July 12, 2026 |
 | **Task** | Design-vs-build call for the UNTRACKED, SOUNDNESS-SENSITIVE qualified/associated-fn call-emission gap in the std-sys-host punch-list; scope the emission strategy + no-mis-emit discipline + the DN-99-row-18/emit.rs name reconciliation as a ratification-ready Draft DN. Read-only except this DN + FLAGGED rows. |
-| **Definition of Done (for the maintainer to ratify Draft → Accepted)** | The maintainer confirms: (a) **`Type__method`** is canonical (call side emits the identical decl-side string; DN-99 row 18 is corrected, append-only); (b) the **resolution gate** is the soundness contract (emit only when callee type resolves AND the mangled decl is known-emitted; else gap — never bare-segment); (c) primitive/std associated fns (`try_from`/`from`) and cross-module *free* fns route to a gap / to M-1084 respectively; (d) a **T-A3-style emit↔check agreement test** (the `emit.rs:2726-2771` prelude-trait pattern) is required before the build lands; (e) the build issue is minted (**FLAG**), `depends_on: [M-1084, DN-133 ratify]`. |
+| **Definition of Done (for the maintainer to ratify Draft → Accepted)** | The maintainer confirms: (a) **`Type__method`** is canonical (call side emits the identical decl-side string; DN-99 row 18 is corrected, append-only); (b) the **resolution gate** is the soundness contract (emit only when callee type resolves AND the mangled decl is known-emitted; else gap — never bare-segment); (c) primitive/std associated fns (`try_from`/`from`) and cross-module *free* fns route to a gap / to M-1084 respectively; (d) a **T-A3-style emit↔check agreement test** (the `emit.rs:3529` T-A3 "emit iff check accepts" agreement anchor, applied at the `emit.rs:3724` MVP prelude-trait recognizer) is required before the build lands; (e) the build issue is minted (**FLAG**), `depends_on: [M-1084, DN-133 ratify]`. |
 
 > **Posture (house rule #4 / VR-5 / G2).** This note **recommends, it does not ratify.** The
 > soundness-sensitive core, reported plainly: the *easy* fix — emit the bare last segment of
@@ -25,17 +25,17 @@
 
 ## §1 The problem, precisely (verify-first — mitigation #14)
 
-`emit.rs`'s `visit_call` (`emit.rs:1263-1311`, `Empirical`) has three arms: a bare single-segment call
+`emit.rs`'s `visit_call` (`emit.rs:2063-2110`, `Empirical`) has three arms: a bare single-segment call
 (`f(x)`, emitted), a **qualified path call** `Type::method(...)` with `qself.is_none()`
-(`emit.rs:1271-1294` — **unconditionally gapped**: "no established Mycelium surface form … emitting the
+(`emit.rs:2071-2094` — **unconditionally gapped**: "no established Mycelium surface form … emitting the
 bare last-segment name would fabricate a call"), and a non-path target (gapped). This gap message is
-verbatim what the std-sys-host `OsClock` impl records (`lib.gap.json` gap @ line 45: three sub-issues,
+verbatim what the std-sys-host `OsClock` impl records (`lib.gap.json` gap @ lines 74-75: three sub-issues,
 one per method).
 
 **The declaration side is already built.** For a **no-`self`-receiver** inherent-impl associated fn,
 `emit_impl` renames the *declaration* to `mangled_inherent_fn_name(self_ty, method) = "{Type}__{method}"`
-(`emit.rs:2689`, `Empirical`) and records an EXPLAIN doc line at the call decl (`emit.rs:3031-3039`). Its
-scope note (`emit.rs:2673-2688`) states — verify-first, `Empirical` — that this is safe *precisely
+(`emit.rs:3490-3491`, `Empirical`) and records an EXPLAIN doc line at the call decl (`emit.rs:3857-3865`). Its
+scope note (`emit.rs:3474-3489`) states — verify-first, `Empirical` — that this is safe *precisely
 because* "`visit_call` already unconditionally gaps every qualified/associated-function call, so no
 currently-emitted call site ever references a no-`self` method by its bare name." **This note lifts that
 boundary — under a gate — and so must also update that scope note (§5.4).**
@@ -107,7 +107,7 @@ DN-99-row-18/decl-side name reconciliation.
    this note (with M-1084) tips.
 3. **`Ok(...)`/`Err(...)` are enum constructors, not associated fns** — handled by existing path/struct
    arms, not this note.
-4. **The decl-side scope note (`emit.rs:2673-2688`) becomes stale on ratification** — it asserts safety
+4. **The decl-side scope note (`emit.rs:3474-3489`) becomes stale on ratification** — it asserts safety
    *because* no call site references the bare name; Alt A changes that premise, so the note must be
    updated in the same change (append the call-side closure), never left contradicting behavior (G2).
 
@@ -115,12 +115,42 @@ DN-99-row-18/decl-side name reconciliation.
 
 - **issues.yaml**: mint the build issue (next free `M-109x` — `grep 'id: M-109' tools/github/issues.yaml`,
   M-1091 currently highest), `depends_on: [M-1084, DN-133 ratify]`, `doc_refs: [corpus:DN-133,
-  corpus:DN-34#8.14, corpus:DN-99, src:crates/mycelium-transpile/src/emit.rs:1271,
-  src:crates/mycelium-transpile/src/emit.rs:2689]`.
+  corpus:DN-34#8.14, corpus:DN-99, src:crates/mycelium-transpile/src/emit.rs:2071,
+  src:crates/mycelium-transpile/src/emit.rs:3490]`.
 - **DN-99 register row 18**: correct the closure name `type_m` → `Type__method` (append-only; cite this
   note as the reconciliation basis).
 - **DN-34 §8.14**: note the D4 residual now has a *call-side* closure proposal (cross-ref, append-only).
 - **CHANGELOG.md**: Draft-DN-133 line. **Doc-Index.md**: register DN-133.
+
+## §7 Changelog
+
+- **2026-07-12** — DN-133 created (**Draft**). Designs the resolution-gated `Type__method` mangled-call
+  emission for `visit_call`'s qualified/associated-fn arm, ratifies `Type__method` as canonical over
+  DN-99 row 18's `type_m` shorthand, and scopes the std-sys-host `OsClock` closure to same-nodule calls
+  pending M-1084. Read against `origin/dev@08d8fc21` (`Empirical` cites); the proposed mechanism is
+  `Declared` (unbuilt). Authored the READ + this DN only — no edit to `issues.yaml`, `CHANGELOG.md`, or
+  `Doc-Index.md` (integration-owned; FLAGGED up). Append-only; status advances only by maintainer
+  ratification (house rule #3).
+- **2026-07-12** — **Citation correction** (Draft stays Draft; append-only, no design change; the
+  DN-130/DN-132 mis-citation pattern, caught by the strict DN-review gate on criteria #1/#9). Every
+  `emit.rs` `src:line` locator in the original draft was displaced ~800 lines from its actual target.
+  Corrected, each re-verified against `origin/dev@08d8fc21` (blob `86afd16d`) before writing: `visit_call`
+  `emit.rs:1263-1311` → **`emit.rs:2063-2110`** (the qualified-call gap arm `emit.rs:1271-1294` →
+  **`emit.rs:2071-2094`**, confirmed `Expr::Path(p) if p.qself.is_none()`, closing brace at 2094);
+  `mangled_inherent_fn_name` `emit.rs:2689-2691` → **`emit.rs:3490-3491`** (2689 in the original draft
+  landed on a bare `}`, not the function); the applied site + EXPLAIN doc line `emit.rs:3029-3046` /
+  `emit.rs:3031-3039` → **`emit.rs:3849-3872`** / **`emit.rs:3857-3865`**; the decl-side scope note
+  `emit.rs:2673-2688` → **`emit.rs:3474-3489`**; the DoD(d)/§4 T-A3 "emit iff check accepts" agreement
+  test cite `emit.rs:2726-2771` (that range is closure-param scanning, not the T-A3 agreement) →
+  **`emit.rs:3529`** (the T-A3 agreement anchor) applied at **`emit.rs:3724`** (the MVP prelude-trait
+  recognizer); the `OsClock` qualified-call gap cite `lib.gap.json` gap @ line 45 (that line is the
+  `OsEntropy` derive-drop gap, a different entry) → **lines 74-75** (the `OsClock` impl gap object's
+  `snippet`/`reason` fields, `crates/mycelium-std-sys-host/...lib.gap.json` — verified path
+  `gen/myc-drafts/stdlib/std-sys-host/lib.gap.json`; the "3 sub-issue(s)" count was already correct, only
+  the line was wrong). The §6 FLAG `doc_refs` were updated to the corrected `visit_call` arm
+  (`emit.rs:2071`) and mangler (`emit.rs:3490`) lines. No design conclusion, alternative ranking, or
+  recommendation changed — only the code-fact locators. Status stays **Draft**; the maintainer / the
+  automated DN-review gate re-runs.
 
 *Guarantee: design claims `Declared`; code `file:line` facts `Empirical`. No tag upgraded past its basis
 (VR-5).*
