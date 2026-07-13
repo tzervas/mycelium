@@ -12,6 +12,68 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(tracking): integration-tier close-out — D4-regression fix + DN-138 increment-1/2 + DN-140 ratified, mint 4 M-ids, flip M-1102 (2026-07-13)
+
+Reconciles `tools/github/issues.yaml`/`docs/Doc-Index.md` against the batch that landed on `dev`
+since the last reconciliation (PRs #1589/#1590/#1591/#1592; `dev@2d469efc`), plus one stale status
+this pass found while verifying (mitigation #14 — every flip/filing below is checked against the
+actual landed code + its PR/commit, never a blind trust of the tracker).
+
+- **fix(transpile): D4 generic self-type mangling hard-parse-fail regression** (PR #1590, merge
+  `8f9cddaf`, fix `6c31887a`) — a **regression-and-recovery of M-1101**/DN-131 (PR #1553): once
+  DN-131 taught `emit_impl` to accept an impl-level generic parameter, a receiver-less associated
+  fn on a generic self type (`impl<T> Foo<T> { fn new(..) }`) mangled to the INVALID identifier
+  `Foo[T]__method` — a hard `myc check` parse failure, poisoning the whole containing file under
+  the vet loop's file-gated all-or-nothing `checked_fraction` (the dip DN-140's own header cites:
+  std-time 6.34%→5.35%). Fixed by gapping the receiver-less-assoc-fn-on-generic-self-type case
+  per method (`self_ty_is_generic_application`), never by base-name-stripping (which would
+  reintroduce the exact `impl Foo<A>`/`impl Foo<B>` collision D4 exists to prevent). Confirmed live
+  on `mycelium-std-time`: parse-error → check-error (an unrelated, already-documented residual).
+  Filed **M-1103** (`status: done`, `depends_on: [M-1101]`); DN-34 §8 gains an append-only
+  regression-and-recovery changelog line ("§8.23 added").
+- **DN-138 (Accepted) — primitive/std derive-instance availability, increment 1 (WU-1/WU-2/WU-3)**
+  — landed with no prior `issues.yaml` row (PR #1589, merge `2cd9b773`, DeriveAttr gaps 67→50). A
+  conditional `PRELUDE_INSTANCE_SEEDS` spine (parallel to the landed `PRELUDE_TRAIT_SEEDS`) plus
+  `field_derive_kind` (replacing a boolean `field_derive_eligible`) routes the five field-gating
+  derive rows over primitive/std-type fields. The sig-pin soundness differential needed **two**
+  hardening rounds before it genuinely caught a seed naming a non-existent instance — a
+  `thread_local` suppression flag proved a no-op across `mycelium_stack::with_deep_stack`'s spawned
+  OS-thread boundary; the fix builds the oracle via direct `register_nodule_decls`+
+  `register_instances` calls instead (no thread spawn to cross). Filed **M-1104** (`status: done`).
+- **DN-138 WU-4 — Vec-recursive derive instances + narrow-width unblock, increment 2** — landed
+  (PR #1591, merge `2d469efc`, DeriveAttr gaps 50→48). A conditional `Vec[T]` prelude-type seed
+  (`Vec[A] = Nil | Cons(A, Vec[A])`), a new `bin_to_bytes` kernel prim (`bit.to_bytes`) for
+  `derive(Hash)`'s scalar route, and `FieldDeriveKind::VecOf` routing (depth-1 `Vec[T]` fields via
+  per-element-type auxiliary plain fns, since `Vec`'s coherence head admits only one instance per
+  file). Two review findings fixed pre-land: CRITICAL — `PhylumEnv::link()` no longer silently
+  replaces a nodule's own hand-declared `Vec` (collision-checked merge, never a silent replace);
+  HIGH — narrow `ScalarBinary` widths >64 now honestly gap instead of a runtime-`Overflow`-risking
+  `width_cast` narrowing. Filed **M-1105** (`status: done`, `depends_on: [M-1104]`), closing the
+  DN-138 §8 worklist.
+- **DN-140 (Accepted) — unified valid-identifier emission contract** — docs-only (PR #1592, merge
+  `24bd9820`), passed a 3-round strict DN-review gate (a maintainer-input length-prefix redesign of
+  the D4 type↔method boundary encoding in round 2). Subsumes DN-139 (its `word→word_kw` rule
+  becomes the reserved-word branch); adds a delimited variable-width `_u{HEX}_` per-illegal-character
+  Unicode-scalar escape for the class M-1103 above fixed by gapping. Filed **M-1106**
+  (`status: todo`, `depends_on: [M-1103]`) for the build (the note itself builds nothing). **Note:**
+  DN-139 lives only on an unmerged branch (`claude/leaf/phase2-next-waves-scoping@ee33e4dc`, not
+  reachable from `dev`) — its Superseded-by-DN-140 flip is left for whoever lands that branch
+  (append-only; not applied here since this pass cannot edit a doc that isn't on `dev`).
+
+**Flipped 1 stale `status:todo` row to `done`** (mitigation #14 — verified against the code before
+flipping): **M-1102** (DN-137 native unit-type build) — the previous reconciliation pass filed this
+as `todo` (2026-07-13 02:21) but the build landed *after* filing, at 2026-07-13 07:56 (PR #1588,
+`fb0bb22f`, unit-type gap 30→0) — a same-day filing/landing race this pass closes.
+
+**`docs/Doc-Index.md`**: registered DN-138 and DN-140 rows (DN-139 has no row — it is not reachable
+from `dev`); updated the DN-137 row's landed-basis parenthetical (`todo`→`done`, PR #1588 cited).
+`python3 tools/github/doc_refs_check.py` passes clean.
+
+**`docs/api-index/` + `docs/tero-index/` regenerated** (`just docs-index`, `just tero-index-gen` →
+`just tero-index` verified current) — both had drifted (line-number staleness) from the code landed
+in PRs #1588, #1589, and #1591 since the last regen; a pre-existing gap this pass closes, not
+caused by this pass's own (docs/tracking-only) edits.
+
 ### chore(tracking): DN-136 Phase-2 wave-1 close-out — file 11 unfiled M-ids, flip 4 stale statuses, DN-135/DN-136 append-only corrections (2026-07-13)
 
 Reconciles `tools/github/issues.yaml` against the DN-136 Phase-1 interfaces build + Phase-2

@@ -1586,3 +1586,30 @@ baseline (`06b4d7a7`); this entry documents *why*, so the next leaf does not re-
   `06b4d7a7` baseline; this is a negative-result measurement entry (VR-5 — the measurement is the
   deliverable), recorded so a future leaf does not re-derive the same analysis (mitigation #14). **Status
   unchanged (Draft).** (Append-only; VR-5; G2.)
+- **2026-07-13 — §8.23 added: the D4 generic self-type mangling hard-parse-fail regression, and its
+  recovery (M-1103, PR #1590, fix `6c31887a`) — a regression-and-recovery entry, not a new lever.**
+  DN-131/M-1101 (PR #1553) taught `emit_impl` to accept an impl-level generic parameter instead of
+  gapping the whole block, but this note's own §8.13/8.14 "D4" inherent-impl associated-fn mangler
+  (`mangled_inherent_fn_name`, `"{Type}__{method}"`) never accounted for a generic-argument self
+  type: `map_type`'s only bracket-producing arm is the generic-application case
+  (`"{name}[{args}]"`), so a receiver-less associated fn on a generic self type (`impl<T> Foo<T> {
+  fn new(..) }`, or a concrete monomorphized `impl Foo<Concrete> { fn new(..) }`) mangled to the
+  **invalid identifier** `Foo[T]__new` — a hard `myc check` **parse failure**, not merely a gap,
+  poisoning the whole containing file under the vet loop's file-gated all-or-nothing
+  `checked_fraction` (the dip DN-140's own header cites: `mycelium-std-time`
+  `checked_fraction` 6.34%→5.35%). **Recovery, verified live (not merely unit-tested):** before the
+  fix, transpiling `crates/mycelium-std-time/src/lib.rs` and running the emitted `.myc` through
+  `myc-check` produced a literal parse-error at the exact `DeclaredTime[T]__new` site; after the fix
+  it produces a check-error naming an unrelated, pre-existing, already-documented residual (the
+  `as_nanos` self-receiving-method collision, named out-of-scope by D4's own doc) — the file now
+  **parses**, closing the parser-poisoning class of failure (parse-error → check-error, the honest
+  shape of this recovery — not a full clean). **Fix, and why not the tempting alternative:** gap the
+  receiver-less-associated-fn-on-a-generic-self-type case per method
+  (`self_ty_is_generic_application`, a purely syntactic check), rather than stripping the self type
+  to its base name — base-name stripping would produce a *valid* identifier but silently reintroduce
+  the exact collision D4 exists to prevent (`impl Foo<A>`/`impl Foo<B>` are distinct, non-conflicting
+  Rust items that could each declare a same-named receiver-less associated fn), so the honest gap is
+  correct over a fabricated mangle (VR-5/G2). Decl/call consistency holds by construction (the call
+  side only ever mangles the bare head segment, never bracketed) — pinned by a new test. Tracked as
+  **M-1103** (`depends_on: [M-1101]`, `status: done`). **Status unchanged (Draft).** (Append-only;
+  VR-5; G2.)
