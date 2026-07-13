@@ -21,7 +21,10 @@
 use crate::gap::GapReason;
 
 mod clone_copy;
+mod eq;
+mod hash;
 mod init;
+mod ord;
 mod show;
 
 /// Everything a derive row's `emit` needs — the pre-refactor inline arms' closed-over locals,
@@ -62,12 +65,25 @@ pub struct DeriveHandler {
     pub citation: &'static str,
 }
 
-/// The table. `Eq`/`Ord`/`Hash`/`PartialEq`/`PartialOrd` are deliberately NOT rows here (DN-128's
-/// std-derive set does not yet build them — falls through to the driver's `unrecognized`
-/// tracking, byte-identical to the pre-refactor `match`'s catch-all `other =>` arm). A future
-/// derive leaf adds one file here + one append-only row — never touches
+/// The table. **DN-136 Phase-2 (DERIVE-COMPLETION) update (append-only, additive):** `PartialEq`/
+/// `PartialOrd`/`Hash` now have rows ([`eq`]/[`ord`]/[`hash`]); bare `Eq`/`Ord` are DELIBERATELY
+/// still NOT recognized (each new row's own module doc explains why: recognizing both names in a
+/// derive-list would invoke that row's `emit` twice for one struct, composing a duplicate
+/// fn/impl the real toolchain refuses — `PartialEq`/`PartialOrd` are the reliable co-occurring
+/// signal Rust's own `Eq: PartialEq`/`Ord: Eq + PartialOrd` supertrait bounds guarantee). A solo
+/// `#[derive(Eq)]`/`#[derive(Ord)]` (invalid Rust on its own, syntactically representable but
+/// never rustc-accepted) still falls through to the driver's `unrecognized` tracking, exactly as
+/// every other never-built name does — this is unchanged from the pre-Phase-2 catch-all behavior.
+/// A future derive leaf adds one file here + one append-only row — never touches
 /// `lower_struct_derives` (DN-136's stated objective).
-pub const TABLE: &[DeriveHandler] = &[show::ROW, init::ROW, clone_copy::ROW];
+pub const TABLE: &[DeriveHandler] = &[
+    show::ROW,
+    init::ROW,
+    clone_copy::ROW,
+    eq::ROW,
+    ord::ROW,
+    hash::ROW,
+];
 
 /// First-match-wins linear scan over [`TABLE`] (same shape as [`crate::prim_map::lookup`]).
 /// `None` for any derive name not in the DN-128 standard-derive set this leaf builds — the

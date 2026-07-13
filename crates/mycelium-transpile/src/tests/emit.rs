@@ -3038,6 +3038,31 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(Debug, Default)]\nstruct Outer(Inner, Inner);",
             "Outer",
         ),
+        // DN-136 Phase-2 (DERIVE-COMPLETION) -- fieldless `PartialEq`, alone.
+        ("#[derive(PartialEq)]\nstruct OsEntropy;", "OsEntropy"),
+        // `PartialEq` + `Eq` together (the common real-Rust pair; must compose exactly once --
+        // `derive_eq_recognizes_only_partialeq_avoids_duplicate_fn` below pins the "exactly once"
+        // half directly).
+        ("#[derive(PartialEq, Eq)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `PartialOrd`, alone.
+        ("#[derive(PartialOrd)]\nstruct OsEntropy;", "OsEntropy"),
+        // `PartialOrd` + `Ord` together (the common real-Rust pair).
+        ("#[derive(PartialOrd, Ord)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `Hash`.
+        ("#[derive(Hash)]\nstruct OsEntropy;", "OsEntropy"),
+        // The realistic full derive stack real Rust code commonly writes on one struct.
+        (
+            "#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\n\
+             struct OsEntropy;",
+            "OsEntropy",
+        ),
+        // The same-file nested-composition case for the Phase-2 derives (mirrors the Debug/
+        // Default case above).
+        (
+            "#[derive(PartialEq, PartialOrd, Hash)]\nstruct Inner;\n\
+             #[derive(PartialEq, PartialOrd, Hash)]\nstruct Outer(Inner, Inner);",
+            "Outer",
+        ),
     ];
     for (i, (rust, item)) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
@@ -3065,6 +3090,341 @@ fn derive_forms_check_clean_against_real_toolchain() {
     }
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-136 Phase-2 (DERIVE-COMPLETION, M-1097/M-1098/M-1099) — the `PartialEq`/`PartialOrd`/`Hash`
+// additive rows (`emit/derives/{eq,ord,hash}.rs`). Mirrors the DN-128 (M-1086) test shape above
+// (fixture-corpus text assertions here; the live-oracle half rides the `rust_snippets` cases
+// added to `derive_forms_check_clean_against_real_toolchain` above).
+// ---------------------------------------------------------------------------------------------
+
+/// Fieldless `derive(PartialEq)` composes the trivially-true `fn eq_T` — mirrors the fieldless
+/// `Debug`/`Default` fixture-corpus cases' shape (`cases()` above), pinned directly here since
+/// this axis has no dedicated fixture-corpus entry point of its own.
+#[test]
+fn derive_eq_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn eq_OsEntropy(a: OsEntropy, b: OsEntropy) => Binary{1} =\n    0b1;"),
+        "expected the fieldless eq fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(PartialEq)` (the primitive-field case) must NEVER leak a fabricated `fn eq_*`
+/// fragment into the `.myc` text — mirrors `derive_gap_never_leaks_partial_impl_text` (DN-128)
+/// exactly, for the new axis (G2).
+#[test]
+fn derive_eq_gap_never_leaks_partial_fn_text() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialEq)]\nstruct Pair(u8, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn eq_"),
+        "a gapped derive(PartialEq) must never emit a partial `fn eq_*`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialEq")),
+        "expected a DeriveAttr gap citing PartialEq, got {:?}",
+        report.gaps
+    );
+}
+
+/// **ADR-040 §2.4 (NaN semantics).** A `Float` field REFUSES the whole `derive(PartialEq)` with a
+/// gap reason that names the real cause (NaN/ADR-040), not the generic no-ambient-instance one —
+/// the DN-136 Phase-2 worklist's explicit "not just ineligible-repr fields" requirement.
+#[test]
+fn derive_eq_float_field_refused_with_adr040_citation() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct Sample(f64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn eq_Sample"),
+        "a Float-field derive(PartialEq) must never fabricate an equality fn, got:\n{myc}"
+    );
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::DeriveAttr && g.reason.contains("Sample"))
+        .unwrap_or_else(|| {
+            panic!(
+                "expected a DeriveAttr gap for Sample, got {:?}",
+                report.gaps
+            )
+        });
+    assert!(
+        gap.reason.contains("NaN") && gap.reason.contains("ADR-040"),
+        "expected the Float-field gap to cite NaN/ADR-040 specifically, got: {}",
+        gap.reason
+    );
+}
+
+/// **The verified duplicate-fn-avoidance property.** `#[derive(PartialEq, Eq)]` on one struct
+/// composes the `fn eq_*` body EXACTLY ONCE (never twice — the empirically-verified
+/// `myc-check "duplicate function"` collision `eq.rs`'s module doc documents) and records the
+/// bare `Eq` name as an unrecognized sub-gap, exactly like any other never-built derive name
+/// falling through the driver's catch-all — never silently absorbed (G2).
+#[test]
+fn derive_eq_recognizes_only_partialeq_avoids_duplicate_fn() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialEq, Eq)]\nstruct OsEntropy;", "f.rs", "f")
+            .expect("parses/transpiles");
+    let occurrences = myc.matches("fn eq_OsEntropy").count();
+    assert_eq!(
+        occurrences, 1,
+        "expected exactly one `fn eq_OsEntropy` (never a duplicate), got {occurrences} in:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Eq")),
+        "expected the bare `Eq` name to fall through as an unrecognized sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// Fieldless `derive(PartialOrd)` composes the trivially-equal `impl Ord3[T] for T`.
+#[test]
+fn derive_ord_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(PartialOrd)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains(
+            "impl Ord3[OsEntropy] for OsEntropy {\n  fn cmp(a: OsEntropy, b: OsEntropy) => \
+             Binary{8} =\n    0b00000001;\n};"
+        ),
+        "expected the fieldless Ord3 impl body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(PartialOrd)` (the primitive-field case) must NEVER leak a fabricated
+/// `impl Ord3[...]` fragment into the `.myc` text.
+#[test]
+fn derive_ord_gap_never_leaks_partial_impl_text() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialOrd)]\nstruct Pair(u8, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl Ord3"),
+        "a gapped derive(PartialOrd) must never emit a partial `impl Ord3`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialOrd")),
+        "expected a DeriveAttr gap citing PartialOrd, got {:?}",
+        report.gaps
+    );
+}
+
+/// **ADR-040 §2.4 (NaN semantics).** A `Float` field REFUSES the whole `derive(PartialOrd)`,
+/// citing the real cause (no order position under IEEE-754's partial order).
+#[test]
+fn derive_ord_float_field_refused_with_adr040_citation() {
+    let (myc, report) = transpile_source("#[derive(PartialOrd)]\nstruct Sample(f64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl Ord3[Sample]"),
+        "a Float-field derive(PartialOrd) must never fabricate an Ord3 impl, got:\n{myc}"
+    );
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::DeriveAttr && g.reason.contains("Sample"))
+        .unwrap_or_else(|| {
+            panic!(
+                "expected a DeriveAttr gap for Sample, got {:?}",
+                report.gaps
+            )
+        });
+    assert!(
+        gap.reason.contains("NaN") && gap.reason.contains("ADR-040"),
+        "expected the Float-field gap to cite NaN/ADR-040 specifically, got: {}",
+        gap.reason
+    );
+}
+
+/// **The verified duplicate-instance-avoidance property** — the `Ord3` analogue of
+/// `derive_eq_recognizes_only_partialeq_avoids_duplicate_fn`. `#[derive(PartialOrd, Ord)]`
+/// composes `impl Ord3[T] for T` EXACTLY ONCE (never the RFC-0019 §4.5 "overlapping instance"
+/// collision `ord.rs`'s module doc documents).
+#[test]
+fn derive_ord_recognizes_only_partialord_avoids_duplicate_impl() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialOrd, Ord)]\nstruct OsEntropy;", "f.rs", "f")
+            .expect("parses/transpiles");
+    let occurrences = myc.matches("impl Ord3[OsEntropy]").count();
+    assert_eq!(
+        occurrences, 1,
+        "expected exactly one `impl Ord3[OsEntropy]` (never a duplicate), got {occurrences} \
+         in:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Ord")),
+        "expected the bare `Ord` name to fall through as an unrecognized sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// Fieldless `derive(Hash)` composes the type-name-discriminated `fn hash_T`.
+#[test]
+fn derive_hash_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn hash_OsEntropy(a: OsEntropy) => Bytes =\n    hash_blake3(\"OsEntropy\");"),
+        "expected the fieldless hash fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(Hash)` (the primitive-field case) must NEVER leak a fabricated `fn hash_*`
+/// fragment into the `.myc` text.
+#[test]
+fn derive_hash_gap_never_leaks_partial_fn_text() {
+    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct Pair(u8, bool);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn hash_"),
+        "a gapped derive(Hash) must never emit a partial `fn hash_*`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Hash")),
+        "expected a DeriveAttr gap citing Hash, got {:?}",
+        report.gaps
+    );
+}
+
+/// **The same-file nested-composition case, for all three Phase-2 rows at once** — mirrors
+/// `derive_composes_end_to_end_over_a_same_file_nested_derived_field` (DN-128) exactly, pinning
+/// the field-walked body text for `Eq`/`Ord3`/`Hash` together.
+#[test]
+fn derive_eq_ord_hash_compose_end_to_end_over_a_same_file_nested_derived_field() {
+    let rust = "#[derive(PartialEq, PartialOrd, Hash)]\nstruct Inner;\n\
+                #[derive(PartialEq, PartialOrd, Hash)]\nstruct Outer(Inner, Inner);";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    for name in ["Inner", "Outer"] {
+        assert!(
+            report.emitted_items.iter().any(|n| n == name),
+            "expected `{name}` in emitted_items, got {:?}",
+            report.emitted_items
+        );
+    }
+    assert!(
+        myc.contains("fn eq_Inner(a: Inner, b: Inner) => Binary{1} =\n    0b1;"),
+        "expected Inner's derived eq fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn eq_Outer(a: Outer, b: Outer) => Binary{1} =\n    match a { Outer(p0, p1) => \
+             match b { Outer(q0, q1) => and(eq_Inner(p0, q0), eq_Inner(p1, q1)) } };"
+        ),
+        "expected Outer's field-walked eq fn body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Ord3[Outer] for Outer {\n  fn cmp(a: Outer, b: Outer) => Binary{8} =\n    \
+             match a { Outer(p0, p1) => match b { Outer(q0, q1) => match cmp(p0, q0) { \
+             0b00000001 => cmp(p1, q1), other => other } } };\n};"
+        ),
+        "expected Outer's field-walked Ord3 impl body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn hash_Outer(a: Outer) => Bytes =\n    match a { Outer(p0, p1) => \
+             hash_blake3(bytes_concat(bytes_concat(\"Outer\", hash_Inner(p0)), hash_Inner(p1))) \
+             };"
+        ),
+        "expected Outer's field-walked hash fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible nested derive set must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// **Mixed derive set (DN-136 §8 invariant witness, Phase-2 twin of
+/// `derive_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits`).** `PartialEq`
+/// composes AND the unrecognized `Serialize` sub-gaps -- the item still emits both.
+#[test]
+fn derive_eq_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits() {
+    let rust = "#[derive(PartialEq, Serialize)]\nstruct OsEntropy;";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "the item must still emit despite a sibling derive being unrecognized, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type OsEntropy = OsEntropy;"),
+        "the struct's own type decl must still emit, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn eq_OsEntropy"),
+        "the composable PartialEq->eq fn must still compose despite the sibling Serialize \
+         derive being unrecognized, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Serialize")),
+        "the unrecognized Serialize derive must still be recorded as a sub-gap, got {:?}",
+        report.gaps
+    );
 }
 
 // ---------------------------------------------------------------------------------------------
