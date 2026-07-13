@@ -1425,6 +1425,14 @@ impl PhylumEnv {
             // uniformly and never-silently (G2): if the upstream coherence invariant is ever violated,
             // `link` refuses explicitly rather than silently keeping one side (no first-wins winner).
             for (k, v) in &env.instances {
+                // DN-138 §8 WU-2: a seeded PRIMITIVE-INSTANCE fact is skipped here and merged
+                // ONCE below (`seed_instance_for_link`) — so two (or more) nodules that each
+                // independently trigger the SAME seeded `(trait, head)` fact never falsely
+                // collide at link time (mirrors why a prelude TRAIT is excluded from
+                // `OwnDecls.traits`'s per-nodule collision set, this struct's own doc above).
+                if PRELUDE_INSTANCE_SEEDS.iter().any(|s| s.provides(k)) {
+                    continue;
+                }
                 if instances.insert(k.clone(), v.clone()).is_some() {
                     return Err(collide("instance", &format!("{}:{}", k.0, k.1)));
                 }
@@ -1449,6 +1457,14 @@ impl PhylumEnv {
                     return Err(collide("via impl", &format!("{}:{}", k.0, k.1)));
                 }
             }
+        }
+
+        // DN-138 §8 WU-2: merge each seeded PRIMITIVE-INSTANCE fact in ONCE, iff *some* nodule
+        // needed it (the instance analogue of `seed_for_link`'s trait loop above) — paired with
+        // the per-nodule skip in the loop above, so this never collides regardless of how many
+        // nodules independently triggered the same seed.
+        for seed in PRELUDE_INSTANCE_SEEDS {
+            seed.seed_instance_for_link(&mut instances, &self.nodules);
         }
 
         Ok(Env {
@@ -2285,6 +2301,149 @@ pub(crate) const PRELUDE_TRAIT_SEEDS: [crate::preseed::PreludeTraitSeed; 5] = [
     crate::show::SEED,
     crate::init::SEED,
     crate::fault::SEED,
+];
+
+// ---- DN-138 §4.1 Alt A / §8 WU-2 — the primitive-instance-seed spine -------------------------
+
+/// One hand-built [`InstanceInfo`] per seeded `(trait, head)` fact below — a plain `fn` item (not a
+/// closure) per [`crate::preseed::PreludeInstanceSeed::instance`]'s doc, mirroring the
+/// `fuse`/`ord3`/`show`/`init`/`fault` modules' own `fn() -> TraitInfo` builder style.
+fn seed_show_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_show_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_show_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_init_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_init_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_init_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_ord3_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+fn seed_ord3_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+fn seed_ord3_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+/// DN-138 §4.1 Alt A / §8 WU-2 — every seeded PRIMITIVE-INSTANCE resolution fact: `Show`/`Init`/
+/// `Ord3` at exactly the three primitive-repr heads DN-138 increment 1 covers (`Binary{64}` /
+/// `Bytes` / `Bool`). Parallel to [`PRELUDE_TRAIT_SEEDS`] — conditional (see
+/// [`crate::preseed::PreludeInstanceSeed::seed_instance_for_nodule`]), no body: the real body lives
+/// in `lib/std/fmt.myc` (`Show`, already landed — DN-127) or `lib/std/derive_prelude.myc`
+/// (`Init`/`Ord3`, DN-138 WU-1), pinned equal to each entry below by the sig-pin differential
+/// (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`, DN-138 §5 obligation 1 — the
+/// soundness gate this whole mechanism rests on). `Float` is never seeded (DN-138 §5 obligation
+/// 3 / ADR-040) and `Vec`/tuple instances are increment 2 (WU-4) — neither appears here.
+pub(crate) const PRELUDE_INSTANCE_SEEDS: [crate::preseed::PreludeInstanceSeed; 9] = [
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Binary{64}] for Binary{64} { fn render(x: Binary{64}) => Bytes = … }",
+        instance: seed_show_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Bytes] for Bytes { fn render(x: Bytes) => Bytes = … }",
+        instance: seed_show_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Bool] for Bool { fn render(x: Bool) => Bytes = … }",
+        instance: seed_show_bool,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Binary{64}] for Binary{64} { fn init() => Binary{64} = … }",
+        instance: seed_init_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Bytes] for Bytes { fn init() => Bytes = … }",
+        instance: seed_init_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Bool] for Bool { fn init() => Bool = … }",
+        instance: seed_init_bool,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Binary{64}] for Binary{64} { fn cmp(a: Binary{64}, b: Binary{64}) => Binary{8} = … }",
+        instance: seed_ord3_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Bytes] for Bytes { fn cmp(a: Bytes, b: Bytes) => Binary{8} = … }",
+        instance: seed_ord3_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Bool] for Bool { fn cmp(a: Bool, b: Bool) => Binary{8} = … }",
+        instance: seed_ord3_bool,
+    },
 ];
 
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
@@ -3239,7 +3398,18 @@ fn check_nodule_with(
     // declared by a *later* `impl`. This pass resolves heads + checks coherence; it does not yet check
     // bodies. The orphan rule consults the pub-blind phylum-wide `coherence` view (M-662).
     // Uses `effective_nodule` so via-generated impls are included in the instance registry.
-    let instances = register_instances(&types, &traits, coherence, effective_nodule)?;
+    let mut instances = register_instances(&types, &traits, coherence, effective_nodule)?;
+
+    // DN-138 §4.1 Alt A / §8 WU-2: seed each PRIMITIVE-INSTANCE resolution fact
+    // (`Show`/`Init`/`Ord3` at `Binary{64}`/`Bytes`/`Bool`) into `instances` — conditionally, iff
+    // this nodule's own items already need that trait (the identical textual trigger the trait
+    // itself is conditionally seeded on, above; see `PreludeInstanceSeed::seed_instance_for_nodule`'s
+    // doc for why this adds no `mono` fast-path regression). No body is seeded — only the coherence
+    // key + concrete `for_ty`/`methods`; the real body lives in `lib/std` and is pinned equal by the
+    // sig-pin differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`).
+    for seed in PRELUDE_INSTANCE_SEEDS {
+        seed.seed_instance_for_nodule(&mut instances, effective_nodule)?;
+    }
 
     // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
     // §4.3), with imports available, and resolve any ambient bare-decimal widths from context —

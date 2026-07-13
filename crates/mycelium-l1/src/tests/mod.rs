@@ -39,6 +39,7 @@ mod mono_tag;
 mod nodule;
 mod ord3;
 mod parse;
+mod prelude_instance_seed;
 mod preseed;
 mod reachability_stage1b;
 mod reveal;
