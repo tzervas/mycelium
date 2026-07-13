@@ -5,6 +5,7 @@ mod batch;
 mod corpus;
 mod diff;
 mod emit;
+mod gap;
 mod invariant;
 mod map;
 mod mut_thread;

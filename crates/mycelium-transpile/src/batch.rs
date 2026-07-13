@@ -75,6 +75,90 @@ pub fn output_rel_path(file: &Path, root: &Path) -> Result<PathBuf, PathBuf> {
     }
 }
 
+/// The output-naming `root` for an **explicit** `--files` set (M-1079/DN-124 §3.2 CLI mode,
+/// bug-fixed here): the **common ancestor directory** of every file's own parent directory, not just
+/// the first file's parent. Bug this replaces: rooting at `files[0].parent()` alone made every OTHER
+/// file whose crate lives in a sibling directory fail `output_rel_path`'s `strip_prefix` and fall
+/// back to a bare stem — so batching e.g. three different crates' `src/lib.rs` (`mycelium-std-sys-host`,
+/// `mycelium-std-rand`, `mycelium-std-time`) had all three collide on `lib.myc`, each silently
+/// overwriting the last write. Walking up to the shared ancestor instead makes `output_rel_path`
+/// succeed (`Ok`, not the fallback `Err`) for every file in the set, and its relative path is then
+/// automatically **crate-qualified** whenever the files span more than one crate root
+/// (`mycelium-std-rand/src/lib` vs `mycelium-std-time/src/lib`) — while degenerating to the identical
+/// pre-fix bare-stem naming when every file already shares one directory (the common mutually-
+/// referencing-siblings case, e.g. `--files checkty.rs,elab.rs,eval.rs`), so no existing single-crate
+/// `--files` output changes.
+///
+/// **`None` — genuinely no common ancestor (bug-fixed here, was `Some(PathBuf::new())`).** Returned
+/// for an empty file set, or when the set mixes **absolute and relative** paths (their `Path`
+/// component sequences are fundamentally incompatible — a `RootDir` component never matches a bare
+/// `Normal` one — so no directory is a real prefix of every file). The previous behavior collapsed
+/// this case to the empty path `""`; because `Path::strip_prefix("")` **always succeeds** and hands
+/// the input back unchanged, `output_rel_path` would then return the ABSOLUTE members of the set
+/// **unchanged and `Ok`**, never routing through its `Err` fallback — so the caller's per-file
+/// warning path was never actually reached for exactly the case it was documented as backstopping
+/// (a stale claim, corrected here). Downstream, `out_dir.join(<that unchanged absolute path>)`
+/// silently **discards `out_dir`** (`Path::join`'s absolute-path-override), writing the `.myc`/
+/// `.gap.json` pair outside the declared `--out-dir` with no warning at all — a G2 silent
+/// misplacement. Returning `None` instead makes the caller detect the no-common-ancestor case
+/// explicitly and route every file through the bare-stem fallback (with a warning), so this can
+/// never happen (see `write_batch_and_maybe_vet`'s `root: Option<&Path>` handling).
+///
+/// A same-absoluteness file set that shares no path *components* (e.g. relative
+/// `mycelium-std-rand/src/lib.rs` vs `mycelium-std-time/src/lib.rs`, which diverge at their very
+/// first component) is **not** the `None` case: it degenerates to `Some(PathBuf::new())` — the
+/// intentional "root is the invocation's own working directory" case that is exactly what makes the
+/// multi-crate-root fix above work (`output_rel_path` against `""` keeps each file's full relative,
+/// crate-qualified path unchanged and `Ok`, never mis-writing since a *relative* path staying
+/// relative never triggers `Path::join`'s absolute-override). The unsafe case is specifically an
+/// absolute member of the set landing on an unchanged-and-`Ok` empty-root strip — which requires a
+/// *mixed* set to reach, since an all-absolute set's shared root (`/` on Unix) is never empty.
+pub fn common_ancestor(files: &[PathBuf]) -> Option<PathBuf> {
+    let mut iter = files.iter();
+    let first = iter.next()?;
+
+    let first_is_absolute = first.is_absolute();
+    if files.iter().any(|f| f.is_absolute() != first_is_absolute) {
+        // Mixed absolute/relative — see the doc above for why this specific case is the unsafe one.
+        return None;
+    }
+
+    let mut common: Vec<std::ffi::OsString> = first
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .components()
+        .map(|c| c.as_os_str().to_os_string())
+        .collect();
+    for f in iter {
+        if common.is_empty() {
+            break;
+        }
+        let parent_components: Vec<std::ffi::OsString> = f
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .components()
+            .map(|c| c.as_os_str().to_os_string())
+            .collect();
+        let shared = common
+            .iter()
+            .zip(parent_components.iter())
+            .take_while(|(a, b)| a == b)
+            .count();
+        common.truncate(shared);
+    }
+
+    if common.is_empty() && first_is_absolute {
+        // Defensive/unreachable on Unix (a shared absolute root always keeps at least the leading
+        // `RootDir` component) — but if every file is absolute and they still share NOTHING (e.g.
+        // different filesystem roots/drives on another platform), that is also genuinely "no common
+        // ancestor", and returning `Some(PathBuf::new())` here would reproduce the exact bug this
+        // `Option` return exists to prevent.
+        return None;
+    }
+
+    Some(common.into_iter().collect())
+}
+
 /// One file's contribution to a [`BatchSummary`].
 #[derive(Debug, Clone, Serialize)]
 pub struct FileSummary {

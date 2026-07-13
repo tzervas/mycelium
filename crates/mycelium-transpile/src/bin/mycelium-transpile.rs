@@ -43,7 +43,9 @@
 //! `Empirical` (measured — see `src/vet.rs`). No `clap` dependency — plain `std::env::args`
 //! (kickoff-scoped minimal deps).
 
-use mycelium_transpile::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
+use mycelium_transpile::batch::{
+    common_ancestor, discover_rs_files, output_rel_path, summarize, transpile_batch,
+};
 use mycelium_transpile::remap::render_remap_md;
 use mycelium_transpile::vet::{vet_batch, MycChecker, VetInput, VetReport};
 use mycelium_transpile::{transpile_file, GapReport};
@@ -266,7 +268,11 @@ fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
     };
 
     let emitted = report.emitted_items.len();
-    let gapped = report.gaps.len();
+    // The headline count excludes non-gap advisories (e.g. `DeriveSatisfied` — "you already have
+    // it", not a coverage loss; see `Category::is_non_gap_advisory`'s doc for why `NamedFieldDrop`
+    // is deliberately NOT excluded here) — a review LOW on M-1086/#1544: the raw `gaps.len()` was
+    // inflating this total by counting satisfied-no-op derives as if they were gaps.
+    let gapped = report.real_gap_count();
     let non_test = report.non_test_item_count();
     println!(
         "mycelium-transpile: {} top-level item(s) ({} non-test) — {} emitted, {} gap(s) \
@@ -308,22 +314,26 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         );
         return ExitCode::FAILURE;
     }
-    write_batch_and_maybe_vet(&files, input_dir, out_dir, vet)
+    write_batch_and_maybe_vet(&files, Some(input_dir), out_dir, vet)
 }
 
 /// **M-1079/DN-124 §3.2**: batch an **explicit, caller-named** file set — no directory discovery,
 /// no staging. Each file's real path (exactly as given) is transpiled and recorded, so the
 /// committed `summary.json`/`vet.json` provenance is the actual repo source location, never a
 /// scratch/staging path (which would be both non-portable and non-deterministic across reruns —
-/// see the module docs). The output-naming `root` is the **first** file's parent directory (the
-/// caller's contract: an explicit file set is a sibling group forming one real phylum — DN-124 §6
-/// Attack 1a's boundary constraint is the caller's responsibility here, not this driver's).
+/// see the module docs). The output-naming `root` is the **common ancestor** of every named file's
+/// own parent directory (`batch::common_ancestor`, bug-fixed from an earlier `files[0].parent()`-only
+/// root — see that function's doc for the collision it fixes): a single sibling group (the common
+/// `--files` case, DN-124 §6 Attack 1a's boundary constraint remains the caller's responsibility)
+/// degenerates to that shared directory exactly as before, while a set spanning MULTIPLE crate roots
+/// (e.g. batching several crates' `src/lib.rs` in one run) now walks up to their shared ancestor so
+/// every file's output is crate-qualified instead of colliding on a bare stem. When there is
+/// genuinely no common ancestor (`common_ancestor` returns `None` — a mixed absolute/relative
+/// `--files` set), `write_batch_and_maybe_vet` routes every file through its bare-stem fallback with
+/// a warning rather than mis-writing outside `out_dir` (see that function's `root: Option<&Path>`).
 fn run_explicit_files(files: &[PathBuf], out_dir: &Path, vet: bool) -> ExitCode {
-    let root = files[0]
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
-    write_batch_and_maybe_vet(files, &root, out_dir, vet)
+    let root = common_ancestor(files);
+    write_batch_and_maybe_vet(files, root.as_deref(), out_dir, vet)
 }
 
 /// Shared batch-write + optional-vet tail for both directory-discovered ([`run_batch`]) and
@@ -333,9 +343,16 @@ fn run_explicit_files(files: &[PathBuf], out_dir: &Path, vet: bool) -> ExitCode 
 /// oracle-mode vet loop **plus** phylum-mode dual-reporting over `out_dir` as one real phylum
 /// (DN-124 §3.1/M-A; both directory mode and `--files` name a real phylum boundary, so both dual-
 /// report identically).
+///
+/// `root: None` means there is no safe root to mirror the source tree under (directory mode always
+/// passes `Some` — the discovered directory itself; only `--files` can hit `None`, via
+/// `batch::common_ancestor`'s no-common-ancestor case). Every file then falls back to its bare stem
+/// individually, with a warning — never `output_rel_path`'s `Ok` arm, which would require a `root`
+/// to strip against; this is what keeps the no-common-ancestor case from ever silently writing
+/// outside `out_dir` (the bug `common_ancestor`'s `Option` return closes; see its doc).
 fn write_batch_and_maybe_vet(
     files: &[PathBuf],
-    root: &Path,
+    root: Option<&Path>,
     out_dir: &Path,
     vet: bool,
 ) -> ExitCode {
@@ -361,16 +378,34 @@ fn write_batch_and_maybe_vet(
         std::collections::BTreeMap::new();
     for r in &results {
         // Path relative to `root`, `.rs` extension stripped (pure logic in `batch.rs` so it is unit
-        // -tested there). Fall back to the bare stem if the path is somehow not under `root`
-        // (never-silent — warned, not silently mis-placed).
-        let rel_noext = match output_rel_path(&r.path, root) {
-            Ok(rel) => rel,
-            Err(fallback) => {
+        // -tested there). Fall back to the bare stem if the path is somehow not under `root`, or if
+        // there is no `root` at all (never-silent — warned, not silently mis-placed; see
+        // `write_batch_and_maybe_vet`'s doc for why `root: None` must NEVER take the `Ok` arm below).
+        let rel_noext = match root {
+            Some(root) => match output_rel_path(&r.path, root) {
+                Ok(rel) => rel,
+                Err(fallback) => {
+                    eprintln!(
+                        "mycelium-transpile: WARNING {} is not under the batch root {} — falling \
+                         back to a bare-stem output name",
+                        r.path.display(),
+                        root.display()
+                    );
+                    fallback
+                }
+            },
+            None => {
+                let fallback = PathBuf::from(
+                    r.path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("output"),
+                );
                 eprintln!(
-                    "mycelium-transpile: WARNING {} is not under the batch root {} — falling back \
-                     to a bare-stem output name",
-                    r.path.display(),
-                    root.display()
+                    "mycelium-transpile: WARNING {} — no common ancestor for this --files set \
+                     (mixed absolute/relative paths, or divergent roots) — falling back to a \
+                     bare-stem output name",
+                    r.path.display()
                 );
                 fallback
             }
@@ -394,7 +429,11 @@ fn write_batch_and_maybe_vet(
         }
     }
 
-    let (batch_summary, union) = summarize(&results, root);
+    // `summarize`/`build_remap_manifest`'s `derive_phylum` already degrades gracefully (falls back
+    // to `"unknown"`) for a root with no usable file name (`src/remap.rs::derive_phylum` doc) — so
+    // the `None` (no-common-ancestor) case passes an empty placeholder rather than needing its own
+    // signature change through `summarize`/`build_remap_manifest`.
+    let (batch_summary, union) = summarize(&results, root.unwrap_or_else(|| Path::new("")));
 
     let summary_path = out_dir.join("summary.json");
     match serde_json::to_string_pretty(&batch_summary) {
@@ -441,6 +480,16 @@ fn write_batch_and_maybe_vet(
         }
     }
 
+    // The headline count excludes non-gap advisories, same as the single-file print above (a
+    // review LOW on M-1086/#1544) — computed straight from `union.gaps` (the batch-wide raw list)
+    // rather than `batch_summary.totals.gaps`, so `Totals`/`summary.json`'s own `gaps` field (a
+    // committed artifact other tooling may already parse) is left untouched; only this printed
+    // headline changes.
+    let real_gap_total = union
+        .gaps
+        .iter()
+        .filter(|g| !g.category.is_non_gap_advisory())
+        .count();
     println!(
         "mycelium-transpile: batch over {} file(s) ({} failed to parse) — {} top-level item(s) \
          ({} non-test), {} emitted, {} gap(s), {:.1}% expressible, {} nodule(s) recorded in the \
@@ -450,7 +499,7 @@ fn write_batch_and_maybe_vet(
         batch_summary.totals.total_items,
         batch_summary.totals.non_test_items,
         batch_summary.totals.emitted,
-        batch_summary.totals.gaps,
+        real_gap_total,
         batch_summary.totals.expressible_pct,
         batch_summary.remap.nodules.len(),
         summary_path.display(),
