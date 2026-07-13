@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
     ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
-    ReturnType, Signature, Stmt, TraitItem,
+    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
 };
 
 // DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
@@ -462,6 +462,114 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
                 // reaches map_type's guard, so guard at the declaration site too.
                 crate::reserved::guard_ident(&tp.ident.to_string(), "type parameter")?;
                 names.push(tp.ident.to_string());
+            }
+            GenericParam::Lifetime(lt) => {
+                return Err(GapReason::new(
+                    Category::GenericBound,
+                    format!(
+                        "lifetime parameter `{}` has no grammar surface",
+                        lt.lifetime
+                    ),
+                ));
+            }
+            GenericParam::Const(cp) => {
+                return Err(GapReason::new(
+                    Category::GenericBound,
+                    format!(
+                        "const generic parameter `{}` — correspondence with Mycelium's width \
+                         const_params (`{{N}}`) is not confirmed",
+                        cp.ident
+                    ),
+                ));
+            }
+        }
+    }
+    Ok(names)
+}
+
+/// DN-131 (Accepted; M-1088/M-1101 build) — map an **inherent**-impl `Generics` list to
+/// Mycelium's impl-slot `type_param ::= Ident (':' bound)?` grammar (RFC-0019 §4.1, already
+/// landed for `fn` generics via `parse_type_params_bounded`/`check_bounds`). Each returned
+/// entry is the impl-slot's own type-param text — `"T"` for an unbounded parameter or
+/// `"T: A + B"` for a bounded one — ready to join into the impl's own `[...]` list. Unlike
+/// [`plain_type_params`] (bare identifiers only, used by `fn`/`enum`/`struct`/`trait`
+/// declaration-head sites this leaf does not touch), this function is the impl-slot's own
+/// bounded surface (DN-131 §3): the bound rides through unchanged, redistributed by DN-103's
+/// Phase-0 desugar onto each lifted method and discharged by the already-landed `check_bounds` +
+/// dictionary-free monomorphizer — zero new discharge logic.
+///
+/// Scope (never-silent, G2): a lifetime parameter or a const-generic parameter gaps exactly as
+/// `plain_type_params` does. A bound is emitted only when it is a **plain trait name** — no
+/// type arguments (`T: Into<u8>`), no `?`-relaxed modifier (`T: ?Sized`), no higher-ranked
+/// `for<'a>` binder, no parenthesized trait — matching the DN-131 v1 surface this leaf builds
+/// (`bound ::= Ident type_args? ('+' Ident type_args?)*` technically allows bound type
+/// arguments too, but this leaf scopes to the plain-name case the DN-136 worklist specs and
+/// gaps a bound-type-arg shape explicitly rather than guessing a mapping, VR-5).
+fn bounded_impl_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
+    let mut names = Vec::with_capacity(generics.params.len());
+    for p in &generics.params {
+        match p {
+            GenericParam::Type(tp) => {
+                // Same emit-verbatim exposure as `plain_type_params`: an UNUSED type-param
+                // name never reaches `map_type`'s guard, so guard at the declaration site too.
+                guard_ident(&tp.ident.to_string(), "impl type parameter")?;
+                if tp.bounds.is_empty() {
+                    names.push(tp.ident.to_string());
+                    continue;
+                }
+                let mut bound_names = Vec::with_capacity(tp.bounds.len());
+                for b in &tp.bounds {
+                    let TypeParamBound::Trait(tb) = b else {
+                        return Err(GapReason::new(
+                            Category::GenericBound,
+                            format!(
+                                "impl type parameter `{}` carries a bound with no confirmed \
+                                 mapping (a lifetime bound or another non-trait bound form) — \
+                                 DN-131 v1 covers plain trait-name bounds only",
+                                tp.ident
+                            ),
+                        ));
+                    };
+                    if tb.paren_token.is_some()
+                        || tb.lifetimes.is_some()
+                        || !matches!(tb.modifier, TraitBoundModifier::None)
+                    {
+                        return Err(GapReason::new(
+                            Category::GenericBound,
+                            format!(
+                                "impl type parameter `{}` bound `{}` is parenthesized, \
+                                 `?`-relaxed, or carries a higher-ranked `for<..>` binder — no \
+                                 confirmed mapping (DN-131 v1 covers plain trait-name bounds \
+                                 only)",
+                                tp.ident,
+                                tokens_to_string(&tb.path)
+                            ),
+                        ));
+                    }
+                    let seg = tb.path.segments.last().ok_or_else(|| {
+                        GapReason::new(
+                            Category::GenericBound,
+                            format!(
+                                "impl type parameter `{}` bound has an empty trait path",
+                                tp.ident
+                            ),
+                        )
+                    })?;
+                    if !matches!(seg.arguments, PathArguments::None) {
+                        return Err(GapReason::new(
+                            Category::GenericBound,
+                            format!(
+                                "impl type parameter `{}` bound `{}` carries generic arguments \
+                                 — DN-131 v1 emits plain trait-name bounds only",
+                                tp.ident,
+                                tokens_to_string(&tb.path)
+                            ),
+                        ));
+                    }
+                    guard_ident(&seg.ident.to_string(), "impl type parameter bound")?;
+                    bound_names.push(seg.ident.to_string());
+                }
+                names.push(format!("{}: {}", tp.ident, bound_names.join(" + ")));
             }
             GenericParam::Lifetime(lt) => {
                 return Err(GapReason::new(
@@ -4364,16 +4472,42 @@ fn mvp_prelude_trait_shape<'a>(
 /// independent of each other than, say, a trait's default-body/supertrait obligations are of its
 /// sibling methods.
 pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
-    // impl_item has no generic-parameter declaration slot at all (unlike type_item/trait_item/
-    // fn_item, which all carry `type_params?`) — so *any* impl-level generic parameter, bounded
-    // or not, is a gap.
-    if !item.generics.params.is_empty() {
-        return Err(GapReason::new(
-            Category::GenericBound,
-            "impl block has generic parameter(s) — impl_item grammar has no generic-parameter \
-             declaration slot",
-        ));
-    }
+    // DN-131 (Accepted; M-1088/M-1101 build) — the Mycelium `impl_item` grammar's INHERENT tail
+    // now HAS a generic-parameter declaration slot: `impl[T] Foo[T]` (DN-103, unbounded) and
+    // `impl[T: Bound] Foo[T]` (DN-131, bounded), both landed at the kernel/L1 level
+    // (`parse_type_params_bounded` reused verbatim for the impl slot; DN-103's Phase-0 desugar
+    // carries the bound onto each lifted method, discharged by the already-landed
+    // `check_bounds` + dictionary-free monomorphizer — zero new discharge code, DN-131 §4).
+    // This function previously refused ANY impl-level generic parameter unconditionally — a
+    // comment/gate that predated DN-103/DN-131's kernel-side landing; it now emits the
+    // inherent-impl slot's type-parameter list, carrying each parameter's bound (if any)
+    // through verbatim.
+    //
+    // Scope boundary (never-silent, G2) — DN-131 authorizes ONLY the inherent-impl slot:
+    //   - a **trait-instance** impl (`impl<..> Trait for ..`) with a non-empty generics list is
+    //     a *different* grammar production + coherence question (DN-130's scope, not yet
+    //     built) — still gapped explicitly, unchanged from before this leaf;
+    //   - a **lifetime** or **const-generic** impl-level parameter has no confirmed grammar
+    //     surface (mirrors `plain_type_params`'s refusal for the same shapes) — gapped;
+    //   - a bound that is not a *plain trait name* (carries type arguments, a `?`-relaxed
+    //     modifier, a higher-ranked `for<'a>` binder, or is parenthesized) has no confirmed v1
+    //     mapping (DN-131 v1 emits plain trait-name bounds only) — gapped, never guessed;
+    //   - an impl `where` clause still has no Mycelium equivalent (DN-131 §3: inline bounds
+    //     only, no `where` in v1) — gapped, unchanged from before.
+    let impl_type_params = if item.trait_.is_some() {
+        if !item.generics.params.is_empty() {
+            return Err(GapReason::new(
+                Category::GenericBound,
+                "impl-level generic parameter(s) on a *trait-instance* impl (`impl<..> Trait \
+                 for ..`) have no confirmed mapping yet — DN-130 (parametric trait-instance \
+                 heads + coherence) is the unbuilt scope for that case; DN-131 authorizes only \
+                 the inherent-impl slot",
+            ));
+        }
+        Vec::new()
+    } else {
+        bounded_impl_type_params(&item.generics)?
+    };
     if item.generics.where_clause.is_some() {
         return Err(GapReason::new(
             Category::WhereClause,
@@ -4697,8 +4831,18 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         // `impl Widen<u64> for bool` don't collide in `emitted_items`.
         format!("impl {trait_name}{targs_text} for {self_ty_text}")
     } else {
-        myc.push_str(&format!("impl {self_ty_text} {{\n{body_text}\n}};"));
-        format!("impl {self_ty_text}")
+        // DN-131: the inherent-impl slot's own type-param list (`""` when the impl carries no
+        // generic parameters at all — byte-identical to the pre-DN-131 text in that case, the
+        // regression guard for the overwhelmingly common non-generic impl).
+        let impl_type_params_text = if impl_type_params.is_empty() {
+            String::new()
+        } else {
+            format!("[{}]", impl_type_params.join(", "))
+        };
+        myc.push_str(&format!(
+            "impl{impl_type_params_text} {self_ty_text} {{\n{body_text}\n}};"
+        ));
+        format!("impl{impl_type_params_text} {self_ty_text}")
     };
     Ok(Emitted {
         name,

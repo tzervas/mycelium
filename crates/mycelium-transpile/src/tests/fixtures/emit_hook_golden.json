@@ -386,12 +386,95 @@
     ],
     "gaps": []
   },
+  "impl_bound_with_type_args_still_gapped": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
+    "emitted_items": [],
+    "gaps": [
+      [
+        "GenericBound",
+        "impl type parameter `T` bound `Into < u8 >` carries generic arguments — DN-131 v1 emits plain trait-name bounds only",
+        "Bx < T >"
+      ]
+    ]
+  },
+  "impl_bounded_generic_emits": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl[T: Clone] Bx[T] {\n  fn dup(self: Bx[T]) => Bx[T] = self;\n};\n",
+    "emitted_items": [
+      "impl[T: Clone] Bx[T]"
+    ],
+    "gaps": []
+  },
+  "impl_const_generic_param_still_gapped": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
+    "emitted_items": [],
+    "gaps": [
+      [
+        "GenericBound",
+        "const generic parameter `N` — correspondence with Mycelium's width const_params (`{N}`) is not confirmed",
+        "Bx < N >"
+      ]
+    ]
+  },
+  "impl_generic_trait_instance_still_gapped": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
+    "emitted_items": [],
+    "gaps": [
+      [
+        "GenericBound",
+        "impl-level generic parameter(s) on a *trait-instance* impl (`impl<..> Trait for ..`) have no confirmed mapping yet — DN-130 (parametric trait-instance heads + coherence) is the unbuilt scope for that case; DN-131 authorizes only the inherent-impl slot",
+        "Bx < T >"
+      ]
+    ]
+  },
+  "impl_lifetime_param_still_gapped": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
+    "emitted_items": [],
+    "gaps": [
+      [
+        "GenericBound",
+        "lifetime parameter `'a` has no grammar surface",
+        "Bx < 'a >"
+      ]
+    ]
+  },
   "impl_method_self_known_binary_participates_in_gate": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Foo for Binary{16} {\n  fn m(self: Binary{16}, b: Binary{16}) => Binary{16} = and(self, b);\n};\n",
     "emitted_items": [
       "impl Foo for Binary{16}"
     ],
     "gaps": []
+  },
+  "impl_multi_bound_generic_emits": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl[T: Clone + Copy] Bx[T] {\n  fn dup(self: Bx[T]) => Bx[T] = self;\n};\n",
+    "emitted_items": [
+      "impl[T: Clone + Copy] Bx[T]"
+    ],
+    "gaps": []
+  },
+  "impl_no_generics_unchanged": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Bx {\n  fn dup(self: Bx) => Bx = self;\n};\n",
+    "emitted_items": [
+      "impl Bx"
+    ],
+    "gaps": []
+  },
+  "impl_unbounded_generic_emits": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl[T] Bx[T] {\n  fn dup(self: Bx[T]) => Bx[T] = self;\n};\n",
+    "emitted_items": [
+      "impl[T] Bx[T]"
+    ],
+    "gaps": []
+  },
+  "impl_where_clause_still_gapped": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
+    "emitted_items": [],
+    "gaps": [
+      [
+        "WhereClause",
+        "impl `where` clause has no Mycelium equivalent",
+        "Bx < T >"
+      ]
+    ]
   },
   "let_alias_of_known_binary_extends_env": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}, b: Binary{16}) => Bool = let c = a in (match eq(c, b) { 0b1 => False, _ => match lt(c, b) { 0b1 => False, _ => True } });\n",
