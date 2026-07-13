@@ -289,7 +289,8 @@ fn qualify_key_never_collapses_to_bare() {
 }
 
 /// A `SameCrate` candidate (`crate::`/`self::`/`super::`-derived) yields exactly ONE lookup key,
-/// qualified under the current file's own crate identity when derivable.
+/// qualified under the current file's own crate identity when derivable -- regardless of
+/// `current_module` (a `SameCrate` head is unaffected by the root-file-only Bare-head gate below).
 #[test]
 fn same_crate_candidate_yields_one_qualified_key() {
     let candidate = UseCandidate {
@@ -298,41 +299,42 @@ fn same_crate_candidate_yields_one_qualified_key() {
         head_kind: HeadKind::SameCrate,
     };
     assert_eq!(
-        SymbolTable::candidate_lookup_keys(Some("mycelium_l1"), &candidate),
+        SymbolTable::candidate_lookup_keys(Some("mycelium_l1"), &[], &candidate),
         vec!["mycelium_l1.checkty".to_string()]
     );
     // No real crate context (e.g. a `src`-ancestor-less test fixture) -- degrades to the bare key,
     // byte-identical to pre-M-1084 behavior.
     assert_eq!(
-        SymbolTable::candidate_lookup_keys(None, &candidate),
+        SymbolTable::candidate_lookup_keys(None, &[], &candidate),
         vec!["checkty".to_string()]
     );
 }
 
-/// A `Bare` candidate yields the same-crate interpretation FIRST (Rust's own precedence — a local
-/// crate-root item shadows a same-named extern crate), then the cross-phylum interpretation (the
-/// head read literally as the named phylum's own extern-crate identifier) — never the reverse order,
-/// and never just one when a real crate identity is derivable.
+/// A `Bare` candidate written in the CRATE-ROOT file (`current_module` empty) yields the
+/// same-crate interpretation FIRST (real Rust's own root-file lexical shadowing — a crate-root
+/// `mod foo;` is a name in the crate-root file's own scope), then the cross-phylum interpretation
+/// (the head read literally as the named phylum's own extern-crate identifier) — never the
+/// reverse order, and never just one when a real crate identity is derivable.
 #[test]
-fn bare_candidate_yields_same_crate_key_before_cross_phylum_key() {
+fn bare_candidate_in_root_file_yields_same_crate_key_before_cross_phylum_key() {
     let candidate = UseCandidate {
         module_segs: segs(&["mycelium_std_rand", "rng"]),
         kind: CandidateKind::Name("Foo".to_string()),
         head_kind: HeadKind::Bare,
     };
-    let keys = SymbolTable::candidate_lookup_keys(Some("mycelium_std_sys_host"), &candidate);
+    let keys = SymbolTable::candidate_lookup_keys(Some("mycelium_std_sys_host"), &[], &candidate);
     assert_eq!(
         keys,
         vec![
             "mycelium_std_sys_host.mycelium_std_rand.rng".to_string(),
             "mycelium_std_rand.rng".to_string(),
         ],
-        "same-crate interpretation must be tried first"
+        "in the crate-root file, the same-crate interpretation must be tried first"
     );
 
     // No real crate context: the same-crate key degrades to the bare module key, the cross-phylum
     // key is unaffected (it never depends on the CURRENT file's own crate identity).
-    let keys_no_ctx = SymbolTable::candidate_lookup_keys(None, &candidate);
+    let keys_no_ctx = SymbolTable::candidate_lookup_keys(None, &[], &candidate);
     assert_eq!(
         keys_no_ctx,
         vec![
@@ -344,11 +346,38 @@ fn bare_candidate_yields_same_crate_key_before_cross_phylum_key() {
     );
 }
 
-/// Precedence in practice: when BOTH a same-crate submodule AND a same-named extern phylum exist in
-/// the table, the same-crate interpretation wins (matches real Rust's own shadowing rule) — an
+/// **CRITICAL fix (strict-review finding on M-1084/PR #1541):** a `Bare` candidate written in a
+/// NON-ROOT file (`current_module` non-empty) yields the cross-phylum interpretation ONLY -- the
+/// same-crate key is never tried, matching real Rust: a non-root file's local scope does not
+/// implicitly contain the crate root's sibling `mod` declarations, so a bare head there can never
+/// resolve against a same-crate submodule it never lexically sees. Before this fix,
+/// `candidate_lookup_keys` tried the same-crate key first for EVERY file regardless of
+/// `current_module`, silently mis-binding a genuine cross-phylum reference whenever the current
+/// crate happened to have an unrelated same-named submodule.
+#[test]
+fn bare_candidate_in_non_root_file_yields_cross_phylum_key_only() {
+    let candidate = UseCandidate {
+        module_segs: segs(&["crate_b"]),
+        kind: CandidateKind::Name("Foo".to_string()),
+        head_kind: HeadKind::Bare,
+    };
+    // Written in `crate-a/src/sub.rs` (current_module = ["sub"], NOT the crate root).
+    let keys = SymbolTable::candidate_lookup_keys(Some("crate_a"), &segs(&["sub"]), &candidate);
+    assert_eq!(
+        keys,
+        vec!["crate_b".to_string()],
+        "a non-root file's bare head must resolve cross-phylum ONLY -- never the same-crate key \
+         `crate_a.crate_b`, even though crate-a also has (elsewhere) a submodule literally named \
+         crate_b"
+    );
+}
+
+/// Precedence in practice, CRATE-ROOT case: when BOTH a same-crate submodule AND a same-named
+/// extern phylum exist in the table, and the referencing `use` is written IN THE CRATE-ROOT FILE,
+/// the same-crate interpretation wins (matches real Rust's own root-file shadowing rule) — an
 /// exhaustive property, not just a single hand-picked pair.
 #[test]
-fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity() {
+fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity_in_root_file() {
     let mut table = SymbolTable::new();
     // This crate's OWN submodule literally named `sibling`.
     table.insert(
@@ -369,11 +398,51 @@ fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity() {
         kind: CandidateKind::Name("Thing".to_string()),
         head_kind: HeadKind::Bare,
     };
-    let keys = SymbolTable::candidate_lookup_keys(Some("mycelium_a"), &candidate);
+    // current_module = [] -- the referencing `use` lives in the crate-root file.
+    let keys = SymbolTable::candidate_lookup_keys(Some("mycelium_a"), &[], &candidate);
     let hit = keys.iter().find_map(|k| table.resolve(k, "Thing"));
     assert_eq!(
         hit,
         Some("a.sibling"),
-        "the current crate's own submodule must shadow a same-named extern phylum"
+        "in the crate-root file, the current crate's own submodule must shadow a same-named \
+         extern phylum"
+    );
+}
+
+/// The NON-ROOT twin of the precedence test above: the SAME ambiguous table, but the referencing
+/// `use` is written in a NON-ROOT file -- the same-crate submodule must NOT shadow the sibling
+/// phylum there (it is never even tried), so resolution goes straight to the genuine sibling.
+#[test]
+fn resolve_goes_cross_phylum_only_from_non_root_file_even_with_a_same_crate_submodule() {
+    let mut table = SymbolTable::new();
+    table.insert(
+        "mycelium_a.sibling".to_string(),
+        "a.sibling".to_string(),
+        ["Thing".to_string()].into_iter().collect(),
+    );
+    table.insert(
+        "sibling".to_string(),
+        "b.sibling".to_string(),
+        ["Thing".to_string()].into_iter().collect(),
+    );
+
+    let candidate = UseCandidate {
+        module_segs: segs(&["sibling"]),
+        kind: CandidateKind::Name("Thing".to_string()),
+        head_kind: HeadKind::Bare,
+    };
+    // current_module = ["sub"] -- NOT the crate root.
+    let keys = SymbolTable::candidate_lookup_keys(Some("mycelium_a"), &segs(&["sub"]), &candidate);
+    assert_eq!(
+        keys,
+        vec!["sibling".to_string()],
+        "from a non-root file the same-crate key must never even be tried"
+    );
+    let hit = keys.iter().find_map(|k| table.resolve(k, "Thing"));
+    assert_eq!(
+        hit,
+        Some("b.sibling"),
+        "from a non-root file, the genuine sibling phylum resolves -- the same-crate submodule \
+         is never consulted, so it cannot wrongly shadow it"
     );
 }

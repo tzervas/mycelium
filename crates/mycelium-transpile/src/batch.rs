@@ -272,7 +272,9 @@ fn scan_pub_needed(
                 let symtab::CandidateKind::Name(name) = &c.kind else {
                     continue;
                 };
-                for key in SymbolTable::candidate_lookup_keys(current_crate.as_deref(), c) {
+                for key in
+                    SymbolTable::candidate_lookup_keys(current_crate.as_deref(), &current_module, c)
+                {
                     if let Some(nodule_path) = symtab.resolve(&key, name) {
                         needed
                             .entry(nodule_path.to_string())

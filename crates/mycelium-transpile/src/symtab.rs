@@ -18,14 +18,21 @@
 //!    rejects this — never a guess (VR-5/G2).
 //! 2. **Cross-phylum**: a *bare* head (neither `crate`/`self`/`super`) is ambiguous in real Rust
 //!    between "this crate's own crate-root submodule" and "an extern crate's own name" —
-//!    [`HeadKind::Bare`] — and [`SymbolTable::candidate_lookup_keys`] tries both, in Rust's own
-//!    precedence order (same-crate first, then the head read literally as the named sibling
-//!    PHYLUM's own extern-crate identifier — `transpile::derive_crate_ident`, the standard Cargo
-//!    package-name -> crate-identifier mapping). A hit requires the exact crate identifier AND the
-//!    exact emitted name to both be real entries in this batch's table (never a guess — VR-5); this
-//!    only ever fires when the referenced phylum's own files are *in the same batch* (e.g. a
-//!    multi-crate `--files` invocation) — a phylum transpiled in a wholly separate run is, honestly,
-//!    still an out-of-batch miss (G2). This mirrors `crates/mycelium-l1/src/checkty.rs`'s DN-113
+//!    [`HeadKind::Bare`]. **The real rule is root-file-only lexical shadowing, NOT "same-crate
+//!    first everywhere"**: a bare `use foo::X;` resolves against a local item literally named
+//!    `foo` in the CURRENT FILE's own lexical scope before falling back to the extern prelude, and
+//!    a crate-root `mod foo;` is only ever a name in the CRATE-ROOT file's own scope — a non-root
+//!    file never implicitly sees the crate root's sibling `mod` declarations. So
+//!    [`SymbolTable::candidate_lookup_keys`] tries the same-crate key FIRST **only when
+//!    `current_module` is empty** (this file itself is the crate root — matching real Rust's own
+//!    crate-root shadowing); for every OTHER file, the same-crate key is never tried at all —
+//!    only the head read literally as the named sibling PHYLUM's own extern-crate identifier
+//!    (`transpile::derive_crate_ident`, the standard Cargo package-name -> crate-identifier
+//!    mapping) is. A hit requires the exact crate identifier AND the exact emitted name to both be
+//!    real entries in this batch's table (never a guess — VR-5); this only ever fires when the
+//!    referenced phylum's own files are *in the same batch* (e.g. a multi-crate `--files`
+//!    invocation) — a phylum transpiled in a wholly separate run is, honestly, still an
+//!    out-of-batch miss (G2). This mirrors `crates/mycelium-l1/src/checkty.rs`'s DN-113
 //!    `merge_phyla_exports`: "one added qualifier dimension" lets the SAME resolver handle both the
 //!    intra-crate and cross-phylum case, no second resolver (DRY; DN-113 §9.6).
 //!
@@ -72,9 +79,12 @@ pub(crate) enum HeadKind {
     /// tried as an extern-crate (cross-phylum) name.
     SameCrate,
     /// A literal head that is neither `crate`/`self`/`super` — ambiguous in real Rust between "this
-    /// crate's own crate-root submodule" (tried FIRST, Rust's own precedence: a local crate-root
-    /// item shadows a same-named extern crate) and "an extern crate's own name" (the cross-phylum
-    /// interpretation, tried only on a same-crate miss).
+    /// crate's own crate-root submodule" and "an extern crate's own name". Real Rust resolves this
+    /// by ROOT-FILE-ONLY LEXICAL SHADOWING: a crate-root `mod foo;` is a name only in the
+    /// crate-root file's own scope, so the same-crate interpretation is tried FIRST only when the
+    /// current file itself IS the crate root (`current_module` empty); every other file's bare
+    /// heads resolve via the extern prelude — the cross-phylum interpretation — EXCLUSIVELY (see
+    /// [`SymbolTable::candidate_lookup_keys`]).
     Bare,
 }
 
@@ -228,7 +238,25 @@ impl SymbolTable {
         Self::default()
     }
 
+    /// Insert one file's cross-nodule-visible surface under `module_key`. The struct doc asserts
+    /// `module_key` uniqueness (each real batch file derives exactly one key — `batch.rs`'s
+    /// `discover_rs_files` walks a real, deduplicated filesystem tree, so two *distinct* files
+    /// legitimately collide here only if their derived crate-identity + module path happen to
+    /// coincide, e.g. two same-named crate directories reachable from one batch root) — that basis
+    /// is `Declared`, not `Proven` (no static guarantee two distinct discovered paths can never
+    /// derive the same key), so a silent last-write-wins `HashMap::insert` would violate G2 if it
+    /// were ever actually violated. `debug_assert!` catches a real collision in dev/test builds
+    /// (never-silent, VR-5) without paying a release-build cost for a check whose triggering case
+    /// is currently unobserved in this crate's own test corpus.
     pub fn insert(&mut self, module_key: String, nodule_path: String, emitted: HashSet<String>) {
+        debug_assert!(
+            !self.modules.contains_key(&module_key),
+            "SymbolTable::insert: module_key {module_key:?} already present (nodule_path \
+             {nodule_path:?}) -- two distinct batch files derived the SAME lookup key, so this \
+             insert would silently overwrite the first file's emitted-surface entry. This \
+             violates the struct doc's uniqueness invariant; investigate the colliding files' \
+             derived crate-identity + module path rather than silently proceeding (G2)."
+        );
         self.modules.insert(
             module_key,
             NoduleSymbols {
@@ -282,15 +310,26 @@ impl SymbolTable {
     /// `&SymbolTable` access) consult, so the "which key(s), in what order" policy lives in exactly
     /// one place (DRY).
     ///
+    /// `current_module` is the CALLING file's own crate-root-relative module segments (empty for a
+    /// crate-root `lib.rs`/`mod.rs` — see `transpile::derive_module_segments`); it is what gates
+    /// the [`HeadKind::Bare`] precedence below (real Rust's root-file-only lexical shadowing — see
+    /// the module docs and [`HeadKind::Bare`]'s own doc).
+    ///
     /// [`HeadKind::SameCrate`] (`crate::`/`self::`/`super::`) yields exactly one key, qualified
     /// under `current_crate` when derivable, else the bare `module_key` (no real crate context —
     /// e.g. a `src`-ancestor-less test fixture; byte-identical to pre-M-1084 behavior).
-    /// [`HeadKind::Bare`] yields up to two: the same-crate interpretation first (Rust's own
-    /// precedence — a local crate-root item shadows a same-named extern crate), then the
-    /// cross-phylum interpretation (the head segment itself read AS the named phylum's own
-    /// extern-crate identifier).
+    /// [`HeadKind::Bare`]'s keys depend on WHERE the `use` is written: when `current_module` is
+    /// empty (this file IS the crate root), it yields up to two, the same-crate interpretation
+    /// FIRST (matching real Rust's crate-root shadowing), then the cross-phylum interpretation
+    /// (the head segment itself read AS the named phylum's own extern-crate identifier); for any
+    /// OTHER (non-root) file it yields exactly ONE key — the cross-phylum interpretation only — a
+    /// non-root file's local scope never implicitly contains the crate root's sibling `mod`
+    /// declarations, so trying the same-crate key there would silently mis-bind a genuine
+    /// cross-phylum reference to an unrelated same-named submodule (the CRITICAL fix this doc
+    /// records; see `src/tests/symtab.rs` + `src/tests/batch.rs`'s non-root regressions).
     pub fn candidate_lookup_keys(
         current_crate: Option<&str>,
+        current_module: &[String],
         candidate: &UseCandidate,
     ) -> Vec<String> {
         let module_key = Self::module_key(&candidate.module_segs);
@@ -298,11 +337,15 @@ impl SymbolTable {
             Some(c) => Self::qualify_key(c, &module_key),
             None => module_key,
         };
-        let mut keys = vec![same_crate_key];
-        if candidate.head_kind == HeadKind::Bare {
-            if let Some((head, rest)) = candidate.module_segs.split_first() {
-                keys.push(Self::qualify_key(head, &Self::module_key(rest)));
-            }
+        if candidate.head_kind != HeadKind::Bare {
+            return vec![same_crate_key];
+        }
+        let mut keys = Vec::new();
+        if current_module.is_empty() {
+            keys.push(same_crate_key);
+        }
+        if let Some((head, rest)) = candidate.module_segs.split_first() {
+            keys.push(Self::qualify_key(head, &Self::module_key(rest)));
         }
         keys
     }

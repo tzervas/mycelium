@@ -632,6 +632,81 @@ fn same_crate_submodule_shadows_a_same_named_sibling_phylum() {
     );
 }
 
+/// **CRITICAL fix (strict-review finding on M-1084/PR #1541), NON-ROOT twin of
+/// `same_crate_submodule_shadows_a_same_named_sibling_phylum` above.** Real Rust's bare-`use`
+/// same-crate-vs-extern-crate shadowing is ROOT-FILE-ONLY lexical shadowing: a crate-root
+/// `mod foo;` is a name only in the crate-root file's own scope, so a NON-root file's bare heads
+/// never see it and resolve via the extern prelude (cross-phylum) exclusively. Before this fix,
+/// `candidate_lookup_keys` tried the same-crate interpretation FIRST for every file regardless of
+/// where the `use` was written, so this exact non-root case silently mis-bound to the unrelated
+/// same-crate submodule instead of the genuine sibling phylum.
+#[test]
+fn cross_phylum_use_from_non_root_file_wins_over_unrelated_same_crate_submodule() {
+    let tmp = TempDir::new("non-root-cross-phylum");
+    // crate-a's NON-ROOT file `sub.rs` (current_module = ["sub"]) references a bare `crate_b`.
+    tmp.write(
+        "crate-a/src/sub.rs",
+        "use crate_b::Foo;\nfn a_helper(x: bool) -> bool { x }",
+    );
+    // crate-a ALSO has its own crate-root submodule literally named `crate_b` -- but `sub.rs`
+    // itself never lexically sees it (it isn't the crate-root file), so this must NOT shadow the
+    // genuine sibling phylum below.
+    tmp.write("crate-a/src/crate_b.rs", "pub struct Foo(u16);");
+    tmp.write(
+        "crate-a/src/lib.rs",
+        "fn root_helper(x: bool) -> bool { x }",
+    );
+    // The GENUINE sibling phylum, also named `crate-b`, exporting a `Foo`.
+    tmp.write("crate-b/src/lib.rs", "pub struct Foo(u8);");
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let sub = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/sub.rs"))
+        .expect("crate-a/src/sub.rs result present");
+    assert!(
+        sub.myc.lines().any(|l| l.trim() == "use crate.b.Foo;"),
+        "expected sub.rs's bare `use crate_b::Foo;` to resolve CROSS-PHYLUM to the sibling \
+         crate-b's own nodule path (`use crate.b.Foo;`), never crate-a's own same-named \
+         submodule; got:\n{}",
+        sub.myc
+    );
+    assert!(
+        !sub.myc.lines().any(|l| l.contains("crate.a.crate_b.Foo")),
+        "must NEVER resolve against crate-a's own same-crate `crate_b` submodule (nodule path \
+         `crate.a.crate_b`) from a non-root file -- that submodule is not lexically in scope \
+         there; got:\n{}",
+        sub.myc
+    );
+
+    // The genuine sibling phylum's Foo IS referenced -- must be marked pub in its own output.
+    let b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/lib.rs"))
+        .expect("crate-b lib.rs result present");
+    assert!(
+        b.myc.contains("pub type Foo"),
+        "crate-b's Foo is referenced cross-phylum from sub.rs -- expected pub; got:\n{}",
+        b.myc
+    );
+
+    // crate-a's OWN `crate_b.rs` submodule's Foo was never actually referenced (sub.rs's bare
+    // head never resolved against it) -- must not be marked pub.
+    let own_crate_b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/crate_b.rs"))
+        .expect("crate-a/src/crate_b.rs result present");
+    assert!(
+        !own_crate_b.myc.contains("pub type Foo") && !own_crate_b.myc.contains("pub struct Foo"),
+        "crate-a's own crate_b.rs Foo was never referenced from a non-root bare head -- must not \
+         be marked pub; got:\n{}",
+        own_crate_b.myc
+    );
+}
+
 /// The never-silent refusal path (VR-5/G2): a `super::` with no parent to go up to (the file is
 /// already at the crate root) is a genuine structural miss — gapped, never a panic, never a guess.
 #[test]

@@ -511,7 +511,7 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
     let mut resolved_names = Vec::new();
     let mut leaf_gaps = Vec::new();
     for c in &candidates {
-        let keys = SymbolTable::candidate_lookup_keys(ctx.crate_ident, c);
+        let keys = SymbolTable::candidate_lookup_keys(ctx.crate_ident, ctx.module, c);
         let module_dotted = c.module_segs.join(".");
         match &c.kind {
             CandidateKind::Name(name) => {
