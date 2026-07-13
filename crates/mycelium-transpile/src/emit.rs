@@ -17,9 +17,18 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
-    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Member, Pat, PathArguments,
+    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
     ReturnType, Signature, Stmt, TraitItem,
 };
+
+// DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
+// the landed `prim_map::TABLE` pattern). Each submodule owns one dispatch axis's additive rows;
+// the driver methods below (`map_pattern_inner`/`lower_struct_derives`/`EmitVisitor::visit_call`)
+// consult the table FIRST, then their own unchanged base/fallback logic — see each submodule's
+// own doc for its axis's ordered-pass-preservation invariant (DN-136 §3/§7).
+mod calls;
+mod derives;
+mod patterns;
 
 /// One struct's positional field layout — the M-1006 field-projection input (Lever 1): its field
 /// slots in declaration order, `Some(name)` for a named field, `None` for a tuple (unnamed) position.
@@ -246,7 +255,7 @@ fn named_field_emit_allowed(name: &str) -> bool {
 /// field-projection / struct-literal desugaring for `name` (context off, `name` not an in-file
 /// single-ctor struct, or `name` not emitted — where a `match name(...) => …` would reference an
 /// absent ctor and poison the file's check).
-fn struct_layout(name: &str) -> Option<StructLayout> {
+pub(crate) fn struct_layout(name: &str) -> Option<StructLayout> {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => None,
         Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
@@ -2147,99 +2156,45 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         }
     }
 
+    /// **DN-136/P1-a (Alt B).** [`calls::lookup`] is consulted FIRST — a static, per-axis
+    /// handler table (generalizing the landed `prim_map::TABLE` pattern) covering the bare and
+    /// 2-segment qualified/associated-fn call-target shapes. A future call-shape leaf adds one
+    /// file + one append-only `TABLE` row there, never touching this method. The remaining two
+    /// shapes (a 3+-segment qualified path; a non-path call target) are not additive leaf
+    /// targets today (DN-133 §2 sub-kind 3 routes the former through the Import/symtab resolver
+    /// instead) — a table miss falls through to them unchanged, then to the guard/emit tail
+    /// below, identical to the pre-refactor `match`'s own fallback shape (G2).
     fn visit_call(&mut self, _expr: &Expr, c: &syn::ExprCall) -> Self::Output {
-        let func = match &*c.func {
-            Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
-                .path
-                .segments
-                .last()
-                .map(|s| s.ident.to_string())
-                .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
-            Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 2 => {
-                // DN-133 (M-1094) — the resolution-gated mangled-call arm for a qualified/
-                // associated-function call `Type::method(...)`. Mycelium calls are bare
-                // identifiers (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
-                // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form), so the bare last
-                // segment can never be emitted directly (the D4 fabrication this arm replaced —
-                // `i16::from(self)` -> `from(self)`, and `from` is not a Mycelium builtin). The
-                // decl side already mangles a receiver-less inherent-impl associated fn to
-                // `{Type}__{method}` (`mangled_inherent_fn_name`, applied in `emit_impl`) — SAFE
-                // to reference here ONLY when that exact mangled declaration is PROVEN present
-                // (never a guess — VR-5/G2): same-file (this file's own single left-to-right pass
-                // already recorded every earlier item's real emission — never a forward
-                // reference), or a resolved M-1084 cross-nodule sibling. `Self::method(...)`
-                // resolves its head via the already-threaded enclosing impl type (`self.self_ty`)
-                // — absent (not inside an impl body) simply doesn't resolve, like every other
-                // unresolved head. A primitive/std associated fn (no emitted decl, e.g.
-                // `i128::try_from`), an unresolved type, or a call naming a `self`-receiving
-                // method (excluded by construction: [`mangled_inherent_fn_name`] is only ever
-                // applied to a receiver-less method, so `local_mangled`/the cross-nodule set never
-                // contains one — it stays reachable only from its own bare call site) all fall
-                // through to the honest gap below rather than fabricate a call.
-                let head = p.path.segments[0].ident.to_string();
-                let method = p.path.segments[1].ident.to_string();
-                let resolved_head = if head == "Self" {
-                    self.self_ty.map(str::to_owned)
-                } else {
-                    Some(head.clone())
-                };
-                let known_mangled = resolved_head.and_then(|h| {
-                    let mangled = mangled_inherent_fn_name(&h, &method);
-                    (local_mangled_assoc_fn_known(&mangled)
-                        || cross_nodule_resolve_mangled(&head, &mangled))
-                    .then_some(mangled)
-                });
-                match known_mangled {
-                    Some(mangled) => mangled,
-                    None => {
+        let func =
+            match calls::lookup(c) {
+                Some(handler) => (handler.resolve)(c, self.self_ty)?,
+                None => match &*c.func {
+                    Expr::Path(p) if p.qself.is_none() => {
+                        // Any OTHER qualified path shape this arm does not (yet) resolve: a
+                        // cross-*module* free-function path (`a::b::c()`, e.g.
+                        // `mycelium_std_sys::time::mono_nanos()`, 3+ segments) routes through the
+                        // Import/symtab free-fn resolver (M-1084's `use`-driven resolution), not this
+                        // call-target path — out of DN-133's scope (§2 sub-kind 3). Mirroring
+                        // `map::map_type`'s identical qualified-path decision, this stays an explicit
+                        // gap rather than a fabricated call (G2/DN-34 §4).
                         return Err(GapReason::new(
                             Category::Other,
                             format!(
-                                "qualified/associated-function call `{}` did not resolve to a \
-                                 known-emitted associated fn — Mycelium calls are bare \
-                                 identifiers, and the only sound surface form for \
-                                 `Type::method(...)` is the mangled `Type__method` name the \
-                                 declaration side already emits for a receiver-less inherent-impl \
-                                 associated fn (DN-34 §8.13/8.14), referenced only when that exact \
-                                 declaration is PROVEN present (same-file, or a resolved M-1084 \
-                                 cross-nodule sibling). A primitive/std associated fn with no \
-                                 emitted decl (e.g. `i128::try_from`), an unresolved type, or a \
-                                 `self`-receiving method (excluded by construction — it stays \
-                                 reachable only from its own bare call site) all gap here rather \
-                                 than fabricate a call (G2/VR-5, DN-133)",
-                                tokens_to_string(&*c.func)
-                            ),
+                            "qualified/associated-function call `{}` — no established Mycelium \
+                             surface form for a Rust conversion-op body; emitting the bare \
+                             last-segment name would fabricate a call (e.g. `from(...)` is not a \
+                             Mycelium builtin)",
+                            tokens_to_string(&*c.func)
+                        ),
                         ));
                     }
-                }
-            }
-            Expr::Path(p) if p.qself.is_none() => {
-                // Any OTHER qualified path shape this arm does not (yet) resolve: a
-                // cross-*module* free-function path (`a::b::c()`, e.g.
-                // `mycelium_std_sys::time::mono_nanos()`, 3+ segments) routes through the
-                // Import/symtab free-fn resolver (M-1084's `use`-driven resolution), not this
-                // call-target path — out of DN-133's scope (§2 sub-kind 3). Mirroring
-                // `map::map_type`'s identical qualified-path decision, this stays an explicit gap
-                // rather than a fabricated call (G2/DN-34 §4).
-                return Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "qualified/associated-function call `{}` — no established Mycelium \
-                         surface form for a Rust conversion-op body; emitting the bare \
-                         last-segment name would fabricate a call (e.g. `from(...)` is not a \
-                         Mycelium builtin)",
-                        tokens_to_string(&*c.func)
-                    ),
-                ));
-            }
-            _ => {
-                return Err(GapReason::new(
-                    Category::Other,
-                    "call target is not a simple path (e.g. a closure call) — no confirmed \
-                     mapping",
-                ))
-            }
-        };
+                    _ => return Err(GapReason::new(
+                        Category::Other,
+                        "call target is not a simple path (e.g. a closure call) — no confirmed \
+                         mapping",
+                    )),
+                },
+            };
         // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
         // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
         guard_ident(&func, "call target")?;
@@ -3196,6 +3151,18 @@ fn inline_fold_option(
 ///   already-confirmed receiver expression itself failed. Propagated rather than silently
 ///   swallowed into a `None` "not applicable" (G2) — an internal-consistency edge case the gate
 ///   above is not expected to let through, but never assumed away.
+///
+/// **DN-136/P1-a scope note.** This axis is the pre-existing `prim_map::TABLE`-adjacent template
+/// the other three axes (patterns/derives/calls) generalize — DN-136 §3 item 4 rules it
+/// "already additive" and its migration action is documentation-only: **this function's
+/// `(kind, arm)` dispatch is deliberately left unrestructured** (no behavior change; the
+/// byte-identical differential in `src/tests/emit.rs` covers it unchanged, same as every other
+/// axis). Restructuring it into a literal `&[Row]` table was considered and declined here — the
+/// per-`(kind, arm)` cross-product has differing arities/closure-count requirements per
+/// combinator (`fold` takes 2 closures, `map`/`and_then`/`map_err`/`or_else` take 1, `unwrap_or`
+/// never inlines) that a uniform row shape would either force through extra indirection or
+/// under-model; DN-136 itself only asks this axis to "document ... as the template", not migrate
+/// it, so restructuring it would be scope creep past the note's own DoD (§8).
 fn try_inline_result_option_combinator(
     m: &syn::ExprMethodCall,
     self_ty: Option<&str>,
@@ -3561,7 +3528,21 @@ pub fn map_pattern(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReason
 
 /// The recursion-guarded body of [`map_pattern`]. Recursive calls use the public `map_pattern`
 /// name so each nested call re-enters the guard.
+///
+/// **DN-136/P1-a (Alt B).** [`patterns::lookup`] is consulted FIRST — a static, per-axis
+/// handler table (generalizing the landed `prim_map::TABLE` pattern, `prim_map.rs:140`) covering
+/// the three "gap-closing leaf" pattern kinds that used to serialize on this `match` (M-823
+/// or-pattern, M-826 tuple-pattern, M-1089/DN-132 struct-variant pattern — DN-136 §1's own
+/// framing of exactly these three). A future pattern leaf adds one file + one append-only
+/// `TABLE` row there, never touching this function. The base-kernel pattern forms below
+/// (`Wild`/`Ident`/`Path`/`TupleStruct`/`Lit`/`Paren`/`Reference`) are foundational grammar
+/// primitives, not additive leaf targets, so they stay here unchanged; a table miss falls
+/// through to them, then to the final explicit gap — identical fallback shape to the
+/// pre-refactor `match`'s own `_` arm (G2: never a silent drop).
 fn map_pattern_inner(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReason> {
+    if let Some(handler) = patterns::lookup(pat) {
+        return (handler.emit)(pat, self_ty);
+    }
     match pat {
         Pat::Wild(_) => Ok("_".to_string()),
         Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
@@ -3614,156 +3595,13 @@ fn map_pattern_inner(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReas
                  a float/byte/char literal pattern has no faithful Mycelium surface — VR-5/G2)",
             )),
         },
-        Pat::Or(po) => {
-            let mut alts = Vec::with_capacity(po.cases.len());
-            for c in &po.cases {
-                alts.push(map_pattern(c, self_ty)?);
-            }
-            Ok(alts.join(" | "))
-        }
-        Pat::Tuple(pt) if pt.elems.len() >= 2 => {
-            let mut elems = Vec::with_capacity(pt.elems.len());
-            for e in &pt.elems {
-                elems.push(map_pattern(e, self_ty)?);
-            }
-            Ok(format!("({})", elems.join(", ")))
-        }
         Pat::Paren(pp) => map_pattern(&pp.pat, self_ty),
         Pat::Reference(pr) => map_pattern(&pr.pat, self_ty),
-        // DN-132 P1 (M-1089, Accepted -- P1 only, 2026-07-12): a named-field **struct-variant
-        // pattern** (`Foo { x, y }`, `Self::NotFound { path, .. }`) desugars to the *positional*
-        // `Ctor(subs...)` surface the grammar already has -- zero kernel/checker growth (reuses
-        // the Maranget usefulness pass unchanged, DN-132 SS3). See [`map_struct_pattern`] for the
-        // resolution + never-silent-gap rules (SS5.2).
-        Pat::Struct(ps) if ps.qself.is_none() => map_struct_pattern(ps, self_ty),
         _ => Err(GapReason::new(
             Category::Other,
             format!("unsupported match pattern form `{}`", tokens_to_string(pat)),
         )),
     }
-}
-
-/// DN-132 SS5.2 -- the `Pat::Struct` lowering: resolve the pattern's constructor name (the path's
-/// last segment, ignoring any `Self::`/enum-qualifying prefix -- the identical convention
-/// [`map_pattern_inner`]'s `Pat::Path`/`Pat::TupleStruct` arms already use), fetch its
-/// [`struct_layout`], resolve each named field to its declaration index, and emit a positional
-/// `Ctor(subs...)` with a wildcard `_` at every unmentioned index.
-///
-/// **Never-silent gaps (VR-5/G2, DN-132 SS5.2/SS7):**
-/// - No confirmed layout for the ctor name (`struct_layout` returns `None`) -- a foreign/
-///   unresolved type, a cross-nodule variant not present in this file, or an ambiguous same-name
-///   struct/variant collision refused at the population (DN-134 SS3 step 1(b)). **Update
-///   (M-1093/DN-134):** the DN-132 SS5.1 `StructLayout` variant-awareness this doc used to flag as
-///   an open component-seam boundary has now landed (`transpile.rs::struct_layouts` walks
-///   `Item::Enum` `Fields::Named` variants too, collision-safe by construction) -- an in-file
-///   enum struct-variant pattern resolves through this arm exactly like a plain struct's, with no
-///   arm-code delta (composed automatically, as this doc predicted). Never a guessed/partial-arity
-///   emission.
-/// - A field member that is **positional** (`Foo { 0: a }`, syntactically legal on a `Pat::Struct`
-///   even though every DN-132 P1 target is `Fields::Named`) -- out of this cluster's scope, gapped.
-/// - A field **name not present** in the resolved layout -- never silently dropped or wildcarded
-///   (OQ-5's field-order canonicalization only reorders *known* names; an unknown name is refused).
-/// - A **duplicate** field name within one pattern (defensive: `syn` does not itself reject this,
-///   unlike `rustc`) -- refused rather than resolved to a guessed/last-wins index (OQ-4c).
-///
-/// **`..`-rest arity (OQ-4):** every index the pattern does not name is a wildcard `_`, regardless
-/// of whether the pattern actually carries `..` -- DN-132 SS5.2 point 4: `rustc` already requires
-/// `..` for a genuinely partial pattern, so by the time syntactically-valid Rust reaches here an
-/// absent `..` never leaves a real field unmentioned; the lowered positional form is identical
-/// either way, so `ps.rest` is deliberately not inspected.
-///
-/// **Field-order canonicalization (OQ-5, inherited from DN-123 OQ-1):** sub-patterns are placed at
-/// their **declaration** index regardless of the order they appear in the source pattern, so
-/// `Foo { y, x }` and `Foo { x, y }` emit identically.
-///
-/// **DN-104 seal (OQ-3(a)):** this lowering constructs nothing -- it emits the same positional
-/// `Ctor` pattern any other pattern-position match already does, so a sealed (`priv Mk`)
-/// constructor's pattern-position matching stays allowed, unchanged from DN-104's semantics.
-///
-/// **`Self { .. }` resolution:** a bare (unqualified) `Self` path resolves to `self_ty` -- the
-/// pattern-side counterpart of [`known_struct_literal_ty`]'s expression-side `Self { .. }`
-/// resolution, gated identically (a resolvable name only, never guessed). A **qualified** `Self::
-/// Variant { .. }` is untouched by this (the path's last segment is already `Variant`, exactly the
-/// convention `Pat::Path`/`Pat::TupleStruct` use) -- only the single-segment bare form needs it.
-fn map_struct_pattern(ps: &syn::PatStruct, self_ty: Option<&str>) -> Result<String, GapReason> {
-    let seg = ps
-        .path
-        .segments
-        .last()
-        .ok_or_else(|| GapReason::new(Category::Other, "empty struct pattern path"))?;
-    let raw = seg.ident.to_string();
-    let name = if raw == "Self" {
-        self_ty
-            .ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    "struct pattern `Self { .. }` used where the enclosing type is not known \
-                     (outside an `impl` body, or the impl's own `Self` type could not be \
-                     resolved) -- `Self` is never guessed (VR-5/G2)",
-                )
-            })?
-            .to_string()
-    } else {
-        raw
-    };
-    guard_ident(&name, "match pattern constructor")?;
-    let layout = struct_layout(&name).ok_or_else(|| {
-        GapReason::new(
-            Category::Other,
-            format!(
-                "struct-variant pattern `{name} {{ .. }}` names a constructor with no confirmed \
-                 in-file layout -- resolved only for an emitted, in-file struct (or, once \
-                 DN-132's SS5.1 variant-aware `StructLayout` population lands, an in-file enum's \
-                 named-field variant); never a guessed field-index arity (DN-132 SS5.1/OQ-4, \
-                 VR-5/G2)"
-            ),
-        )
-    })?;
-    let mut subs: Vec<Option<String>> = vec![None; layout.len()];
-    let mut seen_names: HashSet<String> = HashSet::new();
-    for f in &ps.fields {
-        let fname = match &f.member {
-            Member::Named(ident) => ident.to_string(),
-            Member::Unnamed(_) => {
-                return Err(GapReason::new(
-                    Category::Other,
-                    format!(
-                        "struct pattern `{name} {{ .. }}` uses a positional field-index member \
-                         (`N: pat`) -- only named-field struct-pattern members are in DN-132 P1's \
-                         scope"
-                    ),
-                ));
-            }
-        };
-        if !seen_names.insert(fname.clone()) {
-            return Err(GapReason::new(
-                Category::Other,
-                format!(
-                    "struct pattern `{name} {{ .. }}` names field `{fname}` more than once -- a \
-                     duplicate field-pattern binding is never resolved to a guessed index \
-                     (DN-132 OQ-4c, VR-5/G2)"
-                ),
-            ));
-        }
-        let idx = layout
-            .iter()
-            .position(|slot| slot.as_deref() == Some(fname.as_str()))
-            .ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    format!(
-                        "struct pattern `{name} {{ .. }}` names field `{fname}`, which is not a \
-                         declared field of `{name}`'s confirmed in-file layout (DN-132 OQ-5)"
-                    ),
-                )
-            })?;
-        subs[idx] = Some(map_pattern(&f.pat, self_ty)?);
-    }
-    let positional: Vec<String> = subs
-        .into_iter()
-        .map(|s| s.unwrap_or_else(|| "_".to_string()))
-        .collect();
-    Ok(format!("{}({})", name, positional.join(", ")))
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -3824,153 +3662,26 @@ fn map_named_fields_positional(
 // DN-128 recommends, one layer further out (the transpiler's own field enumeration, not even
 // `mycelium-l1`'s elaborator) — it survives either OQ-1 answer because it never needs one.
 
-/// One field's DN-128 derive-eligibility: is its [`map_type`]-produced text a **Named** (user)
-/// type, as opposed to a **primitive repr** (`Bool`/`Float`/`Bytes`/`Binary{N}`) or an
-/// unclassifiable shape (a tuple/generic-instantiation text containing `(`/`[`)?
-///
-/// **Why primitives are excluded (verified empirically, mitigation #14 — not assumed):** composing
-/// `render(f)`/bare `init()` on a primitive-typed field requires an `impl Show[...]`/`impl Init[...]`
-/// instance for that primitive to be **in scope in the same file** — Mycelium's checker has no
-/// cross-nodule ambient resolution for these (only the *trait itself* is prelude-seeded, DN-129 §5;
-/// the primitive *instances* are ordinary `impl`s living in a separate nodule, `lib/std/fmt.myc`).
-/// Confirmed against the real `myc-check` oracle: a bare `Binary{N}` field's `render(f)` fails with
-/// `"no instance Show for Binary{64}"` and a bare `Binary{N}`/`Bytes`/`Bool`/`Float` field's `init()`
-/// fails with `"no instance Init for <T>"` unless that primitive's `impl` is copied into the SAME
-/// file (which this leaf does not attempt — see `derive_show_impl`/`derive_init_impl` docs). A
-/// `Float` field is additionally, permanently ineligible for `Debug`: `lib/std/fmt.myc` documents
-/// (DN-127 §7 point 3 / OQ-1) that **no** `impl Show[Float] for Float` exists anywhere in the corpus
-/// today — a systemic gap, not a per-file availability one.
-///
-/// A **Named** field (a bare capitalized identifier with no `{`/`(`/`[` — i.e. another in-file or
-/// out-of-file struct/enum type) is eligible: composing `render(f)`/`init()` against it is
-/// mechanically correct, and — for a field that is itself another struct in the SAME file that ALSO
-/// derives `Debug`/`Default` — verified clean end-to-end (`src/tests/emit.rs`). Whether it checks
-/// for an ARBITRARY Named field depends on that field's own type independently providing the
-/// instance; this composition is `Declared` (this whole module's stated guarantee), not verified
-/// per-instantiation — never a fabrication (it is a real, sound composition), just an honest
-/// dependency on peer state this transpile pass cannot see.
-fn field_derive_eligible(mapped_ty: &str) -> bool {
-    if matches!(mapped_ty, "Bool" | "Float" | "Bytes") {
-        return false;
-    }
-    if mapped_ty.contains(['{', '(', '[']) {
-        return false;
-    }
-    mapped_ty
-        .chars()
-        .next()
-        .is_some_and(|c| c.is_ascii_uppercase())
-}
-
-/// Left-fold `parts` into a single `bytes_concat(...)` chain — every step stays `Bytes`-typed,
-/// matching `bytes_concat`'s 2-ary `Bytes -> Bytes -> Bytes` signature (`lib/std/fmt.myc`'s `to_dec`
-/// uses the identical fold shape for its recursive digit accumulation). `parts` is never empty in
-/// either caller below (the fieldless case is handled separately, without this helper).
-fn bytes_concat_chain(parts: &[String]) -> String {
-    let mut iter = parts.iter();
-    let mut acc = iter.next().cloned().unwrap_or_default();
-    for p in iter {
-        acc = format!("bytes_concat({acc}, {p})");
-    }
-    acc
-}
-
-/// DN-128 (M-1086) `derive(Debug)` -> an explicit `impl Show[T] for T` (DN-127/M-1090's landed
-/// prelude trait). **Fieldless (unit) struct:** `fn render(x: T) => Bytes = "T";` — always succeeds,
-/// no field dependency (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:** a
-/// left-to-right `bytes_concat` fold of `"T(", render(f0), ", ", render(f1), …, ")"`, gated per field
-/// via [`field_derive_eligible`] — refuses the WHOLE derive (never a partial/fabricated render, G2)
-/// the moment any field is ineligible, citing that field's index + mapped type.
-fn derive_show_impl(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
-    if field_types.is_empty() {
-        return Ok(format!(
-            "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    \"{ty_name}\";\n}};"
-        ));
-    }
-    for (i, ft) in field_types.iter().enumerate() {
-        if !field_derive_eligible(ft) {
-            return Err(GapReason::new(
-                Category::DeriveAttr,
-                format!(
-                    "struct `{ty_name}` derive(Debug): field {i} has type `{ft}`, a primitive \
-                     repr with no ambient `Show` instance in this file (`lib/std/fmt.myc`'s \
-                     primitive impls live in a separate, unimported nodule) — the whole derive is \
-                     left an honest gap rather than a partial/fabricated render (G2)"
-                ),
-            ));
-        }
-    }
-    let vars: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
-    let mut parts = vec![format!("\"{ty_name}(\"")];
-    for (i, v) in vars.iter().enumerate() {
-        if i > 0 {
-            parts.push("\", \"".to_string());
-        }
-        parts.push(format!("render({v})"));
-    }
-    parts.push("\")\"".to_string());
-    let body = bytes_concat_chain(&parts);
-    Ok(format!(
-        "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x {{ {ty_name}({pats}) => {body} }};\n}};",
-        pats = vars.join(", ")
-    ))
-}
-
-/// DN-128 (M-1086) `derive(Default)` -> an explicit `impl Init[T] for T` (DN-129/M-1091's landed
-/// prelude trait). **Fieldless (unit) struct:** `fn init() => T = T;` — the bare nullary
-/// constructor, always succeeds (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:**
-/// `T(init(), init(), …)`, one bare `init()` per field IN DECLARATION ORDER — **no qualified
-/// `Type::init()` call is needed**, because each position's expected type (the constructor's OWN
-/// declared field type) resolves `init()`'s trait parameter via RFC-0019 §4.4's "seed from expected"
-/// path — verified against `checkty.rs`'s monomorphic-ctor arm, which checks every constructor
-/// argument `Some(&want)` where `want` is that field's declared type
-/// (`crates/mycelium-l1/src/checkty.rs:6522-6536`), and live-oracle-proven end-to-end for a
-/// same-file nested case (`src/tests/emit.rs`). This is unrelated to DN-133's qualified/associated
-/// `Type::method(...)` **call-site** emission (a different arm of `emit.rs`, sequenced after this
-/// leaf) — `init()` is never spelled qualified here. Gated per field via [`field_derive_eligible`]
-/// for the identical reason as [`derive_show_impl`], empirically confirmed separately: no primitive
-/// `impl Init[Binary{N}]`/`Init[Bytes]`/`Init[Bool]`/`Init[Float]` is landed ANYWHERE in the corpus
-/// yet (`grep -rn "impl Init\[" lib/ crates/` finds only test/example Named-type impls), so
-/// composing `init()` for a primitive field would emit text certain to fail `myc check` — refused
-/// rather than partially composed (G2).
-fn derive_init_impl(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
-    if field_types.is_empty() {
-        return Ok(format!(
-            "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name};\n}};"
-        ));
-    }
-    for (i, ft) in field_types.iter().enumerate() {
-        if !field_derive_eligible(ft) {
-            return Err(GapReason::new(
-                Category::DeriveAttr,
-                format!(
-                    "struct `{ty_name}` derive(Default): field {i} has type `{ft}`, a primitive \
-                     repr with no landed `Init` instance anywhere in the corpus yet — the whole \
-                     derive is left an honest gap rather than a partial/fabricated init (G2)"
-                ),
-            ));
-        }
-    }
-    let calls = vec!["init()".to_string(); field_types.len()];
-    Ok(format!(
-        "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name}({args});\n}};",
-        args = calls.join(", ")
-    ))
-}
-
 /// DN-128 (M-1086) — classify + lower a struct's `#[derive(...)]` list against the standard-derive
 /// set this leaf builds (`Debug`->`Show`, `Default`->`Init`, `Clone`/`Copy`->satisfied no-op).
 /// Returns the composed `.myc` impl-block text for every derive that lowered successfully (appended
 /// after the struct's own `type` declaration in [`emit_struct`]) plus every sub-gap this pass
 /// records: an unrecognized derive name (still `Category::DeriveAttr`, same bucket the pre-existing
-/// bulk-drop uses), a recognized-but-uncomposable one (a field-eligibility refusal from
-/// [`derive_show_impl`]/[`derive_init_impl`]), or a `Clone`/`Copy` satisfied-no-op note
-/// (`Category::DeriveSatisfied` — never `DeriveAttr`, it is not a gap). A **generic** struct
-/// (`type_params` non-empty) refuses every impl-producing derive (`Debug`/`Default`) — a derived
-/// impl for a generic type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's
-/// scope — but `Clone`/`Copy` still resolve as a no-op regardless of genericity (value semantics
-/// holds for any type, generic or not). Never partially silent: every derive name that does not end
-/// up in the composed-impls list has a corresponding sub-gap explaining why (G2).
+/// bulk-drop uses), a recognized-but-uncomposable one (a field-eligibility refusal from a derive
+/// row's own rule), or a `Clone`/`Copy` satisfied-no-op note (`Category::DeriveSatisfied` — never
+/// `DeriveAttr`, it is not a gap). Never partially silent: every derive name that does not end up
+/// in the composed-impls list has a corresponding sub-gap explaining why (G2).
+///
+/// **DN-136/P1-a (Alt B).** [`derives::lookup`] is consulted for each derive-path name — a
+/// static, per-axis handler table (generalizing the landed `prim_map::TABLE` pattern) covering
+/// the DN-128 standard-derive set (`Debug`/`Default`/`Clone`/`Copy`). **This driver still owns
+/// the two-level guarantee's set-orchestration half** (DN-136 §3 item 2 / §7 — a build-blocking
+/// invariant this function must never lose): the attribute/derive-list walk, routing each row's
+/// [`derives::DeriveOutcome`] to `impls`/`sub_gaps`, and the `unrecognized` bucket + its final
+/// summary gap for any derive name no row claims (`Eq`/`Ord`/`Hash`/`PartialEq`/`PartialOrd`,
+/// unchanged — still falls through, byte-identical to the pre-refactor catch-all `other =>` arm).
+/// A row owns only its OWN per-impl field-atomicity (the other guarantee-level, unchanged inside
+/// each row's own rule) — a row can never move this orchestration into itself.
 fn lower_struct_derives(
     ty_name: &str,
     attrs: &[Attribute],
@@ -4000,42 +3711,21 @@ fn lower_struct_derives(
         };
         for path in list {
             let name = tokens_to_string(&path);
-            match name.as_str() {
-                "Clone" | "Copy" => {
-                    sub_gaps.push(GapReason::new(
-                        Category::DeriveSatisfied,
-                        format!(
-                            "struct `{ty_name}` derive({name}) is a satisfied no-op under \
-                             Mycelium's value semantics (ADR-003 — every value already copies \
-                             structurally; DN-128 §6.1) — not emitted as an impl, not a gap"
-                        ),
-                    ));
+            match derives::lookup(&name) {
+                Some(handler) => {
+                    let ctx = derives::DeriveCtx {
+                        ty_name,
+                        field_types,
+                        is_generic,
+                        name: &name,
+                    };
+                    match (handler.emit)(&ctx) {
+                        derives::DeriveOutcome::Composed(myc) => impls.push(myc),
+                        derives::DeriveOutcome::Satisfied(note) => sub_gaps.push(note),
+                        derives::DeriveOutcome::Gap(g) => sub_gaps.push(g),
+                    }
                 }
-                "Debug" if is_generic => sub_gaps.push(GapReason::new(
-                    Category::DeriveAttr,
-                    format!(
-                        "struct `{ty_name}` derive(Debug): generic struct — a derived impl for a \
-                         generic type needs DN-130's generic-trait-instance-impl mechanism, out of \
-                         this leaf's scope (DN-128/M-1086)"
-                    ),
-                )),
-                "Default" if is_generic => sub_gaps.push(GapReason::new(
-                    Category::DeriveAttr,
-                    format!(
-                        "struct `{ty_name}` derive(Default): generic struct — a derived impl for a \
-                         generic type needs DN-130's generic-trait-instance-impl mechanism, out of \
-                         this leaf's scope (DN-128/M-1086)"
-                    ),
-                )),
-                "Debug" => match derive_show_impl(ty_name, field_types) {
-                    Ok(myc) => impls.push(myc),
-                    Err(g) => sub_gaps.push(g),
-                },
-                "Default" => match derive_init_impl(ty_name, field_types) {
-                    Ok(myc) => impls.push(myc),
-                    Err(g) => sub_gaps.push(g),
-                },
-                other => unrecognized.push(other.to_string()),
+                None => unrecognized.push(name),
             }
         }
     }

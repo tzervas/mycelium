@@ -2963,6 +2963,41 @@ fn derive_composes_end_to_end_over_a_same_file_nested_derived_field() {
     );
 }
 
+/// **DN-136 §8 invariant witness #3 (mixed derive, per-derive-independence across the set).** A
+/// derive list mixing a COMPOSABLE rule (`Debug`) with an UNRECOGNIZED one (`Serialize`) must
+/// compose the eligible derive AND sub-gap the rest — the item still emits BOTH the struct's own
+/// `type` declaration and the composed `impl Show`, never gapping the whole item just because a
+/// sibling derive in the same list didn't compose. Pins the `lower_struct_derives`
+/// (`crate::emit`, the DN-136/P1-a driver) orchestration this axis's migration must not move into
+/// a row (DN-136 §3 item 2 / §7 / §8 point 2(e)).
+#[test]
+fn derive_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits() {
+    let rust = "#[derive(Debug, Serialize)]\nstruct OsEntropy;";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "the item must still emit despite a sibling derive being unrecognized, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type OsEntropy = OsEntropy;"),
+        "the struct's own type decl must still emit, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Show[OsEntropy] for OsEntropy"),
+        "the composable Debug->Show impl must still compose despite the sibling Serialize \
+         derive being unrecognized, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Serialize")),
+        "the unrecognized Serialize derive must still be recorded as a sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
 /// **The verify-first proof** (mitigation #14) for DN-128 (M-1086): every derive shape the fixture
 /// corpus above proves the *text* of is run through the REAL `myc-check` oracle here — the fieldless
 /// `Debug`/`Default` cases, and the same-file nested-composition case
