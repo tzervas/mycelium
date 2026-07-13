@@ -3053,7 +3053,7 @@ fn derive_clone_copy_never_emits_an_impl() {
 
 /// The DN-128 §2 "structural fold over fields" shape composes end-to-end for a struct whose
 /// fields are themselves ANOTHER derived (fieldless) struct in the SAME file — the one
-/// field-eligible case [`field_derive_eligible`]'s docs describe as mechanically sound and not
+/// field-eligible case [`crate::emit::derives::field_derive_kind`]'s docs describe as mechanically sound and not
 /// merely `Declared`-hopeful. Both `Debug` and `Default` are exercised; the live-oracle half
 /// (that this text is real `myc check`-clean, not just textually plausible) is
 /// `derive_forms_check_clean_against_real_toolchain` below.
@@ -3204,6 +3204,24 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(PartialEq, PartialOrd, Hash)]\nstruct Outer(Inner, Inner);",
             "Outer",
         ),
+        // DN-138 (increment 1, the DeriveAttr-class scalar/Bytes/Bool unblock) -- the exact corpus
+        // shape (`u64`/`String`/`bool` fields, the real `CheckError`/`CtorInfo`/`EvaluatorOpts`
+        // non-`Vec` field mix) now composes all four field-gating rows over ONE struct with zero
+        // DeriveAttr gaps.
+        (
+            "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Rec(u64, String, bool);",
+            "Rec",
+        ),
+        // DN-138 -- `PartialEq` is prim-routed (the `eq` prim is width-generic, RFC-0032 D1), so it
+        // ALSO composes over a narrow `Binary{8}` scalar the trait-dispatched rows still gap
+        // (only `Binary{64}` is seeded, increment 2 for narrower widths).
+        ("#[derive(PartialEq)]\nstruct Narrow(u8);", "Narrow"),
+        // DN-138 -- `Hash` composes over `Bytes`/`Bool` fields (no scalar field present); the
+        // scalar route stays deferred (no `Binary{N} -> Bytes` raw-byte prim yet, DN-138 §6).
+        (
+            "#[derive(Hash)]\nstruct HashableRec(String, bool);",
+            "HashableRec",
+        ),
     ];
     for (i, (rust, item)) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
@@ -3271,9 +3289,17 @@ fn derive_eq_fieldless_composes() {
 /// exactly, for the new axis (G2).
 #[test]
 fn derive_eq_gap_never_leaks_partial_fn_text() {
-    let (myc, report) =
-        transpile_source("#[derive(PartialEq)]\nstruct Pair(u8, bool);", "f.rs", "f")
-            .expect("parses/transpiles");
+    // DN-138 note: `u8`/`bool` fields alone are NO LONGER a gapping fixture for `PartialEq` — the
+    // seeded `Show`/`Init`/`Ord3` unblock (DN-138) also routes `PartialEq` to the width-generic
+    // `eq` prim (any `Binary{N}`) and an inline `Bool` match, so BOTH now compose (see
+    // `derive_eq_composes_over_scalar_bytes_bool_fields_dn138` below). A `Vec<T>` field is still a
+    // genuine, disclosed gap (`Deferred` — increment 2, WU-4), so it is the fixture here instead.
+    let (myc, report) = transpile_source(
+        "#[derive(PartialEq)]\nstruct Pair(Vec<u8>, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
     assert!(
         !myc.contains("fn eq_"),
         "a gapped derive(PartialEq) must never emit a partial `fn eq_*`, got:\n{myc}"
@@ -3481,6 +3507,142 @@ fn derive_hash_gap_never_leaks_partial_fn_text() {
             .iter()
             .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Hash")),
         "expected a DeriveAttr gap citing Hash, got {:?}",
+        report.gaps
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-138 (increment 1) — the DeriveAttr-class scalar/`Bytes`/`Bool` field unblock. The seeded
+// `Show`/`Init`/`Ord3` primitive instances (`crates/mycelium-l1/src/checkty.rs`'s
+// `PRELUDE_INSTANCE_SEEDS`) plus the `field_derive_kind` classifier (this file's `mod.rs`) let the
+// five field-gating rows compose over real scalar/`Bytes`/`Bool` fields for the first time — a
+// struct composed ONLY of such fields is now FULLY unblocked, not just structurally emitted with
+// every derive gapped. `Vec[T]` fields (in every named corpus struct) still gap — increment 2.
+// ---------------------------------------------------------------------------------------------
+
+/// **The DeriveAttr-class unblock, end to end.** A struct with a `u64`/`String`/`bool` field set —
+/// the exact non-`Vec` field mix the real corpus structs (`CheckError`/`CtorInfo`/`EvaluatorOpts`)
+/// carry — composes `Debug`/`Default`/`PartialEq`/`PartialOrd` with ZERO `DeriveAttr` gaps.
+/// Before DN-138, `field_derive_eligible`'s boolean gate refused EVERY field here (`Binary{64}`,
+/// `Bytes`, `Bool` were all in the disallowed/bracketed set), so all four derives gapped entirely.
+#[test]
+fn derive_composes_over_scalar_bytes_bool_fields_dn138() {
+    let (myc, report) = transpile_source(
+        "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Rec(u64, String, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "Rec"),
+        "expected `Rec` in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a scalar/Bytes/Bool-only struct must compose ALL FOUR derives with zero DeriveAttr gaps \
+         (DN-138 increment 1), got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("impl Show[Rec] for Rec"),
+        "expected a composed Show impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Init[Rec] for Rec"),
+        "expected a composed Init impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn eq_Rec("),
+        "expected a composed eq_Rec fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Ord3[Rec] for Rec"),
+        "expected a composed Ord3 impl, got:\n{myc}"
+    );
+}
+
+/// **DN-138 §3's heterogeneity finding, directly exercised:** `PartialEq` is PRIM-ROUTED (the bare
+/// `eq` prim is width-generic, RFC-0032 D1), so it ALSO composes over a NARROW `Binary{8}` scalar —
+/// unlike `Debug` (trait-dispatched through the ONE seeded `Binary{64}` instance), which still
+/// gaps the identical field (a narrower width is increment 2, DN-138 §6).
+#[test]
+fn derive_eq_composes_over_a_narrow_scalar_unlike_the_trait_dispatched_rows() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct Narrow(u8);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "PartialEq must compose over a narrow Binary{{8}} scalar (no width restriction for the \
+         prim-routed eq call), got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("eq(p0, q0)"),
+        "expected the bare eq prim call, got:\n{myc}"
+    );
+
+    // The SAME field, but `Debug` (trait-dispatched, width-restricted to the seeded Binary{64})
+    // still gaps — the disclosed increment-2 residual, not a regression.
+    let (_, debug_report) = transpile_source("#[derive(Debug)]\nstruct Narrow(u8);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        debug_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "Debug must still gap a narrow Binary{{8}} scalar (only Binary{{64}} is seeded — increment \
+         2 for narrower widths), got {:?}",
+        debug_report.gaps
+    );
+}
+
+/// `Hash` composes over `Bytes`/`Bool` fields (no scalar field present) — the ONE row whose scalar
+/// route stays deferred (no `Binary{N} -> Bytes` raw-byte prim exists yet, DN-138 §6), so a
+/// scalar-free struct is what demonstrates ITS unblock cleanly.
+#[test]
+fn derive_hash_composes_over_bytes_and_bool_fields() {
+    let (myc, report) = transpile_source(
+        "#[derive(Hash)]\nstruct HashableRec(String, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a Bytes/Bool-only struct must compose Hash with zero DeriveAttr gaps, got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn hash_HashableRec("),
+        "expected a composed hash_HashableRec fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("hash_blake3(p0)"),
+        "expected the direct hash_blake3 route for the Bytes field, got:\n{myc}"
+    );
+}
+
+/// `Hash` still gaps over a scalar field — unchanged by this leaf (no `Binary{N} -> Bytes` raw-byte
+/// prim exists yet; increment 2, DN-138 §6), an honest, disclosed residual not a regression.
+#[test]
+fn derive_hash_still_gaps_over_a_scalar_field() {
+    let (_, report) = transpile_source("#[derive(Hash)]\nstruct Rec(u64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Hash")),
+        "Hash must still gap a scalar field (no raw-byte prim yet), got {:?}",
         report.gaps
     );
 }

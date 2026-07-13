@@ -25,7 +25,7 @@
 //! Guarantee: `Empirical` (live-oracle-verified, `src/tests/emit.rs`); the field-eligibility
 //! heuristic stays `Declared` (same VR-5 boundary as every other row in this axis).
 
-use super::{field_derive_eligible, DeriveCtx, DeriveHandler, DeriveOutcome};
+use super::{field_derive_kind, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind};
 use crate::gap::{Category, GapReason};
 
 fn recognizes(name: &str) -> bool {
@@ -34,9 +34,36 @@ fn recognizes(name: &str) -> bool {
 
 /// The deterministic top-level fn name this row's compose emits/expects for a given type name —
 /// mirrors `eq.rs`'s identical `eq_fn_name` role (no cross-call state needed; both derive from
-/// `ty_name`/`field_type` alone).
+/// `ty_name`/`field_type` alone). Used ONLY for [`FieldDeriveKind::UserNamed`] fields.
 fn hash_fn_name(ty_name: &str) -> String {
     format!("hash_{ty_name}")
+}
+
+/// **DN-138 §4.5 — the PRIM-ROUTED half of the heterogeneity finding, `Hash`'s analogue of
+/// `eq.rs`'s `field_eq_expr`.** Returns the field's `Bytes`-typed hash-input expression, or `None`
+/// for an ineligible kind.
+///
+/// - `UserNamed` -> `hash_<Type>(p)` (unchanged — the nested-derive compositional call).
+/// - `BytesLike` -> `hash_blake3(p)` directly (already `Bytes`-typed, the M-912 prim).
+/// - `BoolLike` -> `hash_blake3(match p { True => "True", False => "False" })` — a
+///   SELF-CONTAINED inline byte encoding (never a named fn, avoiding the duplicate-fn hazard
+///   `eq.rs`'s module doc documents; never a dependency on the `Show` trait being ambiently
+///   available in THIS nodule, which — unlike `Show`'s own seeded PRIMITIVE instance — is only
+///   conditionally seeded when SOME impl of `Show` is itself declared here, which a `Hash`-only
+///   derive does not guarantee; a self-contained inline match sidesteps that cross-trait
+///   dependency entirely, a disclosed, deliberate leaf-scoped design choice, VR-5).
+/// - `ScalarBinary` -> **deferred** (`None`): no `Binary{N} -> Bytes` raw-byte prim exists yet
+///   (DN-138 §2/§6) — hashing a scalar needs one, increment 2.
+/// - `Float`/`Deferred` -> `None` (ineligible, as before).
+fn field_hash_expr(p: &str, ft: &str) -> Option<String> {
+    match field_derive_kind(ft) {
+        FieldDeriveKind::UserNamed => Some(format!("{}({p})", hash_fn_name(ft))),
+        FieldDeriveKind::BytesLike => Some(format!("hash_blake3({p})")),
+        FieldDeriveKind::BoolLike => Some(format!(
+            "hash_blake3(match {p} {{ True => \"True\", False => \"False\" }})"
+        )),
+        FieldDeriveKind::ScalarBinary | FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
+    }
 }
 
 /// Left-fold `parts` into a single `bytes_concat(...)` chain — a local copy of
@@ -55,10 +82,13 @@ fn bytes_concat_chain(parts: &[String]) -> String {
 
 /// **Fieldless (unit) struct:** `fn hash_T(a: T) => Bytes = hash_blake3("T");` — the type-name
 /// string literal alone is the hash input, always succeeds (live-oracle-proven,
-/// `src/tests/emit.rs`). **Struct with fields:** `hash_blake3(bytes_concat("T",
-/// bytes_concat(hash_<F0>(p0), hash_<F1>(p1), ...)))`, gated per field via
-/// [`field_derive_eligible`] (same as [`super::show`]/[`super::init`]/[`super::eq`]) — refuses the
-/// WHOLE derive (never a partial/fabricated hash, G2) the moment any field is ineligible.
+/// `src/tests/emit.rs`). **Struct with fields:** `hash_blake3(bytes_concat("T", ...))` folding
+/// each field's hash-input expression (routed per [`field_hash_expr`] — DN-138 §4.5), gated per
+/// field — refuses the WHOLE derive (never a partial/fabricated hash, G2) the moment any field is
+/// ineligible. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike` fields now compose (routed to
+/// `hash_<Type>`/`hash_blake3` directly/an inline `Bool`-to-`Bytes` encoding — never a seeded
+/// instance); `ScalarBinary` (no `Binary{N} -> Bytes` prim yet) and `Deferred` still gap
+/// (increment 2, DN-138 §6).
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let fname = hash_fn_name(ty_name);
     if field_types.is_empty() {
@@ -67,14 +97,23 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
         ));
     }
     for (i, ft) in field_types.iter().enumerate() {
-        if !field_derive_eligible(ft) {
+        if field_hash_expr("p", ft).is_none() {
+            let why = match field_derive_kind(ft) {
+                FieldDeriveKind::ScalarBinary => {
+                    "a scalar field, but no `Binary{N} -> Bytes` raw-byte prim exists yet to hash \
+                     it (increment 2, DN-138 §6)"
+                        .to_owned()
+                }
+                _ => "a primitive repr (or `Seq`/`Vec[T]`/tuple/other bracketed shape) with no \
+                      derived (or hand-written) structural-hash route yet (increment 2, DN-138 \
+                      §6 for the bracketed shapes)"
+                    .to_owned(),
+            };
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(
-                    "struct `{ty_name}` derive(Hash): field {i} has type `{ft}`, a primitive \
-                     repr with no derived (or hand-written) structural-hash function in this \
-                     file — the whole derive is left an honest gap rather than a \
-                     partial/fabricated hash (G2)"
+                    "struct `{ty_name}` derive(Hash): field {i} has type `{ft}`, {why} — the \
+                     whole derive is left an honest gap rather than a partial/fabricated hash (G2)"
                 ),
             ));
         }
@@ -82,7 +121,7 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let vars: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
     let mut parts = vec![format!("\"{ty_name}\"")];
     for (i, ft) in field_types.iter().enumerate() {
-        parts.push(format!("{}({})", hash_fn_name(ft), vars[i]));
+        parts.push(field_hash_expr(&vars[i], ft).expect("eligibility already checked above"));
     }
     let inner = bytes_concat_chain(&parts);
     Ok(format!(

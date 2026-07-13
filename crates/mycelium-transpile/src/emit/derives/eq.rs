@@ -45,8 +45,8 @@
 //! call, without needing trait-based dispatch at all.
 //!
 //! **The ADR-040 Float/NaN refusal** fires FIRST, ahead of the general
-//! [`field_derive_eligible`] gate (which also excludes `Float`, so this is currently redundant in
-//! practice but kept as its own explicit, clearly-worded check per the DN-136 Phase-2 worklist's
+//! [`field_derive_kind`] classification (which also excludes `Float`, so this is currently
+//! redundant in practice but kept as its own explicit, clearly-worded check per the DN-136 Phase-2 worklist's
 //! L1 spec — "not just ineligible-repr fields" — so the emitted [`GapReason`] cites the REAL
 //! (NaN/ADR-040) reason for a float field, not the generic no-ambient-instance one).
 //!
@@ -56,7 +56,7 @@
 //! [`super::show`]/[`super::init`] already carry — a nested field's OWN derive is not verified to
 //! have actually succeeded, only that its type NAME has the right shape).
 
-use super::{field_derive_eligible, DeriveCtx, DeriveHandler, DeriveOutcome};
+use super::{field_derive_kind, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind};
 use crate::gap::{Category, GapReason};
 
 fn recognizes(name: &str) -> bool {
@@ -65,9 +65,42 @@ fn recognizes(name: &str) -> bool {
 
 /// The deterministic top-level fn name this row's compose emits/expects for a given type name —
 /// shared between a struct's OWN emission and a nested eligible field's compositional call (no
-/// cross-call state needed; both derive from `ty_name`/`field_type` alone).
+/// cross-call state needed; both derive from `ty_name`/`field_type` alone). Used ONLY for
+/// [`FieldDeriveKind::UserNamed`] fields — a primitive field routes to a PRIM instead (DN-138 §3's
+/// heterogeneity finding: `eq_Binary{8}` is not even a legal fn name), see [`field_eq_expr`].
 fn eq_fn_name(ty_name: &str) -> String {
     format!("eq_{ty_name}")
+}
+
+/// **DN-138 §4.5 — the PRIM-ROUTED half of the heterogeneity finding.** `PartialEq` never
+/// dispatches a primitive field through a trait instance (there is no landed `Eq` prelude trait,
+/// and `eq_Binary{8}` is not a legal fn name — DN-138 §3); it composes a direct call to the
+/// already-landed prim for that field's kind. Returns the field's `Binary{1}`-typed comparison
+/// expression, or `None` for an ineligible kind (`Float` is pre-checked by the caller; `Deferred`
+/// returns `None` here).
+///
+/// - `UserNamed` -> `eq_<Type>(a, b)` (unchanged — the nested-derive compositional call).
+/// - `ScalarBinary` (ANY width, not just `Binary{64}`) -> the bare `eq` prim directly: `eq`/`lt`
+///   are width-generic over any concrete `Binary{N}` (RFC-0032 D1), so — unlike `Show`/`Init`/
+///   `Ord3`'s seeded-instance dispatch — `PartialEq` has NO width restriction at all.
+/// - `BytesLike` -> `bytes_eq(a, b)` (the M-912 prim, already `Binary{1}`-typed).
+/// - `BoolLike` -> an INLINE `match` (not a call): there is no width-generic prim over `Bool`
+///   (only `bool_eq` in `lib/std/cmp.myc`, which is NOT ambiently available and returns `Bool`,
+///   not `Binary{1}` — the wrong type for this row's `and`-fold), and generating a named
+///   `fn eq_Bool` here risks the exact duplicate-fn hazard this row's own module doc documents the
+///   moment a SECOND struct in the same file also derives `PartialEq` over a `Bool` field. An
+///   inlined match is self-contained, needs no shared name, and is exactly `Binary{1}`-typed.
+fn field_eq_expr(a: &str, b: &str, ft: &str) -> Option<String> {
+    match field_derive_kind(ft) {
+        FieldDeriveKind::UserNamed => Some(format!("{}({a}, {b})", eq_fn_name(ft))),
+        FieldDeriveKind::ScalarBinary => Some(format!("eq({a}, {b})")),
+        FieldDeriveKind::BytesLike => Some(format!("bytes_eq({a}, {b})")),
+        FieldDeriveKind::BoolLike => Some(format!(
+            "match {a} {{ True => match {b} {{ True => 0b1, False => 0b0 }}, False => match {b} \
+             {{ True => 0b0, False => 0b1 }} }}"
+        )),
+        FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
+    }
 }
 
 /// Left-fold `parts` into a single `and(...)` chain — mirrors [`super::show`]'s
@@ -85,9 +118,12 @@ fn and_chain(parts: &[String]) -> String {
 
 /// **Fieldless (unit) struct:** `fn eq_T(a: T, b: T) => Binary{1} = 0b1;` — always equal, always
 /// succeeds (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:** an `and`-fold of
-/// `eq_<FieldType>(p_i, q_i)` per field, gated per field via the ADR-040 float check (first) then
-/// [`field_derive_eligible`] (same as [`super::show`]/[`super::init`]) — refuses the WHOLE derive
-/// (never a partial/fabricated equality, G2) the moment any field is ineligible.
+/// each field's comparison expression (routed per [`field_eq_expr`] — DN-138 §4.5), gated per
+/// field via the ADR-040 float check (first) then [`field_derive_kind`] — refuses the WHOLE
+/// derive (never a partial/fabricated equality, G2) the moment any field is ineligible. **DN-138
+/// unblock:** `UserNamed`/`ScalarBinary` (any width)/`BytesLike`/`BoolLike` fields now compose
+/// (routed to `eq_<Type>`/`eq`/`bytes_eq`/an inline match respectively — never a seeded instance,
+/// per DN-138 §3's heterogeneity finding); only `Deferred` (`Vec`/tuple, increment 2) still gaps.
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let fname = eq_fn_name(ty_name);
     if field_types.is_empty() {
@@ -109,14 +145,15 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
                 ),
             ));
         }
-        if !field_derive_eligible(ft) {
+        if field_eq_expr("p", "q", ft).is_none() {
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(
                     "struct `{ty_name}` derive(PartialEq): field {i} has type `{ft}`, a \
-                     primitive repr with no derived (or hand-written) structural-equality \
-                     function in this file — the whole derive is left an honest gap rather than \
-                     a partial/fabricated equality (G2)"
+                     `Seq`/`Vec[T]`/tuple or other bracketed shape with no derived (or \
+                     hand-written) structural-equality route yet (increment 2, DN-138 §6 — WU-4) \
+                     — the whole derive is left an honest gap rather than a partial/fabricated \
+                     equality (G2)"
                 ),
             ));
         }
@@ -126,7 +163,9 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let parts: Vec<String> = field_types
         .iter()
         .enumerate()
-        .map(|(i, ft)| format!("{}({}, {})", eq_fn_name(ft), vars_a[i], vars_b[i]))
+        .map(|(i, ft)| {
+            field_eq_expr(&vars_a[i], &vars_b[i], ft).expect("eligibility already checked above")
+        })
         .collect();
     let body = and_chain(&parts);
     Ok(format!(
