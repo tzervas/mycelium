@@ -11,7 +11,8 @@ use crate::gap::{Gap, GapReport};
 use crate::remap::{build_remap_manifest, RemapManifest};
 use crate::symtab::{self, SymbolTable};
 use crate::transpile::{
-    derive_module_segments, derive_nodule_path, transpile_file, transpile_file_with_ctx,
+    derive_crate_ident, derive_module_segments, derive_nodule_path, transpile_file,
+    transpile_file_with_ctx,
 };
 use serde::Serialize;
 use std::collections::{BTreeMap, HashSet};
@@ -147,7 +148,8 @@ pub struct FileResult {
 /// distinct from a per-item gap) is **not** silently skipped — its path/error is returned
 /// separately so the caller can report it (never-silent, G2).
 ///
-/// **Gap-close-2 (DN-34 §8.19/§8.20) — the batch-scoped cross-nodule `Import` resolution.** This is
+/// **Gap-close-2 (DN-34 §8.19/§8.20) — the batch-scoped cross-nodule `Import` resolution, extended
+/// by M-1084 to `self::`/`super::` + cross-phylum resolution (`symtab.rs` module docs).** This is
 /// a **three-pass** driver, all internal (the public signature/contract is unchanged from before
 /// this lever landed):
 /// 1. **Baseline pass** — transpile every file exactly as [`transpile_file`] always has (no
@@ -155,18 +157,26 @@ pub struct FileResult {
 ///    item-name set — the only names a sibling's `use` may ever resolve to (a name that merely
 ///    exists in the Rust source but itself gapped is never a valid target; VR-5/G2).
 /// 2. **Symbol-table build + a light `use`-only scan** — [`build_symbol_table`] indexes every
-///    file's emitted names under its derived Rust module path; [`scan_pub_needed`] then walks every
-///    file's `use` items (a cheap re-parse, no full re-dispatch) to find which sibling names at
-///    least one OTHER file in the batch actually resolves against — the `pub`-propagation input the
-///    final pass needs (DN-113/M-1060's `resolve_imports` only accepts a `pub` cross-nodule name;
-///    emitting a resolved `use` against a non-`pub` sibling item would be the exact "plausible but
-///    wrong" emission VR-5/G2 forbid).
+///    file's emitted names under its derived (same-crate-bare, or crate-qualified when a real crate
+///    identity is derivable — M-1084) key; [`scan_pub_needed`] then walks every file's `use` items
+///    (a cheap re-parse, no full re-dispatch) to find which sibling names at least one OTHER file in
+///    the batch actually resolves against — the `pub`-propagation input the final pass needs
+///    (DN-113/M-1060's `resolve_imports` only accepts a `pub` cross-nodule name; emitting a resolved
+///    `use` against a non-`pub` sibling item would be the exact "plausible but wrong" emission
+///    VR-5/G2 forbid). Accumulated by the target sibling's own **nodule path** (stable and
+///    lookup-perspective-independent — the same physical sibling may be reached via more than one
+///    lookup key, e.g. both a same-crate and a cross-phylum reference in different consumer files).
 /// 3. **Final pass** — re-transpile every file via [`transpile_file_with_ctx`] with the symbol
-///    table and this file's own pub-needed set installed, so `use crate::<mod>::Item` resolves
-///    against a genuine in-batch sibling and the referenced item is emitted `pub`.
+///    table and this file's own pub-needed set (looked up by ITS OWN derived nodule path) installed,
+///    so `use crate::<mod>::Item`/`self::`/`super::`/a cross-phylum `use <phylum>::<mod>::Item`
+///    resolves against a genuine in-batch sibling and the referenced item is emitted `pub`.
 ///
 /// A single-file batch (or one whose files carry no in-batch cross-referencing `use`) degenerates
-/// to byte-identical output vs. the pre-lever driver (no sibling ⇒ nothing resolves).
+/// to byte-identical output vs. the pre-lever driver (no sibling ⇒ nothing resolves). A multi-crate
+/// batch (M-1084: e.g. a `--files` invocation spanning more than one crate's `src/`) is the vehicle
+/// for cross-phylum resolution — every file's own crate identity is derived from ITS OWN real repo
+/// path (`transpile::derive_crate_ident`), so files from different crates never collide on a bare
+/// (unqualified) key.
 pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, String)>) {
     let mut pass1: Vec<(PathBuf, GapReport)> = Vec::with_capacity(files.len());
     let mut failures = Vec::new();
@@ -185,8 +195,10 @@ pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, Str
 
     let mut results = Vec::with_capacity(pass1.len());
     for (path, _baseline_report) in &pass1 {
-        let module_key = SymbolTable::module_key(&derive_module_segments(path));
-        let needed = pub_needed.get(&module_key).cloned().unwrap_or_default();
+        // Keyed by this file's own derived nodule path (stable, lookup-perspective-independent —
+        // see the driver doc above), NOT the Rust-side module key a consumer used to reach it.
+        let nodule_path = derive_nodule_path(path);
+        let needed = pub_needed.get(&nodule_path).cloned().unwrap_or_default();
         match transpile_file_with_ctx(path, &symtab, &needed) {
             Ok((myc, report)) => results.push(FileResult {
                 path: path.clone(),
@@ -202,25 +214,39 @@ pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, Str
 }
 
 /// Build the batch-wide cross-nodule [`SymbolTable`] from every file's baseline-pass
-/// [`GapReport`] (see [`transpile_batch`] step 2).
+/// [`GapReport`] (see [`transpile_batch`] step 2). Each file is inserted under exactly ONE key: its
+/// own crate-qualified key (`SymbolTable::qualify_key`) when a real crate identity is derivable from
+/// its path (`transpile::derive_crate_ident` — every genuine repo path under a crate's `src/`), else
+/// the bare intra-crate module key unchanged from pre-M-1084 behavior (a `src`-ancestor-less path,
+/// e.g. this crate's own temp-dir test fixtures — never spuriously qualified). Because every file in
+/// a real single-crate batch shares the identical crate identity, this is byte-identical to the
+/// pre-M-1084 table for that (today's only real) case; a multi-crate batch instead gets one
+/// non-colliding key per file (M-1084's cross-phylum extension — see `symtab.rs` module docs).
 fn build_symbol_table(pass1: &[(PathBuf, GapReport)]) -> SymbolTable {
     let mut table = SymbolTable::new();
     for (path, report) in pass1 {
         let module_key = SymbolTable::module_key(&derive_module_segments(path));
         let nodule_path = derive_nodule_path(path);
         let emitted: HashSet<String> = report.emitted_items.iter().cloned().collect();
-        table.insert(module_key, nodule_path, emitted);
+        let key = match derive_crate_ident(path) {
+            Some(crate_ident) => SymbolTable::qualify_key(&crate_ident, &module_key),
+            None => module_key,
+        };
+        table.insert(key, nodule_path, emitted);
     }
     table
 }
 
 /// Light `use`-only scan (see [`transpile_batch`] step 2): for every file in the batch, walk its
-/// `Item::Use`s, resolve each candidate leaf against `symtab`, and accumulate — keyed by the
-/// **target** sibling's own module key — every item name at least one file in the batch actually
-/// resolves a `use` against. A file that fails to re-read/re-parse here (should not happen; the
-/// baseline pass already succeeded) is simply skipped for this scan — never a hard failure, since a
-/// missed pub-propagation opportunity degrades to the pre-lever "stays gapped" behavior, not to an
-/// incorrect emission (VR-5: conservative on failure, never a guess).
+/// `Item::Use`s, resolve each candidate leaf against `symtab` via
+/// [`SymbolTable::candidate_lookup_keys`] (the SAME precedence-ordered policy
+/// `transpile::dispatch_use` consults — DRY, one resolution policy not two divergent copies), and
+/// accumulate — keyed by the **target** sibling's own **nodule path** (stable regardless of which
+/// key a particular consumer resolved through) — every item name at least one file in the batch
+/// actually resolves a `use` against. A file that fails to re-read/re-parse here (should not happen;
+/// the baseline pass already succeeded) is simply skipped for this scan — never a hard failure,
+/// since a missed pub-propagation opportunity degrades to the pre-lever "stays gapped" behavior, not
+/// to an incorrect emission (VR-5: conservative on failure, never a guess).
 fn scan_pub_needed(
     pass1: &[(PathBuf, GapReport)],
     symtab: &SymbolTable,
@@ -233,20 +259,29 @@ fn scan_pub_needed(
         let Ok(parsed) = syn::parse_file(&source) else {
             continue;
         };
+        let current_module = derive_module_segments(path);
+        let current_crate = derive_crate_ident(path);
         for item in &parsed.items {
             let syn::Item::Use(u) = item else {
                 continue;
             };
-            let Some(candidates) = symtab::use_candidates(&u.tree) else {
+            let Some(candidates) = symtab::use_candidates(&u.tree, &current_module) else {
                 continue;
             };
             for c in &candidates {
                 let symtab::CandidateKind::Name(name) = &c.kind else {
                     continue;
                 };
-                let module_key = SymbolTable::module_key(&c.module_segs);
-                if symtab.resolve(&module_key, name).is_some() {
-                    needed.entry(module_key).or_default().insert(name.clone());
+                for key in SymbolTable::candidate_lookup_keys(current_crate.as_deref(), c) {
+                    if let Some(nodule_path) = symtab.resolve(&key, name) {
+                        needed
+                            .entry(nodule_path.to_string())
+                            .or_default()
+                            .insert(name.clone());
+                        // Matches `dispatch_use`'s own precedence: the first key that hits wins,
+                        // never both (a leaf resolves against exactly one sibling).
+                        break;
+                    }
                 }
             }
         }
