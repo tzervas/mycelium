@@ -180,143 +180,90 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
             .last()
             .ok_or_else(|| GapReason::new(Category::Other, "empty type path".to_string()))?;
         let name = seg.ident.to_string();
-        match name.as_str() {
-            "Self" => self.self_ty.map(str::to_string).ok_or_else(|| {
-                GapReason::new(
-                    Category::Other,
-                    "`Self` type with no enclosing impl/trait context",
-                )
-            }),
-            "bool" => Ok("Bool".to_string()),
-            "u8" => Ok("Binary{8}".to_string()),
-            "u16" => Ok("Binary{16}".to_string()),
-            "u32" => Ok("Binary{32}".to_string()),
-            "u64" => Ok("Binary{64}".to_string()),
-            "u128" => Ok("Binary{128}".to_string()),
-            // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028 — see this fn's doc for the full
-            // verify-first correction): `Binary{N}` is sign-free (ADR-028 Accepted); a signed
-            // integer maps to the SAME width `Binary{N}` as its unsigned counterpart. Signedness
-            // lives entirely in which op the transpiler emits (`crate::emit`'s signed-operand
-            // gate), never in this mapped type text.
-            "i8" => Ok("Binary{8}".to_string()),
-            "i16" => Ok("Binary{16}".to_string()),
-            "i32" => Ok("Binary{32}".to_string()),
-            "i64" => Ok("Binary{64}".to_string()),
-            "i128" => Ok("Binary{128}".to_string()),
-            // P4/P5 (DN-99 §8 ENB-6 row #22 — see this fn's doc): a canonicalized, FLAGged
-            // platform width — `Binary{64}` — for both `usize` and `isize` (`isize`'s signedness
-            // is tracked separately by `crate::emit`, exactly like the bare `i*` types above).
-            "usize" | "isize" => Ok("Binary{64}".to_string()),
-            // trx2 Lane C Deliverable 2 (verify-first correction, mitigation #14): the prior
-            // "no confirmed base_type arm" reason for `f32`/`f64` was STALE — the grammar DOES
-            // have a nullary `Float` base_type (`docs/spec/grammar/mycelium.ebnf:251`: "first-
-            // class scalar float, IEEE-754 binary64 only at introduction (ADR-040 FLAG-1;
-            // M-897) — nullary like Bytes"). `scalar` (`F16`/`BF16`/`F32`/`F64`) is a DIFFERENT,
-            // Dense-only production (`Dense{N, scalar}`/`ambient_params`) — the earlier comment
-            // conflated the two. Confirmed `myc check`-clean empirically: `fn f(x: Float) =>
-            // Float = 1.5;` and `fn f(x: Float) => Binary{1} = flt_is_nan(x);` both check with
-            // no import (`target/debug/myc`, `mycelium-proj.toml` `lang = "mycelium-0"`).
-            // `Float` is explicitly "binary64 only at introduction" (a width extension is a
-            // future, its-own-decision append — the grammar comment's own words), so `f64` maps
-            // faithfully; `f32` still has no confirmed representation and stays a gap (never
-            // silently widened/narrowed to `Float`, VR-5).
-            "f64" => Ok("Float".to_string()),
-            "f32" => Err(GapReason::new(
-                Category::Other,
-                "`f32` has no confirmed Mycelium representation — `Float` \
-                 (docs/spec/grammar/mycelium.ebnf:251) is IEEE-754 binary64 only at \
-                 introduction (ADR-040 FLAG-1/M-897); a width extension is a future, \
-                 separately-decided append, never silently assumed (VR-5)",
-            )),
-            // P4/P5 (DN-99 §8 ENB-6 row #45 — see this fn's doc): the Unicode-scalar-value
-            // codepoint idiom, `Binary{32}` — consistent with row #25's char-*literal* codepoint
-            // convention. Unsigned (never tracked signed).
-            "char" => Ok("Binary{32}".to_string()),
-            // RFC-0033 §3.2 (grounded via tero, DN-34 §8.14): `Bytes` is the language's
-            // *dedicated, never-silent UTF-8* text repr (grammar `base_type` line 250,
-            // "first-class byte string"; a `"…"` StrLit lowers to the same `Repr::Bytes` value
-            // form — checkty.rs:6669, M-910/M-911). So Rust `String`/`str` map onto `Bytes`
-            // faithfully: both denote an owned UTF-8 text value under value semantics (ADR-003),
-            // and the earlier "not confirmed equivalent" hedge is resolved by §3.2. Verified
-            // `myc check`-clean (a `Bytes`-typed field/param/return and a `"…"` literal all pass
-            // — DN-34 §8.14 verify-first). This is the type-position twin of the string-literal
-            // value emission `emit.rs` already performs (`Lit::Str` -> `StrLit`). Graded
-            // `Declared` like every row here (grammar-text- + oracle-verified, not proven).
-            "String" | "str" => Ok("Bytes".to_string()),
-            _ if matches!(seg.arguments, PathArguments::None) => {
-                // M-1001: an ordinary named type passed through as-is — but if its name is a
-                // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
-                // bare identifier would lex as a keyword and fail to parse. Gap it (never emit
-                // un-parseable text) rather than guess a rename (VR-5/G2).
+        // DN-136 §4.2 (P1-c) — the fixed-name builtin mappings (`Self`, `bool`, `u8`..`u128`,
+        // `i8`..`i128`, `usize`/`isize`, `f64`/`f32`, `char`, `String`/`str`) now live as additive
+        // rows in `crate::type_map::TABLE`, generalizing the landed `prim_map::TABLE` pattern so a
+        // new named-type mapping is a table row, not a shared-body edit. A hit here returns
+        // exactly what the former inline `match` arm returned (mechanical relocation — see
+        // `type_map.rs`'s module doc); a miss falls through to the same two structural arms
+        // (bare passthrough / generic application) that followed the builtin arms before this
+        // table existed — never a silent drop (G2).
+        if let Some(row) = crate::type_map::lookup(&name) {
+            return (row.map)(self.self_ty);
+        }
+        if matches!(seg.arguments, PathArguments::None) {
+            // M-1001: an ordinary named type passed through as-is — but if its name is a
+            // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
+            // bare identifier would lex as a keyword and fail to parse. Gap it (never emit
+            // un-parseable text) rather than guess a rename (VR-5/G2).
+            crate::reserved::guard_ident(&name, "type name")?;
+            return Ok(name);
+        }
+        // A single-segment named *generic application* (`Result<Duration, TimeErr>`,
+        // `Vec<u8>`, `Option<T>`). Confirmed surface: `base_type ::= Ident type_args?` with
+        // `type_args ::= '[' type_ref (',' type_ref)* ']'`
+        // (docs/spec/grammar/mycelium.ebnf lines 258 + 265 — RFC-0037 D1: type arguments in
+        // square brackets, not `<…>`). Every scalar/gapped builtin (`bool`/`u8`.../`String`/
+        // …) already matched via `type_map::lookup` above, so a generic application is *never*
+        // mapped onto a `Bool`/`Binary{N}`/`String` head here — only ordinary named heads reach
+        // this arm (they fall through the table lookup and the bare-named arm above).
+        // Graded `Declared` like every row in this module (grammar-text-verified only).
+        match &seg.arguments {
+            PathArguments::AngleBracketed(ab) => {
+                // Head maps exactly as the bare-named arm does — a reserved-word head still
+                // gaps (never emit un-lexable text; VR-5/G2), before any argument work.
                 crate::reserved::guard_ident(&name, "type name")?;
-                Ok(name)
-            }
-            // A single-segment named *generic application* (`Result<Duration, TimeErr>`,
-            // `Vec<u8>`, `Option<T>`). Confirmed surface: `base_type ::= Ident type_args?` with
-            // `type_args ::= '[' type_ref (',' type_ref)* ']'`
-            // (docs/spec/grammar/mycelium.ebnf lines 258 + 265 — RFC-0037 D1: type arguments in
-            // square brackets, not `<…>`). Every scalar/gapped builtin (`bool`/`u8`.../`String`/
-            // …) already matched an earlier arm, so a generic application is *never* mapped onto
-            // a `Bool`/`Binary{N}`/`String` head here — only ordinary named heads reach this arm
-            // (they fall through the builtin name matches, exactly as the bare-named arm above).
-            // Graded `Declared` like every row in this module (grammar-text-verified only).
-            _ => match &seg.arguments {
-                PathArguments::AngleBracketed(ab) => {
-                    // Head maps exactly as the bare-named arm does — a reserved-word head still
-                    // gaps (never emit un-lexable text; VR-5/G2), before any argument work.
-                    crate::reserved::guard_ident(&name, "type name")?;
-                    let mut args = Vec::with_capacity(ab.args.len());
-                    for arg in &ab.args {
-                        match arg {
-                            // Recurse through the *public* `map_type` (not `_inner`) so the
-                            // recursion budget re-arms per nested application — same pattern as
-                            // the tuple arm below — and, as there, a type argument that itself
-                            // gaps propagates its own precise `GapReason` unchanged (`?`), never
-                            // a partial emission.
-                            syn::GenericArgument::Type(t) => args.push(map_type(t, self.self_ty)?),
-                            // A lifetime / const-generic / associated-type binding-or-constraint
-                            // (or any future non-`Type` `GenericArgument`) has no `type_ref`-
-                            // shaped `type_args` surface (line 265 admits only `type_ref`s), so
-                            // refuse the whole application rather than drop the argument (G2).
-                            other => {
-                                return Err(GapReason::new(
-                                    Category::GenericBound,
-                                    format!(
-                                        "generic type path `{}` — type argument `{}` is not a \
-                                         type (lifetime / const-generic / associated-type \
-                                         binding-or-constraint); `type_args` admits only \
-                                         type_refs, so left an explicit gap (VR-5)",
-                                        tokens_to_string(tp),
-                                        tokens_to_string(other)
-                                    ),
-                                ));
-                            }
+                let mut args = Vec::with_capacity(ab.args.len());
+                for arg in &ab.args {
+                    match arg {
+                        // Recurse through the *public* `map_type` (not `_inner`) so the
+                        // recursion budget re-arms per nested application — same pattern as
+                        // the tuple arm below — and, as there, a type argument that itself
+                        // gaps propagates its own precise `GapReason` unchanged (`?`), never
+                        // a partial emission.
+                        syn::GenericArgument::Type(t) => args.push(map_type(t, self.self_ty)?),
+                        // A lifetime / const-generic / associated-type binding-or-constraint
+                        // (or any future non-`Type` `GenericArgument`) has no `type_ref`-
+                        // shaped `type_args` surface (line 265 admits only `type_ref`s), so
+                        // refuse the whole application rather than drop the argument (G2).
+                        other => {
+                            return Err(GapReason::new(
+                                Category::GenericBound,
+                                format!(
+                                    "generic type path `{}` — type argument `{}` is not a \
+                                     type (lifetime / const-generic / associated-type \
+                                     binding-or-constraint); `type_args` admits only \
+                                     type_refs, so left an explicit gap (VR-5)",
+                                    tokens_to_string(tp),
+                                    tokens_to_string(other)
+                                ),
+                            ));
                         }
                     }
-                    // `type_args ::= '[' type_ref (',' type_ref)* ']'` requires >= 1 type_ref;
-                    // an empty `<>` has no confirmed surface.
-                    if args.is_empty() {
-                        return Err(GapReason::new(
-                            Category::GenericBound,
-                            format!(
-                                "generic type path `{}` — empty type-argument list has no \
-                                 confirmed `type_args` surface (requires >= 1 type_ref)",
-                                tokens_to_string(tp)
-                            ),
-                        ));
-                    }
-                    Ok(format!("{name}[{}]", args.join(", ")))
                 }
-                // Non-angle-bracketed arguments (e.g. an `Fn(..)`-trait parenthesized form) —
-                // no confirmed grammar surface; left an explicit gap.
-                _ => Err(GapReason::new(
-                    Category::GenericBound,
-                    format!(
-                        "generic type path `{}` — type-argument mapping not confirmed",
-                        tokens_to_string(tp)
-                    ),
-                )),
-            },
+                // `type_args ::= '[' type_ref (',' type_ref)* ']'` requires >= 1 type_ref;
+                // an empty `<>` has no confirmed surface.
+                if args.is_empty() {
+                    return Err(GapReason::new(
+                        Category::GenericBound,
+                        format!(
+                            "generic type path `{}` — empty type-argument list has no \
+                             confirmed `type_args` surface (requires >= 1 type_ref)",
+                            tokens_to_string(tp)
+                        ),
+                    ));
+                }
+                Ok(format!("{name}[{}]", args.join(", ")))
+            }
+            // Non-angle-bracketed arguments (e.g. an `Fn(..)`-trait parenthesized form) —
+            // no confirmed grammar surface; left an explicit gap.
+            _ => Err(GapReason::new(
+                Category::GenericBound,
+                format!(
+                    "generic type path `{}` — type-argument mapping not confirmed",
+                    tokens_to_string(tp)
+                ),
+            )),
         }
     }
 
