@@ -358,17 +358,18 @@ fn main() => Result[Budgets, EffectBudgetExhausted] = Err(Exhausted(EkRetry, 0b0
 
 // ── check_effects (I3 — manual-declare + compositional-check) ───────────────────────────────────
 
-/// Every performed effect declared → `Ok(U)`.
+/// Every performed effect declared → `Ok(Unit)`.
 #[test]
 fn check_effects_all_declared_is_ok() {
     let driver = "fn main() => Result[Unit, UndeclaredEffect] = check_effects(ECons(EkRetry, ECons(EkIo, ENil)), ECons(EkIo, ENil));";
     let src = program(driver);
+    // `Unit` is NOT redeclared here (DN-137/M-1102: it is the built-in prelude type — a local
+    // redeclaration would collide, "duplicate type declaration").
     let expected = "nodule ref;\n\
-type Unit = U;\n\
 type EffectKind = EkRetry | EkAlloc | EkIo | EkCascade | EkTime;\n\
 type UndeclaredEffect = Undeclared(EffectKind);\n\
 type Result[A, E] = Ok(A) | Err(E);\n\
-fn main() => Result[Unit, UndeclaredEffect] = Ok(U);";
+fn main() => Result[Unit, UndeclaredEffect] = Ok(Unit);";
     assert_three_way("check_effects declared ok", &src, expected);
 }
 
@@ -378,7 +379,6 @@ fn check_effects_undeclared_is_explicit_err() {
     let driver = "fn main() => Result[Unit, UndeclaredEffect] = check_effects(ECons(EkRetry, ENil), ECons(EkIo, ENil));";
     let src = program(driver);
     let expected = "nodule ref;\n\
-type Unit = U;\n\
 type EffectKind = EkRetry | EkAlloc | EkIo | EkCascade | EkTime;\n\
 type UndeclaredEffect = Undeclared(EffectKind);\n\
 type Result[A, E] = Ok(A) | Err(E);\n\

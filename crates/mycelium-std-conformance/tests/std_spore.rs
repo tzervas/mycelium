@@ -114,11 +114,12 @@ fn prov_basis() => Basis = ProvenThm(\"test theorem\");\n\
 fn decl_basis() => Basis = UserDeclared;\n";
 
 /// Expected-side type mirrors — constructor order matches `lib/std/spore.myc` exactly
-/// (structural identity for the CoreValue comparison).
+/// (structural identity for the CoreValue comparison). `Unit` is NOT redeclared here (DN-137/
+/// M-1102: it is the built-in prelude type — a local redeclaration would collide, "duplicate
+/// type declaration"), matching `lib/std/spore.myc` itself no longer redeclaring it.
 const T_CORE: &str = "type Result[A, E] = Ok(A) | Err(E);\n\
 type Option[A] = Some(A) | None;\n\
 type Vec[A] = Nil | Cons(A, Vec[A]);\n\
-type Unit = U;\n\
 type Guarantee = GExact | GProven | GEmpirical | GDeclared;\n";
 
 const T_SPORE: &str =
@@ -174,16 +175,16 @@ fn bytes_eq_length_mismatch_is_false() {
     assert_three_way("bytes_eq length mismatch", &src, expected);
 }
 
-// ── verify: equal → Ok(U); divergent → the named HashMismatch (C1/G2) ───────────────────────────
+// ── verify: equal → Ok(Unit); divergent → the named HashMismatch (C1/G2) ───────────────────────────
 
-/// `verify_identity` on equal hashes is `Ok(U)`.
+/// `verify_identity` on equal hashes is `Ok(Unit)`.
 #[test]
 fn verify_identity_equal_is_ok() {
     let driver =
         "fn main() => Result[Unit, SporeErr] = verify_identity(\"blake3:aa\", \"blake3:aa\");";
     let src = program(driver);
     let expected =
-        format!("nodule ref;\n{T_CORE}{T_SPORE}fn main() => Result[Unit, SporeErr] = Ok(U);");
+        format!("nodule ref;\n{T_CORE}{T_SPORE}fn main() => Result[Unit, SporeErr] = Ok(Unit);");
     assert_three_way("verify_identity equal Ok", &src, &expected);
 }
 
@@ -209,7 +210,7 @@ fn verify_spore_carry_round_trip_is_ok() {
     );
     let src = program(&driver);
     let expected =
-        format!("nodule ref;\n{T_CORE}{T_SPORE}fn main() => Result[Unit, SporeErr] = Ok(U);");
+        format!("nodule ref;\n{T_CORE}{T_SPORE}fn main() => Result[Unit, SporeErr] = Ok(Unit);");
     assert_three_way("verify(carry) round-trip Ok", &src, &expected);
 }
 
