@@ -100,6 +100,14 @@ pub enum Category {
     /// FnMut/&mut safety boundary in particular) is countable on its own, never conflated with an
     /// ordinary unmapped-construct gap.
     Closure,
+    /// DN-128 (M-1086): a `#[derive(Clone)]`/`#[derive(Copy)]` that Mycelium's value semantics
+    /// (ADR-003) already **satisfy as a no-op** — every value already copies structurally, so there
+    /// is no impl to generate. This is deliberately **not** [`Category::DeriveAttr`] (a genuine,
+    /// unhandled drop): the derive IS recognized and handled, just with "you already have it" as the
+    /// answer rather than a generated impl. Keeping it a distinct, counted category means the
+    /// gap-category breakdown never conflates an honestly-covered derive with a real coverage gap
+    /// (VR-5) — see `docs/notes/DN-128-Standard-Derive-Lowering-Library.md` §6.1.
+    DeriveSatisfied,
     Other,
 }
 
@@ -126,6 +134,7 @@ impl Category {
             Category::ModuleDecl => "ModuleDecl",
             Category::InnerAttr => "InnerAttr",
             Category::Closure => "Closure",
+            Category::DeriveSatisfied => "DeriveSatisfied",
             Category::Other => "Other",
         }
     }

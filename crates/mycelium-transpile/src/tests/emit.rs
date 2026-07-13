@@ -379,6 +379,89 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::DeriveAttr,
             },
         },
+        // DN-128 (M-1086) — `derive(Debug)` on a FIELDLESS struct composes a trivial `impl
+        // Show[T] for T` (no field-walk dependency): the primary "make sure this case emits clean"
+        // sub-case the leaf's kickoff names (the std-sys-host `OsEntropy`/`OsClock` canary shape).
+        Case {
+            name: "derive_debug_unit_struct_composes_show_impl",
+            rust: "#[derive(Debug)]\nstruct OsEntropy;",
+            expect: Expect::Emitted {
+                item: "OsEntropy",
+                contains: "impl Show[OsEntropy] for OsEntropy {\n  fn render(x: OsEntropy) => Bytes =\n    \"OsEntropy\";\n};",
+            },
+        },
+        // DN-128 (M-1086) — `derive(Default)` on a FIELDLESS struct composes the bare nullary
+        // `impl Init[T] for T` (the constructor with no field args).
+        Case {
+            name: "derive_default_unit_struct_composes_init_impl",
+            rust: "#[derive(Default)]\nstruct OsEntropy;",
+            expect: Expect::Emitted {
+                item: "OsEntropy",
+                contains: "impl Init[OsEntropy] for OsEntropy {\n  fn init() => OsEntropy =\n    OsEntropy;\n};",
+            },
+        },
+        // DN-128 (M-1086) — `derive(Debug)` on a struct with a PRIMITIVE field (`u8`/`Binary{8}`)
+        // stays an honest gap: no ambient `Show[Binary{8}]` instance exists in the freshly
+        // transpiled file (verified against the real `myc-check` oracle — see this leaf's report /
+        // `derive_forms_check_clean_against_real_toolchain` below). The struct's own `type`
+        // declaration still emits (only the derive impl is dropped).
+        Case {
+            name: "derive_debug_primitive_field_gaps_never_fabricates",
+            rust: "#[derive(Debug)]\nstruct Pair(u8, bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Pair",
+                contains: "type Pair = Pair(Binary{8}, Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 (M-1086) — `derive(Default)` on a struct with a PRIMITIVE field stays an honest
+        // gap for the identical reason (no landed `Init[Binary{8}]` anywhere in the corpus yet).
+        Case {
+            name: "derive_default_primitive_field_gaps_never_fabricates",
+            rust: "#[derive(Default)]\nstruct Pair(u8, bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Pair",
+                contains: "type Pair = Pair(Binary{8}, Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 §6.1 (M-1086) — `derive(Clone)`/`derive(Copy)` are a SATISFIED no-op under
+        // Mycelium's value semantics (ADR-003): recorded via the dedicated `DeriveSatisfied`
+        // category (never `DeriveAttr` — this is not a gap), and no `impl Clone`/`impl Copy` text
+        // is ever emitted (Mycelium has no such trait to implement).
+        Case {
+            name: "derive_clone_copy_satisfied_no_op",
+            rust: "#[derive(Clone, Copy)]\nstruct Flag(bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Flag",
+                contains: "type Flag = Flag(Bool);",
+                sub_gap_category: Category::DeriveSatisfied,
+            },
+        },
+        // DN-128 (M-1086) — a derive name outside this leaf's standard set (`Serialize`, or
+        // `Eq`/`Ord`/`Hash`/`PartialEq`/`PartialOrd` — DN-128 §2's OTHER rows, a separate unbuilt
+        // increment) stays an honest `DeriveAttr` gap, exactly like any other unrecognized derive.
+        Case {
+            name: "derive_unrecognized_name_gaps",
+            rust: "#[derive(Serialize)]\nstruct Flag(bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Flag",
+                contains: "type Flag = Flag(Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 (M-1086) — a GENERIC struct's `derive(Debug)` gaps (a derived impl for a generic
+        // type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's scope); the
+        // struct's own (generic) `type` declaration still emits unaffected.
+        Case {
+            name: "derive_debug_generic_struct_gaps",
+            rust: "#[derive(Debug)]\nstruct Wrap<T>(T);",
+            expect: Expect::EmittedAndGapped {
+                item: "Wrap",
+                contains: "type Wrap[T] = Wrap(T);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
         // M-1001: a `use` import is FLAGGED, not emitted — the transpiler has no cross-nodule symbol
         // table so it cannot confirm the path resolves (the vet loop confirms such imports fail
         // `myc check` name-resolution), and an emitted `use` poisons the whole draft's check.
@@ -2213,6 +2296,171 @@ fn mvp_cmp_emit_check_agreement() {
             "case `{}`: emit<->check agreement violated — emitter's bracket judgment ({}) must \
              agree with the real checker's verdict; diagnostic={:?}\nemitted:\n{myc}",
             case.name, case.expect_bracket, rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-128 (M-1086) — std-derive lowering library, struct scope. Regression + negative-assertion
+// tests beyond the data-driven `cases()` fixtures above (a nested-composition case and the
+// "never fabricates" negative checks need multi-item sources / substring-absence assertions the
+// `Case`/`Expect` shape does not carry).
+// ---------------------------------------------------------------------------------------------
+
+/// A gapped `derive(Debug)`/`derive(Default)` (the primitive-field case) must NEVER leak a
+/// fabricated `impl Show[...]`/`impl Init[...]` fragment into the `.myc` text — the
+/// `derive_debug_primitive_field_gaps_never_fabricates` / `derive_default_primitive_field_gaps_
+/// never_fabricates` fixtures above only assert the sub-gap category is present; this pins the
+/// complementary "nothing partial leaked" half directly (G2 — mirrors
+/// `widen_bool_from_call_produces_no_fabricated_myc_text`'s pattern).
+#[test]
+fn derive_gap_never_leaks_partial_impl_text() {
+    let (myc_debug, _) = transpile_source("#[derive(Debug)]\nstruct Pair(u8, bool);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc_debug.contains("impl Show"),
+        "a gapped derive(Debug) must never emit a partial `impl Show`, got:\n{myc_debug}"
+    );
+    let (myc_default, _) =
+        transpile_source("#[derive(Default)]\nstruct Pair(u8, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !myc_default.contains("impl Init"),
+        "a gapped derive(Default) must never emit a partial `impl Init`, got:\n{myc_default}"
+    );
+}
+
+/// `derive(Clone)`/`derive(Copy)` (DN-128 §6.1's satisfied no-op) must never emit ANY impl text —
+/// there is no Mycelium `Clone`/`Copy` trait to implement, so the honest answer is "nothing to
+/// generate", not a stand-in impl.
+#[test]
+fn derive_clone_copy_never_emits_an_impl() {
+    let (myc, _) = transpile_source("#[derive(Clone, Copy)]\nstruct Flag(bool);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl "),
+        "derive(Clone)/derive(Copy) must never emit any impl block, got:\n{myc}"
+    );
+}
+
+/// The DN-128 §2 "structural fold over fields" shape composes end-to-end for a struct whose
+/// fields are themselves ANOTHER derived (fieldless) struct in the SAME file — the one
+/// field-eligible case [`field_derive_eligible`]'s docs describe as mechanically sound and not
+/// merely `Declared`-hopeful. Both `Debug` and `Default` are exercised; the live-oracle half
+/// (that this text is real `myc check`-clean, not just textually plausible) is
+/// `derive_forms_check_clean_against_real_toolchain` below.
+#[test]
+fn derive_composes_end_to_end_over_a_same_file_nested_derived_field() {
+    let rust = "#[derive(Debug, Default)]\nstruct Inner;\n\
+                #[derive(Debug, Default)]\nstruct Outer(Inner, Inner);";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    for name in ["Inner", "Outer"] {
+        assert!(
+            report.emitted_items.iter().any(|n| n == name),
+            "expected `{name}` in emitted_items, got {:?}",
+            report.emitted_items
+        );
+    }
+    assert!(
+        myc.contains("impl Show[Inner] for Inner"),
+        "expected Inner's derived Show impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Init[Inner] for Inner"),
+        "expected Inner's derived Init impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Show[Outer] for Outer {\n  fn render(x: Outer) => Bytes =\n    \
+             match x { Outer(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(\"Outer(\", \
+             render(p0)), \", \"), render(p1)), \")\") };\n};"
+        ),
+        "expected Outer's field-walked Show impl body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Init[Outer] for Outer {\n  fn init() => Outer =\n    Outer(init(), init());\n};"
+        ),
+        "expected Outer's field-walked Init impl body, got:\n{myc}"
+    );
+    // Neither struct's `derive` sub-gaps land as a real `DeriveAttr` gap for THIS composition
+    // (only the pre-existing sub_gap machinery for OTHER, unrelated constructs would) — a
+    // successful compose adds no sub-gap at all (see `lower_struct_derives` docs).
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible nested derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-128 (M-1086): every derive shape the fixture
+/// corpus above proves the *text* of is run through the REAL `myc-check` oracle here — the fieldless
+/// `Debug`/`Default` cases, and the same-file nested-composition case
+/// ([`derive_composes_end_to_end_over_a_same_file_nested_derived_field`]'s text). Skips gracefully
+/// (never fails) when `myc-check` is not built, exactly like `struct_pattern_forms_check_clean_
+/// against_real_toolchain` above.
+#[test]
+fn derive_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-derive-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // Fieldless `Debug` -- the primary "make sure this case emits clean" deliverable.
+        ("#[derive(Debug)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `Default`.
+        ("#[derive(Default)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless struct deriving BOTH in one attribute list.
+        ("#[derive(Debug, Default)]\nstruct OsEntropy;", "OsEntropy"),
+        // The same-file nested-composition case (both items, both derives).
+        (
+            "#[derive(Debug, Default)]\nstruct Inner;\n\
+             #[derive(Debug, Default)]\nstruct Outer(Inner, Inner);",
+            "Outer",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
         );
     }
 

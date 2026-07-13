@@ -328,6 +328,20 @@ pub fn non_doc_attrs(attrs: &[Attribute]) -> Vec<String> {
         .collect()
 }
 
+/// [`non_doc_attrs`] narrowed to exclude `#[derive(...)]` as well (DN-128/M-1086) — used only by
+/// [`emit_struct`], whose derive list is classified/lowered separately (see the "DN-128 std-derive
+/// lowering library" section below) rather than bulk-dropped. Every OTHER non-doc attribute on a
+/// struct (`#[repr(C)]`, an unrecognized macro attribute, …) still falls through to the same
+/// unconditional-drop `Category::DeriveAttr` sub-gap `non_doc_attrs` backs everywhere else
+/// (`enum`/`fn`/impl-method sites, unchanged by this leaf).
+fn non_doc_non_derive_attrs(attrs: &[Attribute]) -> Vec<String> {
+    attrs
+        .iter()
+        .filter(|a| !a.path().is_ident("doc") && !a.path().is_ident("derive"))
+        .map(tokens_to_string)
+        .collect()
+}
+
 /// Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains("test")` check, not a
 /// real `cfg` predicate evaluator).
 pub fn is_cfg_test(attrs: &[Attribute]) -> bool {
@@ -3191,6 +3205,256 @@ fn map_named_fields_positional(
     Ok((tys, names))
 }
 
+// ---------------------------------------------------------------------------------------------
+// DN-128 (M-1086) — the std-derive lowering library, struct scope.
+//
+// `#[derive(...)]` on a `struct` was, until this leaf, unconditionally dropped as one bulk
+// `Category::DeriveAttr` sub-gap (the pre-existing `non_doc_attrs`/`sub_gaps.push` pair every
+// `emit_*` item function still uses for `enum`/`fn`/impl-method sites — unchanged there, see
+// `docs/notes/DN-128-Standard-Derive-Lowering-Library.md` §4/§7 "structs first"). This section
+// lowers the four derives DN-128 §2 scopes to this leaf — `Clone`/`Copy` (a satisfied no-op under
+// value semantics, ADR-003, DN-128 §6.1) and `Debug`/`Default` (composed `impl Show[T] for T` /
+// `impl Init[T] for T` bodies over the DN-127/DN-129 landed prelude traits,
+// `crates/mycelium-l1/src/show.rs` / `init.rs`) — to explicit, `.myc`-text `impl` blocks appended
+// after the struct's own `type` declaration. `Eq`/`Ord`/`Hash`/`PartialEq`/`PartialOrd` (DN-128 §2's
+// other rows) are **out of this leaf's scope** — an unrecognized-name gap, same as any other
+// unhandled derive (recorded, never silently dropped, G2).
+//
+// OQ-1 (DN-128 §3, "does a `lower` RHS have field reflection?") is resolved for THIS emission path
+// as **moot**: the field-walk happens here, in the Rust transpiler, over `syn`'s already-typed field
+// list — never inside a `.myc` `lower` RHS at all. This is the Alt-C "compiler-internal field-walk"
+// DN-128 recommends, one layer further out (the transpiler's own field enumeration, not even
+// `mycelium-l1`'s elaborator) — it survives either OQ-1 answer because it never needs one.
+
+/// One field's DN-128 derive-eligibility: is its [`map_type`]-produced text a **Named** (user)
+/// type, as opposed to a **primitive repr** (`Bool`/`Float`/`Bytes`/`Binary{N}`) or an
+/// unclassifiable shape (a tuple/generic-instantiation text containing `(`/`[`)?
+///
+/// **Why primitives are excluded (verified empirically, mitigation #14 — not assumed):** composing
+/// `render(f)`/bare `init()` on a primitive-typed field requires an `impl Show[...]`/`impl Init[...]`
+/// instance for that primitive to be **in scope in the same file** — Mycelium's checker has no
+/// cross-nodule ambient resolution for these (only the *trait itself* is prelude-seeded, DN-129 §5;
+/// the primitive *instances* are ordinary `impl`s living in a separate nodule, `lib/std/fmt.myc`).
+/// Confirmed against the real `myc-check` oracle: a bare `Binary{N}` field's `render(f)` fails with
+/// `"no instance Show for Binary{64}"` and a bare `Binary{N}`/`Bytes`/`Bool`/`Float` field's `init()`
+/// fails with `"no instance Init for <T>"` unless that primitive's `impl` is copied into the SAME
+/// file (which this leaf does not attempt — see `derive_show_impl`/`derive_init_impl` docs). A
+/// `Float` field is additionally, permanently ineligible for `Debug`: `lib/std/fmt.myc` documents
+/// (DN-127 §7 point 3 / OQ-1) that **no** `impl Show[Float] for Float` exists anywhere in the corpus
+/// today — a systemic gap, not a per-file availability one.
+///
+/// A **Named** field (a bare capitalized identifier with no `{`/`(`/`[` — i.e. another in-file or
+/// out-of-file struct/enum type) is eligible: composing `render(f)`/`init()` against it is
+/// mechanically correct, and — for a field that is itself another struct in the SAME file that ALSO
+/// derives `Debug`/`Default` — verified clean end-to-end (`src/tests/emit.rs`). Whether it checks
+/// for an ARBITRARY Named field depends on that field's own type independently providing the
+/// instance; this composition is `Declared` (this whole module's stated guarantee), not verified
+/// per-instantiation — never a fabrication (it is a real, sound composition), just an honest
+/// dependency on peer state this transpile pass cannot see.
+fn field_derive_eligible(mapped_ty: &str) -> bool {
+    if matches!(mapped_ty, "Bool" | "Float" | "Bytes") {
+        return false;
+    }
+    if mapped_ty.contains(['{', '(', '[']) {
+        return false;
+    }
+    mapped_ty
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_uppercase())
+}
+
+/// Left-fold `parts` into a single `bytes_concat(...)` chain — every step stays `Bytes`-typed,
+/// matching `bytes_concat`'s 2-ary `Bytes -> Bytes -> Bytes` signature (`lib/std/fmt.myc`'s `to_dec`
+/// uses the identical fold shape for its recursive digit accumulation). `parts` is never empty in
+/// either caller below (the fieldless case is handled separately, without this helper).
+fn bytes_concat_chain(parts: &[String]) -> String {
+    let mut iter = parts.iter();
+    let mut acc = iter.next().cloned().unwrap_or_default();
+    for p in iter {
+        acc = format!("bytes_concat({acc}, {p})");
+    }
+    acc
+}
+
+/// DN-128 (M-1086) `derive(Debug)` -> an explicit `impl Show[T] for T` (DN-127/M-1090's landed
+/// prelude trait). **Fieldless (unit) struct:** `fn render(x: T) => Bytes = "T";` — always succeeds,
+/// no field dependency (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:** a
+/// left-to-right `bytes_concat` fold of `"T(", render(f0), ", ", render(f1), …, ")"`, gated per field
+/// via [`field_derive_eligible`] — refuses the WHOLE derive (never a partial/fabricated render, G2)
+/// the moment any field is ineligible, citing that field's index + mapped type.
+fn derive_show_impl(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
+    if field_types.is_empty() {
+        return Ok(format!(
+            "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    \"{ty_name}\";\n}};"
+        ));
+    }
+    for (i, ft) in field_types.iter().enumerate() {
+        if !field_derive_eligible(ft) {
+            return Err(GapReason::new(
+                Category::DeriveAttr,
+                format!(
+                    "struct `{ty_name}` derive(Debug): field {i} has type `{ft}`, a primitive \
+                     repr with no ambient `Show` instance in this file (`lib/std/fmt.myc`'s \
+                     primitive impls live in a separate, unimported nodule) — the whole derive is \
+                     left an honest gap rather than a partial/fabricated render (G2)"
+                ),
+            ));
+        }
+    }
+    let vars: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
+    let mut parts = vec![format!("\"{ty_name}(\"")];
+    for (i, v) in vars.iter().enumerate() {
+        if i > 0 {
+            parts.push("\", \"".to_string());
+        }
+        parts.push(format!("render({v})"));
+    }
+    parts.push("\")\"".to_string());
+    let body = bytes_concat_chain(&parts);
+    Ok(format!(
+        "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x {{ {ty_name}({pats}) => {body} }};\n}};",
+        pats = vars.join(", ")
+    ))
+}
+
+/// DN-128 (M-1086) `derive(Default)` -> an explicit `impl Init[T] for T` (DN-129/M-1091's landed
+/// prelude trait). **Fieldless (unit) struct:** `fn init() => T = T;` — the bare nullary
+/// constructor, always succeeds (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:**
+/// `T(init(), init(), …)`, one bare `init()` per field IN DECLARATION ORDER — **no qualified
+/// `Type::init()` call is needed**, because each position's expected type (the constructor's OWN
+/// declared field type) resolves `init()`'s trait parameter via RFC-0019 §4.4's "seed from expected"
+/// path — verified against `checkty.rs`'s monomorphic-ctor arm, which checks every constructor
+/// argument `Some(&want)` where `want` is that field's declared type
+/// (`crates/mycelium-l1/src/checkty.rs:6522-6536`), and live-oracle-proven end-to-end for a
+/// same-file nested case (`src/tests/emit.rs`). This is unrelated to DN-133's qualified/associated
+/// `Type::method(...)` **call-site** emission (a different arm of `emit.rs`, sequenced after this
+/// leaf) — `init()` is never spelled qualified here. Gated per field via [`field_derive_eligible`]
+/// for the identical reason as [`derive_show_impl`], empirically confirmed separately: no primitive
+/// `impl Init[Binary{N}]`/`Init[Bytes]`/`Init[Bool]`/`Init[Float]` is landed ANYWHERE in the corpus
+/// yet (`grep -rn "impl Init\[" lib/ crates/` finds only test/example Named-type impls), so
+/// composing `init()` for a primitive field would emit text certain to fail `myc check` — refused
+/// rather than partially composed (G2).
+fn derive_init_impl(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
+    if field_types.is_empty() {
+        return Ok(format!(
+            "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name};\n}};"
+        ));
+    }
+    for (i, ft) in field_types.iter().enumerate() {
+        if !field_derive_eligible(ft) {
+            return Err(GapReason::new(
+                Category::DeriveAttr,
+                format!(
+                    "struct `{ty_name}` derive(Default): field {i} has type `{ft}`, a primitive \
+                     repr with no landed `Init` instance anywhere in the corpus yet — the whole \
+                     derive is left an honest gap rather than a partial/fabricated init (G2)"
+                ),
+            ));
+        }
+    }
+    let calls = vec!["init()".to_string(); field_types.len()];
+    Ok(format!(
+        "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name}({args});\n}};",
+        args = calls.join(", ")
+    ))
+}
+
+/// DN-128 (M-1086) — classify + lower a struct's `#[derive(...)]` list against the standard-derive
+/// set this leaf builds (`Debug`->`Show`, `Default`->`Init`, `Clone`/`Copy`->satisfied no-op).
+/// Returns the composed `.myc` impl-block text for every derive that lowered successfully (appended
+/// after the struct's own `type` declaration in [`emit_struct`]) plus every sub-gap this pass
+/// records: an unrecognized derive name (still `Category::DeriveAttr`, same bucket the pre-existing
+/// bulk-drop uses), a recognized-but-uncomposable one (a field-eligibility refusal from
+/// [`derive_show_impl`]/[`derive_init_impl`]), or a `Clone`/`Copy` satisfied-no-op note
+/// (`Category::DeriveSatisfied` — never `DeriveAttr`, it is not a gap). A **generic** struct
+/// (`type_params` non-empty) refuses every impl-producing derive (`Debug`/`Default`) — a derived
+/// impl for a generic type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's
+/// scope — but `Clone`/`Copy` still resolve as a no-op regardless of genericity (value semantics
+/// holds for any type, generic or not). Never partially silent: every derive name that does not end
+/// up in the composed-impls list has a corresponding sub-gap explaining why (G2).
+fn lower_struct_derives(
+    ty_name: &str,
+    attrs: &[Attribute],
+    field_types: &[String],
+    is_generic: bool,
+) -> (Vec<String>, Vec<GapReason>) {
+    let mut impls = Vec::new();
+    let mut sub_gaps = Vec::new();
+    let mut unrecognized = Vec::new();
+
+    for attr in attrs {
+        if !attr.path().is_ident("derive") {
+            continue;
+        }
+        let Ok(list) = attr.parse_args_with(
+            syn::punctuated::Punctuated::<syn::Path, syn::Token![,]>::parse_terminated,
+        ) else {
+            sub_gaps.push(GapReason::new(
+                Category::DeriveAttr,
+                format!(
+                    "dropped derive attribute on struct `{ty_name}` (argument list did not parse \
+                     as a plain trait-path list): {}",
+                    tokens_to_string(attr)
+                ),
+            ));
+            continue;
+        };
+        for path in list {
+            let name = tokens_to_string(&path);
+            match name.as_str() {
+                "Clone" | "Copy" => {
+                    sub_gaps.push(GapReason::new(
+                        Category::DeriveSatisfied,
+                        format!(
+                            "struct `{ty_name}` derive({name}) is a satisfied no-op under \
+                             Mycelium's value semantics (ADR-003 — every value already copies \
+                             structurally; DN-128 §6.1) — not emitted as an impl, not a gap"
+                        ),
+                    ));
+                }
+                "Debug" if is_generic => sub_gaps.push(GapReason::new(
+                    Category::DeriveAttr,
+                    format!(
+                        "struct `{ty_name}` derive(Debug): generic struct — a derived impl for a \
+                         generic type needs DN-130's generic-trait-instance-impl mechanism, out of \
+                         this leaf's scope (DN-128/M-1086)"
+                    ),
+                )),
+                "Default" if is_generic => sub_gaps.push(GapReason::new(
+                    Category::DeriveAttr,
+                    format!(
+                        "struct `{ty_name}` derive(Default): generic struct — a derived impl for a \
+                         generic type needs DN-130's generic-trait-instance-impl mechanism, out of \
+                         this leaf's scope (DN-128/M-1086)"
+                    ),
+                )),
+                "Debug" => match derive_show_impl(ty_name, field_types) {
+                    Ok(myc) => impls.push(myc),
+                    Err(g) => sub_gaps.push(g),
+                },
+                "Default" => match derive_init_impl(ty_name, field_types) {
+                    Ok(myc) => impls.push(myc),
+                    Err(g) => sub_gaps.push(g),
+                },
+                other => unrecognized.push(other.to_string()),
+            }
+        }
+    }
+    if !unrecognized.is_empty() {
+        sub_gaps.push(GapReason::new(
+            Category::DeriveAttr,
+            format!(
+                "struct `{ty_name}` derive(...) names {} not in the DN-128 standard-derive set this \
+                 leaf builds (Debug/Default/Clone/Copy; Eq/Ord/Hash/PartialEq/PartialOrd are a \
+                 separate, unbuilt increment) — dropped, no confirmed Mycelium surface",
+                unrecognized.join(", ")
+            ),
+        ));
+    }
+    (impls, sub_gaps)
+}
+
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "enum type name")?;
@@ -3322,17 +3586,18 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     guard_ident(&item.ident.to_string(), "struct type/constructor name")?;
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
-    let non_doc = non_doc_attrs(&item.attrs);
-    if !non_doc.is_empty() {
+    let non_derive = non_doc_non_derive_attrs(&item.attrs);
+    if !non_derive.is_empty() {
         sub_gaps.push(GapReason::new(
             Category::DeriveAttr,
             format!(
                 "dropped non-doc attribute(s) on struct `{}`: {}",
                 item.ident,
-                non_doc.join(" ")
+                non_derive.join(" ")
             ),
         ));
     }
+    let mut field_types: Vec<String> = Vec::new();
     let ctor = match &item.fields {
         Fields::Unit => item.ident.to_string(),
         Fields::Unnamed(fields) => {
@@ -3349,6 +3614,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
                 })?;
                 tys.push(mapped);
             }
+            field_types = tys.clone();
             format!("{}({})", item.ident, tys.join(", "))
         }
         Fields::Named(fields) => {
@@ -3395,6 +3661,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
                     tys.join(", ")
                 ),
             ));
+            field_types = tys.clone();
             format!("{}({})", item.ident, tys.join(", "))
         }
     };
@@ -3415,6 +3682,21 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
         params_text,
         ctor
     ));
+    // DN-128 (M-1086): lower `#[derive(...)]` against the standard-derive set this leaf builds,
+    // appending each successfully-composed impl after the struct's own `type` declaration (joined
+    // exactly like `transpile.rs`'s own item-to-item `"\n\n"` join, so a single-item and a
+    // multi-item `Emitted.myc` are textually indistinguishable — see `lower_struct_derives` docs).
+    let (derive_impls, derive_gaps) = lower_struct_derives(
+        &item.ident.to_string(),
+        &item.attrs,
+        &field_types,
+        !type_params.is_empty(),
+    );
+    for imp in derive_impls {
+        myc.push_str("\n\n");
+        myc.push_str(&imp);
+    }
+    sub_gaps.extend(derive_gaps);
     Ok(Emitted {
         name: item.ident.to_string(),
         myc,
