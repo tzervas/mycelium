@@ -12,6 +12,60 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(tracking): tracking-truth reconciliation — M-1077/1079/1080/1081/1088/1089/1090/1091 verified against `dev` (2026-07-12)
+
+`issues.yaml` had drifted from `dev`'s actual code (mitigation #14, recurring this session): the
+DN-126–DN-132 build issues below all landed on `dev` between the batch ratification above and this
+reconciliation, but stayed `status:todo`. Every candidate re-verified against `dev`'s code + its
+landing PR before any flip (never a blind trust of the tracker — VR-5). **M-1089 landed mid-session**
+(PR #1535, `f109b0d5`, pulled down via `git merge --no-ff origin/dev` partway through this pass) — its
+consumer-side `Pat::Struct` arm is done, but the producer-side enum-struct-variant `StructLayout`
+population is not, so it stays `todo` scoped to that residual (see below).
+
+- **M-1079** (DN-124 vet-harness phylum visibility) — **done**. All three units landed (PR #1521,
+  `eb6bc0e2`): `mycelium-check`'s per-nodule `PhylumReport` verdicts, `mycelium-transpile`'s
+  phylum-mode dual-report (`checked_fraction_phylum`/`delta_basis`), and
+  `gen/myc-drafts/regenerate.sh`'s semcore-as-one-phylum batching. `cargo test -p mycelium-check`
+  (13/13) + `-p mycelium-transpile --lib` (113/113) green.
+- **M-1080** (DN-122 external-trait-impls MVP) — **done** (mechanism landed, honest 0-corpus-delta).
+  WU-A/WU-B landed (PR #1522, `b97b008e`) with T-A1–T-A3/T-B1–T-B2 green. The Phase-0 re-measure
+  (under M-1079's landed phylum-mode basis, `06b4d7a7`) measures OQ-7's single-param-vs-two-type
+  split at **0% on the witnessed wave-1 corpus** — a measured, not fabricated, leverage figure
+  (VR-5).
+- **M-1081** (DN-125 `&mut self`/`&mut T` value-threading) — **done**. The lowering landed
+  (PR #1527, `6cae69eb`); a re-review found and closed a silent-corruption aliasing hole — `let y =
+  other;` where `other` is itself a threaded `&mut` binding moved the live reference under
+  name-based matching, so a later `*y = ..;` silently mutated the wrong binding while still
+  `myc check`-clean — fixed in PR #1530 (`ae4007bf`) by refusing that shape never-silently
+  (`Category::Other`). `cargo test -p mycelium-transpile --lib -- tests::mut_thread` 14/14 green.
+- **M-1077** (DN-126 two-mode typing) — **partial, stays `todo`**. The demotion switch +
+  mechanical-strictification classifier landed (PR #1531, `cd84768a`, 11/11 tests green) — DoD items
+  1–2 of 3. The py2rust end-to-end fixture (item 3) is genuinely unbuilt and not near-term (py2rust
+  integration is explicitly deferred pending Rust-native maturity).
+- **M-1088** (DN-131 impl-slot bounds) — **partial, stays `todo`**. The L1/kernel side (parse,
+  desugar, check+mono, witnesses) landed (PR #1529, `6822a78c`, 34/34 + 3/3 tests green); the
+  transpiler emission item is not built — `emit.rs` still refuses any bounded type parameter.
+- **M-1089** (DN-132 P1 struct-variant patterns) — **partial, stays `todo`**. The consumer-side
+  `Pat::Struct` arm in `map_pattern_inner` landed (PR #1535, `f109b0d5`, 22/22 tests green); the
+  producer-side `transpile.rs::struct_layouts` still only walks `Item::Struct`, not `Item::Enum`
+  struct-variants, so the issue's own headline target — `Self::NotFound { path, .. }` — still gaps.
+- **M-1090** (DN-127 native formatting) — **partial, stays `todo`**. WU-1 (`lib/std/fmt.myc`'s
+  `to_dec`/`digit_byte`, `myc-check`-clean, 19/19 differential tests) and WU-2 (`Show` prelude seed)
+  landed (PR #1526); WU-3 (the transpiler `write!`/`format!` lowering rule) is not built.
+- **M-1091** (DN-129 Init/Fault prelude traits) — **partial, stays `todo`**. The seeds, the shared
+  `seed_prelude_trait` helper, visibility tests, and OQ-2 (resolved as a bare `Fault[T] {}` marker)
+  landed (PR #1526, 18/18 tests green); the `derive Default` → `Init` cross-note gate is blocked on
+  **M-1086** (DN-128 std-derive lowering), which remains unbuilt.
+
+`docs/Doc-Index.md`'s DN-122/124/125/126/127/129/131 rows corrected (their "unbuilt, tracked as
+M-xxxx" parentheticals were stale); `tools/github/idmap.tsv` gained the two rows the pending
+`claude/leaf/pm-sync-m1079-m1080` idmap branch (`f3e02474`) had queued (M-1079→#1519,
+M-1080→#1520) — folded into this reconciliation rather than landed separately. M-1084 (Import
+net-close) and M-1089 (DN-132 struct-variant patterns) are genuinely in-flight under other leaves
+and untouched here; M-1086 (DN-128 std-derive) is genuinely unbuilt and untouched. All DN statuses
+(DN-123, DN-125–DN-132) confirmed **Accepted** in both `docs/Doc-Index.md` and their own doc
+headers; DN-133 confirmed still **Draft** (untouched, in-flight citation-patch elsewhere).
+
 ### docs(dn): ratify DN-126–DN-132 — language-completeness planning batch (Accepted, 2026-07-12)
 
 Batch-ratifies **seven Draft DNs** to **Accepted** under explicit maintainer delegation ("ratify based
