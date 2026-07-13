@@ -539,6 +539,31 @@ resolves the branch from the command's **worktree `cwd`** (the payload's `cwd`),
 worktree's `HEAD` — so worktree agents commit freely while real protected-branch ops still block
 (verified: leaf-commit ALLOW · dev-commit BLOCK · force-push BLOCK). Keep the per-agent commit/push
 split (the string-match variant above is unchanged).
+**A third variant — now FIXED in the hook (2026-07-13, maintainer directive):** the second-variant
+fix judged the branch from the payload's `.cwd` alone, resolved **once** before any command-string
+analysis. That is still wrong whenever the command ITSELF changes which worktree it operates in — a
+leading `cd <path> &&` (an agent that `git worktree add`-ed its own isolation, or lost its worktree
+binding across a context compaction, so the payload `.cwd` stayed pinned at the shared main checkout
+on a protected branch) was false-blocked even though the commit's real target was a fine,
+non-protected leaf branch; `git -C <path>` was previously fail-closed (`UNSAFE`) unconditionally
+rather than actually resolved. `scripts/hooks/branch_guard_parse.py` now tracks an **effective
+cwd/branch** as it walks the command's segments: a plain `cd <path>` (a real shell cd) persists for
+every later segment in the same command; a git invocation's own `-C <path>` is scoped to that
+invocation alone (matching git's own `-C` semantics, which never changes the shell's cwd) and does
+not leak into a later segment's state. Either way the branch is a REAL lookup
+(`git -C <path> rev-parse --abbrev-ref HEAD`), never a guess — and any target that can't be resolved
+(missing path, not a worktree, `cd -`, a dynamic `$(...)` target, or the git call itself
+failing/hanging) still fails CLOSED (`UNSAFE`) for any op whose verdict needs the current branch;
+`--git-dir=`/`--work-tree=`/`--namespace=` remain unconditionally fail-closed (too ambiguous to
+reconstruct safely). Verified end-to-end via the real hook script (not just the parser in
+isolation): `cd <isolated-leaf-worktree> && git commit` → **ALLOW** even with a stale protected
+payload cwd; `cd <worktree-still-on-dev> && git commit` → **BLOCK** (the real target is genuinely
+protected); a direct commit on the main checkout's own protected branch (no `cd`) → **BLOCK**
+unchanged; a direct commit on a leaf branch (no `cd`) → **ALLOW** unchanged. The full ALLOW/BLOCK/
+UNSAFE matrix is exercised in `scripts/hooks/test-branch-guard-parse.sh` (75 rows, including real
+fixture git worktrees for the `cd`/`-C` resolution rows — not mocked). The temp-anchor dance
+(re-pointing the main checkout at a throwaway non-protected branch just to land a worktree agent's
+commit) is **no longer needed** for this class of false-positive.
 
 ### 13. Stale-base worktree spawn — branch off the working tier, never the default branch (lesson, 2026-07-03)
 **Pattern:** an isolated-worktree agent whose base ref defaults to the **default branch** (`origin/main`)
