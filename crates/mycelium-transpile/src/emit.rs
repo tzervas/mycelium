@@ -2470,6 +2470,40 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
     // positional constructor call `Ty(x, y)` (arguments ordered by the struct's declaration
     // order). Gated on `Ty` being an emitted in-file struct. `..rest` (struct-update) and a
     // partial literal have no Mycelium surface -> explicit gap (never a fabricated field).
+    //
+    // DN-134 SS3 (M-1093, coordinated with M-1089's pattern-side twin): `sty` resolves *exactly*
+    // the same way whether it names a plain in-file struct or — since `struct_layouts`
+    // (`transpile.rs`) now also walks `Item::Enum` `Fields::Named` variants, collision-safe by
+    // construction — an in-file enum's named-field STRUCT-VARIANT (`TimeErr::ClockUnavailable {
+    // reason }`, `Self::Variant { .. }`). `struct_layout` cannot tell the two apart (bare-ctor-name
+    // resolution only, no qualifier threading — see that fn's doc), and this arm doesn't need to:
+    // the enum emitter already lowers a `Fields::Named` variant to the identical positional `Ctor`
+    // surface a struct gets (`emit_enum`'s struct-variant arm, `emit.rs:3113` at the time of
+    // writing), so ONE field-resolution loop below serves both — "no change to the loop itself"
+    // (DN-134 SS3 step 2). The three bounds DN-134 §4 names for the construction side specifically
+    // (as opposed to M-1089's pattern side, which faces none of them):
+    // - **Cross-nodule resolvability (OQ-2):** `struct_layout`/`resolvable` are per-file — a
+    //   variant declared in another file/nodule (e.g. `std-sys-host`'s own `TimeErr`, imported
+    //   from `std.time`) is simply absent from `items` here, so it gaps via the same "not an
+    //   in-file ... that emits" refusal below as any unresolved foreign struct — never a
+    //   fabricated out-of-file reference (G2). Clean on the real port path once the nodule
+    //   actually contains/imports the type (DN-113's cross-nodule resolution, out of this
+    //   file-scoped transpiler's reach today).
+    // - **DN-104 construction seal (OQ-3(b)):** a per-constructor `priv` seal is a Mycelium-side
+    //   annotation this Rust->`.myc` transpiler never reads (Rust has no equivalent per-ctor
+    //   visibility marker to translate FROM, and this transpiler never emits `priv` on anything it
+    //   produces — `reserved.rs`'s `"priv"` entry is only a keyword-collision guard, not a
+    //   seal-tracking mechanism). So there is no first-class "sealed ctor" signal to check here;
+    //   the seal's construction-side enforcement is, today, entirely SUBSUMED by the cross-nodule
+    //   bound above: a same-file variant construction is trivially "at home" (there is no
+    //   smaller-than-file nodule boundary in this architecture), and a cross-file one already gaps
+    //   unconditionally — so "constructing a sealed ctor from outside its home nodule" cannot
+    //   arise as a DISTINCT reachable case through this transpiler; it is held, not built, and
+    //   reported as such (VR-5 — no fabricated enforcement of a signal that isn't there).
+    // - **Same-name struct/variant collision (the correctness mandate, DN-134 §4 stress-#8):**
+    //   enforced entirely at the `struct_layouts` population (never a silently-shadowed `layouts`
+    //   entry) — this arm just sees `struct_layout` return `None` for an ambiguous name, exactly
+    //   like any other unresolved ctor.
     fn visit_struct(&mut self, expr: &Expr, se: &syn::ExprStruct) -> Self::Output {
         if se.qself.is_some() {
             return self.fallback(expr);
@@ -2503,33 +2537,71 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             GapReason::new(
                 Category::Other,
                 format!(
-                    "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct that \
-                     emits (no constructor to build)"
+                    "struct literal `{sty} {{ .. }}` — not an in-file single-ctor struct or \
+                     enum struct-variant that emits (no constructor to build; a cross-nodule \
+                     variant is an honest DN-113/DN-134-OQ-2 resolvability gap, never a \
+                     fabricated out-of-file reference — VR-5/G2)"
                 ),
             )
         })?;
-        let mut args = Vec::with_capacity(layout.len());
-        for (i, slot) in layout.iter().enumerate() {
-            let fv = se
-                .fields
-                .iter()
-                .find(|fv| match (&fv.member, slot) {
-                    (syn::Member::Named(id), Some(name)) => id == name.as_str(),
-                    (syn::Member::Unnamed(idx), None) => idx.index as usize == i,
-                    _ => false,
-                })
-                .ok_or_else(|| {
-                    GapReason::new(
-                        Category::Other,
-                        format!(
-                            "struct literal `{sty}` gives no value for the field at position \
-                             {i} — a partial constructor has no Mycelium surface (VR-5)"
-                        ),
-                    )
-                })?;
-            args.push(emit_expr(&fv.expr, self.self_ty, self.env)?);
+        // Single pass over the WRITTEN fields (mirrors `map_struct_pattern`'s DN-132 SS5.2 loop,
+        // the pattern-side twin): resolves each field to its declaration position, catching a
+        // **duplicate** field-value binding (never-silent, DN-134 SS3 step 3) as it goes, then
+        // requires every layout position be filled exactly once — an unfilled position is a
+        // **missing** field (VR-5, pre-existing check) and a written field matching no position is
+        // an **extra/unknown** field (new, DN-134 SS3 step 3 — previously silently ignored: a
+        // `Foo { a: 1, b: 2, bogus: 3 }` against a two-field layout would drop `bogus` unnoticed).
+        let mut args: Vec<Option<String>> = vec![None; layout.len()];
+        let mut seen_members: HashSet<String> = HashSet::new();
+        for fv in &se.fields {
+            let member_key = member_text(&fv.member);
+            if !seen_members.insert(member_key.clone()) {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "struct literal `{sty}` names field `{member_key}` more than once — a \
+                         duplicate field-value binding has no faithful Mycelium construction \
+                         (VR-5/G2)"
+                    ),
+                ));
+            }
+            let pos = match &fv.member {
+                syn::Member::Named(id) => {
+                    let n = id.to_string();
+                    layout
+                        .iter()
+                        .position(|slot| slot.as_deref() == Some(n.as_str()))
+                }
+                syn::Member::Unnamed(idx) => {
+                    let i = idx.index as usize;
+                    (i < layout.len() && layout[i].is_none()).then_some(i)
+                }
+            }
+            .ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "struct literal `{sty}` names field `{member_key}`, which is not a \
+                         declared field of `{sty}`'s confirmed layout — an extra/unknown field \
+                         is never silently dropped (VR-5/G2)"
+                    ),
+                )
+            })?;
+            args[pos] = Some(emit_expr(&fv.expr, self.self_ty, self.env)?);
         }
-        Ok(format!("{sty}({})", args.join(", ")))
+        let mut resolved = Vec::with_capacity(args.len());
+        for (i, slot) in args.into_iter().enumerate() {
+            resolved.push(slot.ok_or_else(|| {
+                GapReason::new(
+                    Category::Other,
+                    format!(
+                        "struct literal `{sty}` gives no value for the field at position \
+                         {i} — a partial constructor has no Mycelium surface (VR-5)"
+                    ),
+                )
+            })?);
+        }
+        Ok(format!("{sty}({})", resolved.join(", ")))
     }
 
     // A Rust `as` cast (`syn::Expr::Cast`). Rust `as` is **lossy / wrapping / saturating /
@@ -3578,12 +3650,15 @@ fn map_pattern_inner(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReas
 /// `Ctor(subs...)` with a wildcard `_` at every unmentioned index.
 ///
 /// **Never-silent gaps (VR-5/G2, DN-132 SS5.2/SS7):**
-/// - No confirmed layout for the ctor name (`struct_layout` returns `None`) -- e.g. a foreign/
-///   unresolved type, or (the honest **component-seam boundary** this leaf leaves for the DN-132
-///   SS5.1 `StructLayout` variant-awareness change, out of this leaf's scope: `transpile.rs`) an
-///   **enum struct-variant** ctor, since `struct_layouts` does not yet walk `Item::Enum` variants.
-///   Once that population change lands, this arm composes with it unchanged -- no arm-code delta
-///   needed, only the producer side gains new keys. Never a guessed/partial-arity emission.
+/// - No confirmed layout for the ctor name (`struct_layout` returns `None`) -- a foreign/
+///   unresolved type, a cross-nodule variant not present in this file, or an ambiguous same-name
+///   struct/variant collision refused at the population (DN-134 SS3 step 1(b)). **Update
+///   (M-1093/DN-134):** the DN-132 SS5.1 `StructLayout` variant-awareness this doc used to flag as
+///   an open component-seam boundary has now landed (`transpile.rs::struct_layouts` walks
+///   `Item::Enum` `Fields::Named` variants too, collision-safe by construction) -- an in-file
+///   enum struct-variant pattern resolves through this arm exactly like a plain struct's, with no
+///   arm-code delta (composed automatically, as this doc predicted). Never a guessed/partial-arity
+///   emission.
 /// - A field member that is **positional** (`Foo { 0: a }`, syntactically legal on a `Pat::Struct`
 ///   even though every DN-132 P1 target is `Fields::Named`) -- out of this cluster's scope, gapped.
 /// - A field **name not present** in the resolved layout -- never silently dropped or wildcarded
