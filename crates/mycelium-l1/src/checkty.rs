@@ -2503,70 +2503,6 @@ pub(crate) const PRELUDE_INSTANCE_SEEDS: [crate::preseed::PreludeInstanceSeed; 9
     },
 ];
 
-// ---- DN-138 §5 obl. 1 CRITICAL fix — test-only sig-pin oracle-contamination guard -------------
-//
-// **The bug this exists to fix (found by the strict-review mutation test):** the sig-pin
-// differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`) built its
-// `lib/std/fmt.myc`/`lib/std/derive_prelude.myc` oracle `Env`s via the ORDINARY `check_nodule`
-// pipeline — which unconditionally runs the [`PRELUDE_INSTANCE_SEEDS`] seeding loop below on
-// EVERY nodule it checks. So a seed whose `for_ty` names a head the real body does NOT actually
-// declare an instance for self-inserts into its own empty slot while building the "real" oracle,
-// and the sig-pin comparison then diffs the seed against ITSELF — a trivial, silent pass. Proof:
-// mutating `seed_init_bool()`'s `for_ty` to `Ty::Data("NotReal", vec![])` still passed all 9
-// entries. Drift on an ALREADY-EXISTING head is still caught correctly (the real declaration
-// registers first, so the seed's `entry().or_insert()` is a no-op and the comparison is genuine)
-// — only a seed naming a NOVEL, nonexistent head was silently masked.
-//
-// **The fix:** let the sig-pin test build its oracle `Env`s with this seeding step suppressed, so
-// a nonexistent head genuinely resolves to `None` from `real_env.instances.get(&key)` — the
-// never-silent failure DN-138 §5 obligation 1 demands. Implemented as a thread-local flag + RAII
-// guard rather than threading a parameter through `check_nodule`/`check_phylum`'s whole public
-// call chain (KC-3 — the smallest change that actually closes the hole): `cfg(test)`-only, so it
-// is compiled out entirely (zero footprint, zero branch, zero runtime cost) outside this crate's
-// own test build, and it has exactly one production call site to guard (below).
-#[cfg(test)]
-thread_local! {
-    static SUPPRESS_INSTANCE_SEEDING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-}
-
-/// **Test-only RAII guard.** While held, [`check_nodule`]/[`check_phylum`] on THIS thread skip the
-/// [`PRELUDE_INSTANCE_SEEDS`] per-nodule seeding step entirely, so the resulting `Env` reflects
-/// only what the real source body itself declares. Restores the prior value on drop (nesting-safe,
-/// though the sig-pin oracle builder never nests it). `pub(crate)` so
-/// `src/tests/prelude_instance_seed.rs` can construct it directly (white-box, in-crate test access
-/// — this file's own house convention); not part of the public API.
-#[cfg(test)]
-pub(crate) struct SuppressInstanceSeedingForTest {
-    prev: bool,
-}
-
-#[cfg(test)]
-impl SuppressInstanceSeedingForTest {
-    #[must_use]
-    pub(crate) fn engage() -> Self {
-        let prev = SUPPRESS_INSTANCE_SEEDING.with(|f| f.replace(true));
-        Self { prev }
-    }
-}
-
-#[cfg(test)]
-impl Drop for SuppressInstanceSeedingForTest {
-    fn drop(&mut self) {
-        SUPPRESS_INSTANCE_SEEDING.with(|f| f.set(self.prev));
-    }
-}
-
-#[cfg(test)]
-fn instance_seeding_suppressed() -> bool {
-    SUPPRESS_INSTANCE_SEEDING.with(std::cell::Cell::get)
-}
-
-#[cfg(not(test))]
-#[inline(always)]
-fn instance_seeding_suppressed() -> bool {
-    false
-}
-
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
 /// function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the
 /// single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build
@@ -3529,14 +3465,12 @@ fn check_nodule_with(
     // itself is conditionally seeded on, above; see `PreludeInstanceSeed::seed_instance_for_nodule`'s
     // doc for why this adds no `mono` fast-path regression). No body is seeded — only the coherence
     // key + concrete `for_ty`/`methods`; the real body lives in `lib/std` and is pinned equal by the
-    // sig-pin differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`).
-    //
-    // `instance_seeding_suppressed()` is `cfg(test)`-gated and always `false` outside this crate's
-    // own test build (see its doc above) — this `if` is a permanent no-op in production.
-    if !instance_seeding_suppressed() {
-        for seed in PRELUDE_INSTANCE_SEEDS {
-            seed.seed_instance_for_nodule(&mut instances, effective_nodule);
-        }
+    // sig-pin differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`, which builds
+    // its oracle via direct registration — `register_nodule_decls`/`register_instances` — rather
+    // than through this function, so it never observes this seeding step at all; see that file's
+    // module doc for why).
+    for seed in PRELUDE_INSTANCE_SEEDS {
+        seed.seed_instance_for_nodule(&mut instances, effective_nodule);
     }
 
     // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
