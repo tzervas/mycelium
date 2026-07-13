@@ -4,7 +4,7 @@
 |---|---|
 | **Note** | DN-136 |
 | **Status** | **Draft** (2026-07-12). Design only — **builds nothing** and edits no `crates/**`. Every mechanism below is `Declared`/unbuilt until its FLAGGED build issue lands and is differential-witnessed (VR-5). It **recommends, does not ratify** (house rule #3); status moves forward only through the strict DN-review gate, applied by the maintainer/integrating parent — never self-ratified here. `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** (§9), not applied. |
-| **Task** | Design **Phase 1** of the remaining-gaps bulk drive: predevelop the shared **interface points** in `crates/mycelium-transpile` so bulk gap-closing leaves become **purely additive against frozen contracts** (no shared-`emit.rs` serialization). Deliver the emit hook-dispatch interface (ranked alternatives + a migration-preserves-soundness plan), a per-shared-interface stable-vs-needs-work assessment, the Phase-1 build decomposition + parallelism, the Phase-2 bulk-drive map, and an adversarial stress-test. **Does not touch `emit.rs`** (it is under concurrent edit by the residual-tail leaves M-1092/M-1093/M-1094 — DN-133/134/135). Parallel-cluster slot: **DN-136** (mit #1 — DN-133/134/135 taken by the residual-tail cluster; DN-136 verified free at `origin/dev@1bc7956b`). |
+| **Task** | Design **Phase 1** of the remaining-gaps bulk drive: predevelop the shared **interface points** in `crates/mycelium-transpile` so bulk gap-closing leaves become **purely additive against frozen contracts** (no shared-`emit.rs` serialization). Deliver the emit hook-dispatch interface (ranked alternatives + a migration-preserves-soundness plan), a per-shared-interface stable-vs-needs-work assessment, the Phase-1 build decomposition + parallelism, the Phase-2 bulk-drive map, and an adversarial stress-test. **Does not touch `emit.rs`** (it is under concurrent edit by the residual-tail leaves M-1092/M-1093/M-1094 — DN-133/134/135). Parallel-cluster slot: **DN-136** (mit #1 — DN-133/134/135 taken by the residual-tail cluster; DN-136 verified free at `origin/dev` (`1bc7956b`, re-affirmed at `c044452d`)). |
 | **Decides** | *Proposes, for ratification:* (1) the **verified diagnosis** — `emit.rs`'s dispatch is **already half-centralized** (`walk_expr`/`ExprVisitor`, `visit.rs:50/126`; `dispatch_item`, `transpile.rs:404`; the `prim_map::TABLE` registry, `prim_map.rs:140`), so the residual collision surface is **three sub-dispatch axes** *inside* the big handler bodies (pattern-kind in `map_pattern_inner`, derive/trait-shape in `emit_impl`, call-shape in `visit_call`/`visit_method_call`) — **not** a whole-module rewrite. (2) The **recommended interface**: generalize the **already-landed `prim_map::TABLE` pattern** into a **static per-axis handler-table** (Alt B), one submodule file per handler, consulted by the **unchanged single ordered pass** — ranked over a trait-object registry (Alt A) and a chained-visitor (Alt C). (3) The **one hard invariant that makes hook-ification sound**: the *ordered-pass-preservation* invariant — the table changes **who** handles a construct, never **when** or **in what order** constructs are visited, and the single `&mut EmitCtx` stays threaded through the one left-to-right pass. Parallelism is **development-time** (leaves author disjoint handler files), **never emission-time**. (4) The **per-interface** assessment (§4): `struct_layouts` **needs** the DN-134 collision-safe interface (design it here as the shared contract both M-1089/M-1093 consume); `map.rs` type-dispatch **needs** a light type-map table; `gap.rs Category`, `symtab.rs` (M-1084), and the prelude-trait seed set are **additive-as-is**. |
 | **Feeds** | The remaining-gaps bulk drive (the `language-completeness-gap-inventory.md` §3 worklist) — turns each Phase-2 gap-class into an additive leaf; DN-133/134/135/M-1092/1093/1094 (the residual-tail, whose landed `local_mangled` ordering + `struct_layouts` collision-safety are the two soundness witnesses this interface must preserve); DN-132/DN-128 (pattern + derive landed capabilities the migration must not regress); DN-99 (surface-gap register). |
 | **Grounds on** | **KC-3** (small, auditable kernel — the interface is *contained*: it reuses `walk_expr` and the `prim_map` table shape, adds no new kernel/`Ty`/eval surface); **DRY** (one dispatch policy per axis, generalizing the *existing* `prim_map` scan — not a second parallel dispatcher); **KISS/YAGNI** (house rule #5 — the smallest pattern that meets the additivity objective wins; the proven `&[Row]`-table beats a trait-object framework); **G2/never-silent** (every unrecognized construct falls through to the existing explicit gap — a table miss is a `GapReason`, never a silent no-op); **VR-5** (every claim tagged at its basis; `Declared` until built + differential-witnessed; no `Proven` claim); **DN-133** (the `local_mangled` single-left-to-right-pass ordering invariant — `emit.rs:174–196,315–324`); **DN-134** (the mandatory collision-safe `struct_layouts` population — `transpile.rs:332`; DN-134 §3 step 1); **DN-111** (native-equivalence taxonomy — handlers emit the ratified native form, they do not invent one); mitigations **#1** (verified DN slot free), **#11** (isolated worktree), **#13** (stale-base caught + corrected — see §0). |
@@ -14,22 +14,25 @@
 
 ## §0 Verify-first (mitigations #1, #13, #14)
 
-Read against `origin/dev@1bc7956b` (the maintainer-named tip). **A stale-base correction is recorded
-honestly (mit #13):** the isolated worktree first branched from an older dev tip (`#1532`, `08d8fc21`), at
-which DN-133/134/135 did *not* exist and `local_mangled`/`cross_nodule_resolve_mangled` were absent —
-which would have made the task's "landed DN-133/134/135" premises read as false. Re-basing onto
-`origin/dev@1bc7956b` (mit #13's discipline: develop off the working tier, never a stale tip) brought them
-in. **After correction, every task premise verifies** (below). This is exactly the failure mit #13 exists
-to catch — flagged, not silently papered over.
+Grounded against **`origin/dev@c044452d`** (current dev; re-pinned in the post-gate amendment — the
+combinator emitter M-1092/DN-135 landed since the original `1bc7956b` pin, adding ~397 lines and shifting
+every `emit.rs` anchor below ~2000, so all anchors are refreshed to `c044452d`). **A stale-base correction
+is recorded honestly (mit #13):** the isolated worktree first branched from an older dev tip (`#1532`,
+`08d8fc21`), at which DN-133/134/135 did *not* exist and `local_mangled`/`cross_nodule_resolve_mangled`
+were absent — which would have made the task's "landed DN-133/134/135" premises read as false. Re-basing
+onto `origin/dev` (mit #13's discipline: develop off the working tier, never a stale tip; first `1bc7956b`,
+then merged to `c044452d` at the amendment) brought them in. **After correction, every task premise
+verifies** (below). This is exactly the failure mit #13 exists to catch — flagged, not silently papered
+over.
 
-| Premise (task) | Verified at `1bc7956b`? | Anchor |
+| Premise (task) | Verified at `c044452d`? | Anchor |
 |---|---|---|
-| `emit.rs` is a large shared dispatch every gap leaf edits | **Yes** — 4546 lines; `EmitVisitor` is a single `impl` | `emit.rs:1803` |
+| `emit.rs` is a large shared dispatch every gap leaf edits | **Yes** — 4943 lines; `EmitVisitor` is a single `impl` | `emit.rs:1803` |
 | A single-canonical expr dispatch already exists | **Yes (sharpens the design)** — `walk_expr`/`ExprVisitor` | `visit.rs:50,126` |
 | The method-prim / combinator axis is already a registry | **Yes (the template)** — `prim_map::TABLE` + linear `lookup` | `prim_map.rs:140,221` |
 | Qualified-call has a `local_mangled` observed-emission ordering | **Yes** — `EmitCtx.local_mangled`, populated in one left-to-right pass | `emit.rs:174–196,315–324` (DN-133/M-1094) |
 | `struct_layouts` needs collision-safe enum-variant keying | **Yes** — still `Item::Struct`-only, bare-name-keyed | `transpile.rs:332`; DN-134 §3 step 1 |
-| Derive has a never-partial-compose gate | **Yes** — the all-or-nothing derive-set gate lives in the item-emitter driver | `emit.rs:3342–3369` (DN-128) |
+| Derive has a per-derive atomicity guarantee (**corrected — not item-level all-or-nothing**) | **Yes, but two-level, not whole-item** — a single derived impl is all-or-nothing over its *fields* (`derive_show_impl`/`derive_init_impl` refuse the whole impl on any ineligible field), while across the derive *set* each derive independently emits its impl **or** records a sub-gap and the **item still emits** the composable derives | `derive_show_impl:3809`, `derive_init_impl:3861`, `lower_struct_derives:3899`, `emit_struct:4212/4222` (DN-128/M-1086) |
 | DN slot | **DN-136 free** (highest is DN-135) | `docs/notes/` |
 
 **Non-sycophantic finding (house rule #4).** The task frames Phase 1 as "the emit.rs hook-dispatch
@@ -50,8 +53,8 @@ because the sub-construct recognition is an inline `match`/`if`-chain *inside* t
 |---|---|---|---|
 | **method-prim / combinator** | `visit_method_call` `emit.rs:2253` | **`prim_map::TABLE` scan** (already a registry) + inline conversion/desugar arms | *already additive* for a table row; the inline arms still collide |
 | **call-shape** (bare / qualified-assoc / cross-nodule mangled) | `visit_call` `emit.rs:2150` | inline `match` on `c.func` shape + `local_mangled` resolution (DN-133) | every new call-shape leaf |
-| **pattern-kind** (or / tuple / struct-variant / range / `@`) | `map_pattern_inner` `emit.rs:3095` | inline `match` on `Pat::*` | every pattern leaf (M-823/M-826/M-1089 serialized here) |
-| **derive-rule + trait-shape** | `emit_impl` `emit.rs:4204`, `emit_struct` `3711`, `emit_enum` `3585` | inline recognizers (`mvp_prelude_trait_shape`, width-cast, `Narrow`, derive attrs) | every derive/trait-shape leaf |
+| **pattern-kind** (or / tuple / struct-variant / range / `@`) | `map_pattern_inner` `emit.rs:3492` | inline `match` on `Pat::*` | every pattern leaf (M-823/M-826/M-1089 serialized here) |
+| **derive-rule + trait-shape** | `emit_impl` `emit.rs:4601`; derive lowering `lower_struct_derives:3899` / `emit_struct:4108` / `emit_enum:3982` | inline recognizers (`mvp_prelude_trait_shape`, width-cast, `Narrow`, per-derive arms) | every derive/trait-shape leaf |
 
 The item-level (`dispatch_item`, `transpile.rs:404`) and expr-level (`walk_expr`) dispatches are **already
 one canonical match each** and are **not** the collision surface — a new *item kind* is already one
@@ -68,7 +71,7 @@ live in per-construct files.**
 | Criterion | Weight | Why it matters here |
 |---|---|---|
 | **Additivity** | **critical** | A leaf adds a handler *without* editing a shared body — the whole point |
-| **Soundness-preservation** | **critical (veto)** | Must NOT regress the landed gates: DN-133 `local_mangled` ordering, DN-134 `struct_layouts` collision-safety, DN-128 derive never-partial-compose, DN-132 pattern arity/resolvability |
+| **Soundness-preservation** | **critical (veto)** | Must NOT regress the landed gates: DN-133 `local_mangled` ordering, DN-134 `struct_layouts` collision-safety, DN-128 derive **per-derive atomicity** (per-impl all-or-nothing over fields; per-derive independence across the set, item still emits), DN-132 pattern arity/resolvability |
 | **Never-silent (G2)** | **critical (veto)** | A table miss must fall through to the existing explicit `GapReason`, never a silent drop |
 | **KC-3 / KISS** | high | Smallest contained mechanism; no new kernel/framework ceremony |
 | **Testability** | high | The landed `cases()` corpus + differential/conformance harnesses must pass unchanged |
@@ -127,10 +130,11 @@ pub const TABLE: &[PatternHandler] = &[ or_pat::ROW, tuple_pat::ROW, struct_vari
   **pure** (no ctx, no emission), so it cannot perturb ordering; only the driver's scan order (source
   order of rows, first-match-wins) matters and is deterministic.
 - **G2:** a scan that matches no row falls through to the existing `fallback`/`GapReason` — identical to
-  `visit_method_call`'s current fall-through past `prim_map` (`emit.rs:2178`+).
+  `visit_method_call`'s current fall-through past the `prim_map` scan (`emit.rs:2253`, `prim_map::lookup`
+  at `2270`; the conversion/desugar arms and generic fall-through follow it).
 - **KC-3/KISS:** **best** — it is *literally the pattern already in the tree* (`prim_map`), so it adds no
   new concept; a reviewer who understands `prim_map` understands every axis.
-- **Testability:** the `cases()` corpus (`src/tests/emit.rs`, ~161 cases) and the differential/conformance
+- **Testability:** the `cases()` corpus (`src/tests/emit.rs`, 88 `Case` entries at `c044452d`) and the differential/conformance
   harnesses pass unchanged — the emitted text per case is invariant (§3).
 - **Verdict:** **Rank 1.** Smallest, proven, additive, ordering-safe.
 
@@ -165,20 +169,35 @@ rewritten, into a row+file; the driver method keeps its structure and its ctx th
 differential-witness discipline). Per landed capability:
 
 **1. Patterns (M-823 or-pattern, M-826 tuple-pattern, M-1089/DN-132 struct-variant).** Move each `Pat::*`
-arm of `map_pattern_inner` (`emit.rs:3095`) into `emit/patterns/<kind>.rs::ROW`. **The Maranget
+arm of `map_pattern_inner` (`emit.rs:3492`) into `emit/patterns/<kind>.rs::ROW`. **The Maranget
 usefulness/exhaustiveness pass runs unchanged, in the driver, *after* a handler returns its positional
 pattern** — handlers produce a positional `Pattern` fragment; they do **not** own exhaustiveness. DN-132's
 arity/`..`-rest and resolvability gates stay in the driver (they are cross-pattern properties, not
 per-row). **The struct-variant row consumes the shared `struct_layouts` interface (§4.1), never its own
 layout map.**
 
-**2. Derive (M-1086/DN-128 std-derive + M-812 facility).** Move each derive lowering (`Eq`/`Ord`/`Hash`/
-`Clone`, and the DN-127/DN-129 `Show`/`Init`-composed `Debug`/`Default`) into `emit/derives/<d>.rs::ROW`.
-**Critical invariant preserved:** the **never-partial-compose gate is a property of the driver, not of a
-row** (`emit.rs:3342–3369`). The driver evaluates the *whole* derive set all-or-nothing: if any row in the
-requested derive set gaps, the item gaps (no partially-derived emission). Rows are **pure per-derive
-lowerings**; the all-or-nothing composition stays in the item-emitter. **A leaf may add a derive row but
-may NOT relax the driver's compose gate** — this is a build-blocking review check (§8).
+**2. Derive (M-1086/DN-128 std-derive + M-812 facility).** Move each derive lowering into
+`emit/derives/<d>.rs::ROW`. What is landed at `c044452d`: `derive(Debug)` → `impl Show`
+(`derive_show_impl:3809`), `derive(Default)` → `impl Init` (`derive_init_impl:3861`), and `Clone`/`Copy`
+as satisfied value-semantics no-ops (a `DeriveSatisfied` sub-gap); `Eq`/`Ord`/`Hash` are **not yet
+recognized** (collected as a sub-gap). **Critical invariant preserved — corrected to the actual *two-level*
+guarantee (the strict-gate finding; an earlier draft mis-stated this as item-level all-or-nothing, which
+the code does NOT do):**
+- **(i) Per-derived-impl atomicity lives in the *rule*.** `derive_show_impl`/`derive_init_impl` refuse the
+  **whole** impl the moment any field is ineligible (`return Err`, `emit.rs:3809`/`3861`, gated by
+  `field_derive_eligible:3777`) — never a partial single impl. This is the real "never-partial" guarantee,
+  and it is per-impl, not per-item.
+- **(ii) Per-derive independence across the set lives in the *driver*.** `lower_struct_derives`
+  (`emit.rs:3899`) walks the derive set and, for each derive, pushes its composable impl (`Ok`) **or** a
+  sub-gap (`Err`); `emit_struct` (`emit.rs:4212/4222`) then appends the composable impls, does
+  `sub_gaps.extend(derive_gaps)`, and **still returns `Ok(Emitted{…})`**. So `#[derive(Debug, Ord)]` with
+  `Ord` unrecognized emits the struct + the Debug impl + an `Ord` sub-gap — **the item does NOT gap.**
+
+**The interface must preserve BOTH levels:** each derive row carries its own per-impl field-atomicity
+(a rule stays all-or-nothing over *its* fields), and the driver keeps the per-derive-in-set orchestration
+(compose the eligible derives, sub-gap the rest, item still emits). **A leaf may add a derive row but may
+NOT change either level** — neither collapse a rule's per-field atomicity into a partial impl, nor move the
+set-orchestration out of `lower_struct_derives` into a row — a build-blocking review check (§8).
 
 **3. Qualified-call (DN-133/M-1094) — the ordering-sensitive one.** `visit_call` (`emit.rs:2150`) resolves
 a `Type::method(...)` site against `EmitCtx.local_mangled` — the set of `{Type}__{method}` mangled decls
@@ -199,7 +218,9 @@ combinator behavior.
   appears later) gaps identically before/after — because the pass order and `local_mangled` population are
   unchanged.
 - **Collision-safety:** the `struct A{..}` + `enum E{ A{..} }` case (DN-134) refuses identically.
-- **Derive:** a mixed derive set with one unsupported derive gaps the *whole* item identically.
+- **Derive:** a mixed derive set (e.g. `#[derive(Debug, Ord)]`, `Ord` unrecognized) emits the composable
+  derives and sub-gaps the rest byte-identically — **the item still emits**; and a `derive(Debug)` on a
+  struct with one ineligible field refuses the **whole Debug impl** identically (per-impl field-atomicity).
 
 ---
 
@@ -241,7 +262,8 @@ build against it in parallel instead of racing the map's shape.**
 ### §4.2 `map.rs` `MapTypeVisitor` type-mapping — **NEEDS A LIGHT TYPE-MAP TABLE**
 
 `walk_type`/`TypeVisitor` (`visit.rs`) already centralizes the *`syn::Type`-variant* dispatch, but the
-**type-name → Mycelium-type mapping** is an inline body inside `MapTypeVisitor::visit_path` (`map.rs:145`).
+**type-name → Mycelium-type mapping** is an inline body inside `MapTypeVisitor::visit_path` (`map.rs:162`;
+the `MapTypeVisitor` struct at `map.rs:148`).
 The inventory queues several type-vocab additions (signed ints, `usize`/`isize`, `char` — rows 8/9), each
 of which would edit `visit_path` → a collision seam. **Recommend a small `&[TypeMapRow]` table** (same
 `prim_map` shape) consulted by `visit_path`, one row per mapped type in its own file. Low-risk,
@@ -258,7 +280,8 @@ a `Category` variant directly, unlike the emit bodies.)
 
 ### §4.4 `symtab.rs` resolution API (M-1084) — **STABLE / ADDITIVE (with a named follow-up)**
 
-`SymbolTable::resolve`/`candidate_lookup_keys`/`use_candidates` (`symtab.rs:160`+) landed with M-1084 and
+`SymbolTable::resolve` (`symtab.rs:273`) / `candidate_lookup_keys` (`symtab.rs:330`) / `use_candidates`
+(`symtab.rs:121`) landed with M-1084 and
 are a clean, narrow API consumed by `dispatch_use` and `imported_type_keys` (`transpile.rs:364`). **Stable
 enough to build against as-is.** The **per-method-granularity follow-up is real and named**: today
 `imported_type_keys` carries the batch siblings' *emitted item names*, **not yet each mangled per-method
@@ -269,8 +292,10 @@ it as an OQ, do not fold it into the freeze.
 ### §4.5 Prelude-trait registry (Show/Init/Fault seeds) — **ADDITIVE-AS-IS (stable at the emit layer)**
 
 The DN-127/DN-128/DN-129 prelude traits are **prelude-seeded at the checker/prelude layer** — only the
-*trait itself* is seeded (`emit.rs:3342–3369`); no cross-nodule ambient resolution is invented for their
-instances (an unseeded `impl Show[T]` fails never-silently, per DN-127 §7/OQ-1). Adding a prelude trait is
+*trait itself* is seeded; no cross-nodule ambient resolution is invented for their instances (an unseeded
+`impl Show[T]`/`impl Init[T]` for a primitive field fails never-silently — `derive_show_impl:3809` /
+`derive_init_impl:3861` gap exactly on that missing ambient instance, per DN-127 §7/OQ-1 and DN-129 §5).
+Adding a prelude trait is
 a **small append to the seed set**, not an `emit.rs`-dispatch collision. **No interface needed** at the
 emit layer; the seed set is the shared line (append-only). If the seed set grows large, it can later take
 the same `&[Seed]` table shape — YAGNI: not now.
@@ -372,9 +397,14 @@ elevated to a build-blocking DoD item (§8), not left implicit — and why Alt B
 existing pass*) is ranked above any framework that tempts a handler to carry its own execution model.
 
 **Two more stress cases, both survived under the invariant:**
-- **Derive never-partial-compose (DN-128).** If the compose gate migrated *into* the rows, a leaf could
-  add a row that emits a partial derivation. Refused: the all-or-nothing gate **stays in the driver**;
-  rows are pure per-derive lowerings; adding a row cannot relax the gate. Build-blocking review check.
+- **Derive two-level atomicity (DN-128) — corrected model.** Two distinct hazards, both refused. (a) If a
+  *rule* dropped its per-field atomicity, it could emit a *partial* impl (some fields rendered, one skipped)
+  — refused: each rule stays all-or-nothing over its own fields (`derive_show_impl:3809`/`derive_init_impl:3861`),
+  a build-blocking review check. (b) If the *set orchestration* migrated into a row, a row could gap the
+  whole item (or conversely emit past a sibling's sub-gap) — refused: `lower_struct_derives` (`3899`) +
+  `emit_struct` (`4212/4222`) keep the compose-eligible-sub-gap-the-rest-item-still-emits behavior in the
+  driver; a row cannot change it. Note this is **not** an item-level all-or-nothing gate (the earlier draft's
+  error, corrected) — the honest guarantee is per-impl-atomic + per-derive-independent.
 - **`struct_layouts` collision (DN-134).** If pattern and construction leaves each built their own layout
   map, one could omit the collision-safety discipline. Refused: §4.1 freezes **one shared `resolve`
   contract** with DN-134 (b) baked in; both arms consume it, neither re-derives it.
@@ -393,7 +423,8 @@ The invariant is a *design contract*, not a checked theorem — there is no `Pro
 2. **The ordered-pass-preservation invariant (§3/§7) is ratified as a build-blocking contract** — the
    emit-hook leaf's review MUST reject any change that (a) reorders handler invocation, (b) introduces
    emission-time concurrency, (c) gives a handler its own `EmitCtx`, or (d) moves `local_mangled`
-   population or the derive compose-gate out of the driver.
+   population out of the driver, or (e) move the per-derive **set-orchestration** (`lower_struct_derives`)
+   out of the driver into a row, or collapse a derive rule's per-impl field-atomicity into a partial impl.
 3. **The §4 per-interface verdicts** are accepted (`struct_layouts` + `map.rs` type-map need interfaces;
    `Category`/`symtab`/prelude-seeds are additive-as-is), and the `struct_layouts` collision-safe
    `resolve` contract (§4.1, DN-134 (b) default) is frozen.
@@ -401,7 +432,9 @@ The invariant is a *design contract*, not a checked theorem — there is no `Pro
 **Then, the build DoD (per interface leaf, VR-5):**
 - **P1-a** lands only with a **byte-identical differential** over the `cases()` corpus + the M-1089/M-1093
   witnesses, and **the three §7 invariant witnesses green** (forward-ref qualified-call ordering,
-  struct/variant collision refusal, mixed-derive all-or-nothing). Guarantee tag upgrades `Declared →
+  struct/variant collision refusal, and the derive witness: a mixed derive set emits the composable derives
+  and sub-gaps the rest byte-identically — item still emits — while a single-ineligible-field Debug refuses
+  the whole Debug impl identically). Guarantee tag upgrades `Declared →
   Empirical` **only** on that green differential.
 - **P1-b/c/d** land with `just check`-green change-scoped tests; each adds a row/variant, no shared-body
   edit.
@@ -422,7 +455,7 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
 - **FLAG-2 (CHANGELOG):** append-only `[Unreleased]` `docs(dn)` entry for DN-136 (dated 2026-07-12).
 - **FLAG-3 (issues.yaml — M-ids to mint; verify free at filing, mit #1):**
   - **P1-a emit-hook seam** — a build M-id, `depends_on: [M-1092, M-1093, M-1094]` (the residual-tail must
-    land first). **Highest existing id is M-1091** at `1bc7956b`; M-1092/1093/1094 are referenced by
+    land first). **Highest existing id is M-1091** (at both `1bc7956b` and `c044452d`); M-1092/1093/1094 are referenced by
     DN-133/134/135 + landed code but **their issue rows are not yet filed** in `issues.yaml` at this tip —
     confirm/file those too.
   - **P1-b `struct_layouts` collision-safe interface** — coordinate with M-1089/M-1093 (shared
@@ -430,9 +463,9 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
   - **P1-c `map.rs` type-map table** and **P1-d `Category` growth** — small build M-ids.
 - **FLAG-4 (cross-refs):** add `corpus:DN-136` pointers from `language-completeness-gap-inventory.md` §4
   (the design-first vs build-now split gains this interface row) and from DN-133/134/135 (the residual-tail
-  whose gates this interface freezes). Add `doc_refs` `src:` anchors: `emit.rs:1803,2150,2253,3095,4204`,
-  `visit.rs:50,126`, `prim_map.rs:88,140`, `transpile.rs:332,404`, `gap.rs:17`, `map.rs:145`,
-  `symtab.rs:160`.
+  whose gates this interface freezes). Add `doc_refs` `src:` anchors (all at `c044452d`):
+  `emit.rs:1803,2150,2253,2270,3492,3809,3861,3899,4108,4212,4601`, `visit.rs:50,126`,
+  `prim_map.rs:88,140,221`, `transpile.rs:332,404`, `gap.rs:17`, `map.rs:148,162`, `symtab.rs:121,273,330`.
 - **FLAG-5 (shared-checkout hygiene — coordination note, not a doc edit).** During this session's
   verify-first, an early `git reset --hard origin/dev` was inadvertently issued in the **shared main
   checkout** (`/root/git/isolated/mycelium`, on protected `dev`) instead of this worktree; it moved the
@@ -440,10 +473,29 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
   is untouched and canonical, now at `c044452d`), the tree stayed clean, and a follow-up re-align was
   correctly **blocked** by the sandbox (mit #15 — not retried/circumvented). The orchestrator should
   `git -C <shared> fetch && git -C <shared> reset --hard origin/dev` (or fast-forward) to re-align the
-  local `dev` pointer at its convenience. This worktree is correctly based on the pinned `1bc7956b`.
+  local `dev` pointer at its convenience. This worktree is now based on current dev `c044452d` (the
+  original `1bc7956b` pin merged forward at the post-gate amendment).
 
 ## §10 Changelog
 
+- **2026-07-12** — **Draft amendment (post strict-gate review).** The gate PASSED the architecture (Alt B
+  verified a true `prim_map` generalization; the §7 ordered-pass invariant and the §4.1 `struct_layouts`
+  collision-safety held under adversarial stress) but FAILED two items, both fixed here surgically without
+  touching the architecture: **(1) the DN-128 derive guarantee was described FALSELY** as item-level
+  all-or-nothing ("if any derive in the set gaps, the item gaps"). The code does **not** do that — verified
+  against `lower_struct_derives:3899` + `emit_struct:4212/4222` (`sub_gaps.extend(derive_gaps)` then **still**
+  `Ok(Emitted)`) and `derive_show_impl:3809`. The honest guarantee is **two-level**: per-derived-impl
+  atomicity in the *rule* (whole impl refused on any ineligible field, never partial) + per-derive
+  independence in the *driver* (compose the eligible, sub-gap the rest, **item still emits**). Rewrote §0
+  table, §2 objective row, §3.2, the §3 witnesses, §7, and §8 DoD to the corrected model; **(2) replaced
+  the self-contradictory §8 DoD witness** ("mixed derive gaps the whole item") with the differential-consistent
+  witness ("emits the composable derives and sub-gaps the rest byte-identically; single-ineligible-field
+  Debug refuses the whole Debug impl"). **Grounding hygiene:** re-pinned from `1bc7956b` to current dev
+  `c044452d` (M-1092/DN-135 combinator landed, +~397 lines) and refreshed every anchor — `map.rs:145→162`,
+  `symtab.rs:160→121/273/330`, the `prim_map` scan to `visit_method_call:2253`/`lookup:2270` (not the
+  `visit_call:2178` misattribution), `cases()` `~161→88`, and all shifted `emit.rs` anchors
+  (`map_pattern_inner:3492`, `emit_impl:4601`, `emit_struct:4108`, `emit_enum:3982`, the derive fns).
+  Status stays **Draft** (re-gate pending; no self-ratify — house rule #3).
 - **2026-07-12** — initial **Draft**. Designed Phase 1 of the remaining-gaps bulk drive: the emit
   hook-dispatch interface. Verified (mit #1/#13/#14) against `origin/dev@1bc7956b` that the dispatch is
   already half-centralized (`walk_expr`, `prim_map::TABLE`) so the residual collision surface is three
