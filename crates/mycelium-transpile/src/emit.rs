@@ -1014,11 +1014,24 @@ fn emit_block_as_expr_inner(
 // method's original return type carried an extra value. This transpiler has no DN-33 static
 // uniqueness analysis to consult (that analysis is itself `Declared`/unbuilt, DN-125 §5.3) — so
 // the "conservative confident-uniqueness check" §6.1 calls for is implemented by EXCLUSION: any
-// body shape outside this flat sequence (control flow, an early return, a nested/aliasing use of
-// the threaded name, a call chaining another mutation) is refused outright rather than risked,
-// because a single function body with no aliasing construct in this grammar fragment at all
-// cannot introduce a second live alias to a `let`-shadowed name — the narrowness of what we DO
-// accept is what keeps every accepted body provably safe to rebind (never-silent G2/VR-5).
+// body shape outside this flat sequence (control flow, an early return, a call chaining another
+// mutation) is refused outright rather than risked.
+//
+// **Correction (re-review of PR #1527, closing an aliasing hole this doc previously claimed shut
+// by construction):** the flat-sequence grammar DOES admit a plain `let <name> = <rhs>;`
+// statement, and this emitter's `try_threaded_assign`/`threaded_deref_lhs` matching is purely
+// name-based (it has no scope-tracking), so a `let` whose RHS is a bare reference to a DIFFERENT
+// threaded `&mut` binding genuinely DOES introduce a second live alias to the shadowed name — a
+// prior version of this doc's claim that this could not happen was wrong (see
+// `crates/mycelium-transpile/src/tests/mut_thread.rs`'s
+// `let_binding_aliasing_another_threaded_param_refuses_rather_than_mis_thread` for the repro).
+// The REAL guarantee this module upholds is narrower: every body it DOES accept is provably safe
+// to rebind because `aliased_threaded_binding` explicitly detects and REFUSES exactly this one
+// aliasing shape (a bare-path `let <threaded-name> = <other-threaded-name>;`) before it can reach
+// the fold — the narrowness of what we accept, now correctly including this exclusion, is what
+// keeps every accepted body provably safe to rebind (never-silent G2/VR-5). An ordinary
+// independent-value shadow (`let y = <literal>;`, `let y = *other;`, `let y = some_call();`, …)
+// remains fully supported via the pre-existing synthetic-carrier routing.
 // ---------------------------------------------------------------------------------------------
 
 fn emit_mutating_block_as_expr(
@@ -1050,8 +1063,13 @@ fn emit_mutating_block_as_expr_inner(
     }
     // CRITICAL fix (strict review of PR #1527, DN-125/M-1081): a plain `let` binding whose
     // pattern name SHADOWS a threaded `&mut` binding's own name (only reachable for a `&mut T`
-    // PARAMETER — Rust forbids `let self`) introduces a genuinely new, ordinarily-scoped local
-    // (Rust lexical shadowing) with NO effect on the referent. Naively folding both the threaded
+    // PARAMETER — Rust forbids `let self`) is, in the common case, a genuinely new, ordinarily-
+    // scoped local (Rust lexical shadowing) with NO effect on the referent. (**Correction, later
+    // re-review:** this is only true when the RHS is an independent value — a bare-path RHS
+    // naming a DIFFERENT threaded binding is instead a genuine aliasing rebind, refused outright
+    // by `aliased_threaded_binding` in the `Stmt::Local` arm below before it ever reaches this
+    // shadow-routing fix; the shadow_risk/synthetic-carrier machinery here only ever runs on the
+    // already-excluded-from-aliasing, safe-to-shadow case.) Naively folding both the threaded
     // reassignment(s) AND this unrelated same-named local into ONE nested `let <name> = .. in ..`
     // chain (the pre-fix behavior) let the shadow silently intercept the fold's tail reference,
     // returning the shadow's value instead of the actually-threaded one — a silent-corruption bug
@@ -1113,6 +1131,32 @@ fn emit_mutating_block_as_expr_inner(
         let is_final = idx + 1 == stmts.len();
         match s {
             Stmt::Local(local) => {
+                // Aliasing-rebind hole (re-review of PR #1527, DN-125/M-1081 follow-up): a `let`
+                // that shadows a threaded name is not always the harmless "genuinely new local"
+                // the CRITICAL fix above assumes — if its RHS is itself another threaded `&mut`
+                // binding, the shadow makes the bare name alias a DIFFERENT live reference, and
+                // this emitter's purely-name-based `try_threaded_assign`/`threaded_deref_lhs`
+                // matching has no way to notice the rebind, so it would keep attributing
+                // subsequent `*<name> = ..` reassignments to the ORIGINAL threaded binding —
+                // silently mutating the wrong one (see `aliased_threaded_binding`'s doc for the
+                // full repro). Refused outright rather than risked (never-silent G2/VR-5).
+                if let Some(shadowed) = local_binding_simple_name(local) {
+                    if threaded.iter().any(|t| t.name == shadowed) {
+                        if let Some(alias) = aliased_threaded_binding(local, &shadowed, threaded) {
+                            return Err(GapReason::new(
+                                Category::Other,
+                                format!(
+                                    "a `let {shadowed} = ..` binding rebinds threaded `&mut` \
+                                     name `{shadowed}` to alias another threaded binding \
+                                     (`{alias}`) — refused rather than risk mis-threading a \
+                                     subsequent `*{shadowed} = ..`/`{shadowed}.<field> = ..` \
+                                     reassignment onto the wrong referent (DN-125 \
+                                     aliasing-rebind hole, never-silent G2/VR-5)"
+                                ),
+                            ));
+                        }
+                    }
+                }
                 bindings.push(emit_local_binding(local, self_ty, &mut local_env)?);
             }
             Stmt::Expr(e, semi) => {
@@ -1242,6 +1286,37 @@ fn local_binding_simple_name(local: &syn::Local) -> Option<String> {
         Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Some(pi.ident.to_string()),
         _ => None,
     }
+}
+
+/// Aliasing-rebind hole fix (re-review of PR #1527, DN-125/M-1081 follow-up — see the
+/// `Stmt::Local` arm in `emit_mutating_block_as_expr_inner` for the corruption this closes). If
+/// `local` is a plain `let <shadowed_name> = <rhs>;` whose RHS is a bare, single-segment path
+/// naming a DIFFERENT threaded binding, returns that binding's name. Only a bare-`Path` RHS is
+/// checked: every threaded binding's Rust-source type is a `&mut T` reference, which is **not**
+/// `Copy` — so a bare `let <name> = <other-threaded-name>;` can only be a MOVE of that same
+/// reference (an alias), never a deref-copy of its pointee. Any other RHS shape (a literal, a
+/// deref `*other`, a method call, a struct literal, …) produces a genuinely independent value —
+/// exactly the shape the pre-existing synthetic-carrier shadow fix already handles safely, so
+/// this check does not fire for it (never over-refuse the already-safe case). A self-referential
+/// `let y = y;` (RHS names the SAME binding being shadowed) is deliberately excluded too — it
+/// re-states the current threaded value under its own name and introduces no second alias.
+fn aliased_threaded_binding<'a>(
+    local: &syn::Local,
+    shadowed_name: &str,
+    threaded: &'a [ThreadedBinding],
+) -> Option<&'a str> {
+    let init = local.init.as_ref()?;
+    let Expr::Path(p) = &*init.expr else {
+        return None;
+    };
+    if p.qself.is_some() || p.path.segments.len() != 1 {
+        return None;
+    }
+    let rhs_name = p.path.segments[0].ident.to_string();
+    threaded
+        .iter()
+        .find(|t| t.name == rhs_name && t.name != shadowed_name)
+        .map(|t| t.name.as_str())
 }
 
 /// CRITICAL fix (DN-125/M-1081, strict review of PR #1527): the set of threaded-binding names
