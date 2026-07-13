@@ -269,10 +269,14 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
 
     fn visit_tuple(&mut self, ty: &Type, t: &syn::TypeTuple) -> Self::Output {
         if t.elems.is_empty() {
-            Err(GapReason::new(
-                Category::Other,
-                "unit type `()` has no representable value in this grammar fragment",
-            ))
+            // DN-137 Alt D (M-1102): `()` maps to the prelude nullary-constructor `Unit` —
+            // `type_map::TABLE`'s `"()"` row (a synthetic lookup key; `()` is a `Type::Tuple`,
+            // not a `TypePath`, so it can't reach the name-keyed `visit_path` lookup above — this
+            // is its one call site). No longer a gap (superseding the pre-M-1102 "no
+            // representable value" refusal).
+            (crate::type_map::lookup("()")
+                .expect("type_map::TABLE always carries a \"()\" row (DN-137/M-1102)")
+                .map)(self.self_ty)
         } else if t.elems.len() >= 2 {
             let mut parts = Vec::with_capacity(t.elems.len());
             for elem in &t.elems {

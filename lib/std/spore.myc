@@ -75,8 +75,9 @@ nodule std.spores;
 //   oracle too; the decode itself is std.vsa's, spec §2 boundary).
 //
 // SUBSTITUTIONS made honestly (never a silent signature change — VR-5/G2):
-// - `Result[A,E]`/`Option[A]`/`Vec[A]`/`Unit` are redeclared locally, not `use`d — the
-//   single-nodule `include_str!` harness precedent (std.recover/std.error note).
+// - `Result[A,E]`/`Option[A]`/`Vec[A]` are redeclared locally, not `use`d — the single-nodule
+//   `include_str!` harness precedent (std.recover/std.error note). `Unit` is the built-in prelude
+//   type since DN-137/M-1102, no longer a local redeclaration.
 // - `GuaranteeStrength` is mirrored as `Guarantee` with `G`-prefixed constructors
 //   (`Exact`/`Proven`/`Empirical`/`Declared` are RESERVED strength-annotation keywords —
 //   std.diag/std.recover precedent). `strength_rank` mirrors the kernel `rank()` exactly
@@ -120,9 +121,10 @@ type Option[A] = Some(A) | None;
 
 type Vec[A] = Nil | Cons(A, Vec[A]);
 
-// Unit — the nullary marker for `verify`'s `Ok(())` (std.error/std.recover precedent).
-type Unit = U;
-
+// Unit — the nullary marker for `verify`'s `Ok(())` (std.error/std.recover precedent) is the
+// built-in PRELUDE `Unit` type since DN-137/M-1102 (`type Unit = Unit;`, `checkty::unit_prelude`);
+// the local redeclaration this file used to carry here is gone (would now collide with the
+// prelude — "duplicate type declaration").
 // Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`
 // as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).
 type Guarantee = GExact | GProven | GEmpirical | GDeclared;
@@ -266,12 +268,12 @@ fn manifest_of(s: SporeUnit) => Option[ReconManifest] =
   match s { Spore(_, _, m) => m };
 
 // verify_identity: the COMPARISON half of verify (FLAG-spore-2 carries the recomputation half to
-// the kernel): equal → Ok(U); divergent → the explicit, named HashMismatch(declared, recomputed)
+// the kernel): equal → Ok(Unit); divergent → the explicit, named HashMismatch(declared, recomputed)
 // — never a silent accept (C1/G2). `expected` is the declared identity, `found` the recomputed
 // one (the oracle's field convention). Exact (deterministic comparison).
 fn verify_identity(declared: Bytes, recomputed: Bytes) => Result[Unit, SporeErr] =
   match bytes_eq(declared, recomputed) {
-    True => Ok(U),
+    True => Ok(Unit),
     False => Err(HashMismatch(declared, recomputed))
   };
 

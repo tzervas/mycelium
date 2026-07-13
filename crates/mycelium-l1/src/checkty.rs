@@ -349,6 +349,16 @@ pub fn type_head(ty: &Ty) -> Option<String> {
 /// is synthesized on demand per nodule via [`synthetic_tuple_data`]).
 pub(crate) const PRELUDE_HOME: &str = "<prelude>";
 
+/// Every **unconditionally**-seeded prelude data type name (`Bool` — [`prelude`]; `Unit` — DN-137
+/// Alt D / M-1102, [`unit_prelude`]): both are registered into every nodule regardless of use, so
+/// both must be excluded, the same way, wherever a phylum-wide pass needs "this nodule's OWN
+/// declared names" (the [`OwnDecls`] runtime-link exclusion filter, and the pub-blind coherence
+/// view's orphan-rule exclusion) — never a per-nodule collision, and never a false orphan-rule
+/// satisfaction for either builtin. One array, not a hand-duplicated `name != "Bool" && name !=
+/// "Unit"` at each call site (DRY — mirrors [`PRELUDE_TRAIT_SEEDS`]'s factoring for the conditional
+/// prelude traits).
+pub(crate) const PRELUDE_UNCONDITIONAL_TYPE_NAMES: [&str; 2] = ["Bool", "Unit"];
+
 /// A nodule's **home** string for type-identity qualification (DN-112 Rank 1): its dot-joined path
 /// (`"a"`, `"a.b"`), or `""` for a path-less (anonymous, header-less) nodule. An empty home is
 /// treated as bare/unqualified by [`qualify_type_name`] (the same "stay bare" treatment as
@@ -838,6 +848,32 @@ pub(crate) fn prelude() -> DataInfo {
                 fields: vec![],
             },
         ],
+    }
+}
+
+/// The builtin prelude's second entry (DN-137 Alt D, M-1102): `type Unit = Unit;` — a payload-free,
+/// single-constructor data type, the arity-0 member of the M-826 tuple/product family. **No new
+/// kernel node, no grammar change** — this reuses exactly the same hand-built-`DataInfo` seeding
+/// mechanism as [`prelude`]'s `Bool` (never parsed from source, so every nodule sees the identical
+/// `Unit` type without declaring it), and the same-name type/constructor spelling is already
+/// exercised as an ordinary **user-declared** type elsewhere in this crate's test corpus
+/// (`tests/substrate.rs`, `tests/preseed.rs`'s `show_and_init_check_cleanly_for_a_fieldless_nullary_ctor_type`)
+/// — confirming the type and constructor namespaces don't collide ([`Env::type_info`] keys by type
+/// name, [`Env::ctor`] scans each type's `ctors` list, so `Unit`/`Unit` resolve independently).
+///
+/// **Guarantee: `Exact`** (VR-5) — a type with exactly one inhabitant and no fields has nothing to
+/// approximate, swap, or measure; the tag is by construction, not by trial.
+pub(crate) fn unit_prelude() -> DataInfo {
+    DataInfo {
+        name: "Unit".to_owned(),
+        // Same single reserved home as `Bool` (DN-112 §9 invariant i) — `Unit` resolves
+        // identically, unqualified, under every nodule of a phylum.
+        home: PRELUDE_HOME.to_owned(),
+        params: vec![],
+        ctors: vec![CtorInfo {
+            name: "Unit".to_owned(),
+            fields: vec![],
+        }],
     }
 }
 
@@ -1355,13 +1391,16 @@ impl PhylumEnv {
     /// instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have
     /// refused).
     pub fn link(&self) -> Result<Env, CheckError> {
-        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and every
-        // built-in prelude trait (`Fuse`/`Ord3`/`Show`/`Init`/`Fault`) iff any nodule uses it
-        // (mirrors `register_nodule_decls`' conditional seeding; DN-129 §5 DRY factoring — one loop
-        // over [`PRELUDE_TRAIT_SEEDS`] instead of a hand-copied `if` per trait).
+        // Seed the shared prelude once (identical in every nodule): the `Bool` and `Unit`
+        // (DN-137 Alt D) types, and every built-in prelude trait (`Fuse`/`Ord3`/`Show`/`Init`/
+        // `Fault`) iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding;
+        // DN-129 §5 DRY factoring — one loop over [`PRELUDE_TRAIT_SEEDS`] instead of a
+        // hand-copied `if` per trait).
         let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
         let p = prelude();
         types.insert(p.name.clone(), p);
+        let u = unit_prelude();
+        types.insert(u.name.clone(), u);
         let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
         for seed in PRELUDE_TRAIT_SEEDS {
             seed.seed_for_link(&mut traits, &self.nodules);
@@ -2172,10 +2211,11 @@ fn check_phylum_inner(
             coherence.traits.insert(name.clone());
         }
         for name in regs.types.keys() {
-            // The prelude `Bool` is registered into every nodule; skip it as a phylum "local" so it
-            // does not falsely satisfy the orphan rule for an unrelated impl (it is a primitive-ish
-            // builtin, handled by the primitive-repr arm anyway).
-            if name != "Bool" {
+            // The unconditionally-seeded prelude types (`Bool`, `Unit` — DN-137) are registered
+            // into every nodule; skip them as a phylum "local" so neither falsely satisfies the
+            // orphan rule for an unrelated impl (both are primitive-ish builtins, handled by the
+            // primitive-repr arm anyway).
+            if !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&name.as_str()) {
                 coherence.types.insert(name.clone());
             }
         }
@@ -2198,15 +2238,15 @@ fn check_phylum_inner(
     let mut flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
         // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
-        // `regs` is consumed below. Exclude the injected prelude `Bool` and every conditionally-
-        // seeded built-in prelude trait (DN-129 §5: `PRELUDE_TRAIT_SEEDS` — `Fuse`/`Ord3`/`Show`/
-        // `Init`/`Fault`) — they are identical everywhere and are seeded once by `link`, never a
-        // per-nodule collision.
+        // `regs` is consumed below. Exclude the injected prelude `Bool`/`Unit` (DN-137) and every
+        // conditionally-seeded built-in prelude trait (DN-129 §5: `PRELUDE_TRAIT_SEEDS` —
+        // `Fuse`/`Ord3`/`Show`/`Init`/`Fault`) — they are identical everywhere and are seeded once
+        // by `link`, never a per-nodule collision.
         own.push(OwnDecls {
             types: regs
                 .types
                 .keys()
-                .filter(|n| n.as_str() != "Bool")
+                .filter(|n| !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&n.as_str()))
                 .cloned()
                 .collect(),
             fns: regs.fns.keys().cloned().collect(),
@@ -2453,14 +2493,16 @@ pub(crate) const PRELUDE_INSTANCE_SEEDS: [crate::preseed::PreludeInstanceSeed; 9
 /// function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the
 /// single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build
 /// its cross-nodule views before checking any body). Bodies and instances are **not** handled here
-/// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included
-/// so intra-nodule resolution is unchanged.
+/// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` and
+/// `Unit` (DN-137 Alt D) are included so intra-nodule resolution is unchanged.
 ///
 /// Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).
 pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
+    let u = unit_prelude();
+    types.insert(u.name.clone(), u);
     register_types(&mut types, nodule)?;
     let mut traits = register_traits(&types, nodule)?;
     // DN-129 §5 (M-1091): every built-in prelude trait — `Fuse` (M-965 F-A1), `Ord3` (DN-122 §13 /

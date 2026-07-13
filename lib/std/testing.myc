@@ -88,8 +88,9 @@ nodule std.testing;
 //   exercise; `add_u` REFUSES at 256 on all paths — never a silent wrap — where Rust's
 //   `Summary::total` saturates; the overflow discipline differs and is documented, not hidden).
 //   The shrink-loop step ceiling keeps Rust's literal 1000 at Binary{16}.
-// - `FnOnce() -> O` backend thunks are `Unit => Binary{N}` pure fns over the `U` marker
-//   (std.error/std.recover precedent — HOF stage 1 has no nullary closure type); `differential`'s
+// - `FnOnce() -> O` backend thunks are `Unit => Binary{N}` pure fns over the built-in PRELUDE
+//   `Unit` type (DN-137/M-1102; std.error/std.recover precedent — HOF stage 1 has no nullary
+//   closure type); `differential`'s
 //   `O: PartialEq` generic is width-generic `Binary{N}` compared by the width-typed Exact `eq`
 //   prim (no user-type equality surface).
 // - `for_each_mode`'s `FnMut(CertMode)` side-effecting visitor is a PURE map returning the
@@ -102,7 +103,8 @@ nodule std.testing;
 //   (std.error precedent): `CertMode`/`CertScope`/`CertDecl`/`ResolvedMode` (mycelium_core/
 //   mycelium_proj), `GuaranteeStrength` as `Guarantee` with `G`-prefixed constructors
 //   (`Exact`/`Proven`/`Empirical`/`Declared` are reserved strength keywords — std.diag/
-//   std.recover precedent), and `Result`-free `Option`/`Vec`/`Unit` mirrors.
+//   std.recover precedent), and `Result`-free `Option`/`Vec` mirrors (`Unit` is the built-in
+//   prelude type since DN-137/M-1102, no longer a local mirror).
 // - `FailRecord.context` Strings are Bytes literals (constructed, never compared);
 //   `differential`'s Rust context `format!("differential({input_desc})")` is composed with the
 //   Exact `bytes_concat` prim for parity; `golden`'s context is the fixed literal "golden" (the
@@ -126,10 +128,6 @@ nodule std.testing;
 type Option[Opt] = Some(Opt) | None;
 
 type Vec[A] = Nil | Cons(A, Vec[A]);
-
-// Unit — the nullary-marker substitute for the missing `() => T` closure-domain form
-// (std.error.myc precedent).
-type Unit = U;
 
 // Guarantee — the kernel GuaranteeStrength lattice as value-level data, G-prefixed
 // (reserved-keyword substitution; std.diag/std.recover precedent).
@@ -455,7 +453,7 @@ fn differential{N}(
 ) => Verdict[DiffFail[Binary{N}]] =
   match bool_and(lhs_available, rhs_available) {
     False => Skipped(BackendUnavailable),
-    True => diff_compare(input_desc, lhs(U), rhs(U))
+    True => diff_compare(input_desc, lhs(Unit), rhs(Unit))
   };
 
 // ── the honest aggregator (spec §4; the C1 crux made structural) ────────────────────────────────
