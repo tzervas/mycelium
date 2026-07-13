@@ -1260,6 +1260,16 @@ fn struct_pattern_desugars_to_positional_ctor() {
             "struct Foo { x: u8, y: u8 } impl Foo { fn f(self) -> u8 { match self { Self { x, .. } => x, } } }",
             "Foo(x, _)",
         ),
+        // M-1093/DN-134: an **enum struct-variant** pattern -- the DN-132 SS5.1 component-seam
+        // boundary M-1089's own test used to pin as an honest gap (`struct_layouts` walked
+        // `Item::Struct` only). Now that the shared, collision-safe population also walks
+        // `Item::Enum` `Fields::Named` variants (`transpile.rs::struct_layouts`), this arm
+        // resolves it exactly like a plain struct -- "composes automatically once that
+        // population lands, with no further edit here" (M-1089's own doc, confirmed).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(v: E) -> u8 { match v { E::A { x, .. } => x, _ => 0 } }",
+            "A(x, _)",
+        ),
     ];
     for (rust, needle) in cases {
         let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
@@ -1281,15 +1291,6 @@ fn struct_pattern_never_silently_gaps() {
         // No confirmed in-file layout at all (an undeclared/foreign constructor name).
         (
             "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Bar { x, .. } => x, _ => 0 } }",
-            "no confirmed in-file layout",
-        ),
-        // The DN-132 SS5.1 component-seam boundary this leaf documents (verify-first, mitigation
-        // #14): an **enum struct-variant** pattern still gaps today, because `struct_layouts`
-        // (`transpile.rs`, a sibling leaf's scope) does not yet walk `Item::Enum` variants -- this
-        // arm is written generically over `struct_layout`, so it composes automatically the moment
-        // that population change lands, with no further edit here.
-        (
-            "enum E { A { x: u8, y: u8 } } fn f(v: E) -> u8 { match v { E::A { x, .. } => x, _ => 0 } }",
             "no confirmed in-file layout",
         ),
         // A field name absent from the resolved layout -- never a silent wildcard/drop.
@@ -1384,6 +1385,321 @@ fn struct_pattern_forms_check_clean_against_real_toolchain() {
         // A three-field struct, only one field bound, `..` for the rest.
         (
             "struct P3 { a: u8, b: u8, c: u8 } fn f(v: P3) -> u8 { match v { P3 { b, .. } => b, } }",
+            "f",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// DN-134 SS3 (M-1093): a named-field **struct-variant construction** in expression position
+/// (`E::A { x: .., y: .. }`, `Self::Variant { .. }`) desugars to the grammar's positional `Ctor`
+/// call, arguments placed at their DECLARATION index regardless of the literal's own field-write
+/// order -- the construction twin of `struct_pattern_desugars_to_positional_ctor` (M-1089), now
+/// sharing the same `struct_layouts` population.
+#[test]
+fn struct_variant_construction_desugars_to_positional_ctor() {
+    let cases = [
+        // Declaration-order field-value write.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, y: 2 } }",
+            "A(1, 2)",
+        ),
+        // Field-order canonicalization: written `y, x`, still emitted `A(1, 2)` (x=1, y=2).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { y: 2, x: 1 } }",
+            "A(1, 2)",
+        ),
+        // `Self::Variant { .. }` inside an `impl` -- the identical ctor-name-resolution
+        // convention `Expr::Struct`'s bare-`Self` arm and `Pat::Struct`'s already use; the
+        // `Self::` qualifier's ENUM segment is transparent (only the variant's own last segment
+        // matters), so no special-case is needed for the qualified form either.
+        (
+            "enum E { A { x: u8, y: u8 } } impl E { fn f() -> E { Self::A { x: 3, y: 4 } } }",
+            "A(3, 4)",
+        ),
+        // A single-field variant.
+        (
+            "enum E { A { x: u8 } } fn f() -> E { E::A { x: 7 } }",
+            "A(7)",
+        ),
+        // A three-field variant, matching the `std-sys-host` shape's field count class.
+        (
+            "enum E { A { a: u8, b: u8, c: u8 } } fn f() -> E { E::A { c: 3, a: 1, b: 2 } }",
+            "A(1, 2, 3)",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            myc.contains(needle),
+            "case `{rust}`: expected .myc to contain `{needle}`, got:\n{myc}\ngaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// DN-134 SS3 (M-1093): the never-silent gap/refusal paths (VR-5/G2) for struct-variant
+/// construction -- an unresolved ctor, a missing field, an extra/unknown field, and a duplicate
+/// field-value binding all refuse rather than emitting a guessed/partial-arity `Ctor`.
+#[test]
+fn struct_variant_construction_never_silently_gaps() {
+    let cases = [
+        // No confirmed in-file layout at all -- the enum/variant is undeclared in this file (the
+        // honest DN-113/DN-134-OQ-2 cross-nodule-resolvability shape: `TimeErr` isn't declared
+        // here, exactly like `std-sys-host`'s real `TimeErr::ClockUnavailable { reason }`, which
+        // is imported from `std.time`, not declared in the same file).
+        (
+            "fn f() -> u8 { let x = TimeErr::ClockUnavailable { reason: 1 }; 0 }",
+            "not an in-file single-ctor struct or enum struct-variant",
+        ),
+        // Missing field.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1 } }",
+            "gives no value for the field at position",
+        ),
+        // Extra/unknown field -- previously silently dropped (no check existed at all before
+        // this leaf); now an explicit refusal.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, y: 2, z: 3 } }",
+            "not a declared field",
+        ),
+        // Duplicate field-value binding.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, x: 2, y: 3 } }",
+            "more than once",
+        ),
+        // `..rest` struct-update on a variant construction -- the pre-existing "no record-update
+        // surface" gap, exercised on the enum-variant shape too (was previously only reachable
+        // for plain structs since variants never resolved a layout at all).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(o: E) -> E { E::A { x: 1, ..o } }",
+            "struct-update syntax",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            !report.emitted_items.iter().any(|n| n == "f"),
+            "case `{rust}`: `f` must stay gapped, got emitted={:?} myc:\n{myc}",
+            report.emitted_items
+        );
+        assert!(
+            report.gaps.iter().any(|g| g.reason.contains(needle)),
+            "case `{rust}`: expected a gap whose reason contains `{needle}`, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// **CRITICAL regression (PR #1548 strict review — empirically reproduced against the compiled
+/// transpiler; the exact #1535/DN-134 build-blocking hazard).** `struct A` and
+/// `enum Foo1 { A { .. }, Baz { odd: Instant } }` share the bare ctor name `A`. `Baz`'s
+/// `odd: Instant` field is unmappable (an undeclared external type), so `Foo1` fails WHOLE-ENUM
+/// resolvability for a reason entirely UNRELATED to the colliding `A` variant. Before the fix,
+/// `struct_layouts`'s collision loop skipped registering `Foo1`'s variants into its `seen`/
+/// `ambiguous` bookkeeping whenever the WHOLE owning enum was unresolvable — so `Foo1::A`'s bare
+/// name was never flagged as colliding with struct `A`'s, and `emit::struct_layout` (which
+/// resolves by bare ctor name only, with no per-enum scoping) would silently bind `Foo1::A {
+/// foo, bar }`'s construction to struct `A`'s real layout: a wrong-index bind (G2) recorded as a
+/// clean success. This test fails against the pre-fix code (both `f` and `g` wrongly emit, `g`
+/// bound to the wrong layout) and passes with the fix (both gap, never a silent wrong bind).
+#[test]
+fn struct_vs_unrelated_enum_variant_collision_registers_despite_sibling_gap() {
+    let rust = "struct A { foo: u8, bar: u8 } \
+                enum Foo1 { A { foo: u8, bar: u8 }, Baz { odd: Instant } } \
+                fn f() -> A { A { foo: 1, bar: 2 } } \
+                fn g() -> Foo1 { Foo1::A { foo: 3, bar: 4 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "`Foo1::A {{ .. }}` must NEVER silently resolve against the unrelated struct `A`'s layout \
+         just because `Foo1` (as a WHOLE) fails resolvability for a reason unrelated to the `A` \
+         variant (`Baz`'s unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "struct `A`'s own construction must also gap once its bare name collides with `Foo1::A` \
+         — never a partial refusal that leaves one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("A(3, 4)") && !myc.contains("A(1, 2)"),
+        "neither construction may silently emit a positional `A(..)` bound to either \
+         interpretation's layout — got:\n{myc}"
+    );
+}
+
+/// **CRITICAL regression, twin of the above** (PR #1548 strict review). `Foo1::Bar` and
+/// `Foo2::Bar` share the bare ctor name `Bar`, declared on two UNRELATED enums. `Foo1`'s sibling
+/// variant `Baz` has an unmappable field (`Instant`, undeclared), excluding `Foo1` as a WHOLE
+/// from resolvability for a reason entirely unrelated to `Bar`. Before the fix, `Foo1`'s `Bar`
+/// variant was skipped from collision registration entirely (the whole-enum-unresolvable guard
+/// covered the whole loop body, not just the `out`-insertion), so `Foo2::Bar`'s real layout
+/// stayed unflagged and `Foo1::Bar`'s construction site would silently resolve against it —
+/// bare-name-only lookup, no per-enum scoping — a wrong-index bind (G2) between two entirely
+/// unrelated enums. Fails against the pre-fix code (both `g1`/`g2` wrongly emit, `g1` cross-bound
+/// to `Foo2`'s layout) and passes with the fix (both gap, refused as ambiguous).
+#[test]
+fn two_enums_same_named_variant_one_excluded_by_unmappable_sibling_never_cross_binds() {
+    let rust = "enum Foo1 { Bar { reason: String }, Baz { odd: Instant } } \
+                enum Foo2 { Bar { reason: String } } \
+                fn g1() -> Foo1 { Foo1::Bar { reason: 1 } } \
+                fn g2() -> Foo2 { Foo2::Bar { reason: 2 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g1"),
+        "`Foo1::Bar {{ .. }}` must NEVER silently resolve against `Foo2::Bar`'s layout merely \
+         because `Foo1` fails whole-enum resolvability for a reason unrelated to `Bar` (`Baz`'s \
+         unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g2"),
+        "`Foo2::Bar`'s own construction must also gap once its bare name collides with \
+         `Foo1::Bar` — never a partial refusal leaving one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+}
+
+/// **THE key soundness test** (DN-134 SS4 stress-#8, SS3 step 1(b) -- the cross-leaf finding from
+/// the M-1089 pattern-emit review that made the shared `struct_layouts` population's
+/// collision-safety a BUILD-BLOCKING DoD item, not an OQ). A file declaring both a plain `struct
+/// A` and an unrelated `enum E { A { .. } }` sharing the SAME bare name must NEVER let `E::A`'s
+/// construction silently resolve against struct `A`'s layout (a wrong-index bind, G2) -- nor may
+/// struct `A`'s own construction silently keep resolving once the name is ambiguous (this
+/// transpiler's resolution side has no qualifier to tell the two apart -- see
+/// `transpile.rs::struct_layouts`'s collision-safety doc). BOTH must gap, never-silently, never a
+/// wrong emission.
+#[test]
+fn struct_and_variant_same_bare_name_collision_never_silently_binds_wrong() {
+    let rust = "struct A { foo: u8, bar: u8 } \
+                enum E { A { foo: u8 } } \
+                fn f() -> A { A { foo: 1, bar: 2 } } \
+                fn g() -> E { E::A { foo: 3 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "the ambiguous struct `A`'s own construction must gap once its bare name collides with \
+         `E::A`, not silently keep resolving — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "`E::A {{ .. }}` must NEVER silently resolve against the unrelated struct `A`'s layout \
+         — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("A(3)") && !myc.contains("A(1, 2)"),
+        "neither the wrong-bind shape (`A(3)`, `E::A` bound to struct `A`'s 2-field layout) nor \
+         a coincidentally-matching struct-side emission may appear — got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .filter(|g| g.reason.contains(
+                "not an in-file single-ctor struct or enum \
+                                             struct-variant"
+            ))
+            .count()
+            >= 2,
+        "both `f` and `g` must each carry their own honest \"no confirmed layout\" gap (never a \
+         silent wrong bind) — gaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-134 SS3 (M-1093): every struct-variant
+/// construction shape [`struct_variant_construction_desugars_to_positional_ctor`] proves the
+/// *text* of is run through the REAL `myc-check` oracle here, proving the emitted positional
+/// `Ctor` call actually **type-checks** — the construction-side twin of
+/// `struct_pattern_forms_check_clean_against_real_toolchain` (M-1089). Skips gracefully (never
+/// fails) when `myc-check` is not built.
+#[test]
+fn struct_variant_construction_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-struct-variant-ctor-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // Field values are typed fn PARAMETERS (shorthand `E::A { x, y }`), not literal integers --
+    // a bare `Int` literal has no representation family under the real checker without a
+    // declared default paradigm (verify-first, mitigation #14: `expr_env_type`'s own doc, and
+    // `struct_pattern_forms_check_clean_against_real_toolchain`'s sibling oracle test uses the
+    // identical bound-variable convention for the same reason). Arity/declaration-order
+    // correctness is asserted TEXTUALLY by the sibling
+    // `struct_variant_construction_desugars_to_positional_ctor` test; this oracle proves each
+    // canonicalized positional `Ctor` shape actually type-checks.
+    let rust_snippets = [
+        // Declaration-order write.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(x: u8, y: u8) -> E { E::A { x, y } }",
+            "f",
+        ),
+        // Field-order canonicalization: written `y, x`.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(x: u8, y: u8) -> E { E::A { y, x } }",
+            "f",
+        ),
+        // `Self::Variant { .. }` inside an `impl`.
+        (
+            "enum E { A { x: u8, y: u8 } } impl E { fn f(x: u8, y: u8) -> E { Self::A { x, y } } }",
+            "impl E",
+        ),
+        // Single-field variant -- matches `std-sys-host`'s `TimeErr::ClockUnavailable { reason }`
+        // shape's field-count class.
+        ("enum E { A { x: u8 } } fn f(x: u8) -> E { E::A { x } }", "f"),
+        // Three-field variant, a wider arity case for measure.
+        (
+            "enum E { A { a: u8, b: u8, c: u8 } } fn f(a: u8, b: u8, c: u8) -> E { E::A { c, a, b } }",
             "f",
         ),
     ];
