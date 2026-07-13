@@ -100,6 +100,23 @@ pub fn tokens_to_string<T: ToTokens>(node: &T) -> String {
 ///   conflating a foreign type with an unrelated local type of the same terminal name — a real
 ///   bug caught by inspecting this transpiler's own output on `std::cmp::Ordering` vs the local
 ///   `Ordering` (see the transpiler's report). Left an explicit gap rather than guessed (VR-5).
+/// - **L-MAP (DN-99 §2 register rows 15/35) — a native slice type `[T]`** (reached bare, or as the
+///   referent of `&[T]` once the shared-reference arm erases the `&`): **`[u8]` -> `Bytes`**, the
+///   dedicated unsigned-octet-sequence kernel type (RFC-0032 D4; `bytes_slice`/`bytes_concat`
+///   surfaced by DN-43/M-799). Gated on the **syntactic** element type (`is_syntactic_u8`), not the
+///   *mapped* text — `i8`/`u16`/… also map to a `Binary{N}` scalar, but a slice of them is NOT
+///   `[u8]`'s `Bytes` (that would silently reinterpret a differently-signed/-sized element as an
+///   unsigned-octet buffer, VR-5). Every **other** slice element type maps via the DN-99 row 35
+///   `Vec[T]` cons-list convention (`lib/std/collections.myc`'s `type Vec[A] = Nil | Cons(A,
+///   Vec[A])`) — the same surface text `Vec<T>` already receives through the ordinary
+///   generic-application arm below, so `&[T]`/`Vec<T>` are surface-uniform per DN-99 row 35. The
+///   element recurses through the *public* `map_type` (budget re-arms per level, same pattern as
+///   the tuple/reference/generic-argument arms); an unmappable element propagates its own precise
+///   `GapReason` unchanged (`?`) — never a partial `Vec[..]` emission (G2). **Out of scope for this
+///   arm:** `Type::Array` (`[T; N]`, DN-99's `Seq`-mapping half of rows 15/35) is a *different* syn
+///   shape (fixed-size array, not slice) and is untouched here — it still falls to this visitor's
+///   `fallback` exactly as before this leaf landed (verified by this leaf's own regression test),
+///   a real residual gap, not silently claimed closed.
 ///
 /// **RFC-0041 §4.7 (W1):** guarded by the crate-wide recursion budget (`crate::gap::guarded`) —
 /// self-recurses over unbounded/attacker-controlled type nesting (a right-nested `Type::Tuple`),
@@ -369,14 +386,43 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
             ))
         }
     }
+
+    // L-MAP (DN-99 §2 register rows 15/35 — see this fn's doc for the full mapping rationale):
+    // `[u8]` -> `Bytes`; every other `[T]` -> the `Vec[T]` cons-list convention.
+    fn visit_slice(&mut self, _ty: &Type, s: &syn::TypeSlice) -> Self::Output {
+        if is_syntactic_u8(&s.elem) {
+            return Ok("Bytes".to_string());
+        }
+        let elem = map_type(&s.elem, self.self_ty)?;
+        Ok(format!("Vec[{elem}]"))
+    }
+}
+
+/// Whether `ty` is *syntactically* the bare Rust `u8` path type — a single-segment, argument-free
+/// `Type::Path` named exactly `u8`. Used to gate the `[u8]` -> `Bytes` mapping on the SOURCE
+/// spelling, never on whatever `map_type` happens to map `u8` to (deliberately not
+/// `map_type(ty, None) == Ok("Binary{8}".into())`, which would also true for `i8`/every other
+/// `Binary{8}`-mapped scalar and silently widen the `Bytes` mapping to elements it does not
+/// faithfully represent — VR-5, see this module's `map_type` doc).
+fn is_syntactic_u8(ty: &Type) -> bool {
+    match ty {
+        Type::Path(tp) => {
+            tp.qself.is_none()
+                && tp.path.segments.len() == 1
+                && matches!(tp.path.segments[0].arguments, PathArguments::None)
+                && tp.path.segments[0].ident == "u8"
+        }
+        _ => false,
+    }
 }
 
 /// For the M-1006 **resolvability fixpoint** (`transpile::resolvable_type_names`): collect the bare,
 /// single-segment **user** type names `ty` references (the ones [`map_type`] passes through *as-is* —
 /// i.e. not builtins), pushing them into `out`. Returns `false` when `ty` has **no** [`map_type`]
 /// mapping at all (an unmappable field ⇒ its record can never be resolvable — consistent with
-/// `map_type` gapping the field). Builtins (`bool`, `u8..u128`) and tuples/shared-refs/generic-apps
-/// of mappables are traversed for their nested user names but are not themselves deps.
+/// `map_type` gapping the field). Builtins (`bool`, `u8..u128`) and tuples/shared-refs/generic-apps/
+/// slices (L-MAP, DN-99 rows 15/35) of mappables are traversed for their nested user names but are
+/// not themselves deps.
 ///
 /// This deliberately **mirrors [`map_type`]'s mappable shapes**; if the two drift, the only cost is a
 /// *missed* emission (a struct conservatively left gapped) — never an unsound one (VR-5): the gate is
@@ -468,6 +514,17 @@ impl crate::visit::TypeVisitor for FieldDepsVisitor<'_> {
             field_type_user_deps(&r.elem, self.out)
         } else {
             false
+        }
+    }
+
+    // L-MAP: mirrors `MapTypeVisitor::visit_slice` — `[u8]` is mappable (to `Bytes`) but, like the
+    // other builtins above, contributes no user dep; every other `[T]` is mappable exactly when its
+    // element is (the `Vec[T]` cons-list convention), contributing whatever deps the element does.
+    fn visit_slice(&mut self, _ty: &Type, s: &syn::TypeSlice) -> Self::Output {
+        if is_syntactic_u8(&s.elem) {
+            true
+        } else {
+            field_type_user_deps(&s.elem, self.out)
         }
     }
 }
