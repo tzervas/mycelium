@@ -43,7 +43,9 @@
 //! `Empirical` (measured — see `src/vet.rs`). No `clap` dependency — plain `std::env::args`
 //! (kickoff-scoped minimal deps).
 
-use mycelium_transpile::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
+use mycelium_transpile::batch::{
+    common_ancestor, discover_rs_files, output_rel_path, summarize, transpile_batch,
+};
 use mycelium_transpile::remap::render_remap_md;
 use mycelium_transpile::vet::{vet_batch, MycChecker, VetInput, VetReport};
 use mycelium_transpile::{transpile_file, GapReport};
@@ -266,7 +268,11 @@ fn run_single_file(input: &Path, out_dir: &Path, vet: bool) -> ExitCode {
     };
 
     let emitted = report.emitted_items.len();
-    let gapped = report.gaps.len();
+    // The headline count excludes non-gap advisories (e.g. `DeriveSatisfied` — "you already have
+    // it", not a coverage loss; see `Category::is_non_gap_advisory`'s doc for why `NamedFieldDrop`
+    // is deliberately NOT excluded here) — a review LOW on M-1086/#1544: the raw `gaps.len()` was
+    // inflating this total by counting satisfied-no-op derives as if they were gaps.
+    let gapped = report.real_gap_count();
     let non_test = report.non_test_item_count();
     println!(
         "mycelium-transpile: {} top-level item(s) ({} non-test) — {} emitted, {} gap(s) \
@@ -315,14 +321,15 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
 /// no staging. Each file's real path (exactly as given) is transpiled and recorded, so the
 /// committed `summary.json`/`vet.json` provenance is the actual repo source location, never a
 /// scratch/staging path (which would be both non-portable and non-deterministic across reruns —
-/// see the module docs). The output-naming `root` is the **first** file's parent directory (the
-/// caller's contract: an explicit file set is a sibling group forming one real phylum — DN-124 §6
-/// Attack 1a's boundary constraint is the caller's responsibility here, not this driver's).
+/// see the module docs). The output-naming `root` is the **common ancestor** of every named file's
+/// own parent directory (`batch::common_ancestor`, bug-fixed from an earlier `files[0].parent()`-only
+/// root — see that function's doc for the collision it fixes): a single sibling group (the common
+/// `--files` case, DN-124 §6 Attack 1a's boundary constraint remains the caller's responsibility)
+/// degenerates to that shared directory exactly as before, while a set spanning MULTIPLE crate roots
+/// (e.g. batching several crates' `src/lib.rs` in one run) now walks up to their shared ancestor so
+/// every file's output is crate-qualified instead of colliding on a bare stem.
 fn run_explicit_files(files: &[PathBuf], out_dir: &Path, vet: bool) -> ExitCode {
-    let root = files[0]
-        .parent()
-        .map(Path::to_path_buf)
-        .unwrap_or_else(|| PathBuf::from("."));
+    let root = common_ancestor(files);
     write_batch_and_maybe_vet(files, &root, out_dir, vet)
 }
 
@@ -441,6 +448,16 @@ fn write_batch_and_maybe_vet(
         }
     }
 
+    // The headline count excludes non-gap advisories, same as the single-file print above (a
+    // review LOW on M-1086/#1544) — computed straight from `union.gaps` (the batch-wide raw list)
+    // rather than `batch_summary.totals.gaps`, so `Totals`/`summary.json`'s own `gaps` field (a
+    // committed artifact other tooling may already parse) is left untouched; only this printed
+    // headline changes.
+    let real_gap_total = union
+        .gaps
+        .iter()
+        .filter(|g| !g.category.is_non_gap_advisory())
+        .count();
     println!(
         "mycelium-transpile: batch over {} file(s) ({} failed to parse) — {} top-level item(s) \
          ({} non-test), {} emitted, {} gap(s), {:.1}% expressible, {} nodule(s) recorded in the \
@@ -450,7 +467,7 @@ fn write_batch_and_maybe_vet(
         batch_summary.totals.total_items,
         batch_summary.totals.non_test_items,
         batch_summary.totals.emitted,
-        batch_summary.totals.gaps,
+        real_gap_total,
         batch_summary.totals.expressible_pct,
         batch_summary.remap.nodules.len(),
         summary_path.display(),

@@ -75,6 +75,57 @@ pub fn output_rel_path(file: &Path, root: &Path) -> Result<PathBuf, PathBuf> {
     }
 }
 
+/// The output-naming `root` for an **explicit** `--files` set (M-1079/DN-124 §3.2 CLI mode,
+/// bug-fixed here): the **common ancestor directory** of every file's own parent directory, not just
+/// the first file's parent. Bug this replaces: rooting at `files[0].parent()` alone made every OTHER
+/// file whose crate lives in a sibling directory fail `output_rel_path`'s `strip_prefix` and fall
+/// back to a bare stem — so batching e.g. three different crates' `src/lib.rs` (`mycelium-std-sys-host`,
+/// `mycelium-std-rand`, `mycelium-std-time`) had all three collide on `lib.myc`, each silently
+/// overwriting the last write. Walking up to the shared ancestor instead makes `output_rel_path`
+/// succeed (`Ok`, not the fallback `Err`) for every file in the set, and its relative path is then
+/// automatically **crate-qualified** whenever the files span more than one crate root
+/// (`mycelium-std-rand/src/lib` vs `mycelium-std-time/src/lib`) — while degenerating to the identical
+/// pre-fix bare-stem naming when every file already shares one directory (the common mutually-
+/// referencing-siblings case, e.g. `--files checkty.rs,elab.rs,eval.rs`), so no existing single-crate
+/// `--files` output changes.
+///
+/// Returns the empty path (`""`) when the file set is empty or shares no common ancestor at all
+/// (e.g. paths on unrelated absolute roots) — `Path::strip_prefix("")` always succeeds and returns
+/// the path unchanged, so `output_rel_path` against an empty root still yields an injective mapping
+/// (distinct source paths ⇒ distinct relative paths) rather than silently colliding a second time;
+/// the caller's existing per-file `Err`/warning path remains the last-resort backstop (G2).
+pub fn common_ancestor(files: &[PathBuf]) -> PathBuf {
+    let mut iter = files.iter();
+    let first = match iter.next() {
+        Some(f) => f,
+        None => return PathBuf::new(),
+    };
+    let mut common: Vec<std::ffi::OsString> = first
+        .parent()
+        .unwrap_or_else(|| Path::new(""))
+        .components()
+        .map(|c| c.as_os_str().to_os_string())
+        .collect();
+    for f in iter {
+        if common.is_empty() {
+            break;
+        }
+        let parent_components: Vec<std::ffi::OsString> = f
+            .parent()
+            .unwrap_or_else(|| Path::new(""))
+            .components()
+            .map(|c| c.as_os_str().to_os_string())
+            .collect();
+        let shared = common
+            .iter()
+            .zip(parent_components.iter())
+            .take_while(|(a, b)| a == b)
+            .count();
+        common.truncate(shared);
+    }
+    common.into_iter().collect()
+}
+
 /// One file's contribution to a [`BatchSummary`].
 #[derive(Debug, Clone, Serialize)]
 pub struct FileSummary {

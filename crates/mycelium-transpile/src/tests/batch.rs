@@ -3,7 +3,9 @@
 //! `Cargo.toml`'s `quote` comment): fixtures are written directly under `std::env::temp_dir()` in
 //! a per-test unique subdirectory, cleaned up at the end of each test.
 
-use crate::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
+use crate::batch::{
+    common_ancestor, discover_rs_files, output_rel_path, summarize, transpile_batch,
+};
 use crate::gap::Category;
 use proptest::prelude::*;
 use std::fs;
@@ -259,6 +261,138 @@ fn only_the_rs_extension_is_stripped() {
     let root = Path::new("crates/x/src");
     let got = output_rel_path(Path::new("crates/x/src/foo.bar.rs"), root).unwrap();
     assert_eq!(got, PathBuf::from("foo.bar"));
+}
+
+// ── `--files` multi-crate-root output-path collision fix (`common_ancestor`) ────────────────────
+//
+// Regression coverage for the CLI `--files` bug: rooting output naming at only `files[0].parent()`
+// left every OTHER file whose crate lives in a sibling directory failing `output_rel_path`'s
+// `strip_prefix` and falling back to a bare stem — so three crates' `src/lib.rs` batched together
+// all collided on `lib.myc`, silently overwriting one another. `common_ancestor` fixes this by
+// rooting at every file's SHARED ancestor instead.
+
+/// The common single-directory case (mutually-referencing sibling files named explicitly, e.g.
+/// `--files checkty.rs,elab.rs,eval.rs`) reduces to that shared directory — identical to the
+/// pre-fix `files[0].parent()` root, so no existing single-crate `--files` output changes.
+#[test]
+fn common_ancestor_of_siblings_in_one_dir_is_that_dir() {
+    let files = vec![
+        PathBuf::from("crates/mycelium-l1/src/checkty.rs"),
+        PathBuf::from("crates/mycelium-l1/src/elab.rs"),
+        PathBuf::from("crates/mycelium-l1/src/eval.rs"),
+    ];
+    let root = common_ancestor(&files);
+    assert_eq!(root, PathBuf::from("crates/mycelium-l1/src"));
+    // And every file's output_rel_path against that root is the bare stem, exactly as before.
+    for (f, want) in [
+        (&files[0], "checkty"),
+        (&files[1], "elab"),
+        (&files[2], "eval"),
+    ] {
+        assert_eq!(output_rel_path(f, &root).unwrap(), PathBuf::from(want));
+    }
+}
+
+/// **The bug this fixes**: three crates' `src/lib.rs`, batched via `--files`, must NOT collide.
+/// `common_ancestor` walks up to the shared `crates/` directory, so `output_rel_path` succeeds
+/// (`Ok`, never the bare-stem `Err` fallback) for all three, and each is crate-qualified.
+#[test]
+fn common_ancestor_of_three_crate_roots_yields_three_distinct_outputs() {
+    let files = vec![
+        PathBuf::from("crates/mycelium-std-sys-host/src/lib.rs"),
+        PathBuf::from("crates/mycelium-std-rand/src/lib.rs"),
+        PathBuf::from("crates/mycelium-std-time/src/lib.rs"),
+    ];
+    let root = common_ancestor(&files);
+    assert_eq!(root, PathBuf::from("crates"));
+
+    let outs: Vec<PathBuf> = files
+        .iter()
+        .map(|f| output_rel_path(f, &root).expect("every file must resolve under the shared root"))
+        .collect();
+    assert_eq!(
+        outs,
+        vec![
+            PathBuf::from("mycelium-std-sys-host/src/lib"),
+            PathBuf::from("mycelium-std-rand/src/lib"),
+            PathBuf::from("mycelium-std-time/src/lib"),
+        ]
+    );
+    // The never-silent property the bug violated: all outputs pairwise distinct.
+    let unique: std::collections::HashSet<&PathBuf> = outs.iter().collect();
+    assert_eq!(
+        unique.len(),
+        outs.len(),
+        "three crates' lib.rs must map to three DISTINCT outputs, never a collision; got {outs:?}"
+    );
+}
+
+/// End-to-end (through `transpile_batch` + real file writes, not just path arithmetic): batching two
+/// real crates that each declare same-named `src/lib.rs` files with DIFFERENT content must write two
+/// distinct `.myc` files whose content is NOT cross-contaminated — the full regression the CLI bug
+/// would have broken (one write silently overwriting the other, so both ended up with the second
+/// crate's content).
+#[test]
+fn two_crate_roots_transpile_to_distinct_uncontaminated_myc_outputs() {
+    let tmp = TempDir::new("two-crate-roots-e2e");
+    tmp.write(
+        "mycelium-std-rand/src/lib.rs",
+        "pub struct RandMarker(u8);\nfn rand_helper(x: bool) -> bool { x }",
+    );
+    tmp.write(
+        "mycelium-std-time/src/lib.rs",
+        "pub struct TimeMarker(u16);\nfn time_helper(x: bool) -> bool { x }",
+    );
+
+    let files = vec![
+        tmp.path().join("mycelium-std-rand/src/lib.rs"),
+        tmp.path().join("mycelium-std-time/src/lib.rs"),
+    ];
+    let root = common_ancestor(&files);
+    assert_eq!(
+        root,
+        tmp.path().to_path_buf(),
+        "the two crates' shared ancestor is the fixture root itself"
+    );
+
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+    assert_eq!(results.len(), 2);
+
+    let mut out_paths = std::collections::HashSet::new();
+    let mut by_marker: std::collections::HashMap<PathBuf, String> =
+        std::collections::HashMap::new();
+    for r in &results {
+        let rel = output_rel_path(&r.path, &root).expect("under the common-ancestor root -> Ok");
+        assert!(
+            out_paths.insert(rel.clone()),
+            "output path collision at {rel:?} across the batch (the bug this test guards against)"
+        );
+        by_marker.insert(rel, r.myc.clone());
+    }
+    assert_eq!(out_paths.len(), 2, "expected two distinct output paths");
+
+    let rand_myc = by_marker
+        .get(&PathBuf::from("mycelium-std-rand/src/lib"))
+        .expect("rand crate's own output path present");
+    let time_myc = by_marker
+        .get(&PathBuf::from("mycelium-std-time/src/lib"))
+        .expect("time crate's own output path present");
+
+    // Content is NOT cross-contaminated: each crate's own marker is present, the SIBLING's marker
+    // is absent, from the correct output.
+    assert!(
+        rand_myc.contains("RandMarker") && !rand_myc.contains("TimeMarker"),
+        "rand crate's output must contain only its own content; got:\n{rand_myc}"
+    );
+    assert!(
+        time_myc.contains("TimeMarker") && !time_myc.contains("RandMarker"),
+        "time crate's output must contain only its own content; got:\n{time_myc}"
+    );
+    assert_ne!(
+        rand_myc, time_myc,
+        "the two crates' emitted .myc text must differ (they have different source)"
+    );
 }
 
 // ── Gap-close-2 (DN-34 §8.19/§8.20): the batch-scoped cross-nodule symbol table ─────────────────
@@ -734,6 +868,97 @@ fn super_with_no_parent_at_crate_root_still_gaps_never_panics() {
         !lib.myc.contains("use "),
         "the unresolvable super:: must carry no `use` line at all; got:\n{}",
         lib.myc
+    );
+}
+
+/// **Regression for the M-1084/#1541 review LOW**: a SYMBOL-TABLE-KEY collision, distinct from the
+/// output-PATH collision the `common_ancestor` tests above cover. Two real crates each declare a
+/// same-named BARE submodule (`rng.rs`) exporting a same-named item (`Thing`) with DIFFERENT
+/// underlying representation. Pre-M-1084, `build_symbol_table` inserted every file under its bare
+/// intra-crate module key (`"rng"`) with no crate qualifier, so the SECOND crate's `rng.rs` entry
+/// would silently overwrite the FIRST crate's in the batch-wide `HashMap` — after which crate-a's
+/// OWN `use crate::rng::Thing;` could resolve against crate-b's `rng.rs` (or vice versa): a real
+/// cross-contamination, not merely a lost resolve, because both files legitimately export a `Thing`.
+/// `SymbolTable::qualify_key` (crate-qualifying the key whenever a real crate identity is derivable)
+/// is the fix under test: each crate's `rng` entry lands under its OWN qualified key
+/// (`crate_a.rng`/`crate_b.rng`), so same-crate `use crate::rng::Thing;` resolution in each crate
+/// stays within that crate — never resolving against the sibling's same-named submodule.
+#[test]
+fn same_named_bare_submodule_across_two_crates_does_not_cross_contaminate_symbol_table() {
+    let tmp = TempDir::new("same-named-submodule-key-collision");
+    // Both crates declare a bare `rng.rs` submodule (identical Rust module path within their own
+    // crate) exporting a same-named `Thing` — but genuinely DIFFERENT items (different width).
+    tmp.write("crate-a/src/rng.rs", "pub struct Thing(u8);");
+    tmp.write(
+        "crate-a/src/lib.rs",
+        "use crate::rng::Thing;\nfn a_helper(x: bool) -> bool { x }",
+    );
+    tmp.write("crate-b/src/rng.rs", "pub struct Thing(u16);");
+    tmp.write(
+        "crate-b/src/lib.rs",
+        "use crate::rng::Thing;\nfn b_helper(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    assert_eq!(files.len(), 4, "expected all 4 fixture files discovered");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let a = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/lib.rs"))
+        .expect("crate-a lib.rs result present");
+    let b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/lib.rs"))
+        .expect("crate-b lib.rs result present");
+
+    // Each crate's own `use crate::rng::Thing;` must resolve to ITS OWN `rng` (never bare, and
+    // never the SIBLING crate's `rng`) — the cross-contamination the qualified-key fix prevents.
+    assert!(
+        a.myc.contains("crate.a.rng.Thing") || a.myc.contains("a.rng.Thing"),
+        "crate-a's use must resolve to crate-a's OWN rng.rs; got:\n{}",
+        a.myc
+    );
+    assert!(
+        !a.myc.contains("crate.b.rng"),
+        "crate-a's use must NEVER resolve against crate-b's same-named rng.rs (cross-\
+         contamination); got:\n{}",
+        a.myc
+    );
+    assert!(
+        b.myc.contains("crate.b.rng.Thing") || b.myc.contains("b.rng.Thing"),
+        "crate-b's use must resolve to crate-b's OWN rng.rs; got:\n{}",
+        b.myc
+    );
+    assert!(
+        !b.myc.contains("crate.a.rng"),
+        "crate-b's use must NEVER resolve against crate-a's same-named rng.rs (cross-\
+         contamination); got:\n{}",
+        b.myc
+    );
+
+    // Each crate's OWN rng.rs's Thing is marked pub in ITS OWN output (each was genuinely
+    // referenced, by its own crate's lib.rs) — never the sibling's.
+    let rng_a = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/rng.rs"))
+        .expect("crate-a rng.rs result present");
+    let rng_b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/rng.rs"))
+        .expect("crate-b rng.rs result present");
+    assert!(
+        rng_a.myc.contains("pub type Thing") || rng_a.myc.contains("pub struct Thing"),
+        "crate-a's own rng.rs Thing must be marked pub (referenced by crate-a's own lib.rs); \
+         got:\n{}",
+        rng_a.myc
+    );
+    assert!(
+        rng_b.myc.contains("pub type Thing") || rng_b.myc.contains("pub struct Thing"),
+        "crate-b's own rng.rs Thing must be marked pub (referenced by crate-b's own lib.rs); \
+         got:\n{}",
+        rng_b.myc
     );
 }
 
