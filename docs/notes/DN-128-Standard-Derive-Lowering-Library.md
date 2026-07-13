@@ -202,6 +202,18 @@ M-1091/DN-129 land, `depends_on: []` since the dependency-free subset is not blo
 `#[derive]`→`derive` mapping is folded into the same tracking issue (WU-3). DN-99 rows 3/50
 cross-reference recorded as a follow-up (not applied to `DN-99` itself here — FLAGged forward).
 
+**Implementation-note addendum (append-only, landed M-1086 `Debug`/`Default` work, recorded on a later
+review pass):** the transpiler's actual `Debug`/`Default` lowering (`emit.rs::derive_show_impl`/
+`derive_init_impl`) composes the fully-**expanded** `impl Show[T] for T { fn render(x: T) => Bytes = …; }`
+/ `impl Init[T] for T { fn init() => T = …; }` body directly at the derive site, rather than emitting this
+note's §4 literal `derive D for T` (a named reference to a separately-defined standard `lower` rule) — a
+deliberate, disclosed deviation from the Alt-C surface as originally described, taken because OQ-1 (does a
+`lower` RHS have field reflection to enumerate `T`'s fields?) remains unresolved: composing the expansion
+compiler-side sidesteps needing that reflection at all, at the cost of not yet exercising the named-rule
+`derive` surface this note recommended. Still `Native Equivalent`/DN-111-classified, still explicit and
+`reveal`-able L0 (no opacity, KC-3); OQ-1 stays the open precondition for moving to the literal `derive D
+for T` form. Not re-litigated here, only disclosed (VR-5/G2).
+
 ---
 
 ## Meta — changelog

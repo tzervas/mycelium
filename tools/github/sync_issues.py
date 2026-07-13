@@ -854,7 +854,7 @@ def run(args):
     )
 
     writes_done = 0
-    idmap_rows = []
+    appended = 0
     for entry in to_create:
         if writes_done >= args.max_writes:
             print(
@@ -862,8 +862,14 @@ def run(args):
             )
             break
         number, db_id = apply_create(repo, entry, counter)
-        idmap_rows.append((entry["id"], number, db_id))
         writes_done += 1
+        # Checkpoint THIS row immediately (never batched to the end of the loop): a mid-batch `gh`
+        # failure on a LATER create must not lose the idmap row for every EARLIER create already
+        # applied this run — a deferred single end-of-loop append would leave zero checkpoint on
+        # such a failure, so a retry re-creates already-created issues as duplicates (never-silent
+        # G2; `append_idmap` is itself idempotent/append-only, so calling it once per row here is
+        # safe and cheap — no batching benefit was being bought by deferring it in the first place).
+        appended += append_idmap(IDMAP_TSV, [(entry["id"], number, db_id)])
     for entry, live, changes in to_update:
         if writes_done >= args.max_writes:
             print(
@@ -873,7 +879,6 @@ def run(args):
         apply_update(repo, live["number"], changes, counter)
         writes_done += 1
 
-    appended = append_idmap(IDMAP_TSV, idmap_rows)
     if appended:
         print(f">> idmap.tsv: appended {appended} new row(s)")
     # The snapshot is now stale (we mutated) — drop the cache so the next run re-grounds.
@@ -1111,7 +1116,38 @@ def self_test():
         )
         check("accounting idempotent", again == 0)
 
-    total = 25
+    # ── idmap incremental-checkpoint idempotency (the mid-batch-failure fix) ──
+    # `run()` now calls `append_idmap` ONCE PER created issue, immediately after that create
+    # succeeds — not once at the end of the whole create-loop — so a mid-batch `gh` failure on a
+    # LATER create leaves a correct PARTIAL idmap covering every EARLIER create already applied
+    # this run, and a retry must not re-duplicate rows already checkpointed. Prove the property
+    # offline: two single-row appends both accumulate (not overwrite each other), and re-appending
+    # an already-known id (what a retry naturally does, since it re-walks the same `to_create`
+    # list) is a no-op that still lands any genuinely-new row alongside it.
+    with tempfile.TemporaryDirectory() as td:
+        idmap_tmp = Path(td) / "idmap.tsv"
+        n1 = append_idmap(idmap_tmp, [("M-2001", 501, "gid-1")])
+        n2 = append_idmap(idmap_tmp, [("M-2002", 502, "gid-2")])
+        rows_after_two = load_idmap(idmap_tmp)
+        check(
+            "idmap incremental checkpoint: two single-row appends both land",
+            n1 == 1 and n2 == 1 and rows_after_two == {"M-2001": 501, "M-2002": 502},
+        )
+        # Simulated retry after a mid-batch failure: re-append the row that was ALREADY
+        # checkpointed (M-2001) alongside one genuinely new row (M-2003, as if this create
+        # succeeded on the retry) — the known id must be skipped (never duplicated), the new one
+        # must still land.
+        n3 = append_idmap(
+            idmap_tmp, [("M-2001", 501, "gid-1"), ("M-2003", 503, "gid-3")]
+        )
+        rows_after_retry = load_idmap(idmap_tmp)
+        check(
+            "idmap re-append after retry: known id skipped, new id lands, no duplicate",
+            n3 == 1
+            and rows_after_retry == {"M-2001": 501, "M-2002": 502, "M-2003": 503},
+        )
+
+    total = 27
     print(f"\n>> self-test: {ok}/{total} checks passed")
     return 0 if ok == total else 1
 
