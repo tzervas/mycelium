@@ -22,6 +22,13 @@
 //! recursive machinery through a `fn` pointer for no collision-surface benefit (there is exactly
 //! one such arm each, not a growing per-type list).
 //!
+//! **The one exception: the `"()"` row (DN-137/M-1102).** `()` is a `syn::Type::Tuple` with zero
+//! elements, not a `TypePath` — it can never reach `visit_path`'s name-keyed lookup at all, so
+//! `"()"` is a **synthetic** lookup key (not a real Rust identifier `visit_path` could ever pass
+//! in), consulted from `MapTypeVisitor::visit_tuple`'s zero-element arm instead. It still belongs
+//! in this table (not hand-inlined in `visit_tuple`) for the same reason every other fixed-name
+//! mapping does: one citation-carrying, `EXPLAIN`-able row, not a second ad hoc mapping site.
+//!
 //! **Guarantee: `Declared`**, identical strength to every row in `map.rs` (this is a pure
 //! relocation of that module's existing rows, not a new claim — see `map.rs`'s module doc for the
 //! full per-row grammar/ADR grounding this table's `citation` fields summarize).
@@ -211,6 +218,21 @@ pub const TABLE: &[TypeMapRow] = &[
         map: |_| Ok("Bytes".to_string()),
         slug: "str",
         citation: "RFC-0033 §3.2; grammar base_type line 250; checkty.rs:6669; DN-34 §8.14",
+    },
+    // DN-137 Alt D (M-1102): the unit type `()` -> the prelude nullary-constructor `Unit`
+    // (`type Unit = Unit;`, the arity-0 M-826 tuple/product-family member — hand-seeded in
+    // `mycelium-l1`'s `checkty::unit_prelude`, no `mycelium-core`/grammar edit). Not a `TypePath`
+    // (this row's key, `"()"`, is a synthetic lookup name, not a real Rust identifier) — reached
+    // from `MapTypeVisitor::visit_tuple`'s zero-element arm (`map.rs`), the one call site this
+    // shape can come from, mirroring how every `visit_path` row is reached from its one call site.
+    // **Guarantee: `Exact`** (VR-5) — a single-inhabitant type has nothing to approximate.
+    TypeMapRow {
+        rust_name: "()",
+        map: |_| Ok("Unit".to_string()),
+        slug: "unit",
+        citation: "DN-137 Alt D / M-1102: prelude `type Unit = Unit;` (M-826 arity-0 product-\
+                   family member); mycelium.ebnf:151/156 (type_item/constructor, optional \
+                   field-parens); checkty.rs::unit_prelude",
     },
 ];
 
