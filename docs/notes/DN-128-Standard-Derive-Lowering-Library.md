@@ -235,3 +235,9 @@ for T` form. Not re-litigated here, only disclosed (VR-5/G2).
   per-derive design, Alt C (compiler-internal field-walk) recommendation, `Clone`-satisfied-no-op finding,
   and float-`Eq` refusal gate are accepted as designed; OQ-1 stays an open build precondition. Builds
   nothing yet — **M-1086** minted for the implementation. Append-only; VR-5/G2.
+- **2026-07-12 — Implementation-note addendum (append-only, recorded on a later review pass).** The
+  landed M-1086 `Debug`/`Default` lowering composes the fully-expanded `impl Show`/`impl Init` body
+  directly at the derive site instead of emitting this note's §4 literal `derive D for T` form — a
+  deliberate, disclosed deviation taken because OQ-1 (lower-RHS field reflection) remains unresolved
+  (see the "Implementation-note addendum" paragraph above §Meta). Status unchanged (still Accepted);
+  the deviation is disclosed, not re-litigated. VR-5/G2.

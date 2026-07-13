@@ -868,7 +868,14 @@ def run(args):
         # applied this run — a deferred single end-of-loop append would leave zero checkpoint on
         # such a failure, so a retry re-creates already-created issues as duplicates (never-silent
         # G2; `append_idmap` is itself idempotent/append-only, so calling it once per row here is
-        # safe and cheap — no batching benefit was being bought by deferring it in the first place).
+        # safe — no batching benefit was being bought by deferring it in the first place).
+        # Known tradeoff (documented, not fixed here — correctness over micro-cost): each call
+        # re-reads + re-scans the WHOLE idmap.tsv from disk to rebuild its `known` set, so N
+        # per-row checkpoints in one `--apply` run cost O(n^2) total I/O/scanning in the batch's
+        # create count (n), not O(n). `idmap.tsv` stays small in practice (one row per task ever
+        # created) and a `gh` network round-trip per create already dominates wall-clock, so this
+        # is a real but currently-negligible cost; if the batch size or the file ever grow enough
+        # to matter, thread an in-memory `known` set through the loop instead of re-reading per row.
         appended += append_idmap(IDMAP_TSV, [(entry["id"], number, db_id)])
     for entry, live, changes in to_update:
         if writes_done >= args.max_writes:
