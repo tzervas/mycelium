@@ -146,3 +146,39 @@ fn prelude_trait_seed_is_const_constructible() {
     const _CHECK: PreludeTraitSeed = crate::fuse::SEED;
     let _ = _CHECK.name;
 }
+
+/// The std-sys-host canary case (M-1090/M-1091 leaf, DN-128's downstream derive lowering): a
+/// **fieldless (single nullary-constructor) type** — the `OsEntropy`/`OsClock`-shaped unit struct,
+/// the cleanest `Debug`/`Default` derive sub-case — checks cleanly against `Show` **and** `Init`
+/// with zero special-casing. [`crate::checkty::TraitInfo`] is a pure signature-level fact
+/// (`params`/`sigs`) that never inspects a concrete type's constructor arity, so a nullary ctor
+/// (`type Unit = Unit;` — DN-104's `Ctor::fields: vec![]` shape, already exercised elsewhere e.g.
+/// `tests/substrate.rs`) needs no seed-side change to be a valid `Show`/`Init` instance: `render`
+/// takes the value as an ordinary `T`-typed parameter (arity-agnostic) and `init` returns a `T`
+/// with no value parameters at all (already the zero-value-param shape `tests/init.rs` pins).
+/// Verify-first (mitigation #14): this is a **new regression pin**, not new seed code — the
+/// mechanism already covers the fieldless case structurally; this test makes that fact checked
+/// rather than merely asserted.
+#[test]
+fn show_and_init_check_cleanly_for_a_fieldless_nullary_ctor_type() {
+    // `Show`: render a fieldless value to a fixed byte string — the value itself carries no data
+    // to inspect, exactly the `OsEntropy`/`OsClock` shape.
+    let show_checked = env("nodule d;\n\
+         type Unit = Unit;\n\
+         impl Show[Unit] for Unit {\n\
+           fn render(x: Unit) => Bytes = match x { Unit => \"Unit\" };\n\
+         };\n\
+         fn describe(x: Unit) => Bytes = render(x);");
+    assert!(show_checked.traits.contains_key("Show"));
+
+    // `Init`: the canonical (only) value of a fieldless type is trivially its own nullary ctor —
+    // the return-type-only dispatch path (`tests/init.rs`'s "seed from expected") is exactly what
+    // a zero-value, zero-field constructor call needs.
+    let init_checked = env("nodule d;\n\
+         type Unit = Unit;\n\
+         impl Init[Unit] for Unit {\n\
+           fn init() => Unit = Unit;\n\
+         };\n\
+         fn zero() => Unit = init();");
+    assert!(init_checked.traits.contains_key("Init"));
+}
