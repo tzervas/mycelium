@@ -7,7 +7,7 @@
 //! its body trusted/opaque (not recursively checked — audited, not verified, VR-5/ADR-014), and its
 //! execution staged ([`crate::elab`] lowers it to a `Residual`).
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::affine::{Tracker, UseOutcome};
@@ -1959,14 +1959,26 @@ pub(crate) fn check_phylum_matured_with_deps_and_exports(
     deps: &Phyla,
     matured_scope: bool,
 ) -> Result<(PhylumEnv, Exports), CheckError> {
-    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, deps, matured_scope))
+    // DN-126 (M-1077): the phylum-wide public surface stays `Strict`-only (byte-identical to
+    // pre-M-1077 behavior) — `Loose` mode is exposed only through the single-nodule
+    // `check_nodule_with_strictness`/`check_and_resolve_with_strictness` entry points below.
+    mycelium_stack::with_deep_stack(|| {
+        check_phylum_inner(
+            phylum,
+            deps,
+            matured_scope,
+            crate::type_strictness::TypeStrictness::Strict,
+        )
+        .map(|(penv, exports, _flags)| (penv, exports))
+    })
 }
 
 fn check_phylum_inner(
     phylum: &Phylum,
     deps: &Phyla,
     matured_scope: bool,
-) -> Result<(PhylumEnv, Exports), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(PhylumEnv, Exports, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // 1. Ambient-resolve every nodule once (RFC-0012): the checker only ever sees longhand forms.
     let resolved: Vec<Nodule> = phylum
         .nodules
@@ -2162,6 +2174,9 @@ fn check_phylum_inner(
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
     let mut own = Vec::with_capacity(resolved.len());
+    // DN-126 (M-1077): the flat, phylum-wide soft-flag set — every nodule's demotions, in nodule
+    // order. Always empty when `strictness` is `Strict` (nothing ever pushes on that path).
+    let mut flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
         // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
         // `regs` is consumed below. Exclude the injected prelude `Bool` and every conditionally-
@@ -2187,17 +2202,19 @@ fn check_phylum_inner(
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
         let via_objects = &via_objects_per_nodule[i];
-        let env = check_nodule_with(
+        let (env, nodule_flags) = check_nodule_with(
             nodule,
             regs,
             &imports,
             &coherence,
             matured_scope,
             via_objects,
+            strictness,
         )?;
+        flags.extend(nodule_flags);
         out.push((nodule.path.clone(), env));
     }
-    Ok((PhylumEnv { nodules: out, own }, exports))
+    Ok((PhylumEnv { nodules: out, own }, exports, flags))
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
@@ -2668,24 +2685,33 @@ fn remove_import(imp: &mut NoduleImports, simple: &str) {
 /// marked `thaw` are exempt from the gate (RFC-0017 §4.3). When `matured_scope` is `false` this
 /// is identical to [`check_nodule`].
 pub fn check_nodule_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
-    check_and_resolve_matured(nodule, matured_scope).map(|(env, _)| env)
+    check_and_resolve_matured(
+        nodule,
+        matured_scope,
+        crate::type_strictness::TypeStrictness::Strict,
+    )
+    .map(|(env, _, _flags)| env)
 }
 
 fn check_and_resolve_matured(
     nodule: &Nodule,
     matured_scope: bool,
-) -> Result<(Env, Nodule), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // Run the recursive pass on a deep worker stack so deep-but-valid input never overflows the
     // *caller's* thread stack — the explicit [`MAX_CHECK_DEPTH`] budget, not the host stack, bounds a
     // pathological input (banked guard 4; the worker stack is the transitional Rust-only adapter —
     // see [`mycelium_stack`]). Borrows are fine: the worker is a scoped thread.
-    mycelium_stack::with_deep_stack(|| check_and_resolve_matured_inner(nodule, matured_scope))
+    mycelium_stack::with_deep_stack(|| {
+        check_and_resolve_matured_inner(nodule, matured_scope, strictness)
+    })
 }
 
 fn check_and_resolve_matured_inner(
     nodule: &Nodule,
     matured_scope: bool,
-) -> Result<(Env, Nodule), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // A bare nodule is a **phylum-of-one** (M-662): route it through the same phylum orchestration so
     // its orphan rule's locality set is exactly this one nodule and its imports are empty — behavior
     // identical to the pre-M-662 single-nodule path, by construction. The `with_deep_stack` is already
@@ -2695,7 +2721,8 @@ fn check_and_resolve_matured_inner(
     let phylum = Phylum::of_one(resolved.clone());
     // `check_nodule`/`check_nodule_matured` have no `[dependencies]` surface (M-1060 is a
     // phylum-level concept) — always the empty `Phyla` (byte-identical to pre-M-1060 behavior).
-    let (penv, _exports) = check_phylum_inner(&phylum, &Phyla::default(), matured_scope)?;
+    let (penv, _exports, flags) =
+        check_phylum_inner(&phylum, &Phyla::default(), matured_scope, strictness)?;
     let env = penv
         .single()
         .expect("a phylum-of-one yields exactly one Env")
@@ -2721,7 +2748,7 @@ fn check_and_resolve_matured_inner(
         std_sys: resolved.std_sys,
         items,
     };
-    Ok((env, twin))
+    Ok((env, twin, flags))
 }
 
 /// Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program
@@ -2729,7 +2756,41 @@ fn check_and_resolve_matured_inner(
 /// "expand ambient" projection renders (RFC-0012 §5). The returned [`Nodule`] elaborates to the
 /// identical L0 (and content hash) as the original (I2; RFC-0012 §4.3).
 pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
-    check_and_resolve_matured(nodule, false)
+    check_and_resolve_matured(
+        nodule,
+        false,
+        crate::type_strictness::TypeStrictness::Strict,
+    )
+    .map(|(env, twin, _flags)| (env, twin))
+}
+
+/// DN-126 (M-1077) — like [`check_and_resolve`], but under an explicit
+/// [`TypeStrictness`](crate::type_strictness::TypeStrictness). `Strict` is byte-identical to
+/// [`check_and_resolve`] (always zero flags — see `crate::type_strictness`'s module doc). `Loose`
+/// demotes the narrow, verified-safe set of type-level refusals that doc documents, returning
+/// whatever [`TypeFlag`](crate::type_strictness::TypeFlag)s fired alongside the checked [`Env`] and
+/// its resolved longhand twin.
+///
+/// # Errors
+/// The **runnable floor** (DN-126 §3.3) — unresolved name/ctor/type, arity, parse, `wild`/FFI-gate,
+/// and every `CheckError` site this landing does not (yet) classify as demotable — refuses
+/// identically in both modes (`Loose` never silently accepts an un-runnable program).
+pub fn check_and_resolve_with_strictness(
+    nodule: &Nodule,
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
+    check_and_resolve_matured(nodule, false, strictness)
+}
+
+/// Like [`check_and_resolve_with_strictness`], returning just the checked [`Env`] + flags (drops the
+/// resolved longhand twin) — the [`check_nodule`] analogue for an explicit
+/// [`TypeStrictness`](crate::type_strictness::TypeStrictness). See `crate::type_strictness`'s module
+/// doc for the exact, narrow set of demotable sites `Loose` covers in this landing.
+pub fn check_nodule_with_strictness(
+    nodule: &Nodule,
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Vec<crate::type_strictness::TypeFlag>), CheckError> {
+    check_and_resolve_with_strictness(nodule, strictness).map(|(env, _twin, flags)| (env, flags))
 }
 
 /// Register a (resolved) nodule's **data declarations** into `types` (Pass 1; RFC-0007 §11): a shell
@@ -3005,7 +3066,8 @@ fn check_nodule_with(
     coherence: &CoherenceView,
     matured_scope: bool,
     via_objects: &[ObjectDecl],
-) -> Result<Env, CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // Build the nodule's checking registries: imports first (lower precedence), own decls override
     // (the documented "own decl shadows `use`" precedence — RFC-0006 §4.3). `regs` already holds the
     // prelude + this nodule's own declarations; layering imports *under* them is just inserting any
@@ -3186,8 +3248,11 @@ fn check_nodule_with(
     // nodule — RFC-0007 §11; a `use`d fn is checked in its home nodule's context, never re-checked
     // here under this nodule's ambient).
     let mut resolved_fns: BTreeMap<String, FnDecl> = fns.clone();
+    // DN-126 (M-1077): this nodule's soft-flag set — every demotion `check_fn_body`/
+    // `check_impl_methods` recorded below (always empty when `strictness` is `Strict`).
+    let mut nodule_flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     for fd in regs.fns.values() {
-        let (body, _ret) = check_fn_body(
+        let (body, _ret, fd_flags) = check_fn_body(
             &types,
             &fns,
             &traits,
@@ -3196,7 +3261,9 @@ fn check_nodule_with(
             &lower_rules,
             nodule.std_sys,
             fd,
+            strictness,
         )?;
+        nodule_flags.extend(fd_flags);
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
@@ -3225,7 +3292,7 @@ fn check_nodule_with(
     let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
     for item in &effective_nodule.items {
         if let Item::Impl(id) = item {
-            let methods = check_impl_methods(
+            let (methods, impl_flags) = check_impl_methods(
                 &types,
                 &fns,
                 &traits,
@@ -3234,7 +3301,9 @@ fn check_nodule_with(
                 &lower_rules,
                 effective_nodule.std_sys,
                 id,
+                strictness,
             )?;
+            nodule_flags.extend(impl_flags);
             // The instance head: resolve `for_ty` exactly as `register_instances` did (concretely, no
             // type-vars in scope). Registration already accepted this impl, so resolution + a concrete
             // head are guaranteed here (a `Ty::Var` head was refused at registration); the `expect`
@@ -3323,17 +3392,20 @@ fn check_nodule_with(
         }
     }
 
-    Ok(Env {
-        types,
-        fns,
-        totality,
-        traits,
-        instances,
-        impls,
-        lower_rules,
-        derived_provenance,
-        via_provenance,
-    })
+    Ok((
+        Env {
+            types,
+            fns,
+            totality,
+            traits,
+            instances,
+            impls,
+            lower_rules,
+            derived_provenance,
+            via_provenance,
+        },
+        nodule_flags,
+    ))
 }
 
 // ---- lower / derive validation (DN-54 §4/§6 / M-812-cont) ----
@@ -3555,6 +3627,11 @@ fn infer_expr_rule_rhs_type(
         std_sys: false,
         depth: Cell::new(0),
         affine: Tracker::seeded(&scope),
+        // DN-126: a `lower` rule's RHS is language-extension machinery (the generative-lowering
+        // surface, DN-54), not developer application logic — always `Strict` (never demotable),
+        // independent of the enclosing nodule's/caller's own strictness mode.
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
@@ -4624,7 +4701,8 @@ fn check_impl_methods(
     lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     id: &ImplDecl,
-) -> Result<Vec<FnDecl>, CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Vec<FnDecl>, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     let tr = traits
         .get(&id.trait_name)
         .expect("instance registration checked the trait exists");
@@ -4633,6 +4711,8 @@ fn check_impl_methods(
     // AST as a top-level fn rather than the raw registered body (M-663 / Copilot review — grading must
     // not re-derive the ctor/binder ambiguity from a global scan).
     let mut resolved: Vec<FnDecl> = Vec::with_capacity(id.methods.len());
+    // DN-126 (M-1077): this impl's soft-flag set (always empty when `strictness` is `Strict`).
+    let mut impl_flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     // The trait-arg substitution `trait.params ↦ impl.trait_args` (resolved concretely).
     let (for_ty, _) = resolve_ty(&id.trait_name, types, &[], &id.for_ty)?;
     let mut trait_args = Vec::with_capacity(id.trait_args.len());
@@ -4719,7 +4799,7 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        let (body, _ret) = check_fn_body(
+        let (body, _ret, method_flags) = check_fn_body(
             types,
             fns,
             traits,
@@ -4728,7 +4808,9 @@ fn check_impl_methods(
             lower_rules,
             std_sys,
             method,
+            strictness,
         )?;
+        impl_flags.extend(method_flags);
         resolved.push(FnDecl {
             vis: method.vis,
             thaw: method.thaw,
@@ -4738,14 +4820,23 @@ fn check_impl_methods(
         });
     }
     let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
-    Ok(resolved)
+    Ok((resolved, impl_flags))
 }
 
 /// Check a function (or impl method) body against its declared signature (RFC-0007 §11; RFC-0019
 /// §4.1). Validates the type-parameter bounds, builds the `tyvars`/`bounds` scopes, resolves the
 /// value-param + return types, and runs the bidirectional [`Cx::check`]. Returns the **resolved**
-/// body (ambient bare-decimals filled) and the resolved return type. Shared by Pass 3 (top-level
-/// fns) and [`check_impl_methods`] (impl methods) — DRY.
+/// body (ambient bare-decimals filled), the resolved return type, and — DN-126 (M-1077) — the
+/// [`TypeFlag`](crate::type_strictness::TypeFlag)s this body's checking demoted (always empty when
+/// `strictness` is `Strict`). Shared by Pass 3 (top-level fns) and [`check_impl_methods`] (impl
+/// methods) — DRY.
+///
+/// **DN-126 §3.1 "body vs. declared return type" demotion.** In `Loose` mode a body whose checked
+/// type disagrees with `fd.sig.ret` is **not** refused: [`Cx::mismatch_or_flag`] records a
+/// [`TypeFlagKind::ReturnType`](crate::type_strictness::TypeFlagKind::ReturnType) flag and this
+/// function returns the body's *actual* checked type — never `fd.sig.ret` (VR-5). Both of this
+/// function's callers already discard the returned `Ty` (`let (body, _ret) = …`), so a demoted
+/// return type changes nothing observable *here*; it only means the function no longer refuses.
 #[allow(clippy::too_many_arguments)] // M-1054 Stage 0 added `lower_rules`, threaded straight through
 fn check_fn_body(
     types: &BTreeMap<String, DataInfo>,
@@ -4756,7 +4847,8 @@ fn check_fn_body(
     lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     fd: &FnDecl,
-) -> Result<(Expr, Ty), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Expr, Ty, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     let site = &fd.sig.name;
     let tyvars = fd.sig.param_names();
     // Validate every bound names a real trait with the right argument arity (RFC-0019 §4.1). The
@@ -4785,14 +4877,24 @@ fn check_fn_body(
         // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
         // DN-71 §4.2: a parameter pass counts as the caller's move-in).
         affine: Tracker::seeded(&scope),
+        strictness,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
-    if got != ret {
-        return Err(CheckError::new(site, edge_mismatch("body", &ret, &got)));
-    }
-    Ok((body, ret))
+    let effective_ret = if got != ret {
+        let msg = edge_mismatch("body", &ret, &got);
+        cx.mismatch_or_flag(
+            crate::type_strictness::TypeFlagKind::ReturnType,
+            &ret,
+            &got,
+            msg,
+        )?
+    } else {
+        ret
+    };
+    Ok((body, effective_ret, cx.flags.into_inner()))
 }
 
 /// Validate a function/method's type-parameter **bounds** (RFC-0019 §4.1): each bound must name a
@@ -4929,6 +5031,18 @@ struct Cx<'a> {
     /// `crate::affine`'s module docs for why. (FLAG-6 fix, M-973: this doc previously read that the
     /// tracker was inert in `check_lower_rule_rhs_type`, stale since M-919 made it active there.)
     affine: Tracker,
+    /// **DN-126 (M-1077) — the type-strictness mode** this body is checked under (§3). `Strict`
+    /// (the default, every non-[`check_fn_body`] `Cx` site below) makes [`Self::mismatch_or_flag`]
+    /// behave identically to a bare [`Self::err`] — byte-identical to pre-M-1077 behavior. Only
+    /// [`check_fn_body`]'s `Cx` (the one whole-function-body walk over a top-level `fn`/impl method)
+    /// takes this from its caller; every re-inference/rule-RHS `Cx` site hardcodes `Strict` (see each
+    /// site's own comment for why demotion does not apply there).
+    strictness: crate::type_strictness::TypeStrictness,
+    /// **DN-126 §3/§4 — the soft-flag set** [`Self::mismatch_or_flag`] records when `strictness`
+    /// is `Loose` (interior mutability, `RefCell` — matching `depth`'s `Cell` pattern in spirit, so
+    /// [`Self::check`] stays `&self`; a growable `Vec` needs `RefCell`, not `Cell`). Always empty
+    /// when `strictness` is `Strict` (nothing ever pushes to it on that path).
+    flags: RefCell<Vec<crate::type_strictness::TypeFlag>>,
     /// **Test-only non-vacuity sabotage toggle (M-1054 Stage 3, DN-117 §5 item 2).** When `true`,
     /// [`Self::check_sugar_call`]'s Stage-3 walk feeds the walk the **unsubstituted** `rhs` instead
     /// of the real, spliced [`Self::stage3_substitute_expr`] output — simulating "the substitution
@@ -4992,6 +5106,39 @@ pub(crate) fn cons_list_ctors(
 impl Cx<'_> {
     fn err<T>(&self, msg: impl Into<String>) -> Result<T, CheckError> {
         Err(CheckError::new(self.site, msg))
+    }
+
+    /// DN-126 §3/§4 — the **demotion switch**: at a verified-safe, value-level type-mismatch site
+    /// (see `crate::type_strictness`'s module doc for the exact, narrow set of callers), `Strict`
+    /// mode refuses exactly as before; `Loose` mode records a
+    /// [`TypeFlag`](crate::type_strictness::TypeFlag) and returns `actual` so checking continues
+    /// with the value's real (inferred) type — **never** `declared` (VR-5: a violated annotation is
+    /// never silently satisfied). Every caller passes `actual` as a fully-elaborated, already-checked
+    /// concrete [`Ty`] (never a hole), so the recorded resolution is always
+    /// [`Resolution::Principal`](crate::type_strictness::Resolution::Principal) — DN-126 §4.1's
+    /// principality invariant holds trivially for this landing's demotable sites by construction
+    /// (see the module doc for the sites this deliberately does NOT cover).
+    fn mismatch_or_flag(
+        &self,
+        kind: crate::type_strictness::TypeFlagKind,
+        declared: &Ty,
+        actual: &Ty,
+        message: String,
+    ) -> Result<Ty, CheckError> {
+        if self.strictness.is_loose() {
+            self.flags
+                .borrow_mut()
+                .push(crate::type_strictness::TypeFlag {
+                    site: self.site.to_owned(),
+                    kind,
+                    declared: declared.clone(),
+                    resolution: crate::type_strictness::Resolution::Principal(actual.clone()),
+                    message,
+                });
+            Ok(actual.clone())
+        } else {
+            Err(CheckError::new(self.site, message))
+        }
     }
 
     /// Map a match-analysis over-budget refusal (usefulness / decision-tree, RFC-0041 §4.7) into the
@@ -6188,13 +6335,24 @@ impl Cx<'_> {
     ) -> Result<(Ty, Expr), CheckError> {
         let (want, _) = resolve_ty(self.site, self.types, self.tyvars, t)?;
         let (ity, inner2) = self.check(scope, inner, Some(&want))?;
-        if ity != want {
-            return self.err(format!(
-                "ascription: {}",
-                edge_mismatch("expression", &want, &ity)
-            ));
-        }
-        Ok((want, Expr::Ascribe(Box::new(inner2), t.clone())))
+        // DN-126 §3.1 — the textbook "Hinted" demotion site: an explicit `e : T` ascription is a
+        // *hint*, not a *gate*, in `Loose` mode. `mismatch_or_flag` refuses exactly as before in
+        // `Strict` mode; in `Loose` mode it records the flag and returns `ity` (the ascribed
+        // expression's real checked type) — never `want` (the violated annotation is never silently
+        // satisfied, VR-5). The evaluator never reads the ascribed type at all (`Expr::Ascribe` just
+        // evaluates `inner`), so this is inert at runtime by construction.
+        let effective = if ity != want {
+            let msg = format!("ascription: {}", edge_mismatch("expression", &want, &ity));
+            self.mismatch_or_flag(
+                crate::type_strictness::TypeFlagKind::Ascription,
+                &want,
+                &ity,
+                msg,
+            )?
+        } else {
+            want
+        };
+        Ok((effective, Expr::Ascribe(Box::new(inner2), t.clone())))
     }
 
     fn check_app(
@@ -9692,6 +9850,10 @@ pub(crate) fn infer_type(
         // would risk a false positive on a fragment that isn't the original walk, and the term
         // already passed the real check).
         affine: Tracker::inert(),
+        // DN-126: post-check re-inference over an already-CHECKED term — there is nothing left to
+        // demote (the program already strict-checked to get here), so always `Strict`.
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
@@ -9755,6 +9917,10 @@ fn infer_type_with_active_affine_inner(
         std_sys: true,
         depth: Cell::new(0),
         affine: Tracker::seeded(scope),
+        // DN-126: this test-only harness re-infers over an already-checked term, exactly like
+        // `infer_type` — always `Strict` (see that site's comment).
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         stage3_sabotage_skip_substitution: sabotage,
     };
     cx.infer(scope, e)
