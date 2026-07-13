@@ -564,6 +564,53 @@ UNSAFE matrix is exercised in `scripts/hooks/test-branch-guard-parse.sh` (75 row
 fixture git worktrees for the `cd`/`-C` resolution rows — not mocked). The temp-anchor dance
 (re-pointing the main checkout at a throwaway non-protected branch just to land a worktree agent's
 commit) is **no longer needed** for this class of false-positive.
+**A fourth variant — now FIXED (2026-07-13, adversarial security review of the third variant):**
+closed two PRE-EXISTING Critical false-negatives in `branch_guard_parse.py` (live bypasses of the
+protected-branch enforcement, present before the third variant and unrelated to its own change) plus
+one lower-impact informational gap. **(1) Newline segmentation:** `split_top_level` checked for a
+literal `"\n"` token, but `shlex`'s default whitespace set silently CONSUMED an unquoted newline as
+ordinary inter-token whitespace and never emitted it as a token — so a plain multi-line bash block
+(`git add -A␤git commit -m wip␤git push origin main`, exactly how an agent's multi-line Bash tool
+call is often written) flattened into ONE segment, judged only by its first line's leading word.
+Fixed by excluding `\n` from `shlex`'s whitespace (while keeping it in `punctuation_chars`), so an
+unquoted newline is emitted as its own segment-boundary token exactly like `&&`/`;`, while a newline
+INSIDE a quoted argument (`-m "line1␤line2"`) is still consumed as part of that quoted token (quote
+state takes precedence). **(2) Command-word indirection:** literal-`git`-only matching missed an
+absolute/relative path to the binary (`/usr/bin/git commit` — fixed via a basename match, which only
+WIDENS coverage, never narrows it); a leading `NAME=value` shell assignment shifting git off the
+segment's first token (`env FOO=bar git commit`, or bare `FOO=bar git commit` with no `env` at all —
+fixed via a shared `consume_prefix` helper, also used for `cd`-detection so a prefixed `cd` is
+tracked exactly as reliably); `eval '...'`/`sh -c '...'`/`bash -c '...'`/`xargs … git …` hiding git in
+an opaque argument string this guard does not parse (fixed: recognized by name, unconditionally FAIL
+CLOSED — never guessed safe); and a bare `$VAR`/`${VAR}` in the command-word position itself
+(`$GIT commit` — fixed by broadening the dynamic-marker check from command/process-substitution
+syntax only to any bare `$` sigil, now also applied to a segment's resolved head word). As an
+additional, closely-related hardening beyond the reviewer's literal examples: a resolved head
+STARTING WITH `-` (e.g. `env -i FOO=bar git commit` — `env`'s own flags are not specially parsed)
+also now fails closed rather than being silently treated as an inert non-git command. The bash hook's
+own cheap fast-path pre-filter (`\bgit\b` only) was ALSO widened to trigger on `$`/backtick/the named
+wrapper keywords, so a fully-obfuscated command word (e.g. a base64-decoded variable that never
+contains the literal substring "git") cannot skip the python parser entirely at that pre-filter.
+**(3, informational) Detached HEAD:** resolves to the literal string `"HEAD"`, matching no protected
+pattern by default — and `"HEAD"` is also the bash hook's own fallback on an outright resolution
+failure, so the two are indistinguishable. Maintainer's call (documented): a resolved branch of
+literal `"HEAD"` is now treated the same as unresolved — fails CLOSED for any op needing the current
+branch, same as an unresolvable `cd`/`-C` target. Every one of these fail-closed paths is scoped to
+exactly the ambiguous case; an ordinary, unambiguous, non-git, non-wrapper command (`ls`, `echo`,
+`make`, `python3 script.py`, a script FILE via `bash deploy.sh` with no `-c`, …) remains inert/ALLOWED
+— this module does not attempt to prove an arbitrary external program never shells out to git
+internally (unbounded, and outside what a shell-command-string guard can or should attempt); it
+closes exactly the shell-level indirection an adversarial reviewer identified as parseable-but-
+unparsed. **A residual, deliberately out-of-scope gap, flagged not silently left unknown:** a
+MUTATING git invocation hidden inside a variable assignment's command SUBSTITUTION (e.g.
+`X=$(git push origin main) && git status`) is not recursively parsed — the substitution fail-safe
+stays scoped to push args / a `-C` path / the subcommand token / a segment's head word, never the
+free-form content of a `$(...)` capture, because that scope is what keeps the legitimate,
+already-relied-upon idiom `VAR=$(git rev-parse HEAD) && git commit` working without recursive
+re-parsing (a materially larger change, left for a future variant if judged worth it). Verified via
+100/100 rows in `scripts/hooks/test-branch-guard-parse.sh` (up from 75) plus real fixture git
+worktrees (including a genuinely detached one) and end-to-end runs through the real bash hook (not
+just the parser in isolation) for the exact payloads named above.
 
 ### 13. Stale-base worktree spawn — branch off the working tier, never the default branch (lesson, 2026-07-03)
 **Pattern:** an isolated-worktree agent whose base ref defaults to the **default branch** (`origin/main`)
