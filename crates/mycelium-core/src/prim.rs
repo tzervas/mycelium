@@ -416,6 +416,17 @@ impl PrimTable {
         // justified by the kernel's own use of BLAKE3 for content addressing (deterministic; the
         // wrapper calls the same algorithm the same way, adding no additional uncertainty).
         t.insert("hash.blake3", exact(vec![Any], Any));
+        // DN-138 WU-4 (increment 2, §6): `bit.to_bytes` — the missing `Binary{N} -> Bytes` raw-byte
+        // conversion `derive(Hash)`'s `ScalarBinary` route needs (there was previously no way to hash
+        // a scalar field at all — only `Bytes`/`Bool` fields could route to `hash.blake3`). Zero-pads
+        // the `N`-bit unsigned magnitude on the MSB side up to a whole number of bytes, then packs
+        // MSB-first — the same zero-extend convention `bit.width_cast`'s widen case already uses
+        // (DN-41), so `bit.to_bytes(x)` for any `N` is always defined (never a partial byte). Same
+        // `Any`/`Binary` escape hatch as the rest of this group (no first-class `Bytes` paradigm); the
+        // real "operand must be `Binary`" typing lives in the interpreter prim
+        // (`prims.rs::prim_bin_to_bytes`) and the L1 checker's dedicated arm. `intrinsic = Exact` — a
+        // total, deterministic bit-repacking with no approximation.
+        t.insert("bit.to_bytes", exact(vec![Binary], Any));
         // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). `intrinsic = Exact`
         // (a total greatest-lower-bound). The user-`Data` fuse registers no prim — it elaborates to the
         // resolved `Fuse::join` call (DN-58 §A.5) — and the non-`Binary` reprs have no committed meet

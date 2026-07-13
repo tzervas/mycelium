@@ -230,14 +230,14 @@
     ]
   },
   "derive_debug_primitive_field_gaps_never_fabricates": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Pair = Pair(Binary{8}, Bool);\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Pair = Pair(Float, Bool);\n",
     "emitted_items": [
       "Pair"
     ],
     "gaps": [
       [
         "DeriveAttr",
-        "struct `Pair` derive(Debug): field 0 has type `Binary{8}`, a primitive repr with no ambient `Show` instance in this file (`lib/std/fmt.myc`'s primitive impls live in a separate, unimported nodule) — the whole derive is left an honest gap rather than a partial/fabricated render (G2)",
+        "struct `Pair` derive(Debug): field 0 has type `Float`, a primitive repr (or `Seq`/tuple/other bracketed shape) with no ambient `Show` instance in this file (`lib/std/fmt.myc`'s primitive impls live in a separate, unimported nodule) — the whole derive is left an honest gap rather than a partial/fabricated render (G2)",
         "Pair"
       ]
     ]
@@ -250,14 +250,14 @@
     "gaps": []
   },
   "derive_default_primitive_field_gaps_never_fabricates": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Pair = Pair(Binary{8}, Bool);\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Pair = Pair(Float, Bool);\n",
     "emitted_items": [
       "Pair"
     ],
     "gaps": [
       [
         "DeriveAttr",
-        "struct `Pair` derive(Default): field 0 has type `Binary{8}`, a primitive repr with no landed `Init` instance anywhere in the corpus yet — the whole derive is left an honest gap rather than a partial/fabricated init (G2)",
+        "struct `Pair` derive(Default): field 0 has type `Float`, a primitive repr (or `Seq`/tuple/other bracketed shape) with no landed `Init` route yet — the whole derive is left an honest gap rather than a partial/fabricated init (G2)",
         "Pair"
       ]
     ]

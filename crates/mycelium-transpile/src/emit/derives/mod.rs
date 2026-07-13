@@ -127,10 +127,24 @@ pub(super) enum FieldDeriveKind {
     /// order position, NaN != NaN) — `eq.rs`/`ord.rs` special-case this ahead of the classifier so
     /// their gap message cites the real (NaN/ADR-040) reason, not the generic no-route one.
     Float,
-    /// `Seq`/`Vec[T]`, tuples, or any other bracketed shape this leaf does not resolve — deferred
-    /// to increment 2 (WU-4, DN-138 §6). Also the fallback for a non-uppercase-leading,
-    /// non-primitive name the pre-DN-138 boolean gate's implicit "else ineligible" branch covered
-    /// (never silently reclassified as `UserNamed`).
+    /// `Vec[T]` (DN-138 WU-4, §6 increment 2) — the `Vec` cons-list, ONE bracket-level deep
+    /// (`vec_element` peels exactly one `Vec[...]` layer). Each row classifies the peeled-off
+    /// element type SEPARATELY (a second `field_derive_kind` call on the inner text) and decides
+    /// its OWN eligibility for that element kind — this variant only marks the outer SHAPE as
+    /// "a `Vec`", not that it composes. **Depth-1 only, by deliberate, disclosed scope:** a nested
+    /// `Vec[Vec[T]]` field's element reclassifies as `VecOf` too, and none of this leaf's rows
+    /// treat `VecOf` as an eligible ELEMENT kind (only `UserNamed`/`ScalarBinary`/`BytesLike`/
+    /// `BoolLike` are), so a doubly-nested `Vec` is an honest, disclosed gap rather than an
+    /// unbounded/silently-mis-composed recursion (DN-138 §6 "gaps at a sensible depth" — the
+    /// sensible depth chosen here is 1, matching the corpus's own observed shapes, e.g.
+    /// `CtorInfo.fields: Vec<Ty>`; YAGNI against speculative deeper nesting no corpus struct needs).
+    VecOf,
+    /// `Seq`/tuples, or any other bracketed shape this leaf does not resolve (including a `Vec[T]`
+    /// whose element itself failed its OWN eligibility check — a row reports THAT case with its
+    /// own specific reason, not this generic catch-all) — deferred to increment 2 (WU-4, DN-138
+    /// §6) or later. Also the fallback for a non-uppercase-leading, non-primitive name the
+    /// pre-DN-138 boolean gate's implicit "else ineligible" branch covered (never silently
+    /// reclassified as `UserNamed`).
     Deferred,
 }
 
@@ -151,6 +165,12 @@ pub(super) fn field_derive_kind(mapped_ty: &str) -> FieldDeriveKind {
     if mapped_ty.starts_with("Binary{") && mapped_ty.ends_with('}') {
         return FieldDeriveKind::ScalarBinary;
     }
+    // DN-138 WU-4: checked BEFORE the generic bracket-catch-all below (`Vec[...]` also contains
+    // `[`) so a `Vec[T]` field gets its own dedicated kind rather than falling into the generic
+    // `Deferred` bucket.
+    if vec_element(mapped_ty).is_some() {
+        return FieldDeriveKind::VecOf;
+    }
     if mapped_ty.contains(['{', '(', '[']) {
         return FieldDeriveKind::Deferred;
     }
@@ -164,16 +184,72 @@ pub(super) fn field_derive_kind(mapped_ty: &str) -> FieldDeriveKind {
     FieldDeriveKind::Deferred
 }
 
+/// DN-138 WU-4 — peel exactly ONE `Vec[...]` bracket layer off `mapped_ty` (the
+/// `crate::map::map_type` `Vec[{elem}]` convention, DN-99 row 35), returning the inner element's
+/// own mapped-type text, or `None` if `mapped_ty` is not (syntactically) a `Vec[...]` shape.
+/// `format!("Vec[{elem}]")` is the ONLY producer of this shape (`crate::map`), so a literal
+/// `"Vec["` prefix + trailing `']'` suffix is exact — never a false match against some OTHER
+/// bracketed shape (a tuple/`Seq` mapped-type text never starts with the literal bytes `"Vec["`).
+#[must_use]
+pub(super) fn vec_element(mapped_ty: &str) -> Option<&str> {
+    mapped_ty
+        .strip_prefix("Vec[")
+        .and_then(|s| s.strip_suffix(']'))
+}
+
+/// DN-138 WU-4 — sanitize an arbitrary mapped-type string (e.g. `"Binary{64}"`, `"Bytes"`,
+/// `"CheckError"`) into a valid Mycelium bare-identifier segment, for building deterministic,
+/// per-element-type auxiliary fn names (`show_vec_<mangled>`, `eq_vec_<mangled>`, …) that never
+/// collide across DIFFERENT element shapes within the SAME struct's compose call (every
+/// non-alphanumeric byte — `{`, `}`, `[`, `]` — becomes `_`).
+#[must_use]
+pub(super) fn mangle_ty(ft: &str) -> String {
+    ft.chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
+        .collect()
+}
+
 /// `true` iff `ft` is the ONE concrete `Binary{N}` width DN-138 increment 1 seeds a trait instance
-/// at (`Binary{64}` — DN-138 §2 fact 1's width-erased coherence key: at most one `Show`/`Init`/
-/// `Ord3` instance may exist per head `"Binary"`, and the real corpus's `u64` fields hit it
-/// exactly). Used by the three TRAIT-DISPATCHED rows ([`show`], [`init`], [`ord`]) to gate a
-/// `ScalarBinary` field beyond the classifier alone — a narrower/wider width is an honest,
-/// disclosed gap (deferred to increment 2, DN-138 §6), never a silent width-mismatch `myc check`
-/// failure at the emitted call site (`crate::checkty::Checker::require_instance`'s own
-/// `info.for_ty == concrete` guard would refuse it anyway — this gate keeps that refusal at EMIT
-/// time, an honest gap, rather than composing text a downstream `myc check` then rejects).
+/// at directly (`Binary{64}` — DN-138 §2 fact 1's width-erased coherence key: at most one
+/// `Show`/`Init`/`Ord3` instance may exist per head `"Binary"`, and the real corpus's `u64` fields
+/// hit it exactly). **DN-138 WU-4 (increment 2) update:** a narrower/wider `ScalarBinary` width is
+/// no longer a bare refusal for [`show`]/[`ord`] — [`scalar_binary_width`] extracts `N`, and those
+/// two rows wrap the call in a `width_cast` up to `Binary{64}` (see each row's `compose` doc); a
+/// bare `render`/`cmp` call is only correct AT `Binary{64}` directly, which is exactly what this
+/// predicate still answers (used to decide whether the width_cast wrapper is needed at all, never
+/// a silent width-mismatch `myc check` failure at the emitted call site —
+/// `crate::checkty::Checker::require_instance`'s own `info.for_ty == concrete` guard would refuse a
+/// bare mismatched call, so this gate keeps that decision at EMIT time).
 #[must_use]
 pub(super) fn is_seeded_scalar_width(ft: &str) -> bool {
     ft == "Binary{64}"
+}
+
+/// DN-138 WU-4 — extract `N` from a `ScalarBinary`-kind mapped-type text `"Binary{N}"` (the ONLY
+/// producer of this text is `crate::map`'s `Binary{{{n}}}` format, so the parse is exact — never a
+/// silent default on a malformed width; `None` only if `ft` is not actually `ScalarBinary`-shaped,
+/// which every call site here already gates on via [`field_derive_kind`]).
+#[must_use]
+pub(super) fn scalar_binary_width(ft: &str) -> Option<u32> {
+    ft.strip_prefix("Binary{")?.strip_suffix('}')?.parse().ok()
+}
+
+/// DN-138 WU-4 — a `Binary{width}` all-zero literal, grouped in nibbles (`0b0000_0000`-style),
+/// for the `width_cast` witness operand (only its *type* is read — the value is ignored, DN-41)
+/// and for a narrow `ScalarBinary` field's `Init` route (a literal zero at the field's OWN width,
+/// never dispatched through the seeded `Binary{64}`-only `Init` instance — see [`init`]'s
+/// `compose` doc). Mirrors `crate::emit::zero_bin_literal`'s identical shape (a disclosed,
+/// deliberate small duplication — this axis's rows stay self-contained per-file units, the same
+/// KISS trade-off [`hash`]'s module doc already makes for its own `bytes_concat_chain` copy).
+#[must_use]
+pub(super) fn zero_bin_literal(width: u32) -> String {
+    let mut s = String::with_capacity(2 + width as usize + width as usize / 4);
+    s.push_str("0b");
+    for i in 0..width {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        s.push('0');
+    }
+    s
 }

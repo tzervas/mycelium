@@ -56,11 +56,38 @@
 //! [`super::show`]/[`super::init`] already carry — a nested field's OWN derive is not verified to
 //! have actually succeeded, only that its type NAME has the right shape).
 
-use super::{field_derive_kind, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind};
+use std::collections::BTreeMap;
+
+use super::{
+    field_derive_kind, mangle_ty, vec_element, DeriveCtx, DeriveHandler, DeriveOutcome,
+    FieldDeriveKind,
+};
 use crate::gap::{Category, GapReason};
 
 fn recognizes(name: &str) -> bool {
     name == "PartialEq"
+}
+
+/// **DN-138 WU-4 — the `Vec[T]`-recursive `PartialEq` auxiliary.** Composes a plain top-level
+/// `fn eq_vec_<mangled elem>(a: Vec[ELEM], b: Vec[ELEM]) => Binary{1} = …;` that structurally
+/// recurses over BOTH cons-lists in lockstep — `Nil`/`Nil` equal, a length mismatch (`Nil` vs
+/// `Cons`) unequal, and a `Cons`/`Cons` pair `and`-folds the element comparison ([`field_eq_expr`],
+/// recursively reused for the element itself) with the recursive tail comparison. A plain fn, not
+/// an `impl`/trait — `PartialEq` already has no landed `Eq` prelude trait to dispatch through (see
+/// this file's own module doc), so this mirrors the SAME shape the rest of this row already uses,
+/// now applied one level deeper. Named per DISTINCT element shape ([`mangle_ty`]), composed at most
+/// once per struct even if several fields share an element type (the caller dedups). **Disclosed
+/// residual (mirrors this row's own top-level doc):** two DIFFERENT structs in the SAME file
+/// needing the SAME `eq_vec_<mangled>` would collide as a duplicate-function `myc-check` refusal —
+/// out of this leaf's scope without cross-struct driver state.
+fn vec_eq_aux(mangled: &str, elem_ft: &str) -> String {
+    let elem_expr =
+        field_eq_expr("ha", "hb", elem_ft).expect("eligibility already checked by caller");
+    format!(
+        "fn eq_vec_{mangled}(a: Vec[{elem_ft}], b: Vec[{elem_ft}]) => Binary{{1}} =\n  match a {{ \
+         Nil => match b {{ Nil => 0b1, Cons(_, _) => 0b0 }}, Cons(ha, ta) => match b {{ Nil => \
+         0b0, Cons(hb, tb) => and({elem_expr}, eq_vec_{mangled}(ta, tb)) }} }};"
+    )
 }
 
 /// The deterministic top-level fn name this row's compose emits/expects for a given type name —
@@ -90,6 +117,9 @@ fn eq_fn_name(ty_name: &str) -> String {
 ///   `fn eq_Bool` here risks the exact duplicate-fn hazard this row's own module doc documents the
 ///   moment a SECOND struct in the same file also derives `PartialEq` over a `Bool` field. An
 ///   inlined match is self-contained, needs no shared name, and is exactly `Binary{1}`-typed.
+/// - `VecOf` (DN-138 WU-4) -> `eq_vec_<mangled elem>(a, b)`, a per-element-type recursive
+///   auxiliary ([`vec_eq_aux`]) — only when the element itself has an eq route (depth-1 scope: a
+///   `Vec`-of-`Vec` element has none, an honest disclosed gap).
 fn field_eq_expr(a: &str, b: &str, ft: &str) -> Option<String> {
     match field_derive_kind(ft) {
         FieldDeriveKind::UserNamed => Some(format!("{}({a}, {b})", eq_fn_name(ft))),
@@ -99,6 +129,12 @@ fn field_eq_expr(a: &str, b: &str, ft: &str) -> Option<String> {
             "match {a} {{ True => match {b} {{ True => 0b1, False => 0b0 }}, False => match {b} \
              {{ True => 0b0, False => 0b1 }} }}"
         )),
+        FieldDeriveKind::VecOf => {
+            let elem = vec_element(ft)?;
+            // Depth-1 scope: only compose if the ELEMENT itself has its own eq route.
+            field_eq_expr("_a", "_b", elem)?;
+            Some(format!("eq_vec_{}({a}, {b})", mangle_ty(elem)))
+        }
         FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
     }
 }
@@ -146,16 +182,36 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
             ));
         }
         if field_eq_expr("p", "q", ft).is_none() {
+            let why = if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+                format!(
+                    "a `Vec` field whose element type `{}` has no equality route of its own (a \
+                     `Vec`-of-`Vec` or a `Float`/other-bracketed element -- DN-138 section 6, \
+                     WU-4's disclosed depth-1 scope)",
+                    vec_element(ft).unwrap_or(ft)
+                )
+            } else {
+                "a `Seq`/tuple or other bracketed shape with no derived (or hand-written) \
+                 structural-equality route yet"
+                    .to_owned()
+            };
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(
-                    "struct `{ty_name}` derive(PartialEq): field {i} has type `{ft}`, a \
-                     `Seq`/`Vec[T]`/tuple or other bracketed shape with no derived (or \
-                     hand-written) structural-equality route yet (increment 2, DN-138 §6 — WU-4) \
-                     — the whole derive is left an honest gap rather than a partial/fabricated \
+                    "struct `{ty_name}` derive(PartialEq): field {i} has type `{ft}`, {why} — \
+                     the whole derive is left an honest gap rather than a partial/fabricated \
                      equality (G2)"
                 ),
             ));
+        }
+    }
+    let mut vec_aux: BTreeMap<String, String> = BTreeMap::new();
+    for ft in field_types {
+        if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+            if let Some(elem) = vec_element(ft) {
+                vec_aux
+                    .entry(mangle_ty(elem))
+                    .or_insert_with(|| elem.to_owned());
+            }
         }
     }
     let vars_a: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
@@ -168,12 +224,18 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
         })
         .collect();
     let body = and_chain(&parts);
-    Ok(format!(
+    let mut out = String::new();
+    for (mangled, elem_ft) in &vec_aux {
+        out.push_str(&vec_eq_aux(mangled, elem_ft));
+        out.push_str("\n\n");
+    }
+    out.push_str(&format!(
         "fn {fname}(a: {ty_name}, b: {ty_name}) => Binary{{1}} =\n    match a {{ {ty_name}({pa}) \
          => match b {{ {ty_name}({pb}) => {body} }} }};",
         pa = vars_a.join(", "),
         pb = vars_b.join(", ")
-    ))
+    ));
+    Ok(out)
 }
 
 /// A **generic** struct refuses `derive(PartialEq)` — a derived fn for a generic type needs
