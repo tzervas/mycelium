@@ -334,13 +334,24 @@ fn resolvable_type_names(items: &[Item]) -> HashSet<String> {
     // strictly *smaller* dependency set than the enum's combined one), every one of its
     // `Fields::Named` variants' ctor names is *also* resolvable.
     //
-    // This union is deliberately permissive (no collision bookkeeping here) — the ONLY place a
-    // wrong bind could occur is `struct_layout` returning a *value* for the wrong entity, and that
-    // is guarded entirely by `struct_layouts`'s own collision-safe population (never a
-    // silently-shadowed `layouts` entry): `struct_layout(name)` ANDs this set with `layouts.get
-    // (name)`, so a name present here but ambiguous/absent in `layouts` still yields `None`
-    // overall (VR-5) — adding a variant ctor name here can only ever *enable* resolution the
-    // layout map itself has already vetted as safe, never *cause* a wrong one.
+    // This union is deliberately permissive (no collision bookkeeping here) — the safety
+    // obligation is carried entirely by `struct_layouts`'s own population, which MUST register
+    // (into its `seen`/`ambiguous` collision bookkeeping) every struct name and every enum
+    // variant's ctor name **unconditionally**, regardless of the owning enum's whole-item
+    // resolvability, and gate only the *insertion of a usable value into its output map* on that
+    // resolvability. **Historical correction (found by the PR #1548 strict review, empirically
+    // reproduced against the compiled transpiler):** an earlier version of `struct_layouts` gated
+    // its collision registration on the SAME whole-enum-resolvable check this fixed point uses
+    // (skipping registration entirely for an unresolvable enum's variants) and claimed that made
+    // the union above safe by construction. That claim was FALSE — a bare ctor name owned by an
+    // enum that fails whole-enum resolvability for a reason unrelated to that variant (e.g. a
+    // sibling variant with an unmappable field) was then never entered into the collision
+    // bookkeeping at all, so a same-named `struct`/other-enum-variant's layout stayed unflagged
+    // and a construction site for the excluded enum's variant would resolve — bare-name only,
+    // per `struct_layout`'s doc — straight into that unrelated entity's layout: a silent
+    // wrong-index bind (G2). `struct_layouts` now registers unconditionally and only conditions
+    // the `out`-map insertion, so this union is safe again: a name present here but
+    // ambiguous/absent in `layouts` still yields `None` overall (VR-5).
     for item in items {
         if let Item::Enum(e) = item {
             if resolvable.contains(&e.ident.to_string()) {
@@ -413,13 +424,21 @@ fn struct_layouts(
     let mut ambiguous: HashSet<String> = HashSet::new();
     for item in items {
         let Item::Enum(e) = item else { continue };
-        // Mirrors `struct_layout`'s own downstream gate (`resolvable.contains(name)`) at the
-        // ENUM level: an enum with any unresolvable variant field never contributes ANY of its
-        // variants (the same per-item resolvability unit `resolvable_type_names` already
-        // computes for the enum's own name — no separate per-variant analysis needed here).
-        if !resolvable.contains(&e.ident.to_string()) {
-            continue;
-        }
+        // **CRITICAL, fixed by the PR #1548 strict review (empirically reproduced against the
+        // compiled transpiler — the exact #1535/DN-134 build-blocking hazard).** This whole-enum
+        // resolvability check must NOT gate collision *registration* — only whether a usable
+        // layout gets *inserted* into `out` below. `struct_layout`'s runtime lookup gate
+        // (`emit.rs::struct_layout`) is keyed purely on the bare ctor name, with NO per-enum
+        // scoping — so if an unresolvable enum's variant name is skipped here entirely, that bare
+        // name never gets marked `seen`/`ambiguous`, and a later resolvable struct or enum that
+        // happens to share the SAME bare ctor name goes unflagged, un-poisoned, and reachable —
+        // while a construction site for the (unrelated-reason) unresolvable enum's excluded
+        // variant would still resolve, bare-name only, straight into that other entity's layout: a
+        // silent wrong-index bind (G2). So: register every struct name and every `Fields::Named`
+        // variant's ctor name into `seen`/`ambiguous` UNCONDITIONALLY (a name claimed by an
+        // unresolvable enum's variant still POISONS it for any other contender), and gate ONLY the
+        // `out` insertion on this enum's own resolvability.
+        let enum_resolvable = resolvable.contains(&e.ident.to_string());
         for v in &e.variants {
             let syn::Fields::Named(fs) = &v.fields else {
                 continue;
@@ -429,16 +448,27 @@ fn struct_layouts(
                 continue;
             }
             if seen.contains(&key) {
-                // Collides with an existing struct's name or an earlier-accepted variant's ctor
-                // name — never silently shadow either interpretation (G2). Refuse BOTH: remove
-                // whatever is currently keyed under `key` (a struct's or a prior variant's real
-                // layout) and mark it ambiguous so no later variant can re-claim it either.
+                // Collides with an existing struct's name or an earlier-accepted/-registered
+                // variant's ctor name — never silently shadow either interpretation (G2). Refuse
+                // BOTH: remove whatever is currently keyed under `key` (a struct's or a prior
+                // variant's real layout, if any) and mark it ambiguous so no later variant can
+                // re-claim it either. This fires regardless of `enum_resolvable` — collision
+                // registration is unconditional (see above).
                 out.remove(&key);
                 ambiguous.insert(key);
                 continue;
             }
-            out.insert(key.clone(), named_field_layout(fs));
-            seen.insert(key);
+            // Always mark the name claimed (collision bookkeeping), independent of whether this
+            // enum is itself whole-resolvable.
+            seen.insert(key.clone());
+            // Only a resolvable enum contributes a USABLE layout — an unresolvable enum's variant
+            // still occupies (poisons) the name above, but inserts nothing here, matching
+            // `struct_layout`'s own gate (`resolvable.contains(name) && layouts.get(name)`): the
+            // name won't even be in `resolvable` for an unresolvable enum's variant (see
+            // `resolvable_type_names`'s union step), so `out` never needs an entry for it.
+            if enum_resolvable {
+                out.insert(key, named_field_layout(fs));
+            }
         }
     }
     out

@@ -1518,6 +1518,81 @@ fn struct_variant_construction_never_silently_gaps() {
     }
 }
 
+/// **CRITICAL regression (PR #1548 strict review — empirically reproduced against the compiled
+/// transpiler; the exact #1535/DN-134 build-blocking hazard).** `struct A` and
+/// `enum Foo1 { A { .. }, Baz { odd: Instant } }` share the bare ctor name `A`. `Baz`'s
+/// `odd: Instant` field is unmappable (an undeclared external type), so `Foo1` fails WHOLE-ENUM
+/// resolvability for a reason entirely UNRELATED to the colliding `A` variant. Before the fix,
+/// `struct_layouts`'s collision loop skipped registering `Foo1`'s variants into its `seen`/
+/// `ambiguous` bookkeeping whenever the WHOLE owning enum was unresolvable — so `Foo1::A`'s bare
+/// name was never flagged as colliding with struct `A`'s, and `emit::struct_layout` (which
+/// resolves by bare ctor name only, with no per-enum scoping) would silently bind `Foo1::A {
+/// foo, bar }`'s construction to struct `A`'s real layout: a wrong-index bind (G2) recorded as a
+/// clean success. This test fails against the pre-fix code (both `f` and `g` wrongly emit, `g`
+/// bound to the wrong layout) and passes with the fix (both gap, never a silent wrong bind).
+#[test]
+fn struct_vs_unrelated_enum_variant_collision_registers_despite_sibling_gap() {
+    let rust = "struct A { foo: u8, bar: u8 } \
+                enum Foo1 { A { foo: u8, bar: u8 }, Baz { odd: Instant } } \
+                fn f() -> A { A { foo: 1, bar: 2 } } \
+                fn g() -> Foo1 { Foo1::A { foo: 3, bar: 4 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "`Foo1::A {{ .. }}` must NEVER silently resolve against the unrelated struct `A`'s layout \
+         just because `Foo1` (as a WHOLE) fails resolvability for a reason unrelated to the `A` \
+         variant (`Baz`'s unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "struct `A`'s own construction must also gap once its bare name collides with `Foo1::A` \
+         — never a partial refusal that leaves one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("A(3, 4)") && !myc.contains("A(1, 2)"),
+        "neither construction may silently emit a positional `A(..)` bound to either \
+         interpretation's layout — got:\n{myc}"
+    );
+}
+
+/// **CRITICAL regression, twin of the above** (PR #1548 strict review). `Foo1::Bar` and
+/// `Foo2::Bar` share the bare ctor name `Bar`, declared on two UNRELATED enums. `Foo1`'s sibling
+/// variant `Baz` has an unmappable field (`Instant`, undeclared), excluding `Foo1` as a WHOLE
+/// from resolvability for a reason entirely unrelated to `Bar`. Before the fix, `Foo1`'s `Bar`
+/// variant was skipped from collision registration entirely (the whole-enum-unresolvable guard
+/// covered the whole loop body, not just the `out`-insertion), so `Foo2::Bar`'s real layout
+/// stayed unflagged and `Foo1::Bar`'s construction site would silently resolve against it —
+/// bare-name-only lookup, no per-enum scoping — a wrong-index bind (G2) between two entirely
+/// unrelated enums. Fails against the pre-fix code (both `g1`/`g2` wrongly emit, `g1` cross-bound
+/// to `Foo2`'s layout) and passes with the fix (both gap, refused as ambiguous).
+#[test]
+fn two_enums_same_named_variant_one_excluded_by_unmappable_sibling_never_cross_binds() {
+    let rust = "enum Foo1 { Bar { reason: String }, Baz { odd: Instant } } \
+                enum Foo2 { Bar { reason: String } } \
+                fn g1() -> Foo1 { Foo1::Bar { reason: 1 } } \
+                fn g2() -> Foo2 { Foo2::Bar { reason: 2 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g1"),
+        "`Foo1::Bar {{ .. }}` must NEVER silently resolve against `Foo2::Bar`'s layout merely \
+         because `Foo1` fails whole-enum resolvability for a reason unrelated to `Bar` (`Baz`'s \
+         unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g2"),
+        "`Foo2::Bar`'s own construction must also gap once its bare name collides with \
+         `Foo1::Bar` — never a partial refusal leaving one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+}
+
 /// **THE key soundness test** (DN-134 SS4 stress-#8, SS3 step 1(b) -- the cross-leaf finding from
 /// the M-1089 pattern-emit review that made the shared `struct_layouts` population's
 /// collision-safety a BUILD-BLOCKING DoD item, not an OQ). A file declaring both a plain `struct
