@@ -95,7 +95,7 @@ jobs:
           # Guard: fail loudly if nothing was assembled, rather than deploying an empty site.
           test -f target/docsite/index.html
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: target/docsite
       - name: Deploy to GitHub Pages
