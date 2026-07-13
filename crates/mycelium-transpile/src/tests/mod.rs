@@ -11,6 +11,7 @@ mod mut_thread;
 mod prim_map;
 mod remap;
 mod reserved;
+mod slice_type;
 mod symtab;
 mod taxonomy;
 mod transpile;
