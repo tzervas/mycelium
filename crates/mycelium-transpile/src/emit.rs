@@ -18,7 +18,7 @@ use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
     ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
-    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
+    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, Type, TypeParamBound,
 };
 
 // DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
@@ -4310,6 +4310,47 @@ fn has_self_receiver(sig: &Signature) -> bool {
     sig.inputs.iter().any(|a| matches!(a, FnArg::Receiver(_)))
 }
 
+/// **Regression fix (this leaf) — a generic-argument self type is NEVER eligible for
+/// [`mangled_inherent_fn_name`].** DN-131 (M-1088/M-1101) taught `emit_impl` to accept an
+/// impl-level generic parameter (`impl[T] Foo[T] { .. }`) instead of gapping the whole block, but
+/// `mangled_inherent_fn_name`'s `{Type}__{method}` scheme was never updated for that: `self_ty_text`
+/// is `map_type`'s mapped text for `item.self_ty`, and `map_type`'s ONLY bracket-producing arm is a
+/// generic-argument application (`map.rs`'s `PathArguments::AngleBracketed` arm, `"{name}[{args}]"`)
+/// — so a generic self type (`Foo<T>`/`Foo<Concrete>`) maps to `Foo[T]`/`Foo[Concrete]`, and
+/// splicing that into `{Type}__{method}` embeds Mycelium `type_args` bracket syntax inside an
+/// identifier position: `Foo[T]__method` is never a valid Mycelium identifier (grammar's
+/// `Ident` production has no `[`/`]`) — a **hard parse failure** the moment `myc check`/any
+/// Mycelium parser reads the emission (G2: the transpiler must never emit unparseable text).
+/// Reached from BOTH an impl-level generic (`impl<T> Foo<T>`, self type repeats the impl's own
+/// `<T>`) and a concrete monomorphized inherent impl (`impl Foo<Concrete>`, self type has closed
+/// generic args but the impl itself declares none) — this check is purely syntactic on
+/// `item.self_ty`'s own shape, so it catches both without needing to special-case which one.
+///
+/// **Why the fix is a gap, not a "strip to the base type name" repair.** Stripping brackets would
+/// produce a *valid* identifier (`Foo__method`) and — for a single generic type with only one
+/// inherent-impl block — would even be collision-free. But `mangled_inherent_fn_name`'s own
+/// collision-freedom argument ("two distinct Rust items can never share both their enclosing
+/// inherent-impl type name and their method name — that would already be a Rust compile error")
+/// is **FALSE once generic arguments are stripped**: `impl Foo<A> { fn new(..) }` and
+/// `impl Foo<B> { fn new(..) }` are two separate, perfectly legal Rust inherent impls (distinct
+/// concrete instantiations of the same generic type), each free to declare a same-named
+/// receiver-less associated fn — a real collision under Mycelium's flat-fn desugar (M-664) that
+/// base-name-only mangling would silently reintroduce, undoing exactly what D4 exists to prevent
+/// (DN-34 §8.13/8.14). So the receiver-less-associated-fn case on a generic self type is left an
+/// honest per-method gap (this function's own impl-partial-emission asymmetry — sibling methods on
+/// the same impl are unaffected) rather than either an invalid identifier or a reintroduced
+/// collision (VR-5/G2).
+fn self_ty_is_generic_application(self_ty: &Type) -> bool {
+    match self_ty {
+        Type::Path(tp) if tp.qself.is_none() => tp
+            .path
+            .segments
+            .last()
+            .is_some_and(|seg| matches!(seg.arguments, PathArguments::AngleBracketed(_))),
+        _ => false,
+    }
+}
+
 // ---- DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl rule-swap ----------------------------
 //
 // **Verify-first (mitigation #14): there is no "synthetic-trait-def" code path in this crate to
@@ -4692,6 +4733,45 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                 // emitted `fn` itself, not just in this module's comments.
                                 let emitted_fn_name =
                                     if trait_name.is_none() && !has_self_receiver(&f.sig) {
+                                        // Regression fix (this leaf, DN-34 §8.13/8.14 "D4"): a
+                                        // generic-argument self type (`Foo<T>`/`Foo<Concrete>`)
+                                        // must NEVER reach `mangled_inherent_fn_name` — see
+                                        // `self_ty_is_generic_application`'s doc for the full
+                                        // hard-parse-failure + collision-reintroduction rationale.
+                                        // This method alone gaps; sibling methods on the SAME impl
+                                        // (and any `self`-receiving method here) are unaffected —
+                                        // this function's own documented per-method partial-
+                                        // emission asymmetry.
+                                        if self_ty_is_generic_application(&item.self_ty) {
+                                            sub_gaps.push(GapReason::new(
+                                                Category::GenericBound,
+                                                format!(
+                                                    "impl method `{method}`: a receiver-less \
+                                                     inherent-impl associated fn on a \
+                                                     generic-argument self type `{self_ty_text}` \
+                                                     cannot be mangled — the D4 \
+                                                     `{{Type}}__{{method}}` scheme's mapped \
+                                                     self-type text embeds Mycelium `type_args` \
+                                                     bracket syntax (`{self_ty_text}__{method}`), \
+                                                     which is never a valid identifier (would \
+                                                     hard-parse-fail, G2); stripping to the bare \
+                                                     base type name would avoid the parse failure \
+                                                     but reintroduce the exact same-name \
+                                                     collision D4 exists to close: two DIFFERENT \
+                                                     concrete instantiations of this generic type \
+                                                     (e.g. two separate `impl` blocks for two \
+                                                     different type arguments) are distinct, \
+                                                     non-conflicting Rust items that could each \
+                                                     declare a same-named receiver-less \
+                                                     associated fn, which would silently collide \
+                                                     under a base-name-only mangle — left an \
+                                                     explicit gap rather than either (VR-5/G2)",
+                                                    method = f.sig.ident,
+                                                    self_ty_text = self_ty_text,
+                                                ),
+                                            ));
+                                            continue;
+                                        }
                                         doc.push(format!(
                                             "// Declared: renamed `{}` -> `{}__{}` (DN-34 \
                                              §8.13/8.14 \"D4\") — Mycelium's inherent-impl \

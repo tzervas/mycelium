@@ -2783,6 +2783,213 @@ fn qualified_call_resolved_mangled_check_clean_against_real_toolchain() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+// --- Regression (this leaf): a generic-argument self type must NEVER reach `{Type}__{method}` --
+//
+// DN-131 (M-1088/M-1101) taught `emit_impl` to accept an impl-level generic parameter instead of
+// gapping the whole block — but the D4 mangler (above) was never updated for it: `self_ty_text` for
+// a generic self type maps to bracketed text (`map.rs`'s `PathArguments::AngleBracketed` arm,
+// `"{name}[{args}]"`), and splicing that into `{Type}__{method}` produced an INVALID Mycelium
+// identifier (`Foo[T]__method` — brackets in an identifier position) — a HARD PARSE FAILURE the
+// moment `myc check` (or any Mycelium parser) reads the emission, poisoning the whole containing
+// file under the vet loop's file-gated `checked_fraction` (G2 violation). Reachable from BOTH an
+// impl-level generic (`impl<T> Foo<T>`) and a concrete monomorphized inherent impl with no
+// impl-level generics of its own (`impl Foo<Concrete>`) — both fixtures below pin the fix for each
+// shape. `self_ty_is_generic_application` gaps the affected method instead (never a fabricated
+// base-name-only mangle either — see that function's doc for the real cross-instantiation collision
+// hazard that would reintroduce).
+
+/// The exact regression shape named by the task: `impl<T> DeclaredTime<T> { pub fn new(..) }`
+/// (mirroring `mycelium-std-time`'s real `DeclaredTime<T>` — DN-131 unblocked this impl-level
+/// generic from its prior blanket gap). Before the fix, `new` (no `self` receiver) would mangle to
+/// the invalid identifier `DeclaredTime[T]__new`; after the fix it is an honest per-method gap —
+/// the struct's own `type_item` still emits (DN-131 didn't regress that), but the impl's sole
+/// method gaps rather than producing unparseable text.
+#[test]
+fn impl_level_generic_self_type_ctor_gaps_never_emits_invalid_identifier() {
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the generic-self-type fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DeclaredTime"),
+        "the struct's own type_item must still emit (DN-131 didn't regress this): {:?} \
+         (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        !report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("impl DeclaredTime")),
+        "the impl must NOT be counted as emitted (its sole method gapped): {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[T]__") && !myc.contains("]__"),
+        "the emitted .myc text must NEVER contain the invalid bracketed-identifier shape \
+         `Foo[T]__method` (a hard parse failure, G2), got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("cannot be mangled")),
+        "expected a gap reason explaining the un-mangleable generic self type (folded into the \
+         whole-impl `Category::Impl` gap since this impl's only method failed — see \
+         `emit_impl`'s wholesale-failure fold), got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// The second reachable shape: a CONCRETE monomorphized inherent impl (`impl Foo<Concrete>`) whose
+/// impl block itself declares NO generic parameters — only the self type's own generic argument is
+/// generic-application-shaped. This is a real, legitimate Rust pattern (a type-specific inherent
+/// impl of a generic type, e.g. `impl Approx<f64> { .. }` in `mycelium-std-math`) and was NOT
+/// caught by the pre-existing impl-level-generics gap (that check only looks at `item.generics`,
+/// which is empty here) — it is a distinct trigger from the impl-level-generic case above, so this
+/// fixture pins it separately.
+#[test]
+fn concrete_generic_instantiation_self_type_ctor_gaps_never_emits_invalid_identifier() {
+    let rust = "pub struct Wrapper<T>(T);\n\
+                pub struct Inner(u32);\n\
+                impl Wrapper<Inner> {\n\
+                    pub fn new(inner: Inner) -> Self { Wrapper(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle").unwrap_or_else(|e| {
+        panic!("failed to parse/transpile the concrete-instantiation fixture: {e}")
+    });
+    assert!(
+        report.emitted_items.iter().any(|n| n == "Wrapper")
+            && report.emitted_items.iter().any(|n| n == "Inner"),
+        "both struct type_items must still emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        !report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("impl Wrapper")),
+        "the impl must NOT be counted as emitted (its sole method gapped): {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[Inner]__") && !myc.contains("]__"),
+        "the emitted .myc text must NEVER contain the invalid bracketed-identifier shape \
+         `Wrapper[Inner]__new` (a hard parse failure, G2), got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("cannot be mangled")),
+        "expected a gap reason explaining the un-mangleable generic self type (folded into the \
+         whole-impl `Category::Impl` gap since this impl's only method failed — see \
+         `emit_impl`'s wholesale-failure fold), got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **Decl/call consistency** (mitigation #14's "check both sides"): a qualified call
+/// `DeclaredTime::new(x)` naming the now-gapped generic-self-type constructor must ALSO gap —
+/// never resolve to a stale/mismatched mangled name. This is automatic by construction (the decl
+/// side never calls `record_local_mangled_assoc_fn` for the gapped method, so the call side's
+/// `local_mangled_assoc_fn_known` lookup correctly misses) rather than requiring a matching change
+/// on the call side (`emit/calls/qualified_assoc.rs`) — this test pins that the automatic
+/// consistency actually holds, not just that it should in theory.
+#[test]
+fn qualified_call_to_generic_self_type_ctor_gaps_consistently() {
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n\
+                pub fn make(x: u32) -> DeclaredTime<u32> { DeclaredTime::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the call-site fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped (the constructor it calls was never validly mangled/recorded): \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[T]__") && !myc.contains("]__") && !myc.contains("[u32]"),
+        "the emitted .myc text must never contain an invalid bracketed identifier or a \
+         fabricated mismatched call, got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason on the call site, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) — the live-oracle, real-toolchain regression proof:
+/// before this leaf's fix, the emitted text for `impl<T> DeclaredTime<T> { pub fn new(..) }`
+/// contained the invalid identifier `DeclaredTime[T]__new`, which `myc-check` rejects with a
+/// **`parse-error`** (not a `check-error` — see this leaf's report for the exact repro/diagnostic).
+/// After the fix, the method gaps instead, so the emitted `.myc` (just the struct's `type_item`)
+/// must check CLEAN — proving the hard-parse-failure regression is closed, not just that the Rust
+/// text assertions above look right. Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn generic_self_type_ctor_gap_checks_clean_never_parse_error() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the generic-self-type fixture: {e}"));
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-generic-self-mangle-regression-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_ne!(
+        rec.class,
+        crate::vet::VetClass::ParseError,
+        "a generic-self-type inherent-impl constructor must NEVER produce a hard parse failure \
+         (the DN-34 §8.13/8.14 D4 regression this leaf fixes) — emitted:\n{myc}\ngaps={:?}\n\
+         diagnostic={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>(),
+        rec.diagnostic
+    );
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the gapped-method nodule (just the struct's own type_item) must check CLEAN with the \
+         real myc-check oracle — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
 //
 // Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are
