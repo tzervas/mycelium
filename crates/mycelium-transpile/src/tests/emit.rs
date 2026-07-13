@@ -326,12 +326,109 @@ fn cases() -> Vec<Case> {
                 category: Category::Other,
             },
         },
-        // A bounded generic type parameter has no bare-identifier `type_params` mapping.
+        // A bounded generic type parameter has no bare-identifier `type_params` mapping (`fn`
+        // generics are unaffected by DN-131 — that note lifts the refusal on the impl slot
+        // only, `plain_type_params` still refuses any bound here).
         Case {
             name: "generic_bound_gap",
             rust: "fn foo<T: Clone>(x: T) -> T { x }",
             expect: Expect::Gapped {
                 category: Category::GenericBound,
+            },
+        },
+        // DN-131 (Accepted; M-1088/M-1101) — a plain non-generic inherent impl is the
+        // overwhelmingly common case; the regression guard that this leaf's restructuring of
+        // `emit_impl` leaves its output byte-identical when there are no impl-level generic
+        // parameters at all (`impl_type_params` is empty, so `impl{}` + `" "` == the pre-leaf
+        // `"impl "` text exactly).
+        Case {
+            name: "impl_no_generics_unchanged",
+            rust: "impl Bx { fn dup(self) -> Bx { self } }",
+            expect: Expect::Emitted {
+                item: "impl Bx",
+                contains: "impl Bx {\n",
+            },
+        },
+        // DN-131 — an UNBOUNDED impl-level type parameter (`impl<T> Bx<T>`, DN-103's own slot)
+        // now emits: `bounded_impl_type_params` returns the bare identifier `"T"` when a
+        // parameter carries no inline bound, exactly the DN-103 backward-compatible identity
+        // case DN-131 §3 names ("an unbounded `impl[T] Foo[T]` yields `bounds: []`").
+        Case {
+            name: "impl_unbounded_generic_emits",
+            rust: "impl<T> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T] Bx[T]",
+                contains: "impl[T] Bx[T] {",
+            },
+        },
+        // DN-131 — a BOUNDED impl-level type parameter now emits the bound verbatim into the
+        // impl slot's own `[T: Bound]` text (the leaf's headline capability).
+        Case {
+            name: "impl_bounded_generic_emits",
+            rust: "impl<T: Clone> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T: Clone] Bx[T]",
+                contains: "impl[T: Clone] Bx[T] {",
+            },
+        },
+        // DN-131 §3's multi-bound surface (`bound ::= Ident type_args? ('+' Ident
+        // type_args?)*`, reusing the landed `parse_bound` grammar) — two plain trait-name
+        // bounds joined by `+`.
+        Case {
+            name: "impl_multi_bound_generic_emits",
+            rust: "impl<T: Clone + Copy> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T: Clone + Copy] Bx[T]",
+                contains: "impl[T: Clone + Copy] Bx[T] {",
+            },
+        },
+        // Scope boundary (never-silent, G2): a TRAIT-INSTANCE impl with a non-empty generics
+        // list is DN-130's territory (parametric trait-instance heads + coherence), not
+        // authorized by DN-131 — still an explicit gap, unchanged from before this leaf.
+        Case {
+            name: "impl_generic_trait_instance_still_gapped",
+            rust: "impl<T: Clone> Foo<T> for Bx<T> { fn f(a: T) -> T { a } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a lifetime parameter on the impl slot has no grammar surface — gaps
+        // exactly as `plain_type_params` gaps one on a `fn`/`struct`/`enum`/`trait` decl head.
+        Case {
+            name: "impl_lifetime_param_still_gapped",
+            rust: "impl<'a> Bx<'a> { fn dup(self) -> Bx<'a> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a const-generic impl-level parameter has no confirmed width-const
+        // correspondence — gaps.
+        Case {
+            name: "impl_const_generic_param_still_gapped",
+            rust: "impl<const N: usize> Bx<N> { fn dup(self) -> Bx<N> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a bound carrying type arguments (`Into<u8>`) is outside the DN-131 v1
+        // plain-trait-name surface this leaf builds — gapped rather than guessed (VR-5).
+        Case {
+            name: "impl_bound_with_type_args_still_gapped",
+            rust: "impl<T: Into<u8>> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: an impl `where` clause still has no Mycelium equivalent (DN-131 §3:
+        // inline bounds only, no `where` in v1) — unchanged from before this leaf, now reported
+        // under its own precise `WhereClause` category rather than the blanket `GenericBound`
+        // the old unconditional-refusal gate produced for every generic impl (a strictly more
+        // precise, not a weaker, diagnosis).
+        Case {
+            name: "impl_where_clause_still_gapped",
+            rust: "impl<T> Bx<T> where T: Clone { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Gapped {
+                category: Category::WhereClause,
             },
         },
         // M-1006 (E33-1): a named-field enum variant whose fields resolve now emits POSITIONALLY
@@ -3177,4 +3274,84 @@ fn emit_hook_refactor_byte_identical_differential() {
             case.name
         );
     }
+}
+
+/// **The verify-first live-oracle proof** (mitigation #14) for DN-131/M-1101 (bounded
+/// inherent-impl type-parameter emission): every impl-level generic-parameter shape this leaf
+/// newly emits — unbounded, single-bound, multi-bound — runs through the REAL `myc-check`
+/// oracle, mirroring `signed_numeric_idiom_check_clean`'s pattern. Each snippet is a full
+/// one-nodule program (trait + type + bounded impl + a concrete-instantiating `fn`), matching
+/// the shape `crates/mycelium-l1/tests/check.rs::impl_slot_bound_is_accepted` already pins at
+/// the kernel/L1 level — this test is the transpiler-emission twin: it proves the .myc TEXT
+/// this leaf's `emit_impl` produces from REAL Rust source also checks clean, not just that the
+/// kernel accepts hand-written .myc of the same shape. **Non-vacuity:** every one of these Rust
+/// snippets was a hard GAP before this leaf (the impl carried a non-empty `generics.params`, so
+/// the whole impl always refused) — `report.emitted_items` confirms the impl is a REAL
+/// emission, not a coincidental no-op. Skips gracefully (never fails) when `myc-check` is not
+/// built.
+#[test]
+fn bounded_impl_generic_emission_check_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: DN-131/M-1101 live oracle test skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`). The \
+             fixture-corpus text assertions in `cases()` still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-dn131-impl-generics-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // Unbounded impl-level generic (DN-103's own slot; DN-131 §3's backward-compatible
+        // identity case — `bounds: []`).
+        "struct Bx<A>(A);\nimpl<T> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+        // A single bounded impl-level type parameter — the leaf's headline capability. `Cmp` is
+        // declared in-nodule and never called from `dup`, pinning the DN-131 §7 "dead bound"
+        // case (registry-validated by `check_bounds`, costs nothing at monomorphization).
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> bool; }\nstruct Bx<A>(A);\n\
+         impl<T: Cmp> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+        // A multi-bound impl-level type parameter (`T: A + B`, DN-131 §3's `parse_bound` reuse).
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> bool; }\ntrait Ord2<A> { fn lt(a: A, b: A) -> bool; }\n\
+         struct Bx<A>(A);\nimpl<T: Cmp + Ord2> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("case {i} (`{rust}`) failed to parse/transpile: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n.starts_with("impl")),
+            "case {i} (`{rust}`) failed to emit the bounded/unbounded impl at all: \
+             emitted_items={:?} gaps={:?}",
+            report.emitted_items,
+            report.gaps
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
