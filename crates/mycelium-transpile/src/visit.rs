@@ -172,6 +172,15 @@ pub(crate) trait TypeVisitor {
     fn visit_reference(&mut self, ty: &Type, _r: &syn::TypeReference) -> Self::Output {
         self.fallback(ty)
     }
+    /// L-MAP (DN-99 register rows 15/35): a native Rust slice type `[T]` — reached either bare
+    /// (rare; `[T]` is unsized in real Rust and normally appears only behind an indirection) or,
+    /// far more commonly, as the referent `visit_reference` recurses into once `&[T]`'s `&` is
+    /// erased. Defaults to `fallback` like every other shape here — a visitor that does not
+    /// override this still routes a slice type to its own honest "I don't handle this" answer
+    /// (never-silent by construction, G2).
+    fn visit_slice(&mut self, ty: &Type, _s: &syn::TypeSlice) -> Self::Output {
+        self.fallback(ty)
+    }
 }
 
 /// The single canonical `syn::Type` dispatch (see module docs). `syn::Type` is
@@ -181,6 +190,7 @@ pub(crate) fn walk_type<V: TypeVisitor + ?Sized>(ty: &Type, v: &mut V) -> V::Out
         Type::Path(p) => v.visit_path(ty, p),
         Type::Tuple(t) => v.visit_tuple(ty, t),
         Type::Reference(r) => v.visit_reference(ty, r),
+        Type::Slice(s) => v.visit_slice(ty, s),
         _ => v.fallback(ty),
     }
 }

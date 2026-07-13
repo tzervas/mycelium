@@ -106,7 +106,7 @@ fn map_pattern_deep_paren_refuses_cleanly() {
         // single bare pattern.
         let pat: syn::Pat = syn::parse::Parser::parse_str(syn::Pat::parse_single, &src)
             .expect("deeply-parenthesized Rust pattern still parses");
-        map_pattern(&pat)
+        map_pattern(&pat, None)
     });
     let err = result
         .expect_err("expected an explicit over-budget GapReason refusal, not success or a SIGABRT");
