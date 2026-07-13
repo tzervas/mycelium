@@ -12,7 +12,12 @@
 //!   conditional mutation, a field read through a non-`self` threaded param) gaps, never a
 //!   guessed rebind;
 //! - `&self` (shared) still erases to a plain value param, unaffected by this DN (regression
-//!   guard on the pre-existing behavior DN-125 §2 says this lowering must not touch).
+//!   guard on the pre-existing behavior DN-125 §2 says this lowering must not touch);
+//! - a `let <threaded-name> = <other-threaded-name>;` ALIASING rebind (the re-review-of-#1527
+//!   hole closed by `emit::aliased_threaded_binding`) is REFUSED, never mis-threaded — in both
+//!   directions — while the pre-existing, genuinely-safe independent-value shadow shape
+//!   (`let y = <plain local>;`) keeps threading correctly even interleaved between two
+//!   reassignments.
 
 use crate::transpile::transpile_source;
 
@@ -368,4 +373,100 @@ fn no_shadow_means_no_synthetic_carrier_emitted() {
         "a body with no shadow of the threaded name must never introduce the synthetic carrier: \
          {myc}"
     );
+}
+
+/// **CRITICAL regression (re-review of PR #1527 after merge — the aliasing-rebind hole this
+/// leaf closes).** A `let y = other;` where `other` is ITSELF another threaded `&mut` binding is
+/// not the harmless independent-value shadow the CRITICAL fix above assumes — it MOVES `other`'s
+/// live reference into the name `y`, so the subsequent `*y = c;` actually mutates `other`'s
+/// referent, not the original `y`'s. Pre-fix, this emitter's purely name-based
+/// `try_threaded_assign` matching had no way to notice the rebind and kept folding `*y = c;`
+/// against the ORIGINAL `y` binding regardless — silently producing `y_final = c, other_final =
+/// other` (both wrong; the correct pair is `y_final = a, other_final = c`) while still `myc
+/// check`-cleaning. This pins the closure: the body must be REFUSED (a recorded gap), never
+/// emitted with a mis-threaded value.
+#[test]
+fn let_binding_aliasing_another_threaded_param_refuses_rather_than_mis_thread() {
+    let rust = "fn f(y: &mut u64, other: &mut u64, a: u64, c: u64) { *y = a; let y = other; \
+                *y = c; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "an aliasing `let <threaded-name> = <other-threaded-name>;` rebind must NEVER be \
+         emitted (it would silently mis-thread the subsequent reassignment onto the wrong \
+         referent): myc:\n{myc}"
+    );
+    assert!(
+        !myc.contains("fn f("),
+        "no partial/incorrect emission for `f` is acceptable: myc:\n{myc}"
+    );
+    assert!(
+        !report.gaps.is_empty(),
+        "the refusal must be a recorded gap, never a silent drop (G2)"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("alias another threaded binding")),
+        "expected the aliasing-rebind gap reason specifically, got: {:?}",
+        report.gaps
+    );
+}
+
+/// **Non-regression companion (symmetric direction):** the same aliasing hazard, rebinding the
+/// OTHER threaded name (`other`) to alias `y` — confirms the refusal isn't accidentally
+/// direction-dependent (only checking the first-declared threaded param, say).
+#[test]
+fn let_binding_aliasing_another_threaded_param_refuses_symmetric_direction() {
+    let rust = "fn g(y: &mut u64, other: &mut u64, a: u64, c: u64) { *other = a; let other = y; \
+                *other = c; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "aliasing `other` to `y` must also be refused, not just the reverse direction: \
+         myc:\n{myc}"
+    );
+    assert!(
+        !report.gaps.is_empty(),
+        "the refusal must be a recorded gap, never a silent drop (G2)"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("alias another threaded binding")),
+        "expected the aliasing-rebind gap reason specifically, got: {:?}",
+        report.gaps
+    );
+}
+
+/// **Non-regression companion (the safe case the aliasing-rebind refusal must NOT catch):**
+/// interleaved reassign -> shadow-with-INDEPENDENT-value -> reassign. `b` here is a plain `u64`
+/// value param (not a `&mut` threaded binding), so `let y = b;` is the pre-existing, already-safe
+/// shadow shape (no live aliasing introduced) — the subsequent `*y = c;` must still fold onto the
+/// ORIGINAL threaded `y`, correctly returning `c` (never refused, never `b`-corrupted).
+#[test]
+fn interleaved_reassign_shadow_independent_value_reassign_still_returns_last_reassign() {
+    let rust = "fn set_val(y: &mut u64, a: u64, b: u64, c: u64) { *y = a; let y = b; *y = c; }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "mut_thread").expect("parse/transpile");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "set_val"),
+        "an independent-value shadow interleaved between two threaded reassignments must still \
+         emit (not be refused): gaps={:?}\nmyc:\n{myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains(
+            "fn set_val(y: Binary{64}, a: Binary{64}, b: Binary{64}, c: Binary{64}) => \
+             Binary{64} = let __myc_thread_y = y in let y = a in let __myc_thread_y = y in \
+             let y = b in let y = c in let __myc_thread_y = y in __myc_thread_y;"
+        ),
+        "unexpected emission (expected the `c`-preserving synthetic-carrier form, unaffected \
+         by the unrelated `b` shadow in between):\n{myc}"
+    );
+    myc_check_clean(&myc, "interleaved_reassign_shadow_independent_reassign");
 }
