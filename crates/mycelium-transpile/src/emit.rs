@@ -171,6 +171,29 @@ struct EmitCtx {
     layouts: HashMap<String, StructLayout>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
+    /// DN-133 (M-1094) tier (i): mangled inherent-impl associated-fn names (`{Type}__{method}`,
+    /// `mangled_inherent_fn_name`) actually emitted so far in THIS file's own single
+    /// left-to-right item pass — see [`record_local_mangled_assoc_fn`]/
+    /// [`local_mangled_assoc_fn_known`]. A qualified/associated-fn call site
+    /// (`EmitVisitor::visit_call`) is only ever reached AFTER every earlier item in the same
+    /// file has already been dispatched, so this set is exactly "what a call here could
+    /// legitimately reference" — an observed fact, never a forward reference or a syntactic
+    /// prediction (VR-5/G2, the D4 lesson). Starts empty every file; mutated in place as items
+    /// are emitted (unlike the other fields here, which are precomputed before the item loop).
+    local_mangled: HashSet<String>,
+    /// DN-133 tier (ii): for each locally `use`-imported type NAME in this file (an
+    /// `Item::Use` leaf's [`crate::symtab::CandidateKind::Name`]), the ordered cross-nodule
+    /// symbol-table lookup key(s) ([`crate::symtab::SymbolTable::candidate_lookup_keys`]) that
+    /// head would resolve through — the SAME precedence `transpile::dispatch_use` already
+    /// applies to a plain `use` (DRY, one resolution policy). Consumed by
+    /// [`cross_nodule_resolve_mangled`] to try each key's sibling `emitted` set for a
+    /// `{Type}__{method}` mangled decl name. Empty in single-file/non-batch mode (no sibling to
+    /// ever ask, byte-identical no-op) — see `transpile::imported_type_keys`'s doc for the
+    /// currently-honest scope of this tier (the M-1084 symtab indexes per-TOP-LEVEL-ITEM
+    /// emitted names, not yet each mangled per-method name, so a genuinely cross-file
+    /// associated fn does not resolve through this tier today — a real, FLAGged residual, not a
+    /// silently-assumed close).
+    imported_type_keys: HashMap<String, Vec<String>>,
 }
 
 thread_local! {
@@ -191,6 +214,7 @@ pub(crate) fn with_emit_ctx<R>(
     layouts: HashMap<String, StructLayout>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
+    imported_type_keys: HashMap<String, Vec<String>>,
     f: impl FnOnce() -> R,
 ) -> R {
     EMIT_CTX.with(|c| {
@@ -199,6 +223,8 @@ pub(crate) fn with_emit_ctx<R>(
             layouts,
             symtab,
             pub_needed,
+            local_mangled: HashSet::new(),
+            imported_type_keys,
         })
     });
     let r = f();
@@ -276,6 +302,53 @@ pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => false,
         Some(ctx) => ctx.symtab.has_module(module_key),
+    })
+}
+
+/// DN-133 (M-1094) tier (i): record that this file's own single-pass emission just successfully
+/// produced the mangled inherent-impl associated-fn `mangled_name` (`mangled_inherent_fn_name`'s
+/// `{Type}__{method}` form) — called once, from `emit_impl`'s success path, right after it renames
+/// such a method, so a LATER call site in the SAME file can resolve against it (see
+/// [`local_mangled_assoc_fn_known`]). No-op when the context is off (`None` — direct `emit_impl`
+/// unit tests never install a context, so this degrades to always-absent, matching every OTHER
+/// `EmitCtx`-gated behavior's off-mode).
+fn record_local_mangled_assoc_fn(mangled_name: &str) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.local_mangled.insert(mangled_name.to_string());
+        }
+    });
+}
+
+/// DN-133 tier (i): whether `mangled_name` was already recorded via
+/// [`record_local_mangled_assoc_fn`] — an EARLIER item in this same file's own left-to-right pass
+/// really did emit it. `false` when the context is off.
+fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.local_mangled.contains(mangled_name),
+    })
+}
+
+/// DN-133 tier (ii): resolve `mangled_name` via the M-1084 cross-nodule symbol table, using
+/// `head`'s own resolved `use`-import candidate key(s) (see [`EmitCtx::imported_type_keys`]).
+/// `false` when the context is off, `head` was not imported via a resolvable `use` in this file,
+/// or no candidate key's sibling module has `mangled_name` in its own emitted-name set — which,
+/// honestly, is EVERY case today: that set is populated from `GapReport::emitted_items`, which
+/// records an inherent `impl` block under its own coarse `"impl {Type}"` name (`emit_impl`'s
+/// `Emitted::name`), not each individual mangled method it contains. So this tier is currently a
+/// safe no-op for a genuinely cross-file/cross-phylum associated fn — never a false positive
+/// (VR-5/G2) — pending a follow-up that also indexes each mangled per-method name in the batch
+/// symbol table (FLAGged in this leaf's report, not silently assumed closed).
+fn cross_nodule_resolve_mangled(head: &str, mangled_name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => match ctx.imported_type_keys.get(head) {
+            None => false,
+            Some(keys) => keys
+                .iter()
+                .any(|k| ctx.symtab.resolve(k, mangled_name).is_some()),
+        },
     })
 }
 
@@ -2082,19 +2155,72 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 .last()
                 .map(|s| s.ident.to_string())
                 .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
+            Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 2 => {
+                // DN-133 (M-1094) — the resolution-gated mangled-call arm for a qualified/
+                // associated-function call `Type::method(...)`. Mycelium calls are bare
+                // identifiers (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
+                // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form), so the bare last
+                // segment can never be emitted directly (the D4 fabrication this arm replaced —
+                // `i16::from(self)` -> `from(self)`, and `from` is not a Mycelium builtin). The
+                // decl side already mangles a receiver-less inherent-impl associated fn to
+                // `{Type}__{method}` (`mangled_inherent_fn_name`, applied in `emit_impl`) — SAFE
+                // to reference here ONLY when that exact mangled declaration is PROVEN present
+                // (never a guess — VR-5/G2): same-file (this file's own single left-to-right pass
+                // already recorded every earlier item's real emission — never a forward
+                // reference), or a resolved M-1084 cross-nodule sibling. `Self::method(...)`
+                // resolves its head via the already-threaded enclosing impl type (`self.self_ty`)
+                // — absent (not inside an impl body) simply doesn't resolve, like every other
+                // unresolved head. A primitive/std associated fn (no emitted decl, e.g.
+                // `i128::try_from`), an unresolved type, or a call naming a `self`-receiving
+                // method (excluded by construction: [`mangled_inherent_fn_name`] is only ever
+                // applied to a receiver-less method, so `local_mangled`/the cross-nodule set never
+                // contains one — it stays reachable only from its own bare call site) all fall
+                // through to the honest gap below rather than fabricate a call.
+                let head = p.path.segments[0].ident.to_string();
+                let method = p.path.segments[1].ident.to_string();
+                let resolved_head = if head == "Self" {
+                    self.self_ty.map(str::to_owned)
+                } else {
+                    Some(head.clone())
+                };
+                let known_mangled = resolved_head.and_then(|h| {
+                    let mangled = mangled_inherent_fn_name(&h, &method);
+                    (local_mangled_assoc_fn_known(&mangled)
+                        || cross_nodule_resolve_mangled(&head, &mangled))
+                    .then_some(mangled)
+                });
+                match known_mangled {
+                    Some(mangled) => mangled,
+                    None => {
+                        return Err(GapReason::new(
+                            Category::Other,
+                            format!(
+                                "qualified/associated-function call `{}` did not resolve to a \
+                                 known-emitted associated fn — Mycelium calls are bare \
+                                 identifiers, and the only sound surface form for \
+                                 `Type::method(...)` is the mangled `Type__method` name the \
+                                 declaration side already emits for a receiver-less inherent-impl \
+                                 associated fn (DN-34 §8.13/8.14), referenced only when that exact \
+                                 declaration is PROVEN present (same-file, or a resolved M-1084 \
+                                 cross-nodule sibling). A primitive/std associated fn with no \
+                                 emitted decl (e.g. `i128::try_from`), an unresolved type, or a \
+                                 `self`-receiving method (excluded by construction — it stays \
+                                 reachable only from its own bare call site) all gap here rather \
+                                 than fabricate a call (G2/VR-5, DN-133)",
+                                tokens_to_string(&*c.func)
+                            ),
+                        ));
+                    }
+                }
+            }
             Expr::Path(p) if p.qself.is_none() => {
-                // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
-                // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
-                // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
-                // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
-                // iteration of this arm collapsed any path to its last segment, which for a
-                // *call target* fabricates a call to whatever that segment's name happens to
-                // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
-                // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
-                // prose, never in a grammar production). There is no established Mycelium
-                // surface form for a Rust conversion-op/associated-fn call, so — mirroring
-                // `map::map_type`'s identical qualified-path decision — this is left an
-                // explicit gap rather than a fabricated call (G2/DN-34 §4).
+                // Any OTHER qualified path shape this arm does not (yet) resolve: a
+                // cross-*module* free-function path (`a::b::c()`, e.g.
+                // `mycelium_std_sys::time::mono_nanos()`, 3+ segments) routes through the
+                // Import/symtab free-fn resolver (M-1084's `use`-driven resolution), not this
+                // call-target path — out of DN-133's scope (§2 sub-kind 3). Mirroring
+                // `map::map_type`'s identical qualified-path decision, this stays an explicit gap
+                // rather than a fabricated call (G2/DN-34 §4).
                 return Err(GapReason::new(
                     Category::Other,
                     format!(
@@ -4278,10 +4404,16 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                              same-named associated fn in this nodule.",
                                             f.sig.ident, self_ty_text, f.sig.ident
                                         ));
-                                        mangled_inherent_fn_name(
+                                        let mangled = mangled_inherent_fn_name(
                                             &self_ty_text,
                                             &f.sig.ident.to_string(),
-                                        )
+                                        );
+                                        // DN-133 (M-1094) tier (i): record this real, observed
+                                        // emission so a LATER call site in this same file can
+                                        // resolve `Type::method(...)` against it — see
+                                        // `record_local_mangled_assoc_fn`'s doc.
+                                        record_local_mangled_assoc_fn(&mangled);
+                                        mangled
                                     } else {
                                         f.sig.ident.to_string()
                                     };
