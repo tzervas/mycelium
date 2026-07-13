@@ -102,10 +102,10 @@ type Result[A, E] = Ok(A) | Err(E);
 
 type Option[A] = Some(A) | None;
 
-// Unit — the nullary-marker substitute for the missing `() => T` closure-domain form
-// (std.error.myc precedent).
-type Unit = U;
-
+// Unit — the missing `() => T` closure-domain form (std.error.myc precedent) is filled by the
+// built-in PRELUDE `Unit` type since DN-137/M-1102 (a hand-seeded `type Unit = Unit;`,
+// `checkty::unit_prelude`); the local nullary-marker redeclaration this file used to carry here
+// is gone (it would now collide with the prelude — "duplicate type declaration").
 // Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`
 // as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).
 type Guarantee = GExact | GProven | GEmpirical | GDeclared;
@@ -355,7 +355,7 @@ fn effect_insert(xs: EffectList, k: EffectKind) => EffectList =
 // compose — it never INFERS one. Exact (static check; no accuracy semantics).
 fn check_effects(declared: EffectList, performed: EffectList) => Result[Unit, UndeclaredEffect] =
   match performed {
-    ENil => Ok(U),
+    ENil => Ok(Unit),
     ECons(k, rest) => match effect_member(declared, k) {
       True => check_effects(declared, rest),
       False => Err(Undeclared(k))
@@ -454,7 +454,7 @@ fn retry_loop[T, E](
     0b1 => Propagated(err, ByPolicy, False),
     _ => match budget_consume(b, EkRetry, 0b0000_0001) {
       Err(_) => Propagated(err, ByPolicy, False),
-      Ok(b2) => match attempt(U) {
+      Ok(b2) => match attempt(Unit) {
         Attempted(o2, tag) => match o2 {
           OOk(v) => Recovered(v, tag, ByPolicy),
           OErr(_) => retry_loop(sub_u(remaining, 0b0000_0001), err, b2, attempt)

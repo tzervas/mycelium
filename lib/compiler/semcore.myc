@@ -4207,6 +4207,14 @@ fn fuse_prelude() => TraitInfo =
 fn checkty_prelude() => DataInfo =
   DI("Bool", Nil, Cons(CI("False", Nil), Cons(CI("True", Nil), Nil)));
 
+// checkty_unit_prelude: checkty.rs::unit_prelude (DN-137 Alt D / M-1102) -- the second builtin
+// prelude entry, `type Unit = Unit;` -- a payload-free, single-constructor data type (the arity-0
+// M-826 product-family member). Seeded the SAME way as `checkty_prelude`'s `Bool` (this mirror
+// carries no `home` field at all -- see `unqualify_data_info`'s doc comment -- so the seed is just
+// `DI(name, params, ctors)`, byte-identical in shape to `Bool`'s).
+fn checkty_unit_prelude() => DataInfo =
+  DI("Unit", Nil, Cons(CI("Unit", Nil), Nil));
+
 // nodule_uses_fuse: checkty.rs 1367-1370 -- does this nodule's OWN items contain an
 // `impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path
 // in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.)
@@ -4287,10 +4295,10 @@ fn nr_traits(r: NoduleRegs) => Vec[TraitInfo] =
   match r { NR(_, _, tr) => tr };
 
 // register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT
-// order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and
-// returns Ok(NoduleRegs) or the FIRST refusal.
+// order -- types (seeded with the Bool and Unit (DN-137) preludes), traits, the conditional Fuse
+// seed, then fns -- and returns Ok(NoduleRegs) or the FIRST refusal.
 fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes] =
-  match register_types(Cons(checkty_prelude(), Nil), nod) {
+  match register_types(Cons(checkty_prelude(), Cons(checkty_unit_prelude(), Nil)), nod) {
     Err(e) => Err(e),
     Ok(types) => match register_traits(types, nod) {
       Err(e) => Err(e),

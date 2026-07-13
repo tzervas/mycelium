@@ -11,6 +11,8 @@ use crate::gap::Category;
 use crate::map::map_type;
 use crate::type_map::{self, TABLE};
 
+// ── DN-137 / M-1102 — live `myc check` differentials for the `()` -> `Unit` row ────────────────
+
 /// Parse a Rust type from text (white-box fixture builder — mirrors `tests/map.rs`'s `ty`).
 fn ty(text: &str) -> syn::Type {
     syn::parse_str::<syn::Type>(text)
@@ -158,6 +160,14 @@ fn cases() -> Vec<Case> {
         Case {
             rust: "(u8, bool)",
             expect: Ok("(Binary{8}, Bool)"),
+            self_ty: None,
+        },
+        // DN-137 Alt D / M-1102: the unit type `()` -> the prelude nullary-ctor `Unit`, reached
+        // via `visit_tuple`'s zero-element arm (NOT `visit_path` — `()` is never a `TypePath`),
+        // consulting `TABLE`'s synthetic `"()"` row. No longer a gap.
+        Case {
+            rust: "()",
+            expect: Ok("Unit"),
             self_ty: None,
         },
         // Shared reference: the referent recurses through `map_type` (erasure composes with the
@@ -314,4 +324,151 @@ fn every_table_row_matches_map_type_on_its_own_bare_name() {
             ),
         }
     }
+}
+
+// ── DN-137 Alt D / M-1102 — live `myc check` differentials for `()` -> `Unit` ──────────────────
+//
+// **Scope note (mitigation #11-style file ownership):** these differentials exercise exactly
+// what this leaf owns — the TYPE-position mapping (`type_map::TABLE`'s `"()"` row, reached via
+// `map.rs`'s `visit_tuple`) plus the `mycelium-l1` prelude `Unit` it targets. The Rust
+// EXPRESSION-side unit VALUE (`emit.rs`'s `MapExprVisitor::visit_tuple`, "unit value `()` has no
+// Mycelium literal") is a *separate*, still-open residual in a file this leaf does not touch
+// (FLAGged in the leaf report, not silently left implicit) — so the second differential below
+// deliberately picks a body shape (`Err(1)`) that never constructs a Rust `()` expression, to
+// stay a genuine, unmodified `transpile_source` round-trip rather than a hand-patched one.
+
+use super::vet::find_myc_check;
+use crate::transpile::transpile_source;
+
+/// The exact `map_type`-produced text for `()` (`"Unit"`) checks CLEAN in every grammatical
+/// position `Unit` can occupy: a bare `=> type_ref` return, and as the sole value of that type.
+/// Hand-assembled `.myc` (not routed through `transpile_source`, which cannot yet emit the
+/// unit-VALUE expression — see the module-level scope note): this differential's job is to prove
+/// the LANGUAGE side (prelude `Unit` + the mapped text) is real and clean, independent of the
+/// still-open expression-emission residual. Skips gracefully (never fails) when `myc-check` is
+/// not built.
+#[test]
+fn unit_return_position_checks_clean_against_real_toolchain() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "type_map: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or \
+             build `cargo build -p mycelium-check --bin myc-check`). The mapping-differential \
+             corpus above still covers the `()` -> `Unit` text."
+        );
+        return;
+    };
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+
+    let mapped = map_type(&ty("()"), None).expect("`()` must map (DN-137/M-1102)");
+    assert_eq!(
+        mapped, "Unit",
+        "the mapped text feeding this differential must stay in sync"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-type-map-unit-live-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // A `fn f()` analogue of Rust's `fn f() -> () { () }`: an explicit `=> Unit` return, whose
+    // sole value is the ordinary constructor-application expression `Unit` (DN-137's dissolved
+    // OQ-1 — no new literal). Exactly the mapped text `map_type` produces for `()`, asserted above.
+    let path = dir.join("unit_fn.myc");
+    std::fs::write(&path, "// nodule: p\nnodule p;\n\nfn f() => Unit = Unit;\n")
+        .expect("write unit_fn.myc");
+    let rec = checker.vet_file(&path, "unit_fn.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "a bare `() -> Unit`-returning fn must check CLEAN with the prelude Unit mapping; \
+         diagnostic={:?}",
+        rec.diagnostic
+    );
+    assert_eq!(rec.checked_clean_items(), 1);
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A genuine, **unmodified** `transpile_source` round-trip for the realistic `Result<(), E>`
+/// idiom (the shape driving most of the corpus's 26+ `()`-in-"Other" instances per
+/// `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md` §3 item D1) — a real Rust fn whose
+/// return type nests `()` as a generic argument, with a body (`Err(1)`) that never constructs the
+/// Rust unit EXPRESSION itself (staying clear of the separate, unowned expr-emission residual —
+/// see the module-level scope note). Proves the TYPE-position mapping end-to-end through the
+/// actual transpiler entry point, not just `map_type` in isolation.
+#[test]
+fn result_unit_return_type_transpiles_and_checks_clean_against_real_toolchain() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "type_map: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or \
+             build `cargo build -p mycelium-check --bin myc-check`). The mapping-differential \
+             corpus above still covers the `()` -> `Unit` text."
+        );
+        return;
+    };
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+
+    const NODULE_PATH: &str = "oracle";
+    // `x` (a parameter reference), not a bare integer literal — `Err(1)` would additionally trip
+    // the SEPARATE, unowned "bare integer literal has no representation family" refusal
+    // (`emit.rs`'s `Lit::Int` arm emits a plain decimal digit string myc-check legitimately
+    // rejects; unrelated to `()`/`Unit` and out of this leaf's scope). Isolating the differential
+    // to exactly the `()` -> `Unit` mapping this leaf owns.
+    let rust = "fn f(x: u8) -> Result<(), u8> { Err(x) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", NODULE_PATH)
+        .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+    assert!(
+        !report.emitted_items.is_empty(),
+        "expected a clean emission (no gap), got: gaps={:?}\nmyc={myc}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("Result[Unit, Binary{8}]"),
+        "expected the mapped signature to carry `Result[Unit, Binary{{8}}]`, got:\n{myc}"
+    );
+
+    // A standalone nodule needs `Result` declared locally so `myc check` can resolve `Ok`/`Err`
+    // with no cross-nodule import (mirrors `tests/combinator.rs`'s live-oracle fixture pattern).
+    let full = myc.replacen(
+        &format!("nodule {NODULE_PATH};\n\n"),
+        &format!("nodule {NODULE_PATH};\n\ntype Result[A, E] = Ok(A) | Err(E);\n\n"),
+        1,
+    );
+    assert_ne!(
+        full, myc,
+        "expected the nodule-header insertion point to be found, got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-type-map-result-unit-live-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("result_unit.myc");
+    std::fs::write(&path, &full).expect("write result_unit.myc");
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "a real `-> Result<(), u8>` transpile must check CLEAN with the Unit mapping; \
+         diagnostic={:?}\nmyc:\n{full}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
 }
