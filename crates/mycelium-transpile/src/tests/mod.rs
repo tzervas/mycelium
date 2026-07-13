@@ -7,6 +7,7 @@ mod diff;
 mod emit;
 mod invariant;
 mod map;
+mod mut_thread;
 mod prim_map;
 mod remap;
 mod reserved;

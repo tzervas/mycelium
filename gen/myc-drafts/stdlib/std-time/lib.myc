@@ -258,3 +258,12 @@ type SystemClock = SystemClock;
 // assert_eq!(logical.as_tick(), 42);
 // ```
 type ManualClock = ManualClock(MonoInstant, WallInstant, LogicalInstant);
+
+impl ManualClock {
+  // Set the MONOTONIC clock value returned by `mono_now`.
+  fn set_mono(self: ManualClock, instant: MonoInstant) => ManualClock = let self = ManualClock(instant, (match self { ManualClock(_, p1, _) => p1 }), (match self { ManualClock(_, _, p2) => p2 })) in self;
+  // Set the WALL-CLOCK value returned by `wall_now`.
+  fn set_wall(self: ManualClock, instant: WallInstant) => ManualClock = let self = ManualClock((match self { ManualClock(p0, _, _) => p0 }), instant, (match self { ManualClock(_, _, p2) => p2 })) in self;
+  // Set the LOGICAL tick returned by `logical_now`.
+  fn set_logical(self: ManualClock, instant: LogicalInstant) => ManualClock = let self = ManualClock((match self { ManualClock(p0, _, _) => p0 }), (match self { ManualClock(_, p1, _) => p1 }), instant) in self;
+};

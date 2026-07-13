@@ -37,6 +37,28 @@ type EffectSource = Call(Bytes) | Wild;
 // substituted term).
 type Stage3Fresh = Stage3Fresh(Binary{64});
 
+// **Test-only** twin of [`infer_type`] with an **active** affine tracker
+// ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.
+// a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate
+// [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare
+// call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no
+// `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`
+// tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`
+// interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the
+// per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a
+// real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry
+// point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).
+fn infer_type_with_active_affine(env: Env, scope: Vec[(Bytes, Ty)], e: Expr) => (Vec[(Bytes, Ty)], Result[Ty, CheckError]) = (scope, infer_type_with_active_affine_inner(env, scope, e, False));
+
+// **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,
+// DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`
+// runs its Stage-3 walk over the **unsubstituted** RHS (see
+// `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating "the substituted-`Expr`
+// splice never happened," to prove that splice is load-bearing: a fixture that must genuinely
+// REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**
+// here.
+fn infer_type_with_active_affine_sabotaged(env: Env, scope: Vec[(Bytes, Ty)], e: Expr) => (Vec[(Bytes, Ty)], Result[Ty, CheckError]) = (scope, infer_type_with_active_affine_inner(env, scope, e, True));
+
 // **M-1054 Stage 2 (G1, DN-115 §4.1)** — a pure **name** predicate ("is `name` any kernel-
 // recognized prim at all", ignoring argument shape) covering every dispatcher [`Cx::check_app`]
 // tries: the width-preserving [`prim_family`] set, plus [`VSA_PRIM_NAMES`] and the float-prim

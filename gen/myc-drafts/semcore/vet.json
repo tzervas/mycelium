@@ -5,9 +5,9 @@
       "source_file": "crates/mycelium-l1/src/checkty.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `prim_name_is_recognized`: unknown function/constructor/prim `is_some`",
+      "diagnostic": "check-error: check error in `infer_type_with_active_affine`: unknown type `Env`",
       "non_test_items": 147,
-      "emitted_items": 5
+      "emitted_items": 7
     },
     {
       "myc_file": "gen/myc-drafts/semcore/elab.myc",
@@ -47,7 +47,7 @@
     }
   ],
   "total_non_test_items": 293,
-  "total_emitted_items": 15,
+  "total_emitted_items": 17,
   "total_checked_clean_items": 0,
   "class_counts": {
     "CheckError": 5
@@ -60,9 +60,9 @@
         "nodule": "l1.checkty",
         "file": "checkty.myc",
         "class": "CheckError",
-        "site": "prim_name_is_recognized",
+        "site": "infer_type_with_active_affine",
         "on": null,
-        "message": "unknown function/constructor/prim `is_some`"
+        "message": "unknown type `Env`"
       },
       {
         "nodule": "l1.elab",
@@ -84,20 +84,20 @@
         "nodule": "l1.fuse_kw",
         "file": "fuse.myc",
         "class": "CheckError",
-        "site": "prim_name_is_recognized",
+        "site": "infer_type_with_active_affine",
         "on": null,
-        "message": "unknown function/constructor/prim `is_some`"
+        "message": "unknown type `Env`"
       },
       {
         "nodule": "l1.mono",
         "file": "mono.myc",
         "class": "CheckError",
-        "site": "prim_name_is_recognized",
+        "site": "infer_type_with_active_affine",
         "on": null,
-        "message": "unknown function/constructor/prim `is_some`"
+        "message": "unknown type `Env`"
       }
     ],
-    "diagnostic": "unknown function/constructor/prim `is_some`"
+    "diagnostic": "unknown type `Env`"
   },
   "total_checked_clean_items_phylum": 0
 }
