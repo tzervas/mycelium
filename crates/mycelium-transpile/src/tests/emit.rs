@@ -616,12 +616,46 @@ fn cases() -> Vec<Case> {
                             _ => True } })",
             },
         },
-        // Unsigned `Add`/`Sub`/`Mul` are UNCHANGED by this leaf (pre-existing, out-of-scope glyph
-        // fallback — this leaf only adds signed-specific coverage, never regresses the unsigned
-        // path). Proves the signed gate does not mis-fire on an unsigned `Binary{N}` operand.
+        // D3 arithmetic-operator-emission residual (this leaf): the UNSIGNED counterpart to the
+        // `_s`-suffixed arms above. Prior to this leaf the unsigned `Add`/`Sub`/`Mul` operand-gate
+        // fell through to the plain glyph (pinned by this same case's now-superseded
+        // `unsigned_add_keeps_glyph_unchanged_by_this_leaf` name/comment), which did NOT
+        // `myc check`-clean for a `Binary{N}` operand pair — `add` is the *ternary*-only
+        // `prim_family` member (checkty.rs:9975), so `a + b` on two `Binary{N}` values failed with
+        // `` `add` does not accept argument types [Binary(..), Binary(..)] `` (T-Op; RFC-0007
+        // §4.4). Confirmed the exact repro `fn add2(a: u64, b: u64) -> u64 { a + b }` before this
+        // fix. Now composes to the already-registered `add_u`/`sub_u`/`mul_u` prims (width-
+        // preserving `Binary{N}` arithmetic, RFC-0032 D2/M-748 + RFC-0033 §4.1.2 CU-1) — proven
+        // `myc check`-clean with no import (`binop_operand_gated_forms_check_clean` below).
         Case {
-            name: "unsigned_add_keeps_glyph_unchanged_by_this_leaf",
+            name: "unsigned_add_emits_add_u",
             rust: "fn f(a: u32, b: u32) -> u32 { a + b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "add_u(a, b)",
+            },
+        },
+        Case {
+            name: "unsigned_sub_emits_sub_u",
+            rust: "fn f(a: u32, b: u32) -> u32 { a - b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "sub_u(a, b)",
+            },
+        },
+        Case {
+            name: "unsigned_mul_emits_mul_u",
+            rust: "fn f(a: u32, b: u32) -> u32 { a * b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "mul_u(a, b)",
+            },
+        },
+        // Non-`Binary{N}` operand keeps the plain glyph (the gate is genuinely operand-typed, not
+        // unconditional) — the twin of `bitand_non_binary_operand_keeps_glyph` for `+`.
+        Case {
+            name: "add_non_binary_operand_keeps_glyph",
+            rust: "fn f(a: bool, b: bool) -> bool { a + b }",
             expect: Expect::Emitted {
                 item: "f",
                 contains: "a + b",
@@ -1246,6 +1280,14 @@ fn binop_operand_gated_forms_check_clean() {
         // must ALSO check clean, proving the extended `expr_env_type` gate composes into a real,
         // myc-check-clean body, not just matching test-fixture text.
         "fn f_and_ref(a: u16, b: u16) -> u16 { &a & b }",
+        // D3 arithmetic-operator-emission residual (this leaf, the Add-glyph unblock): the
+        // `add_u`/`sub_u`/`mul_u`-composed unsigned arithmetic ops must resolve as bare-call
+        // prims with no `use` and type-check the fn's declared return width — the exact repro
+        // this leaf closes (`fn add2(a: u64, b: u64) -> u64 { a + b }` failed `myc check` with
+        // `` `add` does not accept argument types [Binary(..), Binary(..)] `` before this fix).
+        "fn f_add_u(a: u16, b: u16) -> u16 { a + b }",
+        "fn f_sub_u(a: u16, b: u16) -> u16 { a - b }",
+        "fn f_mul_u(a: u16, b: u16) -> u16 { a * b }",
     ];
     for (i, rust) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")

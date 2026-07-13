@@ -1992,10 +1992,34 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             BinOp::Shl(_) => Ok(format!("{lhs} << {rhs}")),
             BinOp::Shr(_) => Ok(format!("{lhs} >> {rhs}")),
             BinOp::Add(_) if both_known_signed_binary => Ok(format!("add_s({lhs}, {rhs})")),
+            // D3 residual (this leaf): the UNSIGNED counterpart to the `add_s` arm above. The
+            // bare `+` glyph desugars to the word `"add"` (`parse.rs::infix_op`), which is the
+            // *ternary*-only prim family member (`prim_family` — checkty.rs:9975) — it never
+            // resolves for `Binary{N}` operands, so `a + b` on two unsigned `Binary{N}` values
+            // failed `myc check` with `` `add` does not accept argument types
+            // [Binary(..), Binary(..)] `` (T-Op; RFC-0007 §4.4) — confirmed empirically on a
+            // plain `fn add2(a: u64, b: u64) -> u64 { a + b }` transpilation (the exact repro this
+            // leaf closes). `add_u` is the correctly-typed sibling: already registered in
+            // `prim_family`/`prim_sig` (width-preserving `Binary{N}` arithmetic, RFC-0032 D2/
+            // M-748) and mapped to the already-registered kernel prim `bit.add`
+            // (`prim_kernel_name`, `mycelium-interp/src/prims.rs::prim_bit_add`) — so this is a
+            // pure **emission** fix (CASE A: the prim exists end-to-end, checker + interpreter;
+            // no kernel touch), mirroring the `add_s` arm's shape exactly. Confirmed
+            // `myc check`-clean as a bare call with no import (`add2u_check_clean` fixture below).
+            BinOp::Add(_) if both_known_binary => Ok(format!("add_u({lhs}, {rhs})")),
             BinOp::Add(_) => Ok(format!("{lhs} + {rhs}")),
             BinOp::Sub(_) if both_known_signed_binary => Ok(format!("sub_s({lhs}, {rhs})")),
+            // Unsigned counterpart to `sub_s` above — same shape/rationale as `add_u`'s arm;
+            // `sub_u` is likewise already registered (`prim_family`/`prim_sig` -> `bit.sub`,
+            // `mycelium-interp/src/prims.rs::prim_bit_sub`). Confirmed `myc check`-clean.
+            BinOp::Sub(_) if both_known_binary => Ok(format!("sub_u({lhs}, {rhs})")),
             BinOp::Sub(_) => Ok(format!("{lhs} - {rhs}")),
             BinOp::Mul(_) if both_known_signed_binary => Ok(format!("mul_s({lhs}, {rhs})")),
+            // Unsigned counterpart to `mul_s` above — same shape/rationale; `mul_u` is likewise
+            // already registered (`prim_family`/`prim_sig` -> `bit.mul`, RFC-0033 §4.1.2 CU-1's
+            // never-silent unsigned multiply, `mycelium-interp/src/prims.rs::prim_bit_mul`).
+            // Confirmed `myc check`-clean.
+            BinOp::Mul(_) if both_known_binary => Ok(format!("mul_u({lhs}, {rhs})")),
             BinOp::Mul(_) => Ok(format!("{lhs} * {rhs}")),
             BinOp::Div(_) => Ok(format!("{lhs} / {rhs}")),
             BinOp::Rem(_) => Ok(format!("{lhs} % {rhs}")),
