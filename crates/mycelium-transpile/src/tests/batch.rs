@@ -5,6 +5,7 @@
 
 use crate::batch::{discover_rs_files, output_rel_path, summarize, transpile_batch};
 use crate::gap::Category;
+use proptest::prelude::*;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -447,4 +448,345 @@ fn renamed_glob_and_self_leaves_on_an_in_batch_head_still_gap() {
         "neither leaf resolves, so consumer.myc must carry no `use` line at all; got:\n{}",
         consumer.myc
     );
+}
+
+// ── M-1084 (Import net-close): `self::`/`super::` + cross-phylum resolution ────────────────────
+//
+// These fixtures write under a REAL `<crate>/src/...` layout (unlike the flat fixtures above) so
+// `transpile::derive_crate_ident`/`derive_module_segments` see genuine crate/module structure —
+// exercising the same derivation path the real corpus (`gen/myc-drafts/regenerate.sh`) uses.
+
+/// `self::`/`super::` resolve relative to the CURRENT file's own module path, within one crate:
+/// `foo/mod.rs`'s `pub use self::bar::Thing;` (self:: + a submodule) and `mono/mod.rs`'s
+/// `use super::checkty::Width;` (super:: up to the crate root, then back down a DIFFERENT branch)
+/// both resolve — the two residual forms gap-close-2's own doc named as scoped out.
+#[test]
+fn self_and_super_relative_use_resolve_within_one_crate() {
+    let tmp = TempDir::new("self-super-relative");
+    tmp.write(
+        "mycrate/src/checkty.rs",
+        "pub struct Width(u8);\nfn helper(x: bool) -> bool { x }",
+    );
+    tmp.write(
+        "mycrate/src/foo/mod.rs",
+        "pub use self::bar::Thing;\nfn foo_helper(x: bool) -> bool { x }",
+    );
+    tmp.write("mycrate/src/foo/bar.rs", "pub struct Thing(u8);");
+    tmp.write(
+        "mycrate/src/mono/mod.rs",
+        "use super::checkty::Width;\nfn mono_helper(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    assert_eq!(files.len(), 4, "expected all 4 fixture files discovered");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let foo_mod = results
+        .iter()
+        .find(|r| r.path.ends_with("foo/mod.rs"))
+        .expect("foo/mod.rs result present");
+    assert!(
+        foo_mod.myc.contains(".Thing;") && !foo_mod.myc.lines().any(|l| l.trim() == "use Thing;"),
+        "self::bar::Thing must resolve to a qualified use, never a bare `use Thing;`; got:\n{}",
+        foo_mod.myc
+    );
+
+    let mono_mod = results
+        .iter()
+        .find(|r| r.path.ends_with("mono/mod.rs"))
+        .expect("mono/mod.rs result present");
+    assert!(
+        mono_mod.myc.contains(".Width;") && !mono_mod.myc.lines().any(|l| l.trim() == "use Width;"),
+        "super::checkty::Width must resolve (super:: goes up to the crate root, back down to \
+         checkty) to a qualified use, never a bare `use Width;`; got:\n{}",
+        mono_mod.myc
+    );
+
+    // Both resolved references mark their home items `pub` (DN-113/M-1060 pub-gating), keyed by the
+    // sibling's own nodule path (the M-1084 fix — never mismatched against a Rust-side module key a
+    // consumer happened to look it up through).
+    let checkty = results
+        .iter()
+        .find(|r| r.path.ends_with("checkty.rs"))
+        .unwrap();
+    assert!(
+        checkty.myc.contains("pub type Width"),
+        "Width is referenced via super:: — expected pub; got:\n{}",
+        checkty.myc
+    );
+    let bar = results.iter().find(|r| r.path.ends_with("bar.rs")).unwrap();
+    assert!(
+        bar.myc.contains("pub type Thing"),
+        "Thing is referenced via self:: — expected pub; got:\n{}",
+        bar.myc
+    );
+}
+
+/// A `use <phylum>::<mod>::Item;` resolves against a SIBLING PHYLUM's own file when that phylum's
+/// files are in the SAME batch (M-1084's general mechanism — no CLI wiring, no `crate-a`/`crate-b`
+/// special-casing: any two crates' `src/` trees discovered together form one batch, exactly as a
+/// multi-crate `--files` invocation would). The referenced item is marked `pub` in ITS OWN crate's
+/// output too (cross-phylum pub-propagation).
+#[test]
+fn cross_phylum_use_resolves_against_a_sibling_crate_in_the_same_batch() {
+    let tmp = TempDir::new("cross-phylum");
+    tmp.write(
+        "crate-a/src/lib.rs",
+        "use crate_b::Foo;\nfn a_helper(x: bool) -> bool { x }",
+    );
+    tmp.write(
+        "crate-b/src/lib.rs",
+        "pub struct Foo(u8);\nfn b_helper(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    assert_eq!(files.len(), 2, "expected both crates' lib.rs discovered");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let a = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/lib.rs"))
+        .expect("crate-a lib.rs result present");
+    assert!(
+        a.myc.contains(".Foo;") && !a.myc.lines().any(|l| l.trim() == "use Foo;"),
+        "use crate_b::Foo must resolve cross-phylum to a qualified use, never a bare `use Foo;`; \
+         got:\n{}",
+        a.myc
+    );
+    assert!(
+        a.report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("use:") && n.contains("Foo")),
+        "expected an emitted `use:…Foo…` item, got {:?}",
+        a.report.emitted_items
+    );
+
+    let b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/lib.rs"))
+        .expect("crate-b lib.rs result present");
+    assert!(
+        b.myc.contains("pub type Foo"),
+        "Foo is referenced cross-phylum by crate-a — expected pub in crate-b's own output; got:\n{}",
+        b.myc
+    );
+    // `b_helper` was never referenced by anything — no spurious pub (only the genuinely-referenced
+    // item is marked, cross-phylum or not).
+    assert!(
+        !b.myc.contains("pub fn b_helper"),
+        "b_helper is never cross-phylum-referenced — must not be marked pub; got:\n{}",
+        b.myc
+    );
+}
+
+/// Precedence (M-1084, mirrors real Rust's own shadowing rule — see `symtab.rs` module docs): when
+/// a crate has its OWN submodule literally named the same as a sibling PHYLUM's extern-crate
+/// identifier, the same-crate interpretation wins — never a wrong cross-phylum resolve.
+#[test]
+fn same_crate_submodule_shadows_a_same_named_sibling_phylum() {
+    let tmp = TempDir::new("shadow-precedence");
+    // crate-a has ITS OWN submodule literally named `crate_b` (the same identifier crate-b's own
+    // extern-crate name would resolve to).
+    tmp.write(
+        "crate-a/src/lib.rs",
+        "use crate_b::Foo;\nfn a_helper(x: bool) -> bool { x }",
+    );
+    tmp.write("crate-a/src/crate_b.rs", "pub struct Foo(u16);");
+    // A genuinely separate sibling phylum, ALSO named `crate-b`, ALSO exporting a `Foo`.
+    tmp.write("crate-b/src/lib.rs", "pub struct Foo(u8);");
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let a = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/lib.rs"))
+        .unwrap();
+    assert!(
+        a.myc.contains("a.crate_b.Foo") || a.myc.contains(".crate_b.Foo"),
+        "expected the SAME-CRATE submodule interpretation to win (a.crate_b.Foo), not the sibling \
+         phylum's crate-b.Foo; got:\n{}",
+        a.myc
+    );
+    assert!(
+        !a.myc.contains("use crate.b.Foo") && !a.myc.lines().any(|l| l.contains("use crate.b.")),
+        "must never resolve against the sibling phylum when a same-crate submodule shadows it; \
+         got:\n{}",
+        a.myc
+    );
+
+    // The GENUINE sibling phylum's own `Foo` must NOT be marked `pub` — it was never actually
+    // referenced (the same-crate submodule shadowed it, so crate-b's Foo is unreferenced).
+    let b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/lib.rs"))
+        .unwrap();
+    assert!(
+        !b.myc.contains("pub type Foo"),
+        "crate-b's Foo was shadowed, never actually referenced — must not be marked pub; got:\n{}",
+        b.myc
+    );
+}
+
+/// **CRITICAL fix (strict-review finding on M-1084/PR #1541), NON-ROOT twin of
+/// `same_crate_submodule_shadows_a_same_named_sibling_phylum` above.** Real Rust's bare-`use`
+/// same-crate-vs-extern-crate shadowing is ROOT-FILE-ONLY lexical shadowing: a crate-root
+/// `mod foo;` is a name only in the crate-root file's own scope, so a NON-root file's bare heads
+/// never see it and resolve via the extern prelude (cross-phylum) exclusively. Before this fix,
+/// `candidate_lookup_keys` tried the same-crate interpretation FIRST for every file regardless of
+/// where the `use` was written, so this exact non-root case silently mis-bound to the unrelated
+/// same-crate submodule instead of the genuine sibling phylum.
+#[test]
+fn cross_phylum_use_from_non_root_file_wins_over_unrelated_same_crate_submodule() {
+    let tmp = TempDir::new("non-root-cross-phylum");
+    // crate-a's NON-ROOT file `sub.rs` (current_module = ["sub"]) references a bare `crate_b`.
+    tmp.write(
+        "crate-a/src/sub.rs",
+        "use crate_b::Foo;\nfn a_helper(x: bool) -> bool { x }",
+    );
+    // crate-a ALSO has its own crate-root submodule literally named `crate_b` -- but `sub.rs`
+    // itself never lexically sees it (it isn't the crate-root file), so this must NOT shadow the
+    // genuine sibling phylum below.
+    tmp.write("crate-a/src/crate_b.rs", "pub struct Foo(u16);");
+    tmp.write(
+        "crate-a/src/lib.rs",
+        "fn root_helper(x: bool) -> bool { x }",
+    );
+    // The GENUINE sibling phylum, also named `crate-b`, exporting a `Foo`.
+    tmp.write("crate-b/src/lib.rs", "pub struct Foo(u8);");
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let sub = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/sub.rs"))
+        .expect("crate-a/src/sub.rs result present");
+    assert!(
+        sub.myc.lines().any(|l| l.trim() == "use crate.b.Foo;"),
+        "expected sub.rs's bare `use crate_b::Foo;` to resolve CROSS-PHYLUM to the sibling \
+         crate-b's own nodule path (`use crate.b.Foo;`), never crate-a's own same-named \
+         submodule; got:\n{}",
+        sub.myc
+    );
+    assert!(
+        !sub.myc.lines().any(|l| l.contains("crate.a.crate_b.Foo")),
+        "must NEVER resolve against crate-a's own same-crate `crate_b` submodule (nodule path \
+         `crate.a.crate_b`) from a non-root file -- that submodule is not lexically in scope \
+         there; got:\n{}",
+        sub.myc
+    );
+
+    // The genuine sibling phylum's Foo IS referenced -- must be marked pub in its own output.
+    let b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-b/src/lib.rs"))
+        .expect("crate-b lib.rs result present");
+    assert!(
+        b.myc.contains("pub type Foo"),
+        "crate-b's Foo is referenced cross-phylum from sub.rs -- expected pub; got:\n{}",
+        b.myc
+    );
+
+    // crate-a's OWN `crate_b.rs` submodule's Foo was never actually referenced (sub.rs's bare
+    // head never resolved against it) -- must not be marked pub.
+    let own_crate_b = results
+        .iter()
+        .find(|r| r.path.ends_with("crate-a/src/crate_b.rs"))
+        .expect("crate-a/src/crate_b.rs result present");
+    assert!(
+        !own_crate_b.myc.contains("pub type Foo") && !own_crate_b.myc.contains("pub struct Foo"),
+        "crate-a's own crate_b.rs Foo was never referenced from a non-root bare head -- must not \
+         be marked pub; got:\n{}",
+        own_crate_b.myc
+    );
+}
+
+/// The never-silent refusal path (VR-5/G2): a `super::` with no parent to go up to (the file is
+/// already at the crate root) is a genuine structural miss — gapped, never a panic, never a guess.
+#[test]
+fn super_with_no_parent_at_crate_root_still_gaps_never_panics() {
+    let tmp = TempDir::new("super-no-parent");
+    tmp.write(
+        "mycrate/src/lib.rs",
+        "use super::nonexistent::Thing;\nfn ok(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let lib = results.first().expect("one result");
+    assert!(
+        lib.report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::Import),
+        "a crate-root `super::` must gap (no parent to go up to), never panic; gaps: {:?}",
+        lib.report.gaps
+    );
+    assert!(
+        !lib.myc.contains("use "),
+        "the unresolvable super:: must carry no `use` line at all; got:\n{}",
+        lib.myc
+    );
+}
+
+// Property (bound): for a corpus of nesting depths 0..=3, a `super::`-headed use that walks up to
+// an existing sibling ALWAYS resolves to a qualified (never-bare) reference, and a `super::` chain
+// that would walk past the crate root ALWAYS gaps rather than panicking — the never-silent +
+// no-bare-name-collapse bounds hold across the whole depth range, not just the hand-picked cases
+// above (CLAUDE.md: "every approximate operation ships its bound ... and a property test that
+// exercises the bound").
+proptest! {
+    #[test]
+    fn super_relative_resolution_never_bare_collapses_across_nesting_depths(depth in 0usize..=3) {
+        let tmp = TempDir::new(&format!("super-depth-prop-{depth}"));
+        // A target file directly under `src/` (the crate root sibling every depth's `super::...`
+        // chain reaches once it walks all the way up).
+        tmp.write("mycrate/src/target.rs", "pub struct Marker(u8);");
+
+        // Build a `depth`-deep module chain `m0/m1/.../m{depth-1}/mod.rs`, whose `mod.rs` uses
+        // exactly `depth` leading `super::` segments to reach the crate root, then `target::Marker`.
+        let mut rel = String::from("mycrate/src");
+        for i in 0..depth {
+            rel.push('/');
+            rel.push_str(&format!("m{i}"));
+        }
+        rel.push_str("/mod.rs");
+        let supers = "super::".repeat(depth);
+        tmp.write(
+            &rel,
+            &format!("use {supers}target::Marker;\nfn f(x: bool) -> bool {{ x }}"),
+        );
+
+        let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+        let (results, failures) = transpile_batch(&files);
+        prop_assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+        let leaf = results
+            .iter()
+            .find(|r| r.path.ends_with("mod.rs"))
+            .expect("mod.rs result present");
+
+        if depth == 0 {
+            // `mod.rs` directly under `src/` IS the crate root: a single `super::` has no parent —
+            // never-silent refusal, never a panic, never a bare emission.
+            prop_assert!(!leaf.myc.lines().any(|l| l.trim() == "use Marker;"));
+        } else {
+            // `depth` levels deep reached via exactly `depth` `super::` segments lands EXACTLY at
+            // the crate root, where `target.rs` lives — must resolve, and never bare.
+            prop_assert!(
+                leaf.myc.contains(".Marker;"),
+                "depth {depth}: expected a qualified use of Marker; got:\n{}",
+                leaf.myc
+            );
+            prop_assert!(!leaf.myc.lines().any(|l| l.trim() == "use Marker;"));
+        }
+    }
 }

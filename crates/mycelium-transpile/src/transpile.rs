@@ -138,6 +138,18 @@ pub(crate) fn transpile_source_with_ctx(
     // in-file reference (which would poison the file's `myc check` and cost its clean items).
     let resolvable = resolvable_type_names(&parsed.items);
     let layouts = struct_layouts(&parsed.items);
+    // M-1084: this file's own `use`-resolution context — its crate-root-relative module segments
+    // (`self::`/`super::` resolve relative to this) and, when derivable, its own extern-crate
+    // identifier (the cross-phylum same-crate-vs-bare precedence — see `symtab.rs` module docs).
+    // Derived from `file_label` (not a real `&Path` — every real caller passes an actual repo path
+    // via `path.display().to_string()`; a `src`-ancestor-less label, e.g. a test fixture's
+    // `"fixture.rs"`, degrades gracefully to the pre-M-1084 bare-key behavior).
+    let current_module = derive_module_segments(Path::new(file_label));
+    let current_crate = derive_crate_ident(Path::new(file_label));
+    let use_ctx = UseCtx {
+        module: &current_module,
+        crate_ident: current_crate.as_deref(),
+    };
     crate::emit::with_emit_ctx(
         resolvable,
         layouts,
@@ -149,7 +161,7 @@ pub(crate) fn transpile_source_with_ctx(
                 let name_hint = item_display_name(item);
                 let snippet = tokens_to_string(item);
 
-                match dispatch_item(item) {
+                match dispatch_item(item, &use_ctx) {
                     Outcome::Emitted(Emitted {
                         name,
                         myc,
@@ -337,17 +349,27 @@ enum Outcome {
     TestExcluded,
 }
 
+/// Per-file `use`-resolution context (M-1084) — see the item-loop construction site's doc comment.
+/// Threaded through [`dispatch_item`] to [`dispatch_use`] only; every other dispatch arm ignores it,
+/// so this signature change stays local to the `use`-dispatch path (never touches `emit.rs`).
+struct UseCtx<'a> {
+    /// This file's own crate-root-relative module segments (`transpile::derive_module_segments`).
+    module: &'a [String],
+    /// This file's own extern-crate identifier, when derivable (`transpile::derive_crate_ident`).
+    crate_ident: Option<&'a str>,
+}
+
 /// Exhaustive dispatch over `syn::Item` (itself `#[non_exhaustive]`). Every arm either calls into
 /// `emit.rs` or produces an explicit [`GapReason`] — the trailing `_` arm is the
 /// forward-compatibility catch-all, itself a gap, never a silent no-op.
-fn dispatch_item(item: &Item) -> Outcome {
+fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
     match item {
         Item::Enum(e) => emit::emit_enum(e).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Struct(s) => emit::emit_struct(s).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Fn(f) => emit::emit_fn(f).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Trait(t) => emit::emit_trait(t).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Impl(i) => emit::emit_impl(i).map_or_else(Outcome::Gap, Outcome::Emitted),
-        Item::Use(u) => dispatch_use(u),
+        Item::Use(u) => dispatch_use(u, use_ctx),
         Item::Mod(m) => {
             if emit::is_cfg_test(&m.attrs) {
                 Outcome::TestExcluded
@@ -445,39 +467,42 @@ fn dispatch_item(item: &Item) -> Outcome {
 }
 
 /// `use` imports (M-1001 `Category::Import`; gap-close-2 DN-34 §8.19/§8.20 batch-scoped
-/// cross-nodule resolution — the Import gap-class lever, `symtab.rs`).
+/// cross-nodule resolution — the Import gap-class lever, `symtab.rs`; M-1084 extends it with
+/// `self::`/`super::` relative resolution and cross-phylum resolution — see `symtab.rs` module docs).
 ///
-/// **Batch mode (a cross-nodule [`SymbolTable`] is installed):** a `use crate::<mod>::Item` (or a
-/// crate-root file's bare `use <mod>::Item;`/`pub use <mod>::Item;`) is resolved leaf-by-leaf
+/// **Batch mode (a cross-nodule [`SymbolTable`] is installed):** a `use crate::<mod>::Item`, a
+/// `self::`/`super::`-relative form, or a bare `use <mod>::Item;`/`pub use <mod>::Item;` (crate-root
+/// -relative OR, when `<mod>` names a sibling PHYLUM in this same batch, cross-phylum) is resolved
+/// leaf-by-leaf against [`SymbolTable::candidate_lookup_keys`]' precedence-ordered key(s), each tried
 /// against the batch's own sibling files' actually-**emitted** surface (never a name that merely
 /// exists in the Rust source but itself gapped). Every leaf that resolves emits a real
 /// `use <nodule_path>.<Item>;` line, home-qualified against the sibling's own derived nodule path
 /// (never a bare name — the same no-bare-name-collapse discipline DN-113/M-1060's
 /// `qualify_cross_phylum` uses for the kernel's cross-phylum case). A leaf that does **not**
-/// resolve — an out-of-batch head (`std::`, an external/workspace crate, `self::`/`super::`), an
-/// in-batch sibling that itself gapped the requested name, a `self`-module-binding group member, a
-/// rename, or a cross-nodule glob — is still recorded as a precise, never-silent
-/// [`Category::Import`] gap (VR-5/G2): when **at least one** leaf resolved, the unresolved leaves
-/// ride the item's `sub_gaps` (the item is simultaneously "emitted" and "honestly flagged" — see
-/// [`Emitted`]'s doc); when **none** resolve, the whole item is one ordinary [`Gap`], as before.
+/// resolve — an out-of-batch head (`std::`, an external/workspace crate, a phylum not in this batch),
+/// an in-batch sibling that itself gapped the requested name, a `self`-module-binding group member, a
+/// rename, or a glob — is still recorded as a precise, never-silent [`Category::Import`] gap
+/// (VR-5/G2): when **at least one** leaf resolved, the unresolved leaves ride the item's `sub_gaps`
+/// (the item is simultaneously "emitted" and "honestly flagged" — see [`Emitted`]'s doc); when
+/// **none** resolve, the whole item is one ordinary [`Gap`], as before.
 ///
 /// **Single-file mode (no `SymbolTable` installed — `symtab.rs`'s `cross_nodule_resolve` always
 /// misses):** every leaf fails to resolve, so this degenerates to exactly the pre-gap-close-2
 /// behavior — a single flagged gap, nothing emitted (byte-identical for every existing single-file
 /// caller).
-fn dispatch_use(u: &syn::ItemUse) -> Outcome {
-    let Some(candidates) = symtab::use_candidates(&u.tree) else {
-        // `self::`/`super::`-headed, or a tree with no module-path segment at all — this
-        // increment does not attempt relative-to-current-module resolution (out of scope; see
-        // `symtab::use_candidates` doc). Unchanged from pre-gap-close-2 behavior.
+fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
+    let Some(candidates) = symtab::use_candidates(&u.tree, ctx.module) else {
+        // A tree with no module-path segment at all (a bare `use Item;` naming nothing), or a
+        // `super::` head with no parent to go up to (this file is already at the crate root — a
+        // genuine structural miss, real Rust itself rejects this). Unchanged from pre-M-1084
+        // behavior for these two residual cases.
         let detail = describe_use_tree(&u.tree);
         return Outcome::Gap(GapReason::new(
             Category::Import,
             format!(
-                "`use` import ({detail}) — a `self::`/`super::`-relative (or module-path-less) \
-                 head is outside this batch's cross-nodule symbol table (relative-to-current-\
-                 module resolution is out of this increment's scope; DN-34 §8.19/§8.20). Flagged, \
-                 not guessed (VR-5/G2)"
+                "`use` import ({detail}) — either a module-path-less head (naming nothing to \
+                 resolve against) or a `super::` with no parent to go up to at this file's own \
+                 module root. Flagged, not guessed (VR-5/G2)"
             ),
         ));
     };
@@ -486,32 +511,38 @@ fn dispatch_use(u: &syn::ItemUse) -> Outcome {
     let mut resolved_names = Vec::new();
     let mut leaf_gaps = Vec::new();
     for c in &candidates {
-        let module_key = SymbolTable::module_key(&c.module_segs);
+        let keys = SymbolTable::candidate_lookup_keys(ctx.crate_ident, ctx.module, c);
         let module_dotted = c.module_segs.join(".");
         match &c.kind {
-            CandidateKind::Name(name) => match emit::cross_nodule_resolve(&module_key, name) {
-                Some(nodule_path) => {
-                    emitted_lines.push(format!("use {nodule_path}.{name};"));
-                    resolved_names.push(name.clone());
+            CandidateKind::Name(name) => {
+                let hit = keys.iter().find_map(|k| {
+                    emit::cross_nodule_resolve(k, name).map(|nodule_path| (k, nodule_path))
+                });
+                match hit {
+                    Some((_, nodule_path)) => {
+                        emitted_lines.push(format!("use {nodule_path}.{name};"));
+                        resolved_names.push(name.clone());
+                    }
+                    None => leaf_gaps.push(GapReason::new(
+                        Category::Import,
+                        if keys.iter().any(|k| emit::cross_nodule_has_module(k)) {
+                            format!(
+                                "`use {module_dotted}::{name}` — `{name}` is not among sibling \
+                                 `{module_dotted}`'s successfully-emitted surface in this batch \
+                                 (the sibling file itself gapped it rather than emitting it). \
+                                 Flagged, not guessed (VR-5/G2)"
+                            )
+                        } else {
+                            format!(
+                                "`use {module_dotted}::{name}` — `{module_dotted}` is not a \
+                                 sibling module OR sibling phylum transpiled in this same batch \
+                                 (an external crate, `std`, or simply out of this batch's target \
+                                 set). Flagged, not guessed (VR-5/G2)"
+                            )
+                        },
+                    )),
                 }
-                None => leaf_gaps.push(GapReason::new(
-                    Category::Import,
-                    if emit::cross_nodule_has_module(&module_key) {
-                        format!(
-                            "`use {module_dotted}::{name}` — `{name}` is not among sibling \
-                             `{module_dotted}`'s successfully-emitted surface in this batch (the \
-                             sibling file itself gapped it rather than emitting it). Flagged, not \
-                             guessed (VR-5/G2)"
-                        )
-                    } else {
-                        format!(
-                            "`use {module_dotted}::{name}` — `{module_dotted}` is not a sibling \
-                             module transpiled in this same batch (an external crate, `std`, or \
-                             simply out of this batch's target set). Flagged, not guessed (VR-5/G2)"
-                        )
-                    },
-                )),
-            },
+            }
             CandidateKind::SelfModule => leaf_gaps.push(GapReason::new(
                 Category::Import,
                 format!(
@@ -627,6 +658,20 @@ pub(crate) fn derive_nodule_path(path: &Path) -> String {
     }
 }
 
+/// The Rust **extern-crate identifier** (M-1084 cross-phylum lever — see `symtab.rs` module docs):
+/// the raw crate-directory name, hyphens replaced with underscores (`mycelium-std-rand` ->
+/// `mycelium_std_rand`) — the standard Cargo package-name -> crate-identifier mapping, and exactly
+/// the token a sibling PHYLUM's own `use mycelium_std_rand::...;` names. `None` when `path` has no
+/// `src` ancestor to anchor the derivation on (the same degenerate case [`derive_nodule_path`]/
+/// [`derive_module_segments`] fall back for) — never a guessed identity for a path this transpiler
+/// cannot really place in a real crate (VR-5/G2); every existing `src`-ancestor-less caller (this
+/// crate's own `src/tests/batch.rs` temp fixtures) is unaffected: cross-phylum qualification never
+/// applies to them, byte-identical to pre-M-1084 behavior.
+pub(crate) fn derive_crate_ident(path: &Path) -> Option<String> {
+    let (raw_prefix, _segments) = raw_crate_dir_and_segments(path)?;
+    Some(raw_prefix.replace('-', "_"))
+}
+
 /// The Rust crate-root-relative **module-path segments** for `path` — e.g. `checkty.rs` ->
 /// `["checkty"]`, `foo/bar.rs` -> `["foo", "bar"]`, `foo/mod.rs` -> `["foo"]`, a crate-root
 /// `lib.rs`/`mod.rs` -> `[]` (empty — it names no submodule of itself). This is the SAME
@@ -648,15 +693,25 @@ pub(crate) fn derive_module_segments(path: &Path) -> Vec<String> {
 /// `mycelium-` stripped) and the intra-crate module-path segments, or `None` when `path` has no
 /// `src` ancestor to anchor the derivation on.
 fn crate_prefix_and_segments(path: &Path) -> Option<(String, Vec<String>)> {
-    let components: Vec<&std::ffi::OsStr> = path.components().map(|c| c.as_os_str()).collect();
-    let src_idx = components.iter().rposition(|c| *c == "src")?;
-    let prefix = (src_idx > 0)
-        .then(|| components[src_idx - 1].to_str())
-        .flatten()?;
+    let (raw_prefix, segments) = raw_crate_dir_and_segments(path)?;
     let crate_prefix = {
-        let stripped = prefix.strip_prefix("mycelium-").unwrap_or(prefix);
+        let stripped = raw_prefix.strip_prefix("mycelium-").unwrap_or(raw_prefix);
         stripped.replace('-', ".")
     };
+    Some((crate_prefix, segments))
+}
+
+/// Shared by [`crate_prefix_and_segments`]/[`derive_crate_ident`] (M-1084; DRY — one derivation, not
+/// two divergent copies): the RAW crate-directory name (verbatim, e.g. `mycelium-std-rand` —
+/// un-stripped, un-dotted) and the intra-crate module-path segments, anchored on the last `src`
+/// path component. `None` when `path` has no `src` ancestor (the degenerate case every caller falls
+/// back from).
+fn raw_crate_dir_and_segments(path: &Path) -> Option<(&str, Vec<String>)> {
+    let components: Vec<&std::ffi::OsStr> = path.components().map(|c| c.as_os_str()).collect();
+    let src_idx = components.iter().rposition(|c| *c == "src")?;
+    let raw_prefix = (src_idx > 0)
+        .then(|| components[src_idx - 1].to_str())
+        .flatten()?;
 
     let after_src = &components[src_idx + 1..];
     let mut segments = Vec::with_capacity(after_src.len());
@@ -676,7 +731,7 @@ fn crate_prefix_and_segments(path: &Path) -> Option<(String, Vec<String>)> {
             segments.push(name.to_string());
         }
     }
-    Some((crate_prefix, segments))
+    Some((raw_prefix, segments))
 }
 
 /// Fallback nodule-path derivation for a path with no `src` ancestor to anchor on — the bare
