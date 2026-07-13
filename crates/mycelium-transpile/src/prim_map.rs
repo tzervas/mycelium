@@ -73,21 +73,29 @@
 //! the reviewer's exact repro as a regression (confirmed to fail under the pre-fix `AnyKnown`
 //! gate, confirmed to pass under `AnyBuiltinScalar`).
 //!
-//! **`to_owned` DELIBERATELY WITHHELD (found, not guessed away — mitigation #14).** Same semantic
-//! bucket as `clone` (`crate::emit::is_unmappable_conversion_method`'s own doc comment groups both
-//! under "ownership/representation identity"), but an EXISTING, deliberately-locked-in regression
-//! test this leaf does not own —
+//! **`to_owned` ADDED (identity, `wired: true`), the flagged M-1100 residual closed** (this leaf).
+//! Same semantic bucket as `clone`
+//! (`crate::emit::is_unmappable_conversion_method`'s own doc comment groups both under
+//! "ownership/representation identity"): `ToOwned::to_owned`'s value on a receiver whose mapped
+//! type is a fixed builtin/primitive scalar is exactly the trait's blanket-`Clone` behavior
+//! (`bool`/`u8..u128`/`i8..i128`/`usize`/`isize`/`char` all implement `Clone`, so
+//! `to_owned(&self) -> T { self.clone() }` applies) or, for `str`/`String` (both mapping to the
+//! builtin scalar `Bytes` — `crate::type_map::TABLE`'s `String`/`str` rows), std's own explicit
+//! `impl ToOwned for str { type Owned = String; .. }` — in both cases an owned copy with **no
+//! representation change** (ADR-003 value semantics), so the receiver passed through unchanged is
+//! exact. Gated identically to `clone` — [`ReceiverGate::AnyBuiltinScalar`] — for the identical
+//! reason: Rust's orphan rule forecloses a downstream `impl ToOwned` for any of these foreign
+//! primitive types, so identity is sound **only** for this fixed set; a user-named-type receiver
+//! still GAPS (never-silent, VR-5/G2), because `ToOwned`'s `Owned` associated type need not even
+//! equal `Self` for a user impl (std's own `str -> String`/`[T] -> Vec<T>` show `Owned != Self` is
+//! a normal, sanctioned shape), so assuming identity there would be an unchecked guess. The
+//! previously-FLAGged blocker — the existing lock in
 //! `src/tests/emit.rs::conversion_noop_method_gaps_never_fabricates_unknown_prim` (the "#72
-//! co-poison fix") — asserts `fn f(s: &str) -> String { s.to_owned() }` gaps the WHOLE function.
-//! `&str`/`String` both map to the known type `Bytes` (`crate::map::map_type_inner`), so an
-//! `AnyKnown`-gated `to_owned` row WOULD fire here and flip that test's asserted outcome (from "the
-//! whole fn gaps" to "the fn emits `(s)` cleanly") — a genuine behavior change to a file this leaf
-//! is scoped OUT of (`src/tests/emit.rs` pairs with `emit.rs`, itself off-limits per this leaf's own
-//! scope). Rather than silently break that lock or reach into a file this leaf does not own,
-//! `.to_owned()` is left exactly as the existing fallback (`is_unmappable_conversion_method`)
-//! handles it today — unchanged, still gapped — and this finding is FLAGged to the integrating
-//! parent: a trivial follow-on leaf (add the `to_owned` row + update that one regression test's now
-//! -stale expectation, in the file that owns it) closes this residual.
+//! co-poison fix") asserting `fn f(s: &str) -> String { s.to_owned() }` gaps the WHOLE function —
+//! is resolved by updating that one test's now-stale bare-identifier-receiver case to assert
+//! identity instead (its literal-receiver arm, `"a".to_owned()`, and its `.deref()` case are
+//! untouched and still gap, since a string literal is not a bare-identifier receiver
+//! `crate::emit::expr_env_type` can resolve, and `deref` is not a `TABLE` row).
 //!
 //! **`to_string` NOT ADDED (gap unchanged).** DN-127/DN-129 landed `impl Show[Binary{64}]`/
 //! `Show[Bytes]`/`Show[Bool] for ...` with `render(x) => Bytes`, and `render(recv)` DOES
@@ -305,7 +313,8 @@ pub const TABLE: &[PrimMapping] = &[
     // identity-emission sentinel (see this row's own field doc + the module-doc L4 section):
     // `Clone::clone`'s sole effect is an owned copy with no representation change (value
     // semantics, ADR-003), so the receiver passed through unchanged (via a parenthesized-grouping
-    // `(recv)`) is exact, never a guess. `to_owned`/`to_string`/`into` are deliberately NOT rows
+    // `(recv)`) is exact, never a guess. `to_owned` (below) is the same identity class, added by a
+    // follow-on leaf closing the M-1100 residual FLAG. `to_string`/`into` are deliberately NOT rows
     // here — see the module-doc L4 section for each one's own verify-first finding.
     PrimMapping {
         rust_method: "clone",
@@ -341,6 +350,41 @@ pub const TABLE: &[PrimMapping] = &[
                    witness covers exactly u64/bool/String, matching this gate's scope; a prior \
                    claim of user-struct/match-block live-oracle coverage was inaccurate and is \
                    corrected here, PR #1552 review MEDIUM finding)",
+    },
+    // Follow-on leaf to L4 (M-1100 residual, flagged by the `clone` leaf/PR #1552): closes the
+    // `to_owned` gap the same `AnyBuiltinScalar`-gated identity way as `clone` above (see this
+    // row's own citation + the module-doc L4 section for the full soundness argument).
+    PrimMapping {
+        rust_method: "to_owned",
+        myc_prim: "",
+        wired: true,
+        // Same soundness basis + same CRITICAL-class caution as `clone`'s gate: a user-named-type
+        // receiver's `ToOwned` impl is not foreclosed by the orphan rule (only a *foreign* type's
+        // impl is), and its `Owned` associated type need not equal `Self` at all (std's own
+        // `str -> String`/`[T] -> Vec<T>` are exactly this shape) — so `AnyBuiltinScalar`, never
+        // `AnyKnown`, is required here from the start (no post-hoc narrowing needed, unlike
+        // `clone`, because this row is added after that CRITICAL finding). See
+        // `src/tests/prim_map.rs`'s `to_owned_on_user_named_type_receiver_never_fires_identity_and_gaps`
+        // for the direct regression.
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1100",
+        citation: "M-1100 residual closed (flagged by the `clone` leaf/PR #1552 review); ADR-003 \
+                   (value semantics — no reference/ownership distinction); ToOwned::to_owned's \
+                   contract for a `Clone` receiver (`bool`/`u8..u128`/`i8..i128`/`usize`/`isize`/\
+                   `char` — the blanket `impl<T: Clone> ToOwned for T`) and for `str`/`String` \
+                   (std's own explicit `impl ToOwned for str { type Owned = String; .. }`, both \
+                   mapping to the builtin scalar `Bytes` per `crate::type_map::TABLE`'s \
+                   `String`/`str` rows) — both an owned copy with no representation change; sound \
+                   here only because `AnyBuiltinScalar` restricts the receiver to a fixed \
+                   builtin/primitive mapped type (`Bool`/`Bytes`/some `Binary{N}`), which Rust's \
+                   orphan rule guarantees can never carry a user-written `impl ToOwned` (a \
+                   user-named-type receiver GAPS instead — see the gate's own doc); grammar \
+                   primary ::= ... | '(' expr ')' (docs/spec/grammar/mycelium.ebnf:406); confirmed \
+                   myc-check-clean by direct probe against target/debug/myc-check for a \
+                   Binary{64}/Bool/Bytes receiver (see src/tests/prim_map.rs's committed \
+                   regression + live-oracle witness)",
     },
 ];
 
