@@ -2251,6 +2251,15 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
     }
 
     fn visit_method_call(&mut self, _expr: &Expr, m: &syn::ExprMethodCall) -> Self::Output {
+        // DN-135/M-1092 — the Result/Option combinator-directed match-inline (Alt A). Consulted
+        // FIRST (before the `prim_map` forward-map and the generic desugar below), gated on a
+        // CONFIRMED Result/Option receiver (never a guess — VR-5, the same no-guess discipline
+        // `prim_map::receiver_gate_matches` uses for its own rows). `None` means "not applicable"
+        // — falls straight through to the unchanged code below, exactly as if this pass did not
+        // exist; see `try_inline_result_option_combinator`'s own doc for the full decline set.
+        if let Some(result) = try_inline_result_option_combinator(m, self.self_ty, self.env) {
+            return result;
+        }
         // trx2 Lane C Deliverable 2 — forward-mapped kernel prim surface (`crate::prim_map`).
         // Consulted BEFORE the generic desugar below so a confirmed row wins; gated on the
         // receiver's *known* type (never a guess — VR-5) so an unrelated Rust type's
@@ -2787,6 +2796,394 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             .join(", ");
         Ok(format!("lambda({params_text}) => {body_text}"))
     }
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-135 (M-1092) — the Result/Option combinator-directed match-inline (Alt A).
+//
+// The residual: `.map(|()| E)` / `.map_err(|_| C)` / etc. over a closure whose parameter is a
+// UNIT pattern `|()|` or a WILDCARD `|_|` — the exact shapes `EmitVisitor::visit_closure`'s DN-118
+// Phase-1 gate declines (its `lambda` surface needs an explicitly-typed single IDENTIFIER param).
+// The combinator surface itself is NOT the gap: `map`/`map_err`/`and_then`/`or_else`/`fold` already
+// exist as native `.myc` free functions whose bodies ARE `match` expressions
+// (`lib/std/result.myc:23-46`, `lib/std/option.myc:36-58`), and the generic method-desugar already
+// produces the `m(recv, f)` call shape (`visit_method_call`, below). DN-135's native answer:
+// INLINE the combinator's own stdlib `match` body (a beta-reduction) with the closure body
+// substituted and the closure's param lowered as the arm's BINDER PATTERN — `_` for `|_|`/`|()|`,
+// the bare identifier otherwise — which relocates the unmappable construct from the (unsupported)
+// `lambda`-parameter position into the (fully-supported) `match`-pattern position. No parameter
+// type is ever needed (mode-invariant, DN-126 §4), so this fires identically whether or not the
+// closure param happened to carry an explicit type.
+//
+// Zero kernel growth (KC-3: reuses `match` + the `Ok`/`Err`/`Some`/`None` constructors, already
+// active grammar), DRY (inlines the library's own definition — never a parallel/divergent
+// semantics), and the receiver gate below is the SAME no-guess discipline `prim_map`'s
+// `receiver_gate_matches` uses (an unconfirmed/non-Result/Option receiver — e.g. an iterator's
+// `.map` — falls straight through to the unchanged generic desugar, never a guess, VR-5/G2).
+//
+// **Scope correction against the original DN-135 §3 item 5 text (a real-toolchain finding, house
+// rule #4):** a CHAIN (`.map(..).map_err(..)`) does NOT nest safely — `combinator_receiver_kind`
+// deliberately does not resolve a `MethodCall` receiver (see that fn's doc for the full empirical
+// finding: a nested inlined `match` used as an outer match's scrutinee fails `myc check`'s
+// constructor type-parameter inference unless individually ascribed with a type this transpiler
+// cannot generally derive). Only a receiver `expr_env_type` resolves directly (a bare identifier,
+// or a `(..)`/`&..` wrapper) triggers an inline; each combinator in a chain is judged
+// independently on its OWN receiver.
+// ---------------------------------------------------------------------------------------------
+
+/// The Result/Option "sum kind" a combinator's receiver resolved to — decides which pair of
+/// constructor names (`Ok`/`Err` vs `Some`/`None`) the inlined `match`'s arms use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResultOptionKind {
+    Result,
+    Option,
+}
+
+impl ResultOptionKind {
+    /// The `(hit, pass)` constructor-name pair for this kind — `hit` is the constructor MOST
+    /// combinators transform the payload of (`Ok`/`Some`), `pass` is the one MOST combinators
+    /// leave untouched (`Err`/`None`). `map_err` (Result-only) inlines over `pass` instead — it
+    /// builds its own arm text directly rather than using this pair.
+    fn ctor_names(self) -> (&'static str, &'static str) {
+        match self {
+            ResultOptionKind::Result => ("Ok", "Err"),
+            ResultOptionKind::Option => ("Some", "None"),
+        }
+    }
+
+    /// The untouched pass-through arm's full `pattern => body` text — `Err(e) => Err(e)` for
+    /// Result (the `Err` payload is bound and re-wrapped), `None => None` for Option (`None`
+    /// carries no payload to bind).
+    fn pass_arm_text(self) -> String {
+        match self {
+            ResultOptionKind::Result => "Err(e) => Err(e)".to_string(),
+            ResultOptionKind::Option => "None => None".to_string(),
+        }
+    }
+}
+
+/// The combinator this pass recognizes by name — the exact `result.myc`/`option.myc` surface DN-135
+/// §3 item 1 names. Recognizing a name here does NOT guarantee an inline fires for it (see
+/// [`try_inline_result_option_combinator`]'s per-arm dispatch): `unwrap_or` in particular never has
+/// a closure-shaped argument to relocate (both the Rust and the stdlib forms take a plain VALUE
+/// fallback), so it is named for completeness against the spec's recognized set but always declines.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ResultOptionArm {
+    Map,
+    MapErr,
+    AndThen,
+    OrElse,
+    Fold,
+    UnwrapOr,
+}
+
+fn result_option_arm(method: &str) -> Option<ResultOptionArm> {
+    match method {
+        "map" => Some(ResultOptionArm::Map),
+        "map_err" => Some(ResultOptionArm::MapErr),
+        "and_then" => Some(ResultOptionArm::AndThen),
+        "or_else" => Some(ResultOptionArm::OrElse),
+        "fold" => Some(ResultOptionArm::Fold),
+        "unwrap_or" => Some(ResultOptionArm::UnwrapOr),
+        _ => None,
+    }
+}
+
+/// `receiver_ty` (an already-[`map_type`]-produced type-ref text, e.g. `"Result[Binary{8}, E]"`)
+/// narrowed to `Result`/`Option`, or `None` for anything else (including no known type at all) —
+/// the DN-135 receiver gate. Mirrors `prim_map::receiver_gate_matches`'s no-guess discipline
+/// (checked against a resolved type, never inferred from usage), keyed off the generic-application
+/// HEAD (`map_type`'s `"{name}[{args}]"` production, `crate::map`) since `prim_map`'s own
+/// `ReceiverGate::Exact`/`AnyBinaryWidth` gates have no shape for a parameterized head.
+fn result_option_kind_of_type(receiver_ty: &str) -> Option<ResultOptionKind> {
+    if receiver_ty == "Result" || receiver_ty.starts_with("Result[") {
+        Some(ResultOptionKind::Result)
+    } else if receiver_ty == "Option" || receiver_ty.starts_with("Option[") {
+        Some(ResultOptionKind::Option)
+    } else {
+        None
+    }
+}
+
+/// The DN-135 receiver-kind resolution for a method call's receiver expression: `receiver` is a
+/// bare identifier (or a `(..)`/`&..` wrapper around one) whose type is present in `env` —
+/// [`expr_env_type`], the exact same mechanism `prim_map`'s gate consults (`emit.rs:2120-2123` in
+/// `visit_method_call`, `receiver_gate_matches`/`prim_map.rs:228`). Anything else (a `Call`, a
+/// field access, a literal, a nested `MethodCall`, …) resolves to `None` — an honest "not known"
+/// (VR-5: absence, never a wrong guess) that lets the caller fall through to the unchanged generic
+/// desugar (DN-135 §5 stress #2's bounded-faithfulness point: a cross-crate call receiver whose
+/// return type this transpiler cannot resolve gaps honestly under bare vet profiling rather than
+/// fabricating `Ok`/`Err`).
+///
+/// **Deliberately does NOT recurse into a `MethodCall` receiver (a CHAIN, `.map(..).map_err(..)`)
+/// — a real-toolchain finding, not the original design (VR-5/house rule #4, disconfirms DN-135 §3
+/// item 5's "chains nest" claim, which was `Declared`/unverified when written).** A nested inlined
+/// `match` used as an OUTER match's scrutinee does **NOT** `myc check`-clean without an explicit
+/// type ascription on the inner match's own `Ok`/`Err` constructor arms (confirmed empirically:
+/// `match (match r { Ok(_) => Ok(flag), Err(e) => Err(e) }) { .. }` fails checking with `constructor
+/// `Ok` does not determine type parameter `E`` — RFC-0007 §11.3 — UNLESS each inner arm is
+/// individually ascribed, e.g. `Ok(flag) : Result[Binary{8}, Binary{8}]`; a `let`-bound
+/// intermediate does not help either, same error). Supplying a CORRECT ascription type in general
+/// would require knowing the inner combinator's OWN output type — for `map`/`and_then` that is the
+/// closure's return type, which this transpiler has no inference pass to recover (VR-5: never
+/// guess a type to paper over a checker gap). So chain-receiver resolution is left unbuilt here
+/// rather than emitting text this leaf cannot prove checks clean; a chained call's OUTER
+/// combinator simply declines (falls through to the unchanged generic desugar, same as any other
+/// unresolved receiver) while its INNER combinator, if its OWN receiver independently resolves,
+/// still inlines correctly on its own. Tracked as a follow-up (a type-ascription-aware chain
+/// extension needs its own verify-first pass over the checker's inference rules, not guessed here).
+fn combinator_receiver_kind(receiver: &Expr, env: &TypeEnv) -> Option<ResultOptionKind> {
+    expr_env_type(receiver, env).and_then(|ty| result_option_kind_of_type(&ty))
+}
+
+/// Lower a closure's single-parameter PATTERN to the `match`-arm binder text it relocates to
+/// (DN-135's central move): `_` for a wildcard `|_|` or a unit pattern `|()|` (both destructure to
+/// nothing at the arm), the bare identifier name for `|x|`/`|x: T|` (the type, if present, is
+/// simply unused — a `match` arm binder needs none, which is the mode-invariance argument, DN-126
+/// §4). `None` for any other pattern shape (a non-unit tuple destructure, a struct/enum pattern,
+/// a `ref`/`@`-subpattern identifier) — never guessed (VR-5); the caller declines to inline and
+/// falls through to the unchanged generic desugar, which reaches `visit_closure`'s own identical
+/// non-identifier-pattern gap for the same construct.
+fn closure_single_param_binder(pat: &Pat) -> Option<String> {
+    match pat {
+        Pat::Wild(_) => Some("_".to_string()),
+        Pat::Tuple(t) if t.elems.is_empty() => Some("_".to_string()),
+        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => Some(pi.ident.to_string()),
+        Pat::Type(pt) => closure_single_param_binder(&pt.pat),
+        _ => None,
+    }
+}
+
+/// Extract an inlinable closure-literal ARGUMENT's `(binder, body_text)` pair, or `None` when the
+/// argument does not qualify — the DN-135 §3 item 3 split:
+///
+/// - not a closure literal at all (a function VALUE, e.g. `.map(SomeFn)`) — Alt B's residual role,
+///   the existing unchanged `m(recv, f)` free-function call already handles it faithfully;
+/// - an `async`/`const`/`static` closure, or one with != 1 parameter, or a non-inlinable parameter
+///   pattern ([`closure_single_param_binder`]) — inherits `visit_closure`'s own identical gates
+///   unchanged (DN-135 §3 item 3's "multi-param / value-unsafe closure" fallthrough);
+/// - a closure that DN-109 D5/D7 cannot prove value-safe (mutates a non-parameter capture in
+///   place) — applied BEFORE inlining, identically to `visit_closure`'s own gate (DN-135 §5 stress
+///   #4: a single-use INLINED body has no "across calls" snapshot surface at all — there is no
+///   reified closure value to go stale — so inlining is strictly SAFER than emitting a `lambda`,
+///   never less safe; the gate still applies because duplicating/relocating a body that mutates an
+///   outer capture in place would still be unsound regardless of how it is emitted);
+/// - the closure's own body fails to emit (a real, independent gap inside the body) — declining
+///   here does not swallow that gap: falling through re-derives the SAME emission call inside
+///   `visit_closure` and surfaces the identical `GapReason` (never a duplicated/invented message).
+fn inline_closure_arg(
+    arg: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<(String, String)> {
+    let Expr::Closure(c) = arg else {
+        return None;
+    };
+    if c.asyncness.is_some() || c.constness.is_some() || c.movability.is_some() {
+        return None;
+    }
+    if c.inputs.len() != 1 {
+        return None;
+    }
+    let binder = closure_single_param_binder(&c.inputs[0])?;
+    if binder != "_" {
+        guard_ident(&binder, "closure parameter").ok()?;
+    }
+    let mut bound: HashSet<String> = HashSet::new();
+    bound.insert(binder.clone());
+    let mutation = match &*c.body {
+        Expr::Block(b) => scan_block_for_capture_mutation(&b.block.stmts, &bound),
+        other => scan_expr_for_capture_mutation(other, &bound),
+    };
+    if mutation.is_some() {
+        return None;
+    }
+    let body_env = env.clone();
+    let body_text = match &*c.body {
+        Expr::Block(b) => emit_block_as_expr(&b.block, self_ty, &body_env).ok()?,
+        other => emit_expr(other, self_ty, &body_env).ok()?,
+    };
+    Some((binder, body_text))
+}
+
+/// `map`: `{ Ok(<p>) => Ok(<body>), Err(e) => Err(e) }` (Result) / `{ Some(<p>) => Some(<body>),
+/// None => None }` (Option) — `lib/std/result.myc:23`/`lib/std/option.myc:33`'s own bodies,
+/// verbatim, with `f(x)` substituted by the closure's body and `x` lowered to `<p>`.
+fn inline_map(
+    recv_text: &str,
+    kind: ResultOptionKind,
+    arg: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    let (hit, _pass) = kind.ctor_names();
+    let (binder, body) = inline_closure_arg(arg, self_ty, env)?;
+    Some(format!(
+        "match {recv_text} {{ {hit}({binder}) => {hit}({body}), {} }}",
+        kind.pass_arm_text()
+    ))
+}
+
+/// `map_err` (Result only — Option has no error side to map): `{ Ok(x) => Ok(x), Err(<p>) =>
+/// Err(<body>) }` — `lib/std/result.myc:39`'s own body.
+fn inline_map_err(
+    recv_text: &str,
+    arg: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    let (binder, body) = inline_closure_arg(arg, self_ty, env)?;
+    Some(format!(
+        "match {recv_text} {{ Ok(x) => Ok(x), Err({binder}) => Err({body}) }}"
+    ))
+}
+
+/// `and_then`: `{ Ok(<p>) => <body>, Err(e) => Err(e) }` (Result) / `{ Some(<p>) => <body>, None =>
+/// None }` (Option) — `lib/std/result.myc:29`/`lib/std/option.myc:38`'s own bodies. The closure
+/// body is used BARE (not re-wrapped in the hit constructor): `and_then`'s `f` already returns the
+/// whole sum type (the monadic bind), unlike `map`'s plain-value-returning `f`.
+fn inline_and_then(
+    recv_text: &str,
+    kind: ResultOptionKind,
+    arg: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    let (hit, _pass) = kind.ctor_names();
+    let (binder, body) = inline_closure_arg(arg, self_ty, env)?;
+    Some(format!(
+        "match {recv_text} {{ {hit}({binder}) => {body}, {} }}",
+        kind.pass_arm_text()
+    ))
+}
+
+/// `or_else` (Result only — `lib/std/option.myc`'s `or_else` takes a plain Option VALUE `alt`, not
+/// a closure, so there is nothing to inline there; it always falls through unchanged):
+/// `{ Ok(x) => Ok(x), Err(<p>) => <body> }` — `lib/std/result.myc:45`'s own body.
+fn inline_or_else(
+    recv_text: &str,
+    arg: &Expr,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    let (binder, body) = inline_closure_arg(arg, self_ty, env)?;
+    Some(format!(
+        "match {recv_text} {{ Ok(x) => Ok(x), Err({binder}) => {body} }}"
+    ))
+}
+
+/// `fold` on Result: BOTH arguments are closures — `{ Ok(<p1>) => <body1>, Err(<p2>) => <body2> }`
+/// (`lib/std/result.myc:33`). Declines (whole call, both arms) unless BOTH arguments inline —
+/// never a half-inlined `match` with one arm still holding a raw Rust closure token stream.
+fn inline_fold_result(
+    recv_text: &str,
+    args: &[&Expr],
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    if args.len() != 2 {
+        return None;
+    }
+    let (on_ok, on_err) = (args[0], args[1]);
+    let (p1, b1) = inline_closure_arg(on_ok, self_ty, env)?;
+    let (p2, b2) = inline_closure_arg(on_err, self_ty, env)?;
+    Some(format!(
+        "match {recv_text} {{ Ok({p1}) => {b1}, Err({p2}) => {b2} }}"
+    ))
+}
+
+/// `fold` on Option: `on_some` is a closure, `on_none` is a plain VALUE (`lib/std/option.myc:44`'s
+/// `fold(o, on_some: A => B, on_none: B)`) — `{ Some(<p>) => <body>, None => <on_none_expr> }`. The
+/// second argument is emitted directly via [`emit_expr`] (never through [`inline_closure_arg`],
+/// which only ever extracts a CLOSURE literal's binder+body).
+fn inline_fold_option(
+    recv_text: &str,
+    args: &[&Expr],
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<String> {
+    if args.len() != 2 {
+        return None;
+    }
+    let (on_some, on_none) = (args[0], args[1]);
+    let (p, body) = inline_closure_arg(on_some, self_ty, env)?;
+    let on_none_text = emit_expr(on_none, self_ty, env).ok()?;
+    Some(format!(
+        "match {recv_text} {{ Some({p}) => {body}, None => {on_none_text} }}"
+    ))
+}
+
+/// The DN-135/M-1092 entry point, consulted first in `visit_method_call`. Returns:
+/// - `None` — not applicable (an unrecognized method name, an unconfirmed/non-Result-Option
+///   receiver, a non-closure argument, or a closure DN-118's own gates would decline) — the caller
+///   falls straight through to the UNCHANGED code below (the `prim_map` forward-map, then the
+///   generic desugar), exactly as if this pass did not exist. Never a guess (VR-5/G2).
+/// - `Some(Ok(text))` — the inlined `.myc` `match` expression.
+/// - `Some(Err(reason))` — the receiver IS a confirmed Result/Option and the method name IS a
+///   recognized combinator with an otherwise-inlinable closure argument, but emitting the
+///   already-confirmed receiver expression itself failed. Propagated rather than silently
+///   swallowed into a `None` "not applicable" (G2) — an internal-consistency edge case the gate
+///   above is not expected to let through, but never assumed away.
+fn try_inline_result_option_combinator(
+    m: &syn::ExprMethodCall,
+    self_ty: Option<&str>,
+    env: &TypeEnv,
+) -> Option<Result<String, GapReason>> {
+    let method = m.method.to_string();
+    let arm = result_option_arm(&method)?;
+    let kind = combinator_receiver_kind(&m.receiver, env)?;
+
+    // `unwrap_or` never has a closure-shaped argument (Rust's `.unwrap_or(v)` / the stdlib
+    // `unwrap_or(r, fallback: A)` both take a plain VALUE) — nothing to relocate a param out of,
+    // so this pass never fires for it; named in the recognized set (DN-135 §3 item 1) purely for
+    // completeness against the spec, not because it ever inlines.
+    if matches!(arm, ResultOptionArm::UnwrapOr) {
+        return None;
+    }
+
+    // Parenthesized unconditionally (matches DN-135 §1's own worked example) — harmless for a
+    // plain identifier receiver too (`(r)` parses identically to `r`, the same `Expr::Paren`
+    // erasure `visit_paren` already performs elsewhere in this module). NOTE: this does NOT make
+    // a chain safe on its own — `combinator_receiver_kind` never resolves a `MethodCall` receiver
+    // in the first place (see that fn's doc), so `m.receiver` here is never itself an inlined
+    // nested `match`; this parenthesization only ever wraps an ordinary resolved expression.
+    let recv_text = match emit_expr(&m.receiver, self_ty, env) {
+        Ok(t) => format!("({t})"),
+        Err(e) => return Some(Err(e)),
+    };
+    let args: Vec<&Expr> = m.args.iter().collect();
+
+    let inlined = match (kind, arm) {
+        (_, ResultOptionArm::Map) => {
+            let arg = *args.first()?;
+            inline_map(&recv_text, kind, arg, self_ty, env)
+        }
+        (ResultOptionKind::Result, ResultOptionArm::MapErr) => {
+            let arg = *args.first()?;
+            inline_map_err(&recv_text, arg, self_ty, env)
+        }
+        (_, ResultOptionArm::AndThen) => {
+            let arg = *args.first()?;
+            inline_and_then(&recv_text, kind, arg, self_ty, env)
+        }
+        (ResultOptionKind::Result, ResultOptionArm::OrElse) => {
+            let arg = *args.first()?;
+            inline_or_else(&recv_text, arg, self_ty, env)
+        }
+        (ResultOptionKind::Result, ResultOptionArm::Fold) => {
+            inline_fold_result(&recv_text, &args, self_ty, env)
+        }
+        (ResultOptionKind::Option, ResultOptionArm::Fold) => {
+            inline_fold_option(&recv_text, &args, self_ty, env)
+        }
+        // Option has no `map_err` (not a method on `Option[A]` — no error side to map) and its
+        // `or_else`'s argument is a plain Option VALUE, not a closure (`or_else(o, alt:
+        // Option[A])`, `lib/std/option.myc:49`) — nothing to inline; falls through unchanged.
+        (ResultOptionKind::Option, ResultOptionArm::MapErr | ResultOptionArm::OrElse) => None,
+        (_, ResultOptionArm::UnwrapOr) => unreachable!("handled above"),
+    };
+
+    inlined.map(Ok)
 }
 
 /// Extract the "root" identifier a place-expression (an assignment LHS, a `&mut` target, or a
