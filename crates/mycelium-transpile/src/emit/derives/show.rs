@@ -2,7 +2,10 @@
 //! verbatim (no behavior change) from `lower_struct_derives`'s `"Debug"` arms + the former
 //! free-standing `derive_show_impl` helper.
 
-use super::{field_derive_eligible, DeriveCtx, DeriveHandler, DeriveOutcome};
+use super::{
+    field_derive_kind, is_seeded_scalar_width, DeriveCtx, DeriveHandler, DeriveOutcome,
+    FieldDeriveKind,
+};
 use crate::gap::{Category, GapReason};
 
 fn recognizes(name: &str) -> bool {
@@ -26,9 +29,11 @@ fn bytes_concat_chain(parts: &[String]) -> String {
 /// **Fieldless (unit) struct:** `fn render(x: T) => Bytes = "T";` — always succeeds, no field
 /// dependency (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:** a left-to-right
 /// `bytes_concat` fold of `"T(", render(f0), ", ", render(f1), …, ")"`, gated per field via
-/// [`field_derive_eligible`] — refuses the WHOLE derive (never a partial/fabricated render, G2)
-/// the moment any field is ineligible, citing that field's index + mapped type. Moved verbatim
-/// from the former `emit.rs::derive_show_impl`.
+/// [`field_derive_kind`] (DN-138 §4.5) — refuses the WHOLE derive (never a partial/fabricated
+/// render, G2) the moment any field is ineligible, citing that field's index + mapped type + the
+/// real reason. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary`-at-`Binary{64}`
+/// fields now compose (the seeded `Show` instance resolves `render(field)` — DN-138 §4.1 Alt A);
+/// `Float`/`Deferred`/a narrower-or-wider `ScalarBinary` stay honest gaps (increment 2, DN-138 §6).
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     if field_types.is_empty() {
         return Ok(format!(
@@ -36,7 +41,14 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
         ));
     }
     for (i, ft) in field_types.iter().enumerate() {
-        if !field_derive_eligible(ft) {
+        let eligible = match field_derive_kind(ft) {
+            FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
+                true
+            }
+            FieldDeriveKind::ScalarBinary => is_seeded_scalar_width(ft),
+            FieldDeriveKind::Float | FieldDeriveKind::Deferred => false,
+        };
+        if !eligible {
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(

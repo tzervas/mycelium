@@ -31,16 +31,19 @@
 //! three-way order... the implementer intends", DN-122 §13's explicit YAGNI on a law checker), so
 //! this is THIS derive's own, disclosed, self-consistent convention. Composability across a nested
 //! derived field's own `Ord3` instance holds **by construction** as long as every participating
-//! type's instance was ALSO produced by this same row (a heuristic boundary [`field_derive_eligible`]
+//! type's instance was ALSO produced by this same row (a heuristic boundary [`field_derive_kind`]
 //! already shares with [`super::show`]/[`super::init`], VR-5).
 //!
-//! **The ADR-040 Float/NaN refusal** fires FIRST, ahead of the general [`field_derive_eligible`]
-//! gate, for the identical documented reason [`super::eq`] gives.
+//! **The ADR-040 Float/NaN refusal** fires FIRST, ahead of the general [`field_derive_kind`]
+//! classification, for the identical documented reason [`super::eq`] gives.
 //!
 //! Guarantee: `Empirical` (live-oracle-verified, `src/tests/emit.rs`); the field-eligibility
 //! heuristic stays `Declared` (same VR-5 boundary as every other row in this axis).
 
-use super::{field_derive_eligible, DeriveCtx, DeriveHandler, DeriveOutcome};
+use super::{
+    field_derive_kind, is_seeded_scalar_width, DeriveCtx, DeriveHandler, DeriveOutcome,
+    FieldDeriveKind,
+};
 use crate::gap::{Category, GapReason};
 
 /// The `Ord3.cmp` "equal" sentinel this derive's own convention uses (see the module doc's
@@ -54,13 +57,39 @@ fn recognizes(name: &str) -> bool {
     name == "PartialOrd"
 }
 
+/// The precise, honest reason `ft` is ineligible for `derive(PartialOrd)` composition right now
+/// (past the ADR-040 `Float` pre-check, which always fires first) — mirrors
+/// [`super::show::show_ineligible_reason`]'s DN-138 distinction, reworded for `Ord3`.
+fn ord_ineligible_reason(ft: &str) -> String {
+    match field_derive_kind(ft) {
+        FieldDeriveKind::ScalarBinary => format!(
+            "a narrower/wider scalar than the one seeded `Ord3` instance (`Binary{{64}}`) — a \
+             `{ft}` field needs a `width_cast` this leaf does not yet compose (increment 2, \
+             DN-138 §6)"
+        ),
+        FieldDeriveKind::Deferred => format!(
+            "`{ft}`, a `Seq`/`Vec[T]`/tuple or other bracketed shape with no `Ord3` instance yet \
+             (structural recursion over it is increment 2, DN-138 §6 — WU-4)"
+        ),
+        FieldDeriveKind::Float => {
+            unreachable!("Float is refused ahead of this classifier by its own ADR-040 pre-check")
+        }
+        FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
+            unreachable!("ord_ineligible_reason is only called for an ineligible kind")
+        }
+    }
+}
+
 /// **Fieldless (unit) struct:** `fn cmp(a: T, b: T) => Binary{8} = <EQ sentinel>;` — trivially
 /// always equal, always succeeds. **Struct with fields:** a right-to-left short-circuit fold —
 /// the LAST field's `cmp` is the base case; each earlier field wraps it in `match cmp(p_i, q_i) {
 /// EQ => <inner>, other => other }`, so the first non-equal field decides the whole comparison
 /// (lexicographic order, field 0 dominates). Gated per field via the ADR-040 float check (first)
-/// then [`field_derive_eligible`] — refuses the WHOLE derive (never a partial/fabricated order,
-/// G2) the moment any field is ineligible.
+/// then [`field_derive_kind`] (DN-138 §4.5) — refuses the WHOLE derive (never a partial/fabricated
+/// order, G2) the moment any field is ineligible. **DN-138 unblock:**
+/// `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary`-at-`Binary{64}` fields now compose (the
+/// seeded `Ord3` instance resolves `cmp(p, q)` — DN-138 §4.1 Alt A); `Deferred`/a wrong-width
+/// `ScalarBinary` stay honest gaps (increment 2, DN-138 §6).
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     if field_types.is_empty() {
         return Ok(format!(
@@ -82,14 +111,21 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
                 ),
             ));
         }
-        if !field_derive_eligible(ft) {
+        let eligible = match field_derive_kind(ft) {
+            FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
+                true
+            }
+            FieldDeriveKind::ScalarBinary => is_seeded_scalar_width(ft),
+            FieldDeriveKind::Float | FieldDeriveKind::Deferred => false,
+        };
+        if !eligible {
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(
-                    "struct `{ty_name}` derive(PartialOrd): field {i} has type `{ft}`, a \
-                     primitive repr with no `Ord3` instance in this file (a primitive repr type \
-                     has no ambient `Ord3[..]` impl here) — the whole derive is left an honest \
-                     gap rather than a partial/fabricated order (G2)"
+                    "struct `{ty_name}` derive(PartialOrd): field {i} has type `{ft}`, {} — the \
+                     whole derive is left an honest gap rather than a partial/fabricated order \
+                     (G2)",
+                    ord_ineligible_reason(ft)
                 ),
             ));
         }

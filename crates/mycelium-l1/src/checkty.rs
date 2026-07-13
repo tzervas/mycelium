@@ -1430,7 +1430,10 @@ impl PhylumEnv {
                 // independently trigger the SAME seeded `(trait, head)` fact never falsely
                 // collide at link time (mirrors why a prelude TRAIT is excluded from
                 // `OwnDecls.traits`'s per-nodule collision set, this struct's own doc above).
-                if PRELUDE_INSTANCE_SEEDS.iter().any(|s| s.provides(k)) {
+                if PRELUDE_INSTANCE_SEEDS
+                    .iter()
+                    .any(|s| s.is_this_seeds_fact(k, v))
+                {
                     continue;
                 }
                 if instances.insert(k.clone(), v.clone()).is_some() {
@@ -3408,7 +3411,7 @@ fn check_nodule_with(
     // key + concrete `for_ty`/`methods`; the real body lives in `lib/std` and is pinned equal by the
     // sig-pin differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`).
     for seed in PRELUDE_INSTANCE_SEEDS {
-        seed.seed_instance_for_nodule(&mut instances, effective_nodule)?;
+        seed.seed_instance_for_nodule(&mut instances, effective_nodule);
     }
 
     // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
