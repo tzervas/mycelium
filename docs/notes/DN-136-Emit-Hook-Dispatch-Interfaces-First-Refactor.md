@@ -478,6 +478,16 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
 
 ## §10 Changelog
 
+- **2026-07-13** — **Numeric-grounding correction (append-only, house rule #3/#4/VR-5 — tracking-truth
+  reconciliation, mit #14).** The prior ratification-commit entry below claims "the live count at
+  `c044452d` is **89** `Case` literals (three independent counts agree)". Re-counted directly against
+  `git show c044452d:crates/mycelium-transpile/src/tests/emit.rs`'s `cases()` function body (both a
+  `grep -c` line-count and an independent Python regex count over the exact function span): the
+  correct count is **88**, not 89 — the "three independent counts agree" claim in the ratification
+  commit was itself the miscount (an off-by-one in the opposite direction from the earlier `88→89`
+  amendment this note's own history records). §0's Testability row and the two `cases()` count
+  mentions below are left as originally written (append-only); this entry is the current, verified
+  figure (VR-5: downgrade to the checked count, never leave a disconfirmed one standing uncorrected).
 - **2026-07-12** — **Draft → Accepted (ratified, strict 9-criterion DN-review gate, delegated ratification).**
   Re-ran the full gate against the code at `c044452d` on the patched note (`f425e4da`). **Clean pass:**
   every previously-failing item is fixed and verified against source — (1 · grounding) all refreshed

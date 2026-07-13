@@ -12,6 +12,89 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(tracking): DN-136 Phase-2 wave-1 close-out — file 11 unfiled M-ids, flip 4 stale statuses, DN-135/DN-136 append-only corrections (2026-07-13)
+
+Reconciles `tools/github/issues.yaml` against the DN-136 Phase-1 interfaces build + Phase-2
+first-wave leaves that landed on `dev` since the last reconciliation (PRs #1544/#1546–#1555;
+`dev@646607d1`) — the recurring drift this project tracks under mitigation #14, and the pattern
+this batch's own tracking already found once mid-session (an earlier `tracking-truth-reconcile`
+PR #1543 covered up through M-1089's mid-flight state). Every flip/filing below is verified against
+the actual landed code + its PR/commit before being recorded (never a blind trust of the tracker).
+
+**Filed 11 M-ids with no prior `issues.yaml` row**, per `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`
+§6 FLAG-3's reserved-id mapping (verified each slot free before minting — mitigation #1; M-1091 was
+the highest filed id at session start):
+
+- **M-1092** (DN-135 Result/Option-combinator match-inline lowering, PR #1547) — `done`.
+- **M-1093** (DN-134 struct-variant construction + collision-safe `struct_layouts`, PR #1548) —
+  `done`; this landing's `struct_layouts` population also closed M-1089's own residual as a side
+  effect.
+- **M-1094** (DN-133 qualified-associated-fn call emission, PR #1546) — `done`.
+- **M-1095** (DN-136 P1-a emit-hook table-dispatch seam, PR #1551) — `done`,
+  `depends_on: [M-1092, M-1093, M-1094]`.
+- **M-1096** (DN-136 P1-c `map.rs` type-map `TABLE`, PR #1550) — `done`.
+- **M-1097/M-1098/M-1099** (DN-136 Phase-2 L1/L2/L3 — `derive(PartialEq/Eq)`, `derive(PartialOrd/Ord)`,
+  `derive(Hash)` rows, all PR #1555) — `done`.
+- **M-1100** (DN-136 Phase-2 L4 — conversion-method `.clone()`/`.to_owned()` → identity, routed into
+  `prim_map::TABLE`, PR #1552 + the same-PR critical fix `1f4e7aa3` narrowing the receiver gate to
+  builtins only) — `done`. Note: the leaf's working branch was misnamed
+  `claude/leaf/m1101-conversion-prim-map` (off-by-one against this reserved id); the landed commit
+  content is unambiguously M-1100/L4, not a duplicate of M-1101.
+- **M-1101** (DN-136 Phase-2 L5 / M-1088's own residual — bounded inherent-impl type-param
+  transpiler emission, PR #1553) — `done`, `depends_on: [M-1088]`.
+- **M-1102** (DN-137 native unit-type build: prelude `type Unit = Unit;` + one `type_map::TABLE`
+  row) — `todo` (DN-137 Accepted 2026-07-13; not yet built).
+
+**Flipped 4 stale `status:todo` rows to `done`** (mitigation #14 — each verified against the code,
+not the tracker):
+
+- **M-1086** (DN-128 std-derive lowering library) — the Debug/Default/Clone/Copy rows landed via
+  PR #1544 (after this issue's own partial-landing note was written, a same-day ordering gap) and
+  the PartialEq/PartialOrd/Hash rows via M-1097/M-1098/M-1099 (PR #1555); all live-oracle-witnessed
+  (205/205 `mycelium-transpile` tests green). The DoD's own re-measure item has not been re-run
+  post-wave — flagged as an open measurement follow-up, not a build gap.
+- **M-1088** (DN-131 bounded-generics transpiler residual) — closed by M-1101/PR #1553
+  (`bounded_impl_type_params`, verified at `emit.rs:508`).
+- **M-1089** (DN-132 P1 struct-variant patterns) — its producer-side residual (`struct_layouts` not
+  walking `Item::Enum` variants) closed as a side effect of M-1093/PR #1548 (verified at
+  `transpile.rs:394`/`:426`).
+- **M-1091** (DN-129 Init/Fault prelude traits) — its `derive Default` → `Init` cross-note gate
+  closed by the same M-1086/PR #1544 landing.
+
+**`docs/Doc-Index.md`**: registered DN-133/DN-134/DN-135/DN-136/DN-137 rows (all previously
+unregistered despite DN-133–135 being cited by already-filed issues — a pre-existing gap this pass
+also closed) and a Planning-docs row for `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`.
+`python3 tools/github/doc_refs_check.py` now passes clean (was failing with 12 dangling refs before
+the Doc-Index rows + two `doc_refs` grammar corrections — `corpus:M-1037` is not a doc ref type,
+issue ids aren't citable that way; the worklist doc's `#l1`–`#l5` anchors don't resolve to real
+headings, so those became a plain `corpus:DN-136-phase2-bulk-gap-close-worklist` ref instead).
+
+**`docs/notes/DN-135-...md`** — append-only scope-correction addendum (house rule #3/#4): DN-135
+§Decides/§3's original "chains nest" claim is DISCONFIRMED by M-1092's landed build (a nested
+inlined `match` scrutinee fails `myc check`'s constructor type-parameter inference); each combinator
+in a chain is judged independently on its own receiver instead. Original prose left untouched.
+
+**`docs/notes/DN-136-...md`** — append-only numeric-grounding correction: the ratification commit's
+own claim ("the live count at `c044452d` is 89 `Case` literals, three independent counts agree") was
+itself a miscount — re-counted directly against `git show c044452d:.../tests/emit.rs` (both
+`grep -c` and an independent Python regex count over the exact `cases()` span): the correct figure
+is **88**, not 89.
+
+**`crates/mycelium-transpile/src/emit.rs`**: fixed the unrecognized-derive fallback message
+(`lower_struct_derives`), stale since PR #1555 landed Eq/Ord/Hash without updating it — it still
+claimed "Eq/Ord/Hash/PartialEq/PartialOrd are a separate, unbuilt increment", though
+PartialEq/PartialOrd/Hash have been recognized since that same PR (only bare `Eq`/`Ord` are
+deliberately unrecognized, by design — see `emit/derives/mod.rs::TABLE`'s doc). Updated the golden
+differential fixture (`tests/fixtures/emit_hook_golden.json`) to match; the byte-identical
+differential (`emit_hook_refactor_byte_identical_differential`) stays green.
+
+**`crates/mycelium-transpile/src/emit/derives/ord.rs`** (cosmetic, low-risk): folded the two
+separate field-scan loops (Float-check-all-fields-first, then eligibility-check-all-fields) into
+one combined per-field loop, mirroring `eq.rs`'s single-pass shape — consistent
+first-offending-field reporting when a struct has both a Float field and a separately-ineligible
+field. No test pinned the prior two-loop ordering; confirmed the byte-identical differential and
+all 205 `mycelium-transpile` tests stay green.
+
 ### chore(tracking): tracking-truth reconciliation — M-1077/1079/1080/1081/1088/1089/1090/1091 verified against `dev` (2026-07-12)
 
 `issues.yaml` had drifted from `dev`'s actual code (mitigation #14, recurring this session): the

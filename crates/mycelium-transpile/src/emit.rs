@@ -3842,8 +3842,9 @@ fn lower_struct_derives(
             Category::DeriveAttr,
             format!(
                 "struct `{ty_name}` derive(...) names {} not in the DN-128 standard-derive set this \
-                 leaf builds (Debug/Default/Clone/Copy; Eq/Ord/Hash/PartialEq/PartialOrd are a \
-                 separate, unbuilt increment) — dropped, no confirmed Mycelium surface",
+                 leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; \
+                 bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's \
+                 doc for why) — dropped, no confirmed Mycelium surface",
                 unrecognized.join(", ")
             ),
         ));
