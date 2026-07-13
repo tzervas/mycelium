@@ -1130,6 +1130,208 @@ fn string_literal_pattern_emits_with_l1_enabler() {
     );
 }
 
+/// DN-132 P1 (M-1089): a named-field **struct pattern** on an in-file struct desugars to the
+/// grammar's positional `Ctor` surface -- declaration-order placement (OQ-5) regardless of the
+/// *pattern's* field order, a wildcard `_` at every field the pattern does not name (OQ-4,
+/// regardless of whether the pattern spells `..` -- SS5.2 point 4), and the sub-pattern of a
+/// renamed/nested field binding recursively mapped.
+#[test]
+fn struct_pattern_desugars_to_positional_ctor() {
+    let cases = [
+        // All fields named, in declaration order, no rest.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, y } => x, } }",
+            "Foo(x, y)",
+        ),
+        // `..` rest: an unmentioned field is a wildcard.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, .. } => x, } }",
+            "Foo(x, _)",
+        ),
+        // No `..` but still one field unmentioned -- SS5.2 point 4: the transpiler accepts either
+        // spelling and emits the identical positional wildcard (only syntactically-valid Rust,
+        // where `rustc` already enforces `..` for a genuinely partial pattern, ever reaches here).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x } => x, } }",
+            "Foo(x, _)",
+        ),
+        // Field-order canonicalization (OQ-5): pattern spells `y, x`, out of declaration order.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { y, x } => x, } }",
+            "Foo(x, y)",
+        ),
+        // Field rename (`field: binding`) -- the sub-pattern binds a different local name.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: a, y: b } => a, } }",
+            "Foo(a, b)",
+        ),
+        // A nested/literal sub-pattern at a named field recurses through `map_pattern`.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: 0, y } => y, _ => 0 } }",
+            "Foo(0, y)",
+        ),
+        // `Self::Ctor { .. }` inside an `impl` -- the ctor-name resolution takes only the path's
+        // last segment (the identical convention `Pat::Path`/`Pat::TupleStruct` already use), so
+        // the `Self::` qualifier is transparent.
+        (
+            "struct Foo { x: u8, y: u8 } impl Foo { fn f(self) -> u8 { match self { Self { x, .. } => x, } } }",
+            "Foo(x, _)",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            myc.contains(needle),
+            "case `{rust}`: expected .myc to contain `{needle}`, got:\n{myc}\ngaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// DN-132 P1 (M-1089): the never-silent gap paths (VR-5/G2) -- a struct pattern is only ever
+/// desugared when its constructor + every named field is *confirmed* resolvable; anything short of
+/// that refuses rather than emitting a guessed/partial-arity `Ctor`.
+#[test]
+fn struct_pattern_never_silently_gaps() {
+    let cases = [
+        // No confirmed in-file layout at all (an undeclared/foreign constructor name).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Bar { x, .. } => x, _ => 0 } }",
+            "no confirmed in-file layout",
+        ),
+        // The DN-132 SS5.1 component-seam boundary this leaf documents (verify-first, mitigation
+        // #14): an **enum struct-variant** pattern still gaps today, because `struct_layouts`
+        // (`transpile.rs`, a sibling leaf's scope) does not yet walk `Item::Enum` variants -- this
+        // arm is written generically over `struct_layout`, so it composes automatically the moment
+        // that population change lands, with no further edit here.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(v: E) -> u8 { match v { E::A { x, .. } => x, _ => 0 } }",
+            "no confirmed in-file layout",
+        ),
+        // A field name absent from the resolved layout -- never a silent wildcard/drop.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { z, .. } => 0, _ => 1 } }",
+            "not a declared field",
+        ),
+        // A duplicate field name within one pattern (defensive: `syn` parses this even though
+        // `rustc` itself would reject it -- DN-132 OQ-4c).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, x, .. } => 0, _ => 1 } }",
+            "more than once",
+        ),
+        // A positional field-index member (`0: a`) on a struct-pattern -- out of DN-132 P1 scope.
+        (
+            "struct Foo(u8, u8); fn f(v: Foo) -> u8 { match v { Foo { 0: a, 1: _b } => a, } }",
+            "positional field-index member",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            !report.emitted_items.iter().any(|n| n == "f"),
+            "case `{rust}`: `f` must stay gapped, got emitted={:?} myc:\n{myc}",
+            report.emitted_items
+        );
+        assert!(
+            report.gaps.iter().any(|g| g.reason.contains(needle)),
+            "case `{rust}`: expected a gap whose reason contains `{needle}`, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-132 P1 (M-1089): every struct-pattern shape
+/// [`struct_pattern_desugars_to_positional_ctor`] proves the *text* of is run through the REAL
+/// `myc-check` oracle here, proving the emitted positional `Ctor` pattern actually **type-checks**
+/// (the property the whole DN-132 P1 deliverable is for -- it reuses the Maranget usefulness pass
+/// unchanged, so a real `myc check` pass is the honest confirmation of that claim, not just a
+/// substring match). Skips gracefully (never fails) when `myc-check` is not built, exactly like
+/// `binop_operand_gated_forms_check_clean` above.
+#[test]
+fn struct_pattern_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-struct-pattern-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // All fields named, declaration order.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, y } => x, } }",
+            "f",
+        ),
+        // `..` rest -- an unmentioned field wildcards.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, .. } => x, } }",
+            "f",
+        ),
+        // Field-order canonicalization (OQ-5): pattern spells `y, x`.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { y, x } => x, } }",
+            "f",
+        ),
+        // Field rename (`field: binding`).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: a, y: b } => a, } }",
+            "f",
+        ),
+        // Bare `Self { .. }` inside an `impl` -- the pattern-side `Self` resolution. Impl blocks
+        // are recorded under `impl <Type>`, not the bare method name (see
+        // `inherent_impl_no_self_name_collision_is_mangled_and_checks_clean`'s precedent).
+        (
+            "struct Foo { x: u8, y: u8 } impl Foo { fn f(self) -> u8 { match self { Self { x, .. } => x, } } }",
+            "impl Foo",
+        ),
+        // A three-field struct, only one field bound, `..` for the rest.
+        (
+            "struct P3 { a: u8, b: u8, c: u8 } fn f(v: P3) -> u8 { match v { P3 { b, .. } => b, } }",
+            "f",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 /// The #72 co-poison fix: a Rust ownership/identity-conversion no-op method (`.to_owned()`,
 /// `.clone()`, `.to_string()`, `.into()`, …) has no Mycelium free-function/prim referent, so
 /// desugaring it to a bare `to_owned(recv)` would FABRICATE an unknown prim (`myc check`:
