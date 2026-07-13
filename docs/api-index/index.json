@@ -2147,6 +2147,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_check::NoduleClass",
+      "kind": "enum",
+      "crate": "mycelium-check",
+      "module": "mycelium_check",
+      "file": "crates/mycelium-check/src/lib.rs",
+      "line": 281,
+      "summary": "A per-nodule verdict class (P-A, DN-124 §2.2/§2.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_check::NoduleClass::is_clean",
+      "kind": "fn",
+      "crate": "mycelium-check",
+      "module": "mycelium_check::NoduleClass",
+      "file": "crates/mycelium-check/src/lib.rs",
+      "line": 319,
+      "summary": "Whether this class credits the checked numerator (only [`NoduleClass::Clean`] does).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_check::NoduleClass::label",
+      "kind": "fn",
+      "crate": "mycelium-check",
+      "module": "mycelium_check::NoduleClass",
+      "file": "crates/mycelium-check/src/lib.rs",
+      "line": 309,
+      "summary": "The stable lowercase-agnostic label used in the `--json` contract",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_check::NoduleVerdict",
       "kind": "struct",
       "crate": "mycelium-check",
@@ -7850,7 +7883,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 490,
+      "line": 495,
       "summary": "RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7999,6 +8032,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::Phyla",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1696,
+      "summary": "The **resolved dependency set** of one phylum being checked (DN-113 §5.1) — additive over",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::Phylum",
       "kind": "struct",
       "crate": "mycelium-l1",
@@ -8054,6 +8098,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::Resolution",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 110,
+      "summary": "The checker's **principal-resolution verdict** for a demoted hole (DN-126 §4.1 — the soundness",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::Resolved",
       "kind": "struct",
       "crate": "mycelium-l1",
@@ -8065,6 +8120,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::ResolvedPhylum",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1641,
+      "summary": "A dependency phylum, already **checked and linked** (DN-113 §5.1) — the unit [`Phyla`] holds one",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::RevealError",
       "kind": "enum",
       "crate": "mycelium-l1",
@@ -8072,6 +8138,17 @@
       "file": "crates/mycelium-l1/src/reveal.rs",
       "line": 181,
       "summary": "Errors from the `reveal` primitives ([`reveal_l0`], [`reelaborate`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::StrictifyOutcome",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 176,
+      "summary": "The result of DN-126 §4's mechanical-strictification classification pass (steps 1-3: run strict,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8127,6 +8204,39 @@
       "file": "crates/mycelium-l1/src/checkty.rs",
       "line": 78,
       "summary": "A checked type.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::TypeFlag",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 138,
+      "summary": "A demoted type-level CheckError — a DN-04/RFC-0013-shaped",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::TypeFlagKind",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 82,
+      "summary": "Which demotable class a [`TypeFlag`] came from — the (currently narrow, honestly-scoped) enum",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::TypeStrictness",
+      "kind": "enum",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 45,
+      "summary": "The type-strictness mode (DN-126 §3).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8213,7 +8323,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 957,
+      "line": 961,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8224,7 +8334,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 603,
+      "line": 607,
       "summary": "A base (un-annotated) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8235,7 +8345,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 355,
+      "line": 359,
       "summary": "One constructor of a [`TypeDecl`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8246,7 +8356,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 331,
+      "line": 335,
       "summary": "A `derive Name for T` application (DN-54 §3.2 / DN-38 §8.1 / M-812).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8257,7 +8367,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 529,
+      "line": 533,
       "summary": "The execution-mode request for a definition (DN-58 §C; RFC-0004 `ExecutionMode`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8268,7 +8378,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 743,
+      "line": 747,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8279,7 +8389,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 541,
+      "line": 545,
       "summary": "A function definition.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8290,7 +8400,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 467,
+      "line": 471,
       "summary": "A function signature (shared by trait requirements and `fn` definitions).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8301,7 +8411,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::FnSig",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 504,
+      "line": 508,
       "summary": "The **names** of this signature's type parameters (dropping any bounds and width params) —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8312,7 +8422,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::FnSig",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 514,
+      "line": 518,
       "summary": "The **names** of this signature's width parameters (DN-42 / M-753 v1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8323,7 +8433,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 971,
+      "line": 975,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8334,7 +8444,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 393,
+      "line": 397,
       "summary": "A trait-instance declaration `impl Trait<args> for T { fn … }` (RFC-0019 §4.1; RFC-0007 §12.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8367,7 +8477,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1066,
+      "line": 1070,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8378,7 +8488,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1090,
+      "line": 1094,
       "summary": "A float literal from its verbatim decimal source text (ADR-040 / M-897).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8389,7 +8499,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1082,
+      "line": 1086,
       "summary": "A string literal from its **decoded** content.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8400,7 +8510,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1074,
+      "line": 1078,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8411,7 +8521,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 253,
+      "line": 257,
       "summary": "A user-defined generative-lowering rule: `lower Name[params] = <rhs>` (DN-54 §3.2 / M-812).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8422,7 +8532,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::LowerDecl",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 308,
+      "line": 312,
       "summary": "The rule's RHS as an expression, if it is expression-shaped (`None` for an item-shaped rule).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8433,7 +8543,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::LowerDecl",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 319,
+      "line": 323,
       "summary": "The rule's RHS as an item-shaped `impl` template, if it is item-shaped (`None` for an",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8554,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 291,
+      "line": 295,
       "summary": "The right-hand side of a `lower` rule (DN-54 §3.2 / §10; M-812, M-973).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8587,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 560,
+      "line": 564,
       "summary": "A value parameter `name: type`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8598,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 441,
+      "line": 445,
       "summary": "The classification of a type parameter declared in a `fn` signature's `<…>` list (DN-42 /",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8510,7 +8620,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 988,
+      "line": 992,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8532,7 +8642,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 678,
+      "line": 682,
       "summary": "A scalar element kind.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8543,7 +8653,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 669,
+      "line": 673,
       "summary": "Declared sparsity of a VSA type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8554,7 +8664,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 691,
+      "line": 695,
       "summary": "A guarantee-lattice strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8565,7 +8675,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 723,
+      "line": 727,
       "summary": "The **meet** `g₁ ∧ g₂` — the *weaker* (less trusted) of the two grades (RFC-0018 §4.1: the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8576,7 +8686,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 708,
+      "line": 712,
       "summary": "The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8587,7 +8697,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 736,
+      "line": 740,
       "summary": "`self ⊒ demand` — is `self` **at least as trusted** as `demand`? The honesty rule as a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8598,7 +8708,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 377,
+      "line": 381,
       "summary": "`trait Name<params> { fn … }` (LR-2; conventional term).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8609,7 +8719,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 408,
+      "line": 412,
       "summary": "A reference to a trait in a bound position — `Cmp` or `Cmp<Binary{8}>` (RFC-0019 §4.1 `bound`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8620,7 +8730,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 341,
+      "line": 345,
       "summary": "`type Name<params> = Ctor | Ctor(field, …) | …` (LR-1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8631,7 +8741,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 453,
+      "line": 457,
       "summary": "A (possibly **bounded**) type parameter on a **function** — `T` or `T: Cmp + Ord<T>` (RFC-0019",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8642,7 +8752,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 569,
+      "line": 573,
       "summary": "A type with an optional guarantee-strength index (`T @ Exact`; LR-6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8653,7 +8763,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::TypeRef",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 582,
+      "line": 586,
       "summary": "A type with **no** written guarantee index — the surface `T` form (the index is then",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8664,7 +8774,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::TypeRef",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 593,
+      "line": 597,
       "summary": "A type carrying an explicit guarantee-strength index — the surface `T @ g` form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8697,7 +8807,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 420,
+      "line": 424,
       "summary": "A width reference in a [`BaseType::Binary`] or [`BaseType::Ternary`] descriptor — either a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8708,7 +8818,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2778,
+      "line": 2758,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8719,7 +8829,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1898,
+      "line": 1885,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8730,7 +8840,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 2717,
+      "line": 2687,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8741,7 +8851,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1923,
+      "line": 1910,
       "summary": "Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8752,8 +8862,30 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1933,
+      "line": 1920,
       "summary": "Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::check_phylum_matured_with_deps",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1941,
+      "summary": "[`check_phylum_with_deps`] with the explicit `matured_scope` gate (see [`check_phylum_matured`]).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::check_phylum_with_deps",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1933,
+      "summary": "Like [`check_phylum`], but resolving cross-phylum `use dep::a.b.Item` references against `deps`",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8890,6 +9022,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::checkty::Phyla::deps",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty::Phyla",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1731,
+      "summary": "Read-only access to the declared dependencies, by their local name — a Law-of-Demeter-friendly",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::empty",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty::Phyla",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1705,
+      "summary": "An empty dependency set (no `[dependencies]`) — the additive-identity `Phyla` every",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::from_deps",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty::Phyla",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1714,
+      "summary": "Build a `Phyla` directly from already-resolved dependencies, keyed by their consumer-local",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::checkty::PhylumEnv::link",
       "kind": "fn",
       "crate": "mycelium-l1",
@@ -8923,6 +9088,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum::resolve",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty::ResolvedPhylum",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 1676,
+      "summary": "**The v1 single-node resolution entry point (DN-113 §5.1) — for a caller resolving ONE",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::checkty::TraitInfo",
       "kind": "struct",
       "crate": "mycelium-l1",
@@ -8945,12 +9121,34 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::checkty::check_and_resolve_with_strictness",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 2778,
+      "summary": "DN-126 (M-1077) — like [`check_and_resolve`], but under an explicit",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::checkty::check_nodule_with_strictness",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::checkty",
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "line": 2789,
+      "summary": "Like [`check_and_resolve_with_strictness`], returning just the checked [`Env`] + flags (drops the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::checkty::prim_kernel_name",
       "kind": "fn",
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10216,
+      "line": 10335,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8961,7 +9159,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10165,
+      "line": 10284,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8983,7 +9181,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10206,
+      "line": 10325,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9291,7 +9489,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 56,
+      "line": 64,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9335,7 +9533,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 57,
+      "line": 65,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9346,7 +9544,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 399,
+      "line": 404,
       "summary": "The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9467,7 +9665,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 58,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9500,7 +9698,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 63,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9535,6 +9733,39 @@
       "file": "crates/mycelium-l1/src/parse.rs",
       "line": 64,
       "summary": "Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::phyla",
+      "kind": "mod",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/lib.rs",
+      "line": 77,
+      "summary": "**DN-113 Rank 1 / M-1060** — the multi-phylum dependency-graph builder: [`phyla::PhylumNode`] +",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::phyla::PhylumNode",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::phyla",
+      "file": "crates/mycelium-l1/src/phyla.rs",
+      "line": 33,
+      "summary": "One phylum's node in a multi-phylum dependency graph (DN-113 §5.1/§9.3) — the input to",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::phyla::build_phyla_graph",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::phyla",
+      "file": "crates/mycelium-l1/src/phyla.rs",
+      "line": 66,
+      "summary": "Build every phylum in `graph`, bottom-up, resolving each node's [`Phyla`] from its already-",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9588,7 +9819,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 76,
+      "line": 88,
       "summary": "`reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9660,12 +9891,23 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::strictify",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 188,
+      "summary": "Classify a loose run's soft-flag set into the mechanically-materializable subset and the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::substrate",
       "kind": "mod",
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 82,
+      "line": 98,
       "summary": "The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9775,7 +10017,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 83,
+      "line": 99,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9852,7 +10094,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 84,
+      "line": 100,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9887,6 +10129,39 @@
       "file": "crates/mycelium-l1/src/totality.rs",
       "line": 100,
       "summary": "Classify every function in the table.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness",
+      "kind": "mod",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/lib.rs",
+      "line": 106,
+      "summary": "DN-126 (M-1077) — the **type-strictness axis**: loose/duck-typed on the interpreted path vs.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::principal",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::type_strictness::Resolution",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 123,
+      "summary": "The principal type, if this resolution has one.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::is_loose",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::type_strictness::TypeStrictness",
+      "file": "crates/mycelium-l1/src/type_strictness.rs",
+      "line": 63,
+      "summary": "`true` iff this mode demotes rather than refuses at a demotable site.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27188,7 +27463,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 122,
+      "line": 207,
       "summary": "The combined `summary.json` artifact for a batch/directory transpile run.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27210,7 +27485,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 150,
+      "line": 180,
       "summary": "One construct this transpiler could not (or would not) express in Mycelium surface syntax.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27221,7 +27496,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 194,
+      "line": 224,
       "summary": "The full report for one transpiled source file.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27331,7 +27606,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 132,
+      "line": 217,
       "summary": "The combined `union.gap.json` artifact: every [`Gap`] from every file in the batch, plus the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27397,7 +27672,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 139,
+      "line": 224,
       "summary": "One file's parse/transpile outcome, kept alongside its report so the CLI can still write the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27408,7 +27683,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 79,
+      "line": 164,
       "summary": "One file's contribution to a [`BatchSummary`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27419,8 +27694,19 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::batch",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 106,
+      "line": 191,
       "summary": "The batch-wide aggregate — same shape as [`FileSummary`] minus the per-file `file` name, so a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::batch::common_ancestor",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::batch",
+      "file": "crates/mycelium-transpile/src/batch.rs",
+      "line": 116,
+      "summary": "The output-naming `root` for an **explicit** `--files` set (M-1079/DN-124 §3.2 CLI mode,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27441,7 +27727,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 30,
+      "line": 31,
       "summary": "Recursively discover every `*.rs` file under `root`, skipping test infrastructure: any",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27463,7 +27749,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 263,
+      "line": 366,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27474,7 +27760,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 282,
+      "line": 385,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27485,7 +27771,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 707,
+      "line": 1124,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27496,7 +27782,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2273,
+      "line": 3856,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27507,7 +27793,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 910,
+      "line": 1890,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27518,7 +27804,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2504,
+      "line": 4105,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27529,7 +27815,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2862,
+      "line": 4475,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27540,7 +27826,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2399,
+      "line": 3982,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27551,7 +27837,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2541,
+      "line": 4154,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27562,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 312,
+      "line": 429,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27573,7 +27859,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 2153,
+      "line": 3633,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27584,7 +27870,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 302,
+      "line": 405,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27606,7 +27892,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::Category",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 107,
+      "line": 115,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27617,8 +27903,19 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::Category",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 143,
+      "line": 152,
       "summary": "Whether a gap of this category is **excluded from the expressible-fraction denominator** —",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::gap::Category::is_non_gap_advisory",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::gap::Category",
+      "file": "crates/mycelium-transpile/src/gap.rs",
+      "line": 173,
+      "summary": "Whether a [`Gap`] of this category is a **non-gap advisory** — recorded (never silently",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27628,7 +27925,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 174,
+      "line": 204,
       "summary": "Internal helper carrying a [`Category`] + reason before a [`Gap`] is materialized with its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27639,7 +27936,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReason",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 180,
+      "line": 210,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27650,7 +27947,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 247,
+      "line": 279,
       "summary": "Per-category gap counts, for reporting.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27661,7 +27958,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 216,
+      "line": 246,
       "summary": "Count of top-level items recorded as gaps that are **excluded from the denominator**",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27672,7 +27969,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 238,
+      "line": 268,
       "summary": "Fraction of non-test top-level items for which some `.myc` text was emitted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27683,8 +27980,19 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 231,
+      "line": 261,
       "summary": "`total_top_level_items` minus the denominator-excluded items (test items **and** bodyless",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::gap::GapReport::real_gap_count",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::gap::GapReport",
+      "file": "crates/mycelium-transpile/src/gap.rs",
+      "line": 293,
+      "summary": "The **headline** gap count — `self.gaps.len()` minus every entry whose category is a",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27694,7 +28002,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::gap::GapReport",
       "file": "crates/mycelium-transpile/src/gap.rs",
-      "line": 204,
+      "line": 234,
       "summary": "Count of gaps tagged [`Category::TestItem`] — `#[cfg(test)]` items excluded from scope.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27716,7 +28024,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::map",
       "file": "crates/mycelium-transpile/src/map.rs",
-      "line": 108,
+      "line": 125,
       "summary": "Map a Rust type to its Mycelium `type_ref` text.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27738,7 +28046,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 66,
+      "line": 67,
       "summary": "The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27760,7 +28068,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 88,
+      "line": 172,
       "summary": "One forward-mapped Rust `Expr::MethodCall` pattern (see module docs).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27771,7 +28079,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 79,
+      "line": 142,
       "summary": "The gate on a `wired: true` row's **receiver** — required so a coincidentally-same-named method",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27782,7 +28090,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 140,
+      "line": 229,
       "summary": "The table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27793,7 +28101,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 221,
+      "line": 351,
       "summary": "Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27804,7 +28112,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 228,
+      "line": 358,
       "summary": "Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27854,6 +28162,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::reserved::RESERVED_SEGMENT_SUFFIX:",
+      "kind": "const",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 185,
+      "summary": "**Gap-close-2 Phase-0 regression fix, revised (PR #1517 review HIGH — cross-file nodule-path",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::reserved::guard_ident",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -27876,12 +28195,23 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::reserved::sanitize_nodule_path",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 187,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::summarize",
       "kind": "fn",
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 263,
+      "line": 384,
       "summary": "Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27903,7 +28233,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 170,
+      "line": 264,
       "summary": "Transpile every file in `files` (already-discovered `.rs` paths), collecting a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27931,12 +28261,56 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_transpile::vet",
+      "symbol": "mycelium_transpile::type_map",
       "kind": "mod",
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/lib.rs",
       "line": 44,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::type_map::TABLE:",
+      "kind": "const",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::type_map",
+      "file": "crates/mycelium-transpile/src/type_map.rs",
+      "line": 66,
+      "summary": "The table.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::type_map::TypeMapRow",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::type_map",
+      "file": "crates/mycelium-transpile/src/type_map.rs",
+      "line": 42,
+      "summary": "One named-type mapping row.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::type_map::lookup",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::type_map",
+      "file": "crates/mycelium-transpile/src/type_map.rs",
+      "line": 222,
+      "summary": "Look up `rust_name` in [`TABLE`] (first match; the table has no duplicate `rust_name` entries",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet",
+      "kind": "mod",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile",
+      "file": "crates/mycelium-transpile/src/lib.rs",
+      "line": 45,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27971,6 +28345,39 @@
       "file": "crates/mycelium-transpile/src/vet.rs",
       "line": 490,
       "summary": "Run `myc check` on one `.myc` file and classify the outcome.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::MycChecker::vet_phylum",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::MycChecker",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 547,
+      "summary": "Run `myc check --phylum <dir> --json` (DN-124 §2.3/§3.1, P-A partial verdicts) and parse the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumNodule",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 196,
+      "summary": "One row of the `myc check --phylum --json` `nodules` array (P-A, DN-124 §2.3/§3.1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumVetSummary",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 223,
+      "summary": "The whole-batch phylum-mode vet outcome (DN-124 §3.1) — dual-reported alongside the oracle-mode",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -28041,6 +28448,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::vet::VetReport::checked_fraction_phylum",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 323,
+      "summary": "**checked_fraction_phylum** — the DN-124 P-A/M-A basis-corrected metric: myc-check-clean",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::vet::VetReport::clean_file_fraction",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -28048,6 +28466,17 @@
       "file": "crates/mycelium-transpile/src/vet.rs",
       "line": 357,
       "summary": "Companion **file-level** metric: `(clean_files, files_with_emissions)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::VetReport::delta_basis",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 335,
+      "summary": "**Δ_basis** (DN-124 §4.3 step 2) — the one-time basis-correction delta",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -28074,6 +28503,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::vet::VetReport::with_phylum",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet::VetReport",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 296,
+      "summary": "Attach a phylum-mode vet result (DN-124 §3.1) — dual-reports [`Self::checked_fraction_phylum`]",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::vet::classify_run",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -28081,6 +28521,17 @@
       "file": "crates/mycelium-transpile/src/vet.rs",
       "line": 372,
       "summary": "Build a [`VetRecord`] from one completed `myc check` run's parts.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::vet::phylum_checked_clean_items",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::vet",
+      "file": "crates/mycelium-transpile/src/vet.rs",
+      "line": 670,
+      "summary": "Credit each input's items via the phylum-mode partial verdicts (DN-124 §3.1): a file is credited",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -31655,6 +32106,18 @@
     },
     {
       "symbol": "mycelium_check::FindingKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_check::NoduleClass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_check::NoduleClass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_check::NoduleClass::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
@@ -36330,6 +36793,34 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_l1::checkty::Phyla",
+      "reason": "dedup-alias: same definition as `mycelium_l1::Phyla` at crates/mycelium-l1/src/checkty.rs:1696 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::Phyla::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_l1::checkty::PhylumEnv",
       "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:1286 — one canonical row kept"
     },
@@ -36347,6 +36838,26 @@
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum",
+      "reason": "dedup-alias: same definition as `mycelium_l1::ResolvedPhylum` at crates/mycelium-l1/src/checkty.rs:1641 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::ResolvedPhylum::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
@@ -36419,23 +36930,31 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:2778 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:2758 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1898 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1885 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:2717 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:2687 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1923 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1910 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1933 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1920 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::check_phylum_matured_with_deps",
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured_with_deps` at crates/mycelium-l1/src/checkty.rs:1941 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::checkty::check_phylum_with_deps",
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_with_deps` at crates/mycelium-l1/src/checkty.rs:1933 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::ElabError",
@@ -36835,7 +37354,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:490 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:495 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
@@ -37020,6 +37539,14 @@
     {
       "symbol": "mycelium_l1::parse::parse_phylum",
       "reason": "dedup-alias: same definition as `mycelium_l1::parse_phylum` at crates/mycelium-l1/src/parse.rs:64 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::phyla::PhylumNode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::phyla::PhylumNode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_l1::resolve",
@@ -37412,6 +37939,190 @@
     {
       "symbol": "mycelium_l1::totality::WalkDepthExceeded::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution",
+      "reason": "dedup-alias: same definition as `mycelium_l1::Resolution` at crates/mycelium-l1/src/type_strictness.rs:110 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::Resolution::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome",
+      "reason": "dedup-alias: same definition as `mycelium_l1::StrictifyOutcome` at crates/mycelium-l1/src/type_strictness.rs:176 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::StrictifyOutcome::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag",
+      "reason": "dedup-alias: same definition as `mycelium_l1::TypeFlag` at crates/mycelium-l1/src/type_strictness.rs:138 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind",
+      "reason": "dedup-alias: same definition as `mycelium_l1::TypeFlagKind` at crates/mycelium-l1/src/type_strictness.rs:82 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeFlagKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness",
+      "reason": "dedup-alias: same definition as `mycelium_l1::TypeStrictness` at crates/mycelium-l1/src/type_strictness.rs:45 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::TypeStrictness::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::type_strictness::strictify",
+      "reason": "dedup-alias: same definition as `mycelium_l1::strictify` at crates/mycelium-l1/src/type_strictness.rs:188 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lint::DOC_QUALITY_CHECKS",
@@ -50571,7 +51282,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:122 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::BatchSummary` at crates/mycelium-transpile/src/batch.rs:207 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::BatchSummary::clone",
@@ -50623,7 +51334,7 @@
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:132 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::UnionGapReport` at crates/mycelium-transpile/src/batch.rs:217 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::UnionGapReport::clone",
@@ -50651,19 +51362,19 @@
     },
     {
       "symbol": "mycelium_transpile::batch::discover_rs_files",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:30 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::discover_rs_files` at crates/mycelium-transpile/src/batch.rs:31 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::output_rel_path",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:66 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::output_rel_path` at crates/mycelium-transpile/src/batch.rs:67 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::summarize",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:263 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:384 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::transpile_batch",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:170 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:264 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Category",
@@ -50719,7 +51430,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::Gap",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:150 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::Gap` at crates/mycelium-transpile/src/gap.rs:180 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Gap::clone",
@@ -50755,7 +51466,7 @@
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:194 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::GapReport` at crates/mycelium-transpile/src/gap.rs:224 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::GapReport::clone",
@@ -51170,6 +51881,10 @@
       "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:56 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_transpile::type_map::TypeMapRow::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_transpile::vet::MycChecker",
       "reason": "dedup-alias: same definition as `mycelium_transpile::MycChecker` at crates/mycelium-transpile/src/vet.rs:449 — one canonical row kept"
     },
@@ -51188,6 +51903,34 @@
     {
       "symbol": "mycelium_transpile::vet::MycChecker::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumNodule::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumNodule::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumNodule::is_clean",
+      "reason": "dedup-alias: same definition as `mycelium_transpile::vet::VetClass::is_clean` at crates/mycelium-transpile/src/vet.rs:129 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumNodule::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumVetSummary::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumVetSummary::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::vet::PhylumVetSummary::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_transpile::vet::VetClass",

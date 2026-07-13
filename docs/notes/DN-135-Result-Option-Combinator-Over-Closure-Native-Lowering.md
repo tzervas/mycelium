@@ -302,3 +302,19 @@ residual is the closure param) is confirmed against the codebase.
   witnesses (`emit.rs:2113/2179–2189/2210–2214/2526–2549`, `result.myc:23–46`, `option.myc:36–58`,
   `cmp.myc:86`, `std-sys-host lib.rs:27–30`) verified exact. The design is unchanged; the decision is
   ratified, mechanisms stay `Declared` until M-1092 lands + is differential-witnessed (VR-5).
+- **2026-07-13 — Scope-correction addendum (append-only, house rule #3/#4 — M-1092 landed, PR #1547,
+  `dev@c044452d`).** Real-toolchain build DISCONFIRMS §Decides item 5 / §3 item 5's original claim
+  that "**chains nest**" (`.map(..).map_err(..)` composing as a nested inlined `match` scrutinee).
+  The landed build (`crates/mycelium-transpile/src/emit.rs:2959–2966`) found: a nested inlined
+  `match` used as an outer combinator's scrutinee fails `myc check`'s constructor type-parameter
+  inference unless individually type-ascribed, which this transpiler cannot generally derive.
+  `combinator_receiver_kind` therefore deliberately does **not** resolve a `MethodCall` receiver —
+  only a receiver whose `expr_env_type` resolves directly (a bare identifier, or a `(..)`/`&..`
+  wrapper) triggers an inline. **Each combinator in a chain is judged independently on its own
+  receiver** — a chain's outer combinator falls through to the unchanged generic desugar or an
+  honest gap (never a guess, G2/VR-5), rather than the nested-inline this note originally described.
+  This narrows (does not reverse) the note's central finding: the combinator surface is still not
+  the gap, and the single-receiver match-inline still closes the named `std-sys-host` residual and
+  the bulk of the corpus "Other" class instances that are NOT chained. Superseding correction only —
+  §Decides/§3/§5's prose is left as originally ratified (append-only); this entry is the current,
+  honest state.

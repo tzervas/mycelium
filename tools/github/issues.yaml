@@ -17020,7 +17020,7 @@ issues:
   - id: M-1086
     title: "M-1086 -- std-derive lowering library: resolve OQ-1 (field reflection) + Eq/Ord/Hash/Clone derive rules, Debug/Default gated on M-1090/M-1091 (DN-128)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -17061,6 +17061,24 @@ issues:
         emit<->check agreement + the `Clone`-no-op handling.
       - An M-1006/DN-124 re-measure quantifies the `DeriveAttr`-class `checked_fraction` movement
         (`Declared` until run, VR-5).
+
+      **Status-flip note (2026-07-13, tracking-truth reconciliation -- mit #14).** Every build DoD
+      item is now landed, in two commits: **PR #1544** (`f5fd567e`, `feat(transpile): DN-128
+      std-derive lowering -- Debug->Show, Default->Init, Clone/Copy no-op`) landed OQ-1 (Alt C,
+      compiler-internal field-walk composed by `lower`-shaped rows), the dependency-free
+      `Clone`/`Copy`-as-no-op row, and the `Debug`/`Default` rows (both already unblocked because
+      **M-1090** WU-1/WU-2 -- `Show` render surface -- and **M-1091** -- `Init` trait -- had already
+      landed by then); **PR #1555** (`e95f1216`) added the `PartialEq`/`PartialOrd`/`Hash` rows
+      (filed separately as **M-1097/M-1098/M-1099** per the DN-136 Phase-2 worklist's reserved-id
+      mapping -- this issue's own scope and those three overlap by design, not duplicated work).
+      The four-site `#[derive]` mapping is now the `emit/derives::TABLE` dispatch (DN-136 P1-a,
+      **M-1095**), `emit<->check` agreement live-oracle-witnessed
+      (`derive_forms_check_clean_against_real_toolchain`, 205/205 `mycelium-transpile` tests green).
+      **Residual, not gating `done`:** the DoD's own "M-1006/DN-124 re-measure quantifies the
+      DeriveAttr-class checked_fraction movement" item has not been re-run since this wave landed
+      (the DN-136 Phase-2 worklist's own re-measure predates PRs #1544/#1555) -- flagged as an
+      open measurement follow-up, not a build gap (VR-5: the build is `Empirical`/witnessed; the
+      corpus-wide measurement is a separate, not-yet-run instrument). Flipping `status: done`.
 
   - id: M-1087
     title: "M-1087 -- generic trait-instance impls (impl[T] Trait for Foo[T]): parse/AST lift + constructor-keyed coherence + per-instantiation mono synthesis + transpiler emit (DN-130)"
@@ -17112,7 +17130,7 @@ issues:
   - id: M-1088
     title: "M-1088 -- bounds on the inherent-impl type-parameter slot (impl[T: Bound] Foo[T]): bounded-parser switch + DN-103 desugar-carries-bounds (DN-131)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -17169,10 +17187,20 @@ issues:
       now-checker-accepted bounded impl slot. `status:todo` stays correct, **scoped to this residual
       only** (the transpiler emission item); the L1/kernel DoD items above are done.
 
+      **Status-flip note (2026-07-13, tracking-truth reconciliation -- mit #14).** The Transpiler
+      DoD item is now landed: **M-1101** (PR #1553, `64110037`,
+      `feat(transpile): emit bounded/unbounded inherent-impl type-parameters (DN-131, M-1101)`) --
+      filed as its own leaf issue per the DN-136 Phase-2 worklist's reserved-id mapping (L5, named
+      there explicitly as "M-1088 residual") -- replaced `emit.rs`'s unconditional bound-refusal
+      with `bounded_impl_type_params` (verified present at `emit.rs:508`), which emits the bound
+      when present and refuses only the genuinely out-of-v1-scope shapes (lifetime/parenthesized/
+      empty-path/generic-arg bounds), matching this issue's own DoD wording exactly. All DoD items
+      (Parse/Desugar/Check+mono/Witnesses/Transpiler) are now landed. Flipping `status: done`.
+
   - id: M-1089
     title: "M-1089 -- struct-variant pattern transpiler build: variant-aware StructLayout + Pat::Struct map_pattern arm (DN-132 P1, DN-34 SS8.22 finding #5 follow-on)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -17230,6 +17258,15 @@ issues:
       the landing PR's own commit message names explicitly as out of its 3-file scope. `status:todo`
       stays correct, **scoped to this residual only** (the `transpile.rs` enum-variant layout
       population); the consumer-side `emit.rs` arm is done.
+
+      **Status-flip note (2026-07-13, tracking-truth reconciliation -- mit #14).** The producer-side
+      residual is now closed -- **not** by a leaf against this issue, but as a side effect of
+      **M-1093** (DN-134 struct-variant construction + collision-safe `struct_layouts`, PR #1548,
+      `a4318e53`): `transpile.rs::struct_layouts` (verified at line 394, current dev) now walks
+      `Item::Enum` variants with `Fields::Named` at line 426, registering unconditionally and
+      collision-safely (per-ctor-name, shared with plain structs). Both this issue's own DoD halves
+      (the `Pat::Struct` consumer arm + the variant-aware `StructLayout` producer) are landed.
+      Flipping `status: done`.
 
   - id: M-1090
     title: "M-1090 -- native formatting build: std to_dec/digit_byte + Show prelude trait + transpiler write!/format! lowering (DN-127)"
@@ -17290,7 +17327,7 @@ issues:
   - id: M-1091
     title: "M-1091 -- Init + Fault prelude traits + shared seed_prelude_trait helper (DN-129)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -17341,3 +17378,274 @@ issues:
       NOT landed**: it depends on **M-1086** (DN-128 std-derive lowering library), which remains
       unbuilt (the emit-lane pending). `status:todo` stays correct, **scoped to this residual only**
       (the DN-128 cross-note gate, blocked on M-1086); the seed/helper/visibility/OQ-2 items are done.
+
+      **Status-flip note (2026-07-13, tracking-truth reconciliation -- mit #14).** The fourth DoD
+      item now IS landed: PR #1544 (`f5fd567e`, `feat(transpile): DN-128 std-derive lowering --
+      Debug->Show, Default->Init, Clone/Copy no-op`) landed AFTER this partial-landing note was
+      written (`f2b1bdd8` at 21:53, PR #1544 merged at 22:09 the same session) -- a same-day
+      ordering gap, not a re-implementation. `crates/mycelium-transpile/src/emit/derives/init.rs`'s
+      `ROW` recognizes `"Default"` and composes an `impl Init[T] for T`, live-oracle-witnessed by
+      `derive_forms_check_clean_against_real_toolchain`'s `#[derive(Default)]`/
+      `#[derive(Debug, Default)]` cases (`myc-check` CLEAN) -- see M-1086's own status-flip note.
+      Flipping `status: done`.
+  - id: M-1092
+    title: "M-1092 -- DN-135 Result/Option-combinator match-inline lowering (transpiler emit.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-135
+      - src:crates/mycelium-transpile/src/emit.rs:2959
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1092 free before minting; M-1091 was highest at filing time). Landed code with no prior
+      issues.yaml row (mit #14/#1 finding, `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`
+      §0/§6 FLAG-3). Builds DN-135 (Accepted 2026-07-12): the Result/Option combinator-directed
+      match-inline desugar for a `|()|`/`|_|`/untyped-param closure argument on a confirmed
+      Result/Option receiver.
+
+      Landed: PR #1547 (`c044452d`, `feat(transpile): DN-135/M-1092 -- Result/Option combinator
+      match-inline`). `crates/mycelium-transpile/src/emit.rs`'s
+      `try_inline_result_option_combinator` + `combinator_receiver_kind`/`result_option_arm`
+      recognize `map`/`map_err`/`and_then`/`or_else`/`fold`/`unwrap_or` on a receiver whose
+      `expr_env_type` resolves directly, gated by the `prim_map::receiver_gate_matches` no-guess
+      discipline; a chain (`.map(..).map_err(..)`) is judged per-combinator-independently, not
+      nest-inlined (a real-toolchain finding disconfirming DN-135's original "chains nest" claim --
+      see DN-135 §9's 2026-07-13 scope-correction addendum). `cargo test -p mycelium-transpile`
+      green including the live-oracle differential. `status: done`.
+  - id: M-1093
+    title: "M-1093 -- DN-134 struct-variant construction + collision-safe struct_layouts interface (transpiler emit.rs/transpile.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-134
+      - src:crates/mycelium-transpile/src/transpile.rs:394
+      - src:crates/mycelium-transpile/src/transpile.rs:426
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1093 free before minting; M-1092 was highest at filing time). Landed code with no prior
+      issues.yaml row (mit #14/#1 finding). Builds DN-134 (Accepted 2026-07-12): expression-position
+      struct-variant construction, plus the collision-safe `struct_layouts` interface (DN-136 P1-b)
+      that walks `Item::Enum` `Fields::Named` variants alongside plain structs.
+
+      Landed: PR #1548 (`a4318e53`, `feat(transpile): DN-134 expression-position struct-variant
+      construction (M-1093)`). `crates/mycelium-transpile/src/transpile.rs::struct_layouts`
+      (line 394) walks `Item::Enum` variants at line 426, collision-safely (register unconditionally,
+      condition only at use). **This closes M-1089's own named residual as a side effect** -- see
+      M-1089's status-flip note below. `status: done`.
+  - id: M-1094
+    title: "M-1094 -- DN-133 qualified-associated-fn call emission (resolution-gated Type__method, transpiler emit.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-133
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1094 free before minting; M-1093 was highest at filing time). Landed code with no prior
+      issues.yaml row (mit #14/#1 finding). Builds DN-133 (Accepted): resolution-gated qualified/
+      associated-fn call-site emission (`Type::method(...)` -> `Type__method(...)`), gated on a
+      confirmed local resolution -- never a guessed mangling.
+
+      Landed: PR #1546 (`eb1b7625`, `feat(transpile): DN-133/M-1094 -- resolution-gated
+      qualified/associated-fn call emission`). `cargo test -p mycelium-transpile` green.
+      `status: done`.
+  - id: M-1095
+    title: "M-1095 -- DN-136 P1-a emit-hook seam: table-dispatch patterns/derives/calls axes (transpiler emit/*)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1092, M-1093, M-1094]
+    doc_refs:
+      - corpus:DN-136
+      - src:crates/mycelium-transpile/src/emit/derives/mod.rs
+      - src:crates/mycelium-transpile/src/emit/patterns/mod.rs
+      - src:crates/mycelium-transpile/src/emit/calls/mod.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1095 free before minting; M-1094 was highest at filing time). Landed code with no prior
+      issues.yaml row (mit #14/#1 finding). Builds DN-136 Phase-1 (Accepted): the interfaces-first
+      emit-hook-dispatch refactor -- static per-axis handler tables (Alt B) generalizing the landed
+      `prim_map::TABLE` pattern, for the pattern-kind/derive/call-shape sub-dispatch axes.
+      `depends_on: [M-1092, M-1093, M-1094]` per DN-136 §5's own stated dependency (the
+      M-823->M-826->M-1089->M-1092->M-1094 residual-tail serialization must land first so the
+      byte-identical differential has a stable pre-refactor baseline) -- satisfied.
+
+      Landed: PR #1551 (`b1755fa6`, `DN-136/P1-a: emit hook-dispatch Alt B handler tables
+      (patterns/derives/calls)`) -- byte-identical differential over the `cases()` corpus, 3
+      witnesses green (per the merge-commit title). `status: done`.
+  - id: M-1096
+    title: "M-1096 -- DN-136 P1-c map.rs type-map TABLE (transpiler map.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-136
+      - src:crates/mycelium-transpile/src/map.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1096 free before minting; M-1095 was highest at filing time). Landed code with no prior
+      issues.yaml row (mit #14/#1 finding). Builds DN-136 §4.2 (Accepted): the additive
+      named-type-mapping `TABLE` in `map.rs`, byte-identical refactor over the pre-existing
+      dispatch.
+
+      Landed: PR #1550 (`7d3724cc`, `feat(transpile): P1-c -- map.rs named-type mapping table
+      (DN-136 §4.2)`). `status: done`.
+  - id: M-1097
+    title: "M-1097 -- DN-136 Phase-2 L1: derive(PartialEq)/derive(Eq) row (transpiler emit/derives/eq.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1095, M-1096]
+    doc_refs:
+      - corpus:DN-128
+      - corpus:DN-136-phase2-bulk-gap-close-worklist
+      - src:crates/mycelium-transpile/src/emit/derives/eq.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1097 free before minting; M-1096 was highest at filing time), per
+      `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md` §6 FLAG-3's reserved-id mapping
+      (L1). Builds DN-128's `PartialEq`/`Eq` derive row: a field-wise `and`-fold over a
+      deterministic `eq_<Type>` fn, recognizing only `"PartialEq"` (never bare `"Eq"` -- verified
+      duplicate-fn collision when both co-occur, `eq.rs`'s own module doc), with an ADR-040
+      Float/NaN whole-derive refusal ahead of the general eligibility gate.
+
+      Landed: PR #1555 (`e95f1216`, `feat(transpile): DN-136 Phase-2 DERIVE-COMPLETION --
+      PartialEq/PartialOrd/Hash derive rows`). `derive_eq_*` test family +
+      `derive_forms_check_clean_against_real_toolchain`'s `PartialEq`/`PartialEq+Eq` cases,
+      live-oracle CLEAN. `depends_on: [M-1095, M-1096]` (the frozen DN-136 axes this row is
+      appended to) -- satisfied. `status: done`.
+  - id: M-1098
+    title: "M-1098 -- DN-136 Phase-2 L2: derive(Ord)/derive(PartialOrd) row (transpiler emit/derives/ord.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1095, M-1096]
+    doc_refs:
+      - corpus:DN-128
+      - corpus:DN-136-phase2-bulk-gap-close-worklist
+      - src:crates/mycelium-transpile/src/emit/derives/ord.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1098 free before minting; M-1097 was highest at filing time), per the DN-136 Phase-2
+      worklist §6 FLAG-3 (L2). Builds DN-128's `Ord`/`PartialOrd` derive row: a lexicographic fold
+      over the landed `Ord3` prelude trait (M-1080), recognizing only `"PartialOrd"` (same
+      duplicate-instance-avoidance reasoning as `eq.rs`), ADR-040 Float/NaN refusal.
+
+      Landed: PR #1555 (`e95f1216`). `derive_ord_*` test family + the live-oracle
+      `PartialOrd`/`PartialOrd+Ord` cases, CLEAN. **Tracking-truth reconciliation follow-up
+      (2026-07-13):** folded `ord.rs::compose`'s two separate field-scan loops (Float-then-
+      eligibility) into one combined per-field loop, mirroring `eq.rs`'s single-pass shape, for
+      consistent first-offending-field reporting when a struct has both a Float field and a
+      separately-ineligible field -- no test pinned the prior two-loop ordering; the byte-identical
+      differential (`emit_hook_refactor_byte_identical_differential`) stays green (not exercised by
+      that fixture). `depends_on: [M-1095, M-1096]` satisfied. `status: done`.
+  - id: M-1099
+    title: "M-1099 -- DN-136 Phase-2 L3: derive(Hash) row (transpiler emit/derives/hash.rs)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1095, M-1096]
+    doc_refs:
+      - corpus:DN-128
+      - corpus:DN-136-phase2-bulk-gap-close-worklist
+      - src:crates/mycelium-transpile/src/emit/derives/hash.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1099 free before minting; M-1098 was highest at filing time), per the DN-136 Phase-2
+      worklist §6 FLAG-3 (L3). Builds DN-128's `Hash` derive row: a fold over the landed
+      `hash.blake3` kernel prim (DN-34 §8.17/M-912), no new kernel prim.
+
+      Landed: PR #1555 (`e95f1216`). `derive_hash_*` test family + the live-oracle `Hash` case,
+      CLEAN. `depends_on: [M-1095, M-1096]` satisfied. `status: done`.
+  - id: M-1100
+    title: "M-1100 -- DN-136 Phase-2 L4: conversion-method mapping (.clone/.to_owned -> identity, prim_map row)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1095, M-1096]
+    doc_refs:
+      - corpus:DN-136
+      - corpus:DN-136-phase2-bulk-gap-close-worklist
+      - src:crates/mycelium-transpile/src/prim_map.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1100 free before minting; M-1099 was highest at filing time), per the DN-136 Phase-2
+      worklist §6 FLAG-3 (L4). Builds M-1037's (see `depends_on`/body cross-reference; M-1037 is an
+      issue id, not a doc, so it is not a `doc_refs` entry) conversion-method mapping: `.clone()`/`.to_owned()`
+      -> identity passthrough, routed into `prim_map::TABLE` (a `MethodCall` receiver-call shape,
+      the SAME axis the method-prim table already owns -- a spec correction from the worklist's
+      naive "it's calls-shaped" read; see worklist §4 L4 row).
+
+      Landed: PR #1552 (`646607d1`, `feat(transpile): L4 -- prim_map clone identity row (DN-136
+      Phase-2, M-1100)`) -- **NOTE: the leaf's working branch was misnamed
+      `claude/leaf/m1101-conversion-prim-map` (an off-by-one against this reserved id), but the
+      landed commit message and content are unambiguously M-1100/L4**; not a duplicate of M-1101
+      (DN-131 bounded-generics, a disjoint file). **Critical fix**: PR #1552's own review reproduced
+      a silent-swap (`ReceiverGate::AnyKnown` fired the clone-identity row on ANY resolvable
+      receiver, including a user type with a hand-written, non-derived `Clone` impl that mutates
+      state) -- fixed by `1f4e7aa3` (`fix(transpile): CRITICAL -- narrow clone-identity receiver
+      gate to builtins only`), landed in the same PR before merge (`ReceiverGate::AnyBuiltinScalar`,
+      builtin/primitive receivers only; a user-named-type receiver now GAPs, never-silent). `depends_on:
+      [M-1095, M-1096]` (the frozen axes) -- satisfied (via `prim_map::TABLE`, the sibling
+      registry DN-136 froze alongside `emit/derives`/`emit/calls`). `status: done`.
+  - id: M-1101
+    title: "M-1101 -- DN-136 Phase-2 L5 / M-1088 residual: bounded inherent-impl type-param transpiler emission"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
+    epic: E28-1
+    depends_on: [M-1088]
+    doc_refs:
+      - corpus:DN-131
+      - corpus:DN-136-phase2-bulk-gap-close-worklist
+      - src:crates/mycelium-transpile/src/emit.rs:508
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1101 free before minting; M-1100 was highest at filing time), per the DN-136 Phase-2
+      worklist §6 FLAG-3 (L5, explicitly named there as "M-1088 residual"). Closes M-1088's
+      Transpiler DoD item: replaces `emit.rs`'s prior unconditional refusal of any bounded
+      inherent-impl type parameter with `bounded_impl_type_params` -- a Rust `impl<T: Bound>
+      Foo<T>` now emits the bounded `.myc` impl slot (plain trait-name bounds only; a lifetime,
+      parenthesized, empty-path, or generic-arg bound stays an honest, explicitly-cited gap, VR-5).
+
+      Landed: PR #1553 (`64110037`, `feat(transpile): emit bounded/unbounded inherent-impl
+      type-parameters (DN-131, M-1101)`). `depends_on: [M-1088]` (the kernel/L1 side PR #1529
+      already landed; this closes the one remaining DoD item) -- see M-1088's own status-flip note
+      below. `status: done`.
+  - id: M-1102
+    title: "M-1102 -- DN-137 native unit-type build: prelude Unit = Unit + type_map::TABLE row"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-137
+      - src:crates/mycelium-transpile/src/map.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1102 free before minting; M-1101 was highest at filing time), per the DN-136 Phase-2
+      worklist §6 FLAG-3 (a design-tracking id, not yet build-ready at filing). DN-137 (Accepted
+      2026-07-13, `docs/notes/DN-137-Native-Answer-To-Unit-Type.md`) ratified: a prelude
+      nullary-constructor data type `type Unit = Unit;` (DN-111 Native Equivalent, the arity-0
+      member of the M-826 tuple/product family) as Mycelium's native answer to Rust's `()` --
+      no new kernel node, no grammar change. The `()`-has-no-representable-value gap is the single
+      largest specific reason (26/203) in the whole `Other`-class corpus tail (DN-136 Phase-2
+      worklist §3 D1).
+
+      Definition of Done (DN-137, restated as this issue's build gate):
+      - A prelude nullary-constructor declaration `type Unit = Unit;` seeded (mechanism TBD --
+        either a literal prelude source fragment or a `PRELUDE_TRAIT_SEEDS`-style programmatic
+        seed; a build-time decision, not yet made).
+      - One `type_map::TABLE` row mapping Rust's `()` to `Unit` (`crates/mycelium-transpile/src/
+        map.rs`).
+      - A transpiler emission witness: a Rust `fn f() { ... }` (implicit `-> ()`) or an explicit
+        `-> ()` return maps to `=> Unit` with a trailing `Unit` value expression, `myc check`-clean,
+        differential-witnessed.
+      - `Declared` until built; `Empirical` once witnessed (VR-5).
+      Not yet started. `status: todo`.

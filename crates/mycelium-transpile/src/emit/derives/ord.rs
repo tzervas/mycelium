@@ -68,23 +68,20 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
              Binary{{8}} =\n    {ORD3_EQ};\n}};"
         ));
     }
-    if let Some((i, _)) = field_types
-        .iter()
-        .enumerate()
-        .find(|(_, ft)| ft.as_str() == "Float")
-    {
-        return Err(GapReason::new(
-            Category::DeriveAttr,
-            format!(
-                "struct `{ty_name}` derive(PartialOrd): field {i} has type `Float` — a derived \
-                 TOTAL order over a float field is refused (ADR-040 §2.4 NaN semantics: NaN has \
-                 no order position under IEEE-754 §5.11's partial order, so a structural \
-                 three-way `Ord3.cmp` fold cannot honestly claim a total order here) — the whole \
-                 derive is left an honest gap rather than a silently-wrong order (G2)"
-            ),
-        ));
-    }
     for (i, ft) in field_types.iter().enumerate() {
+        if ft == "Float" {
+            return Err(GapReason::new(
+                Category::DeriveAttr,
+                format!(
+                    "struct `{ty_name}` derive(PartialOrd): field {i} has type `Float` — a \
+                     derived TOTAL order over a float field is refused (ADR-040 §2.4 NaN \
+                     semantics: NaN has no order position under IEEE-754 §5.11's partial order, \
+                     so a structural three-way `Ord3.cmp` fold cannot honestly claim a total \
+                     order here) — the whole derive is left an honest gap rather than a \
+                     silently-wrong order (G2)"
+                ),
+            ));
+        }
         if !field_derive_eligible(ft) {
             return Err(GapReason::new(
                 Category::DeriveAttr,
