@@ -1828,47 +1828,62 @@ fn struct_variant_construction_forms_check_clean_against_real_toolchain() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The #72 co-poison fix: a Rust ownership/identity-conversion no-op method (`.to_owned()`,
-/// `.clone()`, `.to_string()`, `.into()`, …) has no Mycelium free-function/prim referent, so
-/// desugaring it to a bare `to_owned(recv)` would FABRICATE an unknown prim (`myc check`:
-/// `unknown function/constructor/prim to_owned`). It must be gapped, never fake-emitted (G2/VR-5).
-/// Verified against the real oracle in the vet loop: without this gap, emitting the string-literal
-/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — poisons
-/// the whole file's file-gated `checked_fraction`; with it, that fn gaps cleanly (no regression) and
-/// gapping the fabricated conversions un-poisons real files (a measured `checked_fraction` rise).
+/// The #72 co-poison fix, UPDATED (M-1100 residual, `to_owned` follow-on leaf): a Rust
+/// ownership/identity-conversion no-op method (`.to_owned()`, `.clone()`, `.to_string()`,
+/// `.into()`, …) with no Mycelium free-function/prim referent must never be desugared to a
+/// fabricated bare call (`myc check`: `unknown function/constructor/prim <name>`) — G2/VR-5. That
+/// invariant is unchanged. What changed (this leaf): `crate::prim_map::TABLE` now carries an
+/// `AnyBuiltinScalar`-gated identity row for `to_owned` (mirroring `clone`'s row, PR #1552) — sound
+/// because Rust's orphan rule forecloses any downstream `impl ToOwned` for a foreign
+/// builtin/primitive receiver type (`bool`/`u8..u128`/.../`String`/`str`). So a `.to_owned()` call
+/// on a receiver KNOWN to be such a builtin (a bare identifier whose mapped type resolves, e.g.
+/// `&str`/`String` -> `Bytes`) now emits as identity, not a gap; a `.to_owned()` call on any
+/// receiver that does NOT resolve to a known builtin scalar (a user-named type, or an unresolved
+/// expression like a string literal or a nested call) still gaps exactly as before — the
+/// fabrication-avoidance invariant this test exists to pin is unaffected for those cases. Verified
+/// against the real oracle in the vet loop: without the original gap, emitting the string-literal
+/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — used
+/// to poison the whole file's file-gated `checked_fraction`; that literal-receiver arm still gaps
+/// today (a string literal is not a bare-identifier receiver `crate::emit::expr_env_type` can
+/// resolve), so the whole-fn-gaps invariant for that real corpus shape is unchanged.
 #[test]
 fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
-    // A bare `.to_owned()` on a `&str` must gap, not emit a fabricated `to_owned(...)` call.
+    // A bare `.to_owned()` on a `&str` (maps to the builtin scalar `Bytes`) is now sound identity
+    // (this leaf) — it must emit cleanly as the receiver unchanged, never a fabricated
+    // `to_owned(...)` call, and never gap.
     let rust = "fn f(s: &str) -> String { s.to_owned() }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        !report.emitted_items.iter().any(|n| n == "f"),
-        "a `.to_owned()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
-        report.emitted_items
+        report.emitted_items.iter().any(|n| n == "f"),
+        "a `.to_owned()` on a builtin-scalar (`Bytes`) receiver must emit identity (not gap), \
+         got emitted_items={:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
     );
     assert!(
         !myc.contains("to_owned("),
         "the fabricated `to_owned(...)` bare call must NEVER be emitted, got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("ownership/identity-conversion no-op method")),
-        "the conversion gap must name the no-op-conversion class, got {:?}",
-        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        myc.contains("(s)"),
+        "expected the identity passthrough `(s)`, got:\n{myc}"
     );
 
     // The real `checkty::vsa_kernel_model_id` shape: a string-literal `match` (now emittable per
-    // M-1035) whose arm bodies are `.to_owned()` — the whole fn must gap cleanly (the enabler flip
-    // does NOT drag a fabricated `to_owned` into an emission), so no check-failing surface lands.
+    // M-1035) whose arm bodies are `.to_owned()` — the literal-receiver arm (`"A" =>
+    // "a".to_owned()`) has an unresolved receiver (`crate::emit::expr_env_type` only resolves a
+    // bare identifier or a paren/reference wrapper around one, never a literal), so it still gaps,
+    // and the whole fn therefore still gaps cleanly — unaffected by the bare-identifier identity
+    // fix on the other arm (`s.to_owned()`).
     let real =
         "fn m(s: &str) -> String { match s { \"A\" => \"a\".to_owned(), _ => s.to_owned() } }";
     let (myc2, report2) = transpile_source(real, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
         !report2.emitted_items.iter().any(|n| n == "m"),
-        "the to_owned-bodied string-match fn must gap (no fabricated emission), got {:?}",
+        "the `\"a\".to_owned()` literal-receiver arm is unresolved and must still gap the whole \
+         fn (no fabricated emission), got {:?}",
         report2.emitted_items
     );
     assert!(
@@ -1877,7 +1892,8 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
     );
 
     // An explicit `.deref()` call is the same fabrication class (the docstring claims `Deref`
-    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review fix).
+    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review
+    // fix) — `deref` is not in `prim_map::TABLE`, deliberately withheld, unaffected by this leaf.
     let deref = "fn g(s: &str) -> &str { s.deref() }";
     let (myc3, report3) = transpile_source(deref, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
@@ -1889,6 +1905,34 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
     assert!(
         !myc3.contains("deref("),
         "the fabricated `deref(...)` bare call must NEVER be emitted, got:\n{myc3}"
+    );
+
+    // A `.to_owned()` on a USER-NAMED-TYPE receiver must NEVER fire the builtin-scalar identity
+    // row — the receiver's `ToOwned` impl is not foreclosed by the orphan rule (only a *foreign*
+    // type's is), and its `Owned` associated type need not even equal `Self` (std's own
+    // `str -> String`/`[T] -> Vec<T>` are exactly this shape), so assuming identity would be an
+    // unchecked guess (G2/VR-5). Mirrors `src/tests/prim_map.rs`'s
+    // `clone_on_user_named_type_receiver_never_fires_identity_and_gaps` for the `clone` row.
+    let user_type = "fn snap(t: Ticket) -> Ticket { t.to_owned() }";
+    let (myc4, report4) = transpile_source(user_type, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report4.emitted_items.iter().any(|n| n == "snap"),
+        "a `.to_owned()` on a user-named-type receiver (`Ticket`, not a builtin scalar) must \
+         NEVER emit as identity, got emitted_items={:?}, gaps={:?}, myc=\n{myc4}",
+        report4.emitted_items,
+        report4.gaps
+    );
+    assert!(
+        !myc4.contains("fn snap"),
+        "no `fn snap` declaration of any shape may ever be emitted, got:\n{myc4}"
+    );
+    assert!(
+        report4.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "expected `snap` to gap via the `is_unmappable_conversion_method` catch-all, got {:?}",
+        report4.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
 

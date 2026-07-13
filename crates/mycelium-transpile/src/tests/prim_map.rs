@@ -289,27 +289,149 @@ fn clone_on_unresolved_receiver_type_still_gaps_never_fabricates() {
     );
 }
 
-/// NEVER-SILENT (G2/VR-5) regression guard: `to_owned`/`to_string`/`into`/`deref` are
-/// DELIBERATELY WITHHELD from `TABLE` this leaf (L4, DN-136 Phase-2, M-1100 — see the module
-/// doc's L4 section for each one's own verify-first finding), so the pre-existing
-/// `is_unmappable_conversion_method` gap in `emit.rs` keeps handling them exactly as before —
-/// unchanged. Pins that decision directly against the table (not a guess about emitted text), so
-/// a future accidental/silent addition of one of these rows is caught here first.
+/// NEVER-SILENT (G2/VR-5) regression guard: `to_string`/`into`/`deref` are DELIBERATELY WITHHELD
+/// from `TABLE` (L4, DN-136 Phase-2, M-1100 — see the module doc's L4 section for each one's own
+/// verify-first finding), so the pre-existing `is_unmappable_conversion_method` gap in `emit.rs`
+/// keeps handling them exactly as before — unchanged. Pins that decision directly against the
+/// table (not a guess about emitted text), so a future accidental/silent addition of one of these
+/// rows is caught here first. `to_owned` was withheld by the original L4 leaf (a flagged residual)
+/// but is added by this follow-on leaf — see the converse check below.
 #[test]
-fn to_owned_to_string_into_deref_are_not_in_the_table_deliberately_withheld() {
-    for method in ["to_owned", "to_string", "into", "deref"] {
+fn to_string_into_deref_are_not_in_the_table_deliberately_withheld() {
+    for method in ["to_string", "into", "deref"] {
         assert!(
             crate::prim_map::lookup(method).is_none(),
-            "`{method}` must NOT be in prim_map::TABLE (deliberately withheld this leaf — see \
-             the module doc's L4 section for its verify-first finding); the existing \
+            "`{method}` must NOT be in prim_map::TABLE (deliberately withheld — see the module \
+             doc's L4 section for its verify-first finding); the existing \
              `is_unmappable_conversion_method` gap in `emit.rs` must keep handling it unchanged"
         );
     }
-    // `clone` IS in the table (the one method this leaf adds) — the converse check, so this test
-    // cannot pass by accident (e.g. an empty table).
+    // `clone`/`to_owned` ARE in the table — the converse check, so this test cannot pass by
+    // accident (e.g. an empty table).
+    for method in ["clone", "to_owned"] {
+        assert!(
+            crate::prim_map::lookup(method).is_some(),
+            "`{method}` must be in prim_map::TABLE (an identity-conversion addition)"
+        );
+    }
+}
+
+/// WIRED (this leaf, M-1100 residual): `.to_owned()` on a receiver whose mapped type is a fixed
+/// **builtin/primitive scalar** (`ReceiverGate::AnyBuiltinScalar` — `Bool`/`Bytes`/some concrete
+/// `Binary{N}`) emits the receiver UNCHANGED via the documented `myc_prim: ""`
+/// parenthesized-passthrough convention (`(recv)`), exactly like `clone` above — never a
+/// fabricated bare `to_owned(recv)` call (the exact fabrication class
+/// `is_unmappable_conversion_method` exists to prevent — see
+/// `src/tests/emit.rs::conversion_noop_method_gaps_never_fabricates_unknown_prim`, updated by this
+/// leaf to reflect the new identity behavior for a bare-identifier `&str`/`String` receiver).
+#[test]
+fn to_owned_on_known_builtin_receiver_emits_identity_passthrough() {
+    let cases = [
+        ("fn f(x: u64) -> u64 { x.to_owned() }", "(x)"),
+        ("fn f(x: bool) -> bool { x.to_owned() }", "(x)"),
+        ("fn f(x: String) -> String { x.to_owned() }", "(x)"),
+        ("fn f(s: &str) -> String { s.to_owned() }", "(s)"),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == "f"),
+            "case `{rust}`: expected `f` in emitted_items, got {:?} (gaps={:?})",
+            report.emitted_items,
+            report.gaps
+        );
+        assert!(
+            myc.contains(needle) && !myc.contains("to_owned("),
+            "case `{rust}`: expected the identity passthrough `{needle}` and NO fabricated \
+             `to_owned(...)` call, got:\n{myc}"
+        );
+    }
+}
+
+/// **Soundness regression, mirroring `clone_on_user_named_type_receiver_never_fires_identity_and_gaps`
+/// above.** A receiver whose mapped type is a user-named type must NEVER fire the `.to_owned()`
+/// identity row — `ToOwned`'s `Owned` associated type need not even equal `Self` for a user impl
+/// (std's own `str -> String`/`[T] -> Vec<T>` are exactly this shape), so assuming identity there
+/// would silently guess a transformation that may not even preserve the receiver's own type,
+/// reporting a clean success while producing behaviorally wrong (or outright type-mismatched)
+/// output (G2's central anti-pattern: a silent swap).
+#[test]
+fn to_owned_on_user_named_type_receiver_never_fires_identity_and_gaps() {
+    let rust = "fn snap(t: Ticket) -> Ticket { t.to_owned() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        crate::prim_map::lookup("clone").is_some(),
-        "`clone` must be in prim_map::TABLE (this leaf's one addition)"
+        !report.emitted_items.iter().any(|n| n == "snap"),
+        "a `.to_owned()` on a user-named-type receiver (`Ticket`, not a builtin scalar) must \
+         NEVER emit `snap` as a clean identity passthrough. Got emitted_items={:?}, gaps={:?}, \
+         myc=\n{myc}",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        !myc.contains("fn snap"),
+        "no `fn snap` declaration of any shape (identity passthrough or otherwise) may ever be \
+         emitted, got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "expected `snap` to gap via the `is_unmappable_conversion_method` catch-all, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// NOT gated: `.to_owned()` on a receiver whose type does NOT resolve at all (a nested call
+/// expression) never fires the identity row (VR-5: no guess) — same receiver-gate discipline as
+/// `clone_on_unresolved_receiver_type_still_gaps_never_fabricates` above.
+#[test]
+fn to_owned_on_unresolved_receiver_type_still_gaps_never_fabricates() {
+    let rust = "fn f(x: Thing) -> Thing { g(x).to_owned() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "a `.to_owned()` on an unresolved receiver must still gap (the pre-existing \
+         `is_unmappable_conversion_method` catch-all), got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("to_owned("),
+        "the fabricated `to_owned(...)` bare call must NEVER be emitted, got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "the conversion gap must name the no-op-conversion class, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// Direct unit-level pin (belt-and-suspenders): `ReceiverGate::AnyBuiltinScalar` is the gate both
+/// `clone` and `to_owned` rows share — already pinned by `any_builtin_scalar_gate_excludes_user_named_types`
+/// above; this test just confirms `lookup("to_owned")` actually uses that gate (not a copy/paste
+/// drift onto some other variant).
+#[test]
+fn to_owned_row_uses_any_builtin_scalar_gate() {
+    use crate::prim_map::ReceiverGate;
+
+    let row = crate::prim_map::lookup("to_owned").expect("`to_owned` must be in TABLE");
+    assert_eq!(
+        row.receiver_gate,
+        ReceiverGate::AnyBuiltinScalar,
+        "the `to_owned` row must use `AnyBuiltinScalar` (never the broader `AnyKnown`), for the \
+         identical soundness reason as `clone`'s row"
+    );
+    assert!(
+        row.wired,
+        "`to_owned` must be `wired: true` (an identity emission, not PENDING)"
+    );
+    assert_eq!(
+        row.myc_prim, "",
+        "`to_owned` must use the identity-passthrough sentinel"
     );
 }
 
@@ -416,6 +538,70 @@ fn clone_identity_checks_clean_against_real_toolchain() {
             "case {i} (`{rust}`) leaked a fabricated `clone(...)` call, got:\n{myc}"
         );
         let path = dir.join(format!("clone_case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// **The verify-first proof** (mitigation #14) for this leaf's `to_owned` row: every
+/// identity-passthrough `.to_owned()` emission is run through the REAL `myc-check` oracle over a
+/// `Binary{64}`-, `Bool`-, and `Bytes`-typed receiver (`u64`/`bool`/`String`, plus the `&str`
+/// bare-identifier shape from the #72 test), proving the emitted conversions check CLEAN, not
+/// just a substring match. Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn to_owned_identity_checks_clean_against_real_toolchain() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "prim_map: to_owned live oracle test skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`). The \
+             fixture-corpus text assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-prim-map-to-owned-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        "fn f_binary(x: u64) -> u64 { x.to_owned() }",
+        "fn f_bool(x: bool) -> bool { x.to_owned() }",
+        "fn f_bytes(x: String) -> String { x.to_owned() }",
+        "fn f_str(s: &str) -> String { s.to_owned() }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        assert!(
+            !myc.contains("to_owned("),
+            "case {i} (`{rust}`) leaked a fabricated `to_owned(...)` call, got:\n{myc}"
+        );
+        let path = dir.join(format!("to_owned_case_{i}.myc"));
         std::fs::write(&path, &myc).expect("write case .myc");
 
         let checker = crate::vet::MycChecker {
