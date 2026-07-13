@@ -1,18 +1,24 @@
 #!/usr/bin/env bash
 # Test matrix for scripts/hooks/branch_guard_parse.py — the per-invocation structural parser
-# behind the branch-guard PreToolUse hook (mitigation #12, variant 3: 2026-07-01 rewrite).
+# behind the branch-guard PreToolUse hook (mitigation #12: variant 3, 2026-07-01; variant 4,
+# 2026-07-13 — effective-target-worktree resolution).
 #
-# Exercises the parser directly (bypassing the bash hook's payload/cwd plumbing, which is
-# unchanged from the prior fix and not what this rewrite touches) against:
-#   - the must-ALLOW cases that were false-blocked before this rewrite (compound commands where
-#     a protected-branch word appears only as a merge SOURCE, in a commit message, or attached to
-#     a force flag on an unrelated git subcommand);
+# Exercises the parser directly (bypassing the bash hook's payload/cwd plumbing except where a
+# test row explicitly passes a run-dir to exercise that plumbing) against:
+#   - the must-ALLOW cases that were false-blocked before the variant-3 rewrite (compound commands
+#     where a protected-branch word appears only as a merge SOURCE, in a commit message, or
+#     attached to a force flag on an unrelated git subcommand);
 #   - the must-BLOCK cases that must remain blocked (real protected-branch pushes/commits/merges
 #     and real force-pushes, including --force-with-lease / --force-if-includes / a leading '+'
 #     refspec);
 #   - the fail-safe (default-deny) cases: dynamic content ($()/`` `` /<()/>()), unterminated
-#     quoting, unparseable push flags, and a git -C/--git-dir/--work-tree redirect combined with
-#     an operation whose verdict depends on the (now-ambiguous) current branch.
+#     quoting, unparseable push flags, and a git --git-dir/--work-tree redirect combined with an
+#     operation whose verdict depends on the (now-ambiguous) current branch;
+#   - variant-4 cases: a leading `cd <path>` and/or a `git -C <path>` that changes the EFFECTIVE
+#     target worktree away from the payload/harness `run-dir` — both the now-fixed false-positive
+#     (a cd into a non-protected leaf worktree must ALLOW even when the initial branch/run-dir is
+#     protected) and the still-must-BLOCK/fail-closed companions (cd onto a protected branch,
+#     unresolvable cd/-C targets).
 #
 # Run: scripts/hooks/test-branch-guard-parse.sh
 # Exit 0 iff every row matches its expected verdict; a mismatch prints the row and the script
@@ -27,14 +33,18 @@ PROTECTED="main integration dev claude/head/*"
 pass=0
 fail=0
 
-# check <expect ALLOW|BLOCK|UNSAFE> <branch> <description> <command>
+# check <expect ALLOW|BLOCK|UNSAFE> <branch> <description> <command> [run-dir]
+# `run-dir` is optional (5th arg) — omitted, the parser behaves exactly as variant 3 (no cd/-C
+# resolution possible without a known base path); passed, it seeds the effective-cwd state so a
+# `cd`/`-C` in `cmd` can be resolved against a real fixture worktree (see the variant-4 section
+# below, which builds two tiny fixture repos to exercise this for real rather than mocking git).
 # BLOCK and UNSAFE both exit non-zero from the hook's point of view (both mean "the Bash tool
 # call is blocked") but are reported distinctly here since they are different rows in the brief:
 # BLOCK = a real protected-branch/force-push violation; UNSAFE = the fail-safe default-deny path.
 check() {
-  local expect="$1" branch="$2" desc="$3" cmd="$4"
+  local expect="$1" branch="$2" desc="$3" cmd="$4" run_dir="${5:-}"
   local out rc verdict
-  out="$(python3 "$PARSE" "$cmd" "$branch" "$PROTECTED" 2>&1)"
+  out="$(python3 "$PARSE" "$cmd" "$branch" "$PROTECTED" "$run_dir" 2>&1)"
   rc=$?
   case "$rc" in
     0) verdict="ALLOW" ;;
@@ -187,6 +197,82 @@ check UNSAFE claude/leaf/x "push dest produced by \$(cat target.txt) substitutio
 # shellcheck disable=SC2016
 check UNSAFE claude/leaf/x "git subcommand itself produced by a substitution" \
   'git $(echo push) origin main'
+
+echo ""
+echo "=== variant 4: resolve the EFFECTIVE target worktree (cd / -C), fail-closed on ambiguity ==="
+# These exercise the REAL fix (branch_guard_parse.py's Cwd tracking) against real fixture git
+# worktrees checked out on known branches — not mocked — so the resolution path (a real
+# `git -C <path> rev-parse --abbrev-ref HEAD` subprocess call) is genuinely proven, not assumed.
+FIXTURE_ROOT="$(mktemp -d)"
+trap 'rm -rf "$FIXTURE_ROOT"' EXIT
+
+make_fixture_repo() {
+  # make_fixture_repo <dir> <branch>: a minimal git repo checked out on <branch>. Explicitly
+  # disables commit signing (-c commit.gpgsign=false) since some environments set it globally
+  # without a usable gpg binary, which would otherwise fail this fixture's own setup commit.
+  local dir="$1" branch="$2"
+  git init -q -b "$branch" "$dir"
+  git -C "$dir" -c user.email=test@example.com -c user.name=test -c commit.gpgsign=false \
+    commit -q --allow-empty -m init
+}
+
+LEAF_WT="$FIXTURE_ROOT/leaf-worktree"    # simulates an isolated leaf worktree — NOT protected
+DEV_WT="$FIXTURE_ROOT/dev-worktree"      # simulates a worktree still sitting on the protected branch
+make_fixture_repo "$LEAF_WT" claude/leaf/cdtest
+make_fixture_repo "$DEV_WT" dev
+
+echo ""
+echo "--- must ALLOW: the false-positive this variant fixes ---"
+check ALLOW dev "cd into an isolated leaf worktree, then commit — payload cwd/branch is stale 'dev'" \
+  "cd $LEAF_WT && git commit -m wip" "$DEV_WT"
+check ALLOW dev "cd into a leaf worktree, then a bare push with no refspec (resolves to leaf branch)" \
+  "cd $LEAF_WT && git push" "$DEV_WT"
+check ALLOW dev "git -C <leaf-worktree> commit — payload cwd/branch is stale 'dev'" \
+  "git -C $LEAF_WT commit -m wip" "$DEV_WT"
+check ALLOW dev "a -C to the leaf dir on a no-op status segment; nothing to judge either way" \
+  "git -C $LEAF_WT status && git status" "$DEV_WT"
+
+echo ""
+echo "--- must still BLOCK: the effective target genuinely IS protected ---"
+check BLOCK claude/leaf/cdtest "cd onto a worktree still sitting on 'dev' — the real target IS protected" \
+  "cd $DEV_WT && git commit -m wip" "$LEAF_WT"
+check BLOCK claude/leaf/cdtest "git -C <dev-worktree> commit — the real target IS protected (scoped -C)" \
+  "git -C $DEV_WT commit -m wip" "$LEAF_WT"
+
+echo ""
+echo "--- fail-closed: unresolvable cd/-C targets never silently ALLOW ---"
+check UNSAFE claude/leaf/cdtest "cd to a nonexistent path, then commit — unresolvable, must fail CLOSED not open" \
+  "cd $FIXTURE_ROOT/does-not-exist && git commit -m wip" "$LEAF_WT"
+check UNSAFE claude/leaf/cdtest "git -C <nonexistent> commit — unresolvable -C target fails CLOSED" \
+  "git -C $FIXTURE_ROOT/does-not-exist commit -m wip" "$LEAF_WT"
+check UNSAFE claude/leaf/cdtest "cd - (previous dir, untracked) then commit — ambiguous, fails CLOSED" \
+  "cd - && git commit -m wip" "$LEAF_WT"
+# shellcheck disable=SC2016  # single-quoted on purpose: literal argv test data, not for local expansion.
+check UNSAFE claude/leaf/cdtest "cd to a dynamic \$(...) target (quoted as one token) then commit — fails CLOSED, never guesses" \
+  'cd "$(echo /tmp)" && git commit -m wip' "$LEAF_WT"
+
+echo ""
+echo "--- persistence semantics: cd persists across segments; -C never leaks into later segments ---"
+check ALLOW dev "cd into leaf, unrelated status, THEN commit — cd's effect persists to later segments" \
+  "cd $LEAF_WT && git status && git commit -m wip" "$DEV_WT"
+check ALLOW dev "cd into leaf; a -C to the dev worktree for an unrelated status must NOT leak; commit still resolves to leaf" \
+  "cd $LEAF_WT && git -C $DEV_WT status && git commit -m wip" "$DEV_WT"
+check BLOCK dev "a -C to the leaf worktree on an earlier segment must NOT leak forward: a later bare push (no -C, no prior cd) is still judged by the ORIGINAL 'dev' cwd" \
+  "git -C $LEAF_WT status && git push" "$DEV_WT"
+
+echo ""
+echo "--- explicit-refspec push destinations are unaffected by cd/-C resolution (unchanged) ---"
+check BLOCK dev "cd into a leaf worktree, then push to an EXPLICIT protected destination — still BLOCKed" \
+  "cd $LEAF_WT && git push origin dev" "$DEV_WT"
+check ALLOW dev "cd into a leaf worktree, explicit non-protected destination — ALLOW regardless" \
+  "cd $LEAF_WT && git push origin claude/leaf/cdtest" "$DEV_WT"
+
+echo ""
+echo "=== backward compatibility: variant-3 behavior is unchanged when run-dir is omitted ==="
+check UNSAFE claude/leaf/x "git -C <dir> bare push, no run-dir supplied — behaves as before (UNSAFE)" \
+  'git -C /some/other/dir push'
+check ALLOW claude/leaf/x "git -C <dir> push explicit refspec, no run-dir supplied — behaves as before (ALLOW)" \
+  'git -C /some/dir push origin claude/leaf/x'
 
 echo ""
 echo "----------------------------------------------------------------------"
