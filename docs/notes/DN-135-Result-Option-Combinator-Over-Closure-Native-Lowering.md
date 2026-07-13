@@ -1,14 +1,14 @@
-# Design Note DN-133 — Result/Option Combinator-over-Closure Native Lowering (the match-inline desugar)
+# Design Note DN-135 — Result/Option Combinator-over-Closure Native Lowering (the match-inline desugar)
 
 | Field | Value |
 |---|---|
-| **Note** | DN-133 |
-| **Status** | **Draft** (2026-07-12). Works the decision forward and **recommends, ranked**; it does **not** self-ratify (house rule #3 — the DN-review gate / maintainer ratifies Draft → Accepted). **Builds nothing** — every mechanism below is `Declared`/unbuilt until the FLAGGED build issue (M-1092) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** for the integrating parent, not applied here. |
-| **Decides** | *Proposes, for ratification:* (1) the **verified residual** — the Result/Option *combinator surface* (`map`/`map_err`/`and_then`/`or_else`/`fold`/`unwrap_or`) is **already a Native Equivalent** that exists and runs (`lib/std/result.myc`, `lib/std/option.myc`; M-649/M-685/687), and the generic method-desugar already rewrites `recv.m(a)` → `m(recv, a)` (`emit.rs:2179–2189`). The gap is **not** the combinator — it is the **closure argument** when its parameter is a **unit pattern `|()|`, a wildcard `|_|`, or otherwise not a single explicitly-typed identifier** (exactly what DN-118 Phase-1 leaves out — `emit.rs:2526–2549`). (2) The **native-solution class** (DN-111 §3.2): the combinator is a Native Equivalent; the closure-param residual is closed by an **Idiomatic Remapping** — a **combinator-directed match-inline** that inlines the combinator's *own* stdlib `match` body with the closure body substituted, **relocating the unit/wildcard from the (unsupported) `lambda`-parameter position to the (fully-supported) `match`-pattern position**. (3) The **gate**: the desugar fires **only** on a *confirmed* Result/Option receiver (`expr_env_type`, the exact `prim_map::receiver_gate_matches` discipline, `prim_map.rs:2121–2123`); an unknown receiver or a non-Result/Option `.map` (e.g. an iterator's) **falls through** to the unchanged generic desugar or an honest gap — never a guess (VR-5). (4) The **closure-literal vs. function-value split**: a **closure-literal** argument is inlined; a **named-function value** argument (`.map(SomeFn)`) takes the existing `m(recv, SomeFn)` free-function call unchanged. (5) The **honesty boundary + open questions** (§7/§8). It **references DN-118** for the closure-emit pass it extends (does not duplicate it), **DN-126** for the two-mode invariance argument, and **DN-111** for the taxonomy. |
+| **Note** | DN-135 |
+| **Status** | **Accepted** (2026-07-12; was **Draft** 2026-07-12, ratified the same day). Ratified by the strict DN-review gate (9-criterion pass — grounding/VR-5/G2/append-only/native-solution/KC-3/adversarial/DoD/consistency), with every decision-critical witness verified against `dev @ 08d8fc21` and the receiver-gate/`prim_map` citations corrected (see §9). Renumbered from an initial DN-133 draft to resolve a collision with the Qualified-Associated-Fn-Call DN-133. **Still builds nothing** — the decision is ratified, but every mechanism below stays `Declared`/unbuilt until the FLAGGED build issue (M-1092) lands and is differential-witnessed (VR-5). Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** for the integrating parent, not applied here. |
+| **Decides** | *Proposes, for ratification:* (1) the **verified residual** — the Result/Option *combinator surface* (`map`/`map_err`/`and_then`/`or_else`/`fold`/`unwrap_or`) is **already a Native Equivalent** that exists and runs (`lib/std/result.myc`, `lib/std/option.myc`; M-649/M-685/687), and the generic method-desugar already rewrites `recv.m(a)` → `m(recv, a)` (`emit.rs:2179–2189`). The gap is **not** the combinator — it is the **closure argument** when its parameter is a **unit pattern `\|()\|`, a wildcard `\|_\|`, or otherwise not a single explicitly-typed identifier** (exactly what DN-118 Phase-1 leaves out — `emit.rs:2526–2549`). (2) The **native-solution class** (DN-111 §3.2): the combinator is a Native Equivalent; the closure-param residual is closed by an **Idiomatic Remapping** — a **combinator-directed match-inline** that inlines the combinator's *own* stdlib `match` body with the closure body substituted, **relocating the unit/wildcard from the (unsupported) `lambda`-parameter position to the (fully-supported) `match`-pattern position**. (3) The **gate**: the desugar fires **only** on a *confirmed* Result/Option receiver (`expr_env_type`, the exact `prim_map::receiver_gate_matches` discipline — consulted at `emit.rs:2120–2123`, defined at `prim_map.rs:228`); an unknown receiver or a non-Result/Option `.map` (e.g. an iterator's) **falls through** to the unchanged generic desugar or an honest gap — never a guess (VR-5). (4) The **closure-literal vs. function-value split**: a **closure-literal** argument is inlined; a **named-function value** argument (`.map(SomeFn)`) takes the existing `m(recv, SomeFn)` free-function call unchanged. (5) The **honesty boundary + open questions** (§7/§8). It **references DN-118** for the closure-emit pass it extends (does not duplicate it), **DN-126** for the two-mode invariance argument, and **DN-111** for the taxonomy. |
 | **Feeds** | The `std-sys-host` 6/6 path — closes residual #1 in `OsEntropy::fill_bytes` (`lib.rs:27–30`); a large slice of the corpus DN-34 §8.22 "Other" gap class (combinator-over-closure appears across the stdlib port surface); DN-118 (the closure-emit pass this note's match-inline **complements** — it handles the param shapes DN-118 Phase-1 declines); DN-126 (loose/strict two-mode typing — this note's desugar is mode-invariant, a data point for that note's runnable-floor argument). |
 | **Grounds on** | **DN-111 §3.2** (native-equivalence taxonomy — Native Equivalent combinator + Idiomatic Remapping for the param residual); **DN-106 GP2** (gap-closure default = the mechanically-lowering desugar over a new kernel form — the ratified basis for desugar-to-`match` over any new closure-param grammar); **KC-3** (zero kernel growth — `match` and the stdlib combinators exist; the pass adds no L0/`Ty`/eval node); **KISS/YAGNI** (no unit-type lever, no general type-inference pass, no new combinator surface); **DRY** (inlines the combinator's *own* `match` definition — no parallel semantics; `result.myc:23–46`, `option.myc:36–58`); **DN-118** (the closure-emit pass — single explicitly-typed-identifier param only, `emit.rs:2519–2592`; the unit/wildcard/untyped param is its named out-of-scope residual); **DN-126** (two-mode typing — the match-inline needs *no* param type, so it is identical in loose and strict mode, where the alternative lambda-param-typing path would diverge); **G2/never-silent** (an unconfirmed receiver, a non-inlinable argument, and a multi-param closure are all never-silent gaps/fallthroughs, never a fabricated emission); **VR-5** (the whole design is `Declared` until built + differential-witnessed against the real oracle; no `Proven` claim). |
 | **Date** | July 12, 2026 |
-| **Task** | Scope the Result-combinator-over-closure residual that (with DN-134) blocks `std-sys-host` 6/6, and that is a corpus-wide "Other" gap class — verify-first, native solution, ranked recommendation, emission spec, adversarial stress-test, DoD. Read-only except this DN + its FLAGGED rows. Parallel-cluster slot: **DN-133** (mit #1 — DN-125..132 taken by sibling clusters; DN-133 verified free). |
+| **Task** | Scope the Result-combinator-over-closure residual that (with DN-134) blocks `std-sys-host` 6/6, and that is a corpus-wide "Other" gap class — verify-first, native solution, ranked recommendation, emission spec, adversarial stress-test, DoD. Read-only except this DN + its FLAGGED rows. Parallel-cluster slot: **DN-135** (mit #1 — DN-133 held by the Qualified-Associated-Fn-Call DN, DN-134 held by the sibling struct-variant DN; DN-135 verified free — renumbered from an initial DN-133 draft to resolve the collision). |
 
 > **Grounding + honesty (house rule #4 / VR-5 / G2).** This note **works a decision forward and
 > recommends, ranked**; it does not take it (house rule #3). Its central finding — reported on the
@@ -76,13 +76,16 @@ the closure body substituted for `f(x)` and the closure param lowered as the arm
 ```
 fill_bytes(buf).map(|()| EntropyEffect).map_err(|_| RandErr::EntropyUnavailable)
 ```
+
 lowers to (inlining `map`'s and `map_err`'s stdlib bodies, `Ok`/`Err` from `result.myc:10`):
+
 ```mycelium
 match (match fill_bytes(buf) { Ok(_) => Ok(EntropyEffect), Err(e) => Err(e) }) {
   Ok(x)  => Ok(x),
   Err(_) => Err(RandErr.EntropyUnavailable)
 }
 ```
+
 — every construct here is already active grammar (`match`, `Ok`/`Err` ctors, wildcard patterns, nested
 `match`), and this is *definitionally* what `result.myc`'s `map`/`map_err` mean (§1.1 above), so it is
 maximally faithful (a beta-reduction of the stdlib combinator), zero kernel growth (KC-3).
@@ -191,8 +194,10 @@ Run the recommendation through the sequences that would break it:
 1. **Iterator `.map` false-fire.** `v.iter().map(|x| …)` must NOT get the Result desugar. **Held:** the
    receiver gate (§3.2) fires only on a *confirmed* `Result`/`Option` receiver; an iterator receiver falls
    through to the generic desugar unchanged. The gate is the same no-guess mechanism `prim_map` already
-   uses (`prim_map.rs:2121–2123`); the module doc there (`prim_map.rs:25–29`) is the precedent for exactly
-   this discipline — it *declines* to map `.checked_mul` for a receiver-type mismatch reason.
+   uses — the receiver-type gate `receiver_gate_matches` (consulted at `emit.rs:2120–2123`, defined at
+   `prim_map.rs:228`); and the `prim_map` module doc (`prim_map.rs:25–29`) is a sibling precedent for the
+   same decline-don't-guess discipline — it *declines* to map `.checked_mul` for a **value-shape** mismatch
+   (`Option[Binary{N}]` vs bare `Binary{N}`), never fabricating a body.
 2. **Cross-crate receiver whose type is unknown.** In *bare vet profiling* of the Rust file,
    `mycelium_std_sys::rand::fill_bytes(buf)`'s `Result` return may not resolve in `expr_env_type` ⇒ the
    gate honestly **gaps** (never fabricates `Ok`/`Err`). **This is a bounded-faithfulness point, stated
@@ -270,7 +275,7 @@ residual is the closure param) is confirmed against the codebase.
   a new block in `visit_method_call`). One leaf: **M-1092** (`depends_on: []`; no shared-file or cross-DN
   dependency — the combinator surface it targets already exists).
 - **Where it sits in 6/6:** `std-sys-host`'s two impl bodies carry the two residuals beyond the
-  5-capability punch-list. **DN-133/M-1092 closes residual #1** (the `.map(|()|…).map_err(|_|…)` chain in
+  5-capability punch-list. **DN-135/M-1092 closes residual #1** (the `.map(|()|…).map_err(|_|…)` chain in
   `OsEntropy::fill_bytes`, `lib.rs:27–30`); **DN-134/M-1093 closes residual #2** (the struct-variant
   construction in `OsClock::wall_now`, `lib.rs:63–65`). Both are `emit.rs` serial-lane leaves; landed with
   the existing 5-capability punch-list they take `std-sys-host` to **6/6**. M-1092 and M-1093 touch
@@ -281,9 +286,19 @@ residual is the closure param) is confirmed against the codebase.
 
 ## §9 Changelog
 
-- 2026-07-12 — DN-133 created (**Draft**). Scopes the Result/Option combinator-over-closure residual
+- 2026-07-12 — DN-135 created (**Draft**, renumbered from an initial DN-133 draft to resolve a
+  DN-133 collision with the Qualified-Associated-Fn-Call DN). Scopes the Result/Option combinator-over-closure residual
   (`std-sys-host` #1 + corpus "Other" class); recommends **Alt A, the combinator-directed match-inline**
   (native, mode-invariant, zero kernel growth) over lambda-param typing (partial — cannot lower `|()|`) and
   status-quo gap; emission spec + adversarial stress-test + DoD; build leaf **M-1092**. `Declared` — builds
   nothing; the DN-review gate/maintainer ratifies. FLAGs Doc-Index/CHANGELOG/issues rows for the
   integrating parent.
+- 2026-07-12 — **Draft → Accepted** (strict DN-review gate, 9-criterion clean pass). Pre-ratification
+  citation corrections (grounding/consistency, verified against `dev @ 08d8fc21`): the receiver-gate
+  reference `prim_map.rs:2121–2123` (an impossible line — `prim_map.rs` is 234 lines) corrected to the
+  actual mechanism — consulted at `emit.rs:2120–2123`, `receiver_gate_matches` defined at `prim_map.rs:228`
+  (§Decides item 3, §5.1); and the `.checked_mul` decline at `prim_map.rs:25–29` recharacterized from a
+  "receiver-type mismatch" to its actual **value-shape** mismatch reason (§5.1). All decision-critical
+  witnesses (`emit.rs:2113/2179–2189/2210–2214/2526–2549`, `result.myc:23–46`, `option.myc:36–58`,
+  `cmp.myc:86`, `std-sys-host lib.rs:27–30`) verified exact. The design is unchanged; the decision is
+  ratified, mechanisms stay `Declared` until M-1092 lands + is differential-witnessed (VR-5).

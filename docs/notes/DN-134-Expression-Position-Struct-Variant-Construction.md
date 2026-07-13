@@ -3,12 +3,12 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-134 |
-| **Status** | **Draft** (2026-07-12). Works the decision forward and **recommends, ranked**; it does **not** self-ratify (house rule #3 — the DN-review gate / maintainer ratifies Draft → Accepted). **Builds nothing** — every mechanism is `Declared`/unbuilt until the FLAGGED build issue (M-1093) lands and is differential-witnessed. Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** for the integrating parent, not applied here. |
+| **Status** | **Accepted** (2026-07-12; was **Draft** 2026-07-12, ratified the same day). Ratified by the strict DN-review gate (9-criterion pass), with every decision-critical witness verified against `dev @ 08d8fc21`, the `map_pattern`/`StructLayout` cross-reference corrected (§1), **and a hard collision-safety soundness mandate folded into the shared `struct_layouts` population** (§3 step 1 / §4 stress-#8 / §6 DoD / §7 — from a cross-leaf finding in the M-1089 pattern-emit review; see §8). **Still builds nothing** — the decision is ratified, but every mechanism stays `Declared`/unbuilt until the FLAGGED build issue (M-1093) lands and is differential-witnessed (VR-5). Does not edit `crates/**`; `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** for the integrating parent, not applied here. |
 | **Decides** | *Proposes, for ratification:* (1) the **verified residual** — a named-field **enum struct-variant** built in **expression position** (`TimeErr::ClockUnavailable { reason: "…" }`, `Self::NotFound { path }`) is a genuine transpiler gap: `visit_struct` (`emit.rs:2324`) resolves the ctor via `struct_layout(name)` (`emit.rs:2353`), which is populated **from `Item::Struct` only** (`transpile.rs:315–332`) — so an *enum variant's* layout is never found and the construction gaps. This is the **construction twin** of DN-132/M-1089's **pattern** side (they share the identical blocker). (2) The **native-solution class** (DN-111 §3.2): an **Idiomatic Remapping** onto the positional `constructor` call **that already exists** — the enum emitter already lowers a struct-variant `Ctor { a: T, b: U }` to a positional `Ctor(T, U)` (names dropped + recorded, `emit.rs:3113–3141`); construction just *calls* that ctor with the field values in **declaration order**. Zero kernel growth (KC-3). (3) The **shared `StructLayout` variant-awareness** — the **same** population change DN-132/M-1089 specifies (`struct_layouts` also walks `Item::Enum` `Fields::Named` variants, keyed by emitted ctor name; a population change to the existing `HashMap<String, Vec<Option<String>>>`, not a new type) serves **both** the pattern arm (M-1089) and this construction arm (M-1093). (4) The **`visit_struct` extension**: with the variant-aware layout available, the existing field-resolution loop (`emit.rs:2362–2382`) already maps named fields to positional args by declaration order — so the construction arm is *near-free* once the shared population lands; the new work is the enum-variant path + the never-silent refusals. (5) The **honesty boundary** — cross-nodule resolvability (the `std-sys-host` case constructs `TimeErr` from another nodule) and the DN-104 **construction-side seal** (OQ-3(b)). It **references DN-123** for the field-name↔index map (does not duplicate it), **DN-132** for the pattern twin, **DN-104** for the seal, **DN-131** for the generic-variant interaction, and **DN-113** for cross-nodule resolution. |
 | **Feeds** | The `std-sys-host` 6/6 path — closes residual #2 in `OsClock::wall_now` (`lib.rs:63–65`); the corpus DN-34 §8.22 "Other" gap class (expression-position struct-variant construction is the construction complement of the §8.22 finding #5 pattern gaps); DN-132/M-1089 (shares the `StructLayout` population — a coordination point); DN-123 (records / named-fields surface — the construction half of the field-name↔index map DN-132 built the pattern half of). |
 | **Grounds on** | **DN-111 §3.2** (native-equivalence taxonomy — Idiomatic Remapping onto positional `Ctor`, the identical class DN-132 P1 took for the pattern side); **DN-106 GP2** (gap-closure default = the mechanically-lowering desugar over a new kernel form); **KC-3** (zero L0/`Ty`/eval growth — the positional ctor and the `HashMap` layout both exist); **DRY** (reuse the *same* `struct_layouts` population DN-132/M-1089 specifies, and `visit_struct`'s existing field-resolution loop — no parallel resolver); **ADR-003** (value-semantic positional identity — a named-field product *is* its positional tuple, so name-drop is faithful, exactly `emit.rs:3113–3141`'s ruling); **DN-123** (the field-name↔declaration-index map + field-order canonicalization, OQ-1 — inherited, not duplicated); **DN-104** (per-constructor visibility seal — construction of a sealed ctor outside its module is the never-silent refusal OQ-3(b)); **DN-131** (bounds on the type-parameter slot — a struct-variant of a generic enum composes with the impl-slot generics unchanged); **DN-113** (cross-phylum/cross-nodule import resolution — the resolvability dependency for a variant defined in another nodule); **G2/never-silent** (an unresolved ctor name, a missing/duplicate field, a sealed cross-module construction are all never-silent refusals); **VR-5** (`Declared` until built + differential-witnessed; no `Proven` claim). |
 | **Date** | July 12, 2026 |
-| **Task** | Scope the expression-position struct-variant-construction residual that (with DN-133) blocks `std-sys-host` 6/6, and that is a corpus-wide "Other" gap class — verify-first, native solution, ranked recommendation, emission spec, adversarial stress-test, DoD. Read-only except this DN + its FLAGGED rows. Parallel-cluster slot: **DN-134** (mit #1 — DN-125..133 taken; DN-134 verified free). |
+| **Task** | Scope the expression-position struct-variant-construction residual that (with DN-135) blocks `std-sys-host` 6/6, and that is a corpus-wide "Other" gap class — verify-first, native solution, ranked recommendation, emission spec, adversarial stress-test, DoD. Read-only except this DN + its FLAGGED rows. Parallel-cluster slot: **DN-134** (mit #1 — DN-125..133 taken; DN-134 verified free). |
 
 > **Grounding + honesty (house rule #4 / VR-5 / G2).** This note **works a decision forward and
 > recommends, ranked**; it does not take it (house rule #3). Its central finding is that this is the
@@ -50,8 +50,11 @@ so the construction reads against the field names not brittle positions.*
    only the *construction site* can't find the field→index map.
 
 This is **exactly** the DN-132/M-1089 blocker — DN-132 §5.1 names the same `struct_layouts`-is-struct-only
-gap for the **pattern** side (`emit.rs:28`, the `map_pattern_inner` `Pat::Struct` arm). This note is its
-**construction** mirror.
+gap for the **pattern** side. The shared blocker is the **bare-name-keyed** `struct_layouts` map
+(`transpile.rs:315–332`; the layout type `StructLayout` at `emit.rs:28`, resolved by `struct_layout`,
+`emit.rs:223`), which the pattern side's struct-variant handling would hit identically (a `Pat::Struct`
+arm is *not yet accepted* by `map_pattern` today — `emit.rs:2872`). This note is its **construction**
+mirror.
 
 **The Mycelium-native answer (DN-111 / DN-110 taxonomy).** An **Idiomatic Remapping** (DN-111 §3.2 / DN-110
 "Solution") — *not* a Native Equivalent, because Mycelium's `constructor` is **positional-only** by design
@@ -79,8 +82,8 @@ loop; zero kernel growth.
 
 **Alt B — A record/named-field construction surface.** Give Mycelium a first-class `Ctor { a: v }`
 construction grammar (the DN-123 records lever, construction side). This is a *genuine language feature*,
-not a remapping — it would let named-field construction survive as named. But it grows the grammar + checker
-+ eval for a payoff DN-123 already scopes as its own lever, and it is **not needed** to close the residual
+not a remapping — it would let named-field construction survive as named. But it grows the grammar, checker,
+and eval for a payoff DN-123 already scopes as its own lever, and it is **not needed** to close the residual
 (the positional remapping is faithful under positional identity, ADR-003). YAGNI/KC-3 decline for *this*
 gap; retained as DN-123's separate decision.
 
@@ -110,11 +113,36 @@ different decision, not this residual's fix — declined here on KC-3/YAGNI, def
 
 ## §3 The emission spec (what M-1093 builds)
 
-1. **Shared `StructLayout` variant-awareness (coordinated with DN-132/M-1089).** `struct_layouts`
-   (`transpile.rs:315`) additionally walks `Item::Enum` variants with `Fields::Named`, inserting each under
-   its **emitted ctor name** (the variant ident) with the same `Vec<Option<String>>` field-name layout.
-   *This is one population change serving both the M-1089 pattern arm and the M-1093 construction arm* —
-   whichever leaf lands first adds it; the other reuses it (see §7 coordination).
+1. **Shared `StructLayout` variant-awareness (coordinated with DN-132/M-1089) — collision-safe by
+   construction (mandatory, G2).** `struct_layouts` (`transpile.rs:315`) additionally walks `Item::Enum`
+   variants with `Fields::Named`, contributing each variant's `Vec<Option<String>>` field-name layout. *This
+   is one population change serving both the M-1089 pattern arm and the M-1093 construction arm* — whichever
+   leaf lands first adds it; the other reuses it (see §7 coordination).
+
+   **Hard soundness requirement — the shared population MUST be collision-safe (G2; cross-leaf finding
+   from the M-1089 pattern-emit review).** Today the layout map is a **flat `HashMap<String,
+   Vec<Option<String>>>` keyed by BARE name** (`transpile.rs:315`), and `struct_layout(name)` resolves it by
+   the **last path segment only** (`emit.rs:223`; `visit_struct` takes the last segment, step 2). While only
+   `Item::Struct` populates it, a bare-name key cannot misfire. **The moment enum struct-variants join the
+   same map keyed by bare variant ident, a file containing both `struct A { foo, bar }` and `enum E { A {
+   foo } }` would silently resolve `E::A { foo }` against the UNRELATED struct `A`'s layout — a silent
+   wrong-index bind (a G2 violation), not a gap.** So the population change is **required** to be
+   collision-safe by one of two disciplines, and M-1093 (and the shared M-1089 landing) **may not** insert a
+   bare-variant-ident key naïvely:
+   - **(a) Qualified-identity keying** — key enum-variant ctors by a distinct qualified identity (e.g.
+     `Enum::Variant`), *not* the bare variant name, and resolve construction/pattern against that qualified
+     key (which then also requires the resolution side to carry the enum qualifier, not just the last
+     segment); **or**
+   - **(b) Never-silent refusal of ambiguity** — on population, when a variant ctor name would collide with
+     an existing struct name *or* another variant's ctor name, **do not insert a silently-shadowing layout**;
+     mark that name ambiguous so `struct_layout` **gaps (never-silently refuses)** rather than binding
+     against an unrelated layout. The ambiguous same-name struct/variant case becomes an explicit G2 gap,
+     never a wrong emission.
+
+   Either discipline satisfies VR-5/G2; **(b)** is the smaller, KISS change (no resolution-side qualifier
+   threading) and is the **recommended default** unless a port target actually needs same-name
+   struct/variant construction to *emit* (then **(a)**). Whichever leaf lands the population **owns this
+   guarantee**; the other inherits it. This constraint is a build-blocking part of the DoD (§6), not an OQ.
 2. **`visit_struct` enum-variant path (`emit.rs:2324`).** The method already takes the last path segment as
    the ctor name (correct for `Enum::Variant` and `Self::Variant`). With the variant-aware layout present,
    `struct_layout(ctor_name)` now resolves for an enum struct-variant, and the **existing** field-resolution
@@ -172,10 +200,24 @@ different decision, not this residual's fix — declined here on KC-3/YAGNI, def
    The genuinely *new* content on the construction side is the two bounds above (cross-nodule resolvability;
    the DN-104 construction seal) — which the pattern side does not face. Reporting that the two are more
    *shared* than the framing implies (one population change serves both) is the honest call (house rule #4).
+8. **Same-name struct/variant collision in the shared bare-name layout map (cross-leaf finding, M-1089
+   pattern-emit review).** A file with both `struct A { foo, bar }` and `enum E { A { foo } }` — the layout
+   map is flat and **bare-name-keyed** (`transpile.rs:315`; `struct_layout` resolves the last path segment,
+   `emit.rs:223`). A naïve enum-variant population keyed by bare variant ident would make `E::A { foo }`
+   **silently resolve against struct `A`'s layout** (a wrong-index bind — G2 violation), *not* gap.
+   **Held only by design mandate, not for free:** §3 step 1 now makes collision-safety a **hard build
+   requirement** — either qualified-identity keying (a) or a never-silent refusal of the ambiguous same-name
+   case (b, the recommended default). Without that mandate the shared population would be unsound; with it,
+   the collision is an explicit G2 gap. This is a real soundness constraint on the shared population — the
+   third honest bound, and the only one that is a *correctness* obligation (the other two are
+   resolvability/seal dependencies).
 
-**Verdict:** Alt A survives. Its two honest bounds — cross-nodule resolvability (DN-113 dependency) and the
-DN-104 construction seal (a never-silent refusal to *add*, OQ-3(b)) — are stated as dependencies/refusals,
-not hidden, and neither is an incorrectness.
+**Verdict:** Alt A survives. Its three honest bounds — cross-nodule resolvability (DN-113 dependency), the
+DN-104 construction seal (a never-silent refusal to *add*, OQ-3(b)), and the **same-name struct/variant
+collision in the shared bare-name layout map** (a G2 correctness mandate on the shared population, §3 step 1)
+— are stated as dependencies/refusals/requirements, not hidden. The collision bound is the one genuine
+*correctness* constraint and is now a build-blocking part of the DoD; none of the three is an unflagged
+incorrectness.
 
 ---
 
@@ -198,12 +240,17 @@ confirmed.
 
 **M-1093 Done (Enacted basis):**
 
-- **Shared population:** `struct_layouts` walks `Item::Enum` `Fields::Named` variants keyed by ctor name (or
-  reuses M-1089's landing of the same change — §7).
+- **Shared population (collision-safe — mandatory, G2):** `struct_layouts` walks `Item::Enum`
+  `Fields::Named` variants (or reuses M-1089's landing of the same change — §7), and does so **collision-safe
+  by construction** per §3 step 1 — either qualified-identity keying (a) or a never-silent refusal of the
+  ambiguous same-name struct/variant case (b, default). A bare-variant-ident insert into the flat bare-name
+  map is **forbidden** (it would silently shadow an unrelated same-name struct — a G2 wrong-index bind).
 - **Construction arm:** `visit_struct` resolves an enum struct-variant's layout and emits the positional
   `Ctor(args…)` in declaration order via the existing field-resolution loop.
 - **Never-silent tests:** unresolved ctor → gap; missing field → gap; **duplicate** field → refusal;
-  `..rest` → gap; a sealed cross-module construction → refusal (OQ-3(b)); field name-drop recorded.
+  `..rest` → gap; a sealed cross-module construction → refusal (OQ-3(b)); field name-drop recorded;
+  **a same-name `struct A` + `enum E { A { … } }` in one file → the ambiguous ctor gaps (never-silently
+  refuses), never a silent bind against the unrelated struct's layout (stress #8, the collision mandate).**
 - **Cross-nodule honesty:** a same-nodule variant emits clean; a cross-nodule variant is gated/clean per the
   DN-113 resolvability state (stress #1) — the test asserts the never-silent gate, not a fabricated
   reference.
@@ -225,8 +272,18 @@ confirmed.
   if M-1089 lands first (its pattern arm already specifies the exact population), else the reverse — the
   integrating parent picks the order and sets the single `depends_on` edge. Either way the population change
   is written **once** (mitigation #2/#7 — never duplicated across the two leaves).
+- **The shared population MUST be collision-safe (G2 soundness constraint — §3 step 1; cross-leaf finding
+  from the M-1089 pattern-emit review).** Whichever leaf lands the `Item::Enum`-variant population **owns the
+  collision-safety guarantee**: the layout map is flat and **bare-name-keyed** (`transpile.rs:315`;
+  `struct_layout` resolves the last path segment, `emit.rs:223`), so a naïve bare-variant-ident insert would
+  let `E::A { … }` **silently resolve against an unrelated `struct A`'s layout** (a wrong-index bind, G2
+  violation). The landing leaf **must** implement §3 step 1's discipline — qualified-identity keying (a) or a
+  never-silent refusal of the ambiguous same-name case (b, the recommended default) — and carry the stress-#8
+  test. The *consuming* leaf inherits the guarantee but **must assert it holds** (the collision test runs in
+  both arms' suites). This is a build-blocking DoD item, not an OQ — M-1093 (and M-1089) cannot silently
+  inherit the ambiguity.
 - **Where it sits in 6/6:** **DN-134/M-1093 closes residual #2** — the `Err(TimeErr::ClockUnavailable {
-  reason })` construction in `OsClock::wall_now` (`lib.rs:63–65`). With **DN-133/M-1092** closing residual
+  reason })` construction in `OsClock::wall_now` (`lib.rs:63–65`). With **DN-135/M-1092** closing residual
   #1 (the combinator chain in `OsEntropy::fill_bytes`) and the existing 5-capability punch-list,
   `std-sys-host` reaches **6/6**. M-1092 (`visit_method_call`) and M-1093 (`visit_struct`) touch different
   methods of `emit.rs` and can land in either order (no shared hunk); M-1093's only ordering edge is the
@@ -243,3 +300,17 @@ confirmed.
   stress-test (cross-nodule resolvability, DN-104 construction seal) + DoD; build leaf **M-1093** (shares the
   `struct_layouts` population with DN-132/M-1089). `Declared` — builds nothing; the DN-review gate/maintainer
   ratifies. FLAGs Doc-Index/CHANGELOG/issues rows for the integrating parent.
+- 2026-07-12 — **Draft → Accepted** (strict DN-review gate, 9-criterion clean pass). Two pre-ratification
+  amendments, both never-silent: **(1) citation correction** (grounding/consistency, verified against
+  `dev @ 08d8fc21`) — the pattern-side cross-reference `emit.rs:28, the map_pattern_inner Pat::Struct arm`
+  was wrong (line 28 is the `type StructLayout` alias; the `Pat::Struct` arm at `emit.rs:2892` is in
+  `collect_pattern_bound_names`, and `Pat::Struct` is *not yet accepted* by `map_pattern`, `emit.rs:2872`) —
+  corrected in §1 to cite the verified shared blocker (`struct_layouts` bare-name map at `transpile.rs:315–332`,
+  resolved by `struct_layout` at `emit.rs:223`). All decision-critical witnesses (`emit.rs:2324/2341–2352/2353/2362–2382/3113–3141/3149–3159/3221–3236`, `transpile.rs:315–332`, `std-sys-host lib.rs:6–9/63–65`) verified exact.
+  **(2) Collision-safety soundness mandate** (from the M-1089 pattern-emit review, a MEDIUM) — because the
+  layout map is flat and **bare-name-keyed**, a naïve enum-variant population by bare variant ident would let
+  `E::A { … }` silently resolve against an unrelated `struct A`'s layout (a G2 wrong-index bind). Folded in as
+  a **hard, build-blocking requirement** (§3 step 1: qualified-identity keying or a never-silent refusal of the
+  ambiguous same-name case; §4 stress-#8; §6 DoD test; §7 coordination — the leaf landing the shared population
+  owns the guarantee). The decision (Alt A) is unchanged and now strengthened; mechanisms stay `Declared` until
+  M-1093 lands + is differential-witnessed (VR-5).
