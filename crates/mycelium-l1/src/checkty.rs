@@ -359,6 +359,24 @@ pub(crate) const PRELUDE_HOME: &str = "<prelude>";
 /// prelude traits).
 pub(crate) const PRELUDE_UNCONDITIONAL_TYPE_NAMES: [&str; 2] = ["Bool", "Unit"];
 
+/// DN-138 WU-4 — prelude type names seeded **conditionally** (iff the nodule's own items mention
+/// them in a type position — [`nodule_mentions_named_type`]), unlike
+/// [`PRELUDE_UNCONDITIONAL_TYPE_NAMES`]'s always-present `Bool`/`Unit`. Currently just `Vec`
+/// (`Vec[A] = Nil | Cons(A, Vec[A])`, [`vec_prelude`]) — the cons-list DN-138 §6/DN-99 row 35
+/// already names as the corpus's `Vec<T>` mapping target. **Why conditional, unlike `Bool`/`Unit`:**
+/// `Vec` genuinely has a non-empty `params` (`["A"]`), so an *unconditional* seed would trip
+/// `mono::is_already_monomorphic`'s `env.types.values().all(|d| d.params.is_empty())` test for
+/// EVERY program in the phylum — the exact regression [`PRELUDE_TRAIT_SEEDS`]/
+/// [`PRELUDE_INSTANCE_SEEDS`]'s own conditional-on-need discipline exists to avoid (DN-138 §2 fact
+/// 2), now extended from trait/instance seeding to a prelude TYPE seed. Once present (in any
+/// nodule that needs it), the DataInfo is identical everywhere `Vec` is used, so it is excluded
+/// from [`OwnDecls::types`]'s per-nodule collision set exactly like `PRELUDE_UNCONDITIONAL_TYPE_NAMES`
+/// (two nodules independently seeding `Vec` never falsely collide), and merged **once** by
+/// [`PhylumEnv::link`] iff *some* nodule's checked env actually declares it (mirroring
+/// [`crate::preseed::PreludeTraitSeed::seed_for_link`]'s "present iff used somewhere" rule, not
+/// the `Bool`/`Unit` "always present" rule).
+pub(crate) const CONDITIONAL_PRELUDE_TYPE_NAMES: [&str; 1] = ["Vec"];
+
 /// A nodule's **home** string for type-identity qualification (DN-112 Rank 1): its dot-joined path
 /// (`"a"`, `"a.b"`), or `""` for a path-less (anonymous, header-less) nodule. An empty home is
 /// treated as bare/unqualified by [`qualify_type_name`] (the same "stay bare" treatment as
@@ -877,6 +895,40 @@ pub(crate) fn unit_prelude() -> DataInfo {
     }
 }
 
+/// DN-138 WU-4 (§6 increment 2) — the conditionally-seeded `Vec[A]` cons-list: `type Vec[A] = Nil |
+/// Cons(A, Vec[A])`, byte-for-byte the same shape `lib/std/collections.myc` hand-declares (DN-99
+/// row 35). Seeded (never parsed) into a nodule's own type registry **iff** [`nodule_mentions_named_type`]
+/// finds `Vec` used somewhere in that nodule (see [`seed_vec_type_if_used`]) — the same
+/// hand-built-`DataInfo` mechanism [`prelude`]/[`unit_prelude`] use for `Bool`/`Unit`, but
+/// CONDITIONAL rather than unconditional ([`CONDITIONAL_PRELUDE_TYPE_NAMES`]'s doc explains why).
+///
+/// **Guarantee: `Exact`** (VR-5) — `Nil`/`Cons` are total constructors; this is a bare structural
+/// shape with no approximation, identical to the hand-written `lib/std/collections.myc` declaration
+/// it mirrors (this seed and that hand-written source are two independent, disclosed copies of the
+/// SAME shape — never unified/imported, per DN-138 Alt A's decision against auto-`use std.*`; a
+/// transpiled file's `Vec` never actually imports `std.collections`, so no identity clash arises in
+/// practice, a residual disclosed here rather than engineered against speculatively, YAGNI).
+pub(crate) fn vec_prelude() -> DataInfo {
+    DataInfo {
+        name: "Vec".to_owned(),
+        home: PRELUDE_HOME.to_owned(),
+        params: vec!["A".to_owned()],
+        ctors: vec![
+            CtorInfo {
+                name: "Nil".to_owned(),
+                fields: vec![],
+            },
+            CtorInfo {
+                name: "Cons".to_owned(),
+                fields: vec![
+                    Ty::Var("A".to_owned()),
+                    Ty::Data("Vec".to_owned(), vec![Ty::Var("A".to_owned())]),
+                ],
+            },
+        ],
+    }
+}
+
 /// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
 /// (RFC-0007 §11.2): a `Named(name, [])` whose `name` is a type parameter resolves to [`Ty::Var`];
 /// any other `Named` is a data type whose **arity is checked** against its declaration (`List<A>`
@@ -1212,6 +1264,102 @@ fn collect_tuple_arities_sig(sig: &crate::ast::FnSig, out: &mut std::collections
     collect_tuple_arities_typeref(&sig.ret, out);
 }
 
+/// DN-138 WU-4 — does `nodule`'s own items mention the type name `target` anywhere in a TYPE
+/// position (a data-type ctor field, a fn/trait-method signature, or an impl head/trait-args)?
+/// Used to conditionally seed [`CONDITIONAL_PRELUDE_TYPE_NAMES`] entries (currently just `Vec` —
+/// [`vec_prelude`]) exactly the way [`PRELUDE_TRAIT_SEEDS`]/[`PRELUDE_INSTANCE_SEEDS`] already
+/// condition their own seeding on a textual "is this actually declared/used here" scan — never
+/// unconditional (DN-138 §2 fact 2, extended to a prelude TYPE). Structurally mirrors
+/// [`collect_tuple_arities`]'s recursive `TypeRef` walk (same item/type-position coverage,
+/// specialized to a name search instead of tuple-arity collection) — deliberately does **not**
+/// walk expression bodies (an `Item::Fn` body can't introduce a bare TYPE mention that a signature
+/// or field list didn't already carry; only a type POSITION triggers this seed, not a value-level
+/// use of a same-named ctor, which cannot occur here since `Vec`'s own ctors are named `Nil`/`Cons`,
+/// never `Vec`). A residual, disclosed conservative miss: `Item::Object`/`Item::InherentImpl`/
+/// `Item::Lower`/`Item::Derive` are not walked (the transpiler's derive emissions — this walker's
+/// only real caller — only ever produce `Item::Type`/`Item::Fn`/`Item::Impl`, so this is not a live
+/// gap for that caller; a hand-written `.myc` file using one of those forms to introduce its ONLY
+/// `Vec` mention would see an honest "unknown type `Vec`" check error rather than a silent miss —
+/// G2 — never a wrong/fabricated answer, just a narrower trigger than exhaustive).
+pub(crate) fn nodule_mentions_named_type(nodule: &Nodule, target: &str) -> bool {
+    nodule
+        .items
+        .iter()
+        .any(|item| item_mentions_named_type(item, target))
+}
+
+fn item_mentions_named_type(item: &Item, target: &str) -> bool {
+    match item {
+        Item::Type(td) => td.ctors.iter().any(|c| {
+            c.fields
+                .iter()
+                .any(|f| typeref_mentions_named_type(f, target))
+        }),
+        Item::Fn(fd) => sig_mentions_named_type(&fd.sig, target),
+        Item::Trait(tr) => tr.sigs.iter().any(|s| sig_mentions_named_type(s, target)),
+        Item::Impl(id) => {
+            id.trait_args
+                .iter()
+                .any(|t| typeref_mentions_named_type(t, target))
+                || typeref_mentions_named_type(&id.for_ty, target)
+                || id
+                    .methods
+                    .iter()
+                    .any(|m| sig_mentions_named_type(&m.sig, target))
+        }
+        Item::Use(_)
+        | Item::Default(_)
+        | Item::Object(_)
+        | Item::Lower(_)
+        | Item::Derive(_)
+        | Item::InherentImpl(_) => false,
+    }
+}
+
+fn typeref_mentions_named_type(tr: &TypeRef, target: &str) -> bool {
+    match &tr.base {
+        BaseType::Tuple(elems) => elems.iter().any(|e| typeref_mentions_named_type(e, target)),
+        BaseType::Seq { elem, .. } => typeref_mentions_named_type(elem, target),
+        BaseType::Named(name, args) => {
+            name == target || args.iter().any(|a| typeref_mentions_named_type(a, target))
+        }
+        BaseType::Fn(a, b) => {
+            typeref_mentions_named_type(a, target) || typeref_mentions_named_type(b, target)
+        }
+        _ => false,
+    }
+}
+
+fn sig_mentions_named_type(sig: &FnSig, target: &str) -> bool {
+    sig.value_params
+        .iter()
+        .any(|p| typeref_mentions_named_type(&p.ty, target))
+        || typeref_mentions_named_type(&sig.ret, target)
+}
+
+/// DN-138 WU-4 — conditionally seed [`vec_prelude`] into `types` iff (a) this nodule does not
+/// already declare its own `Vec` (a hand-written/imported `Vec` simply wins — never silently
+/// shadowed, mirroring why [`register_types`]'s own duplicate-type-declaration check already
+/// refuses a nodule that BOTH triggers an unconditional prelude seed AND redeclares it, e.g.
+/// `Bool`), and (b) [`nodule_mentions_named_type`] finds `Vec` mentioned somewhere in a type
+/// position. Must run BEFORE [`register_types`] (which resolves ctor field types against `types`
+/// immediately — a struct's own `Vec[Binary{64}]` field needs `Vec` already present to resolve).
+fn seed_vec_type_if_used(types: &mut BTreeMap<String, DataInfo>, nodule: &Nodule) {
+    if types.contains_key("Vec") {
+        return;
+    }
+    let already_own_vec = nodule
+        .items
+        .iter()
+        .any(|item| matches!(item, Item::Type(td) if td.name == "Vec"));
+    if already_own_vec {
+        return;
+    }
+    if nodule_mentions_named_type(nodule, "Vec") {
+        types.insert("Vec".to_owned(), vec_prelude());
+    }
+}
+
 /// Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic
 /// `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is
 /// constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.
@@ -1401,6 +1549,18 @@ impl PhylumEnv {
         types.insert(p.name.clone(), p);
         let u = unit_prelude();
         types.insert(u.name.clone(), u);
+        // DN-138 WU-4: `Vec` (a CONDITIONAL prelude type, unlike `Bool`/`Unit` above) is present
+        // in the link iff SOME nodule's own checked `Env` actually declared it — mirrors
+        // `PreludeTraitSeed::seed_for_link`'s "present iff used somewhere" rule (never
+        // unconditional — see `CONDITIONAL_PRELUDE_TYPE_NAMES`'s doc for why `Vec`'s non-empty
+        // `params` makes an unconditional seed a real mono-fast-path regression).
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.types.contains_key("Vec"))
+        {
+            types.insert("Vec".to_owned(), vec_prelude());
+        }
         let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
         for seed in PRELUDE_TRAIT_SEEDS {
             seed.seed_for_link(&mut traits, &self.nodules);
@@ -2228,8 +2388,13 @@ fn check_phylum_inner(
             // The unconditionally-seeded prelude types (`Bool`, `Unit` — DN-137) are registered
             // into every nodule; skip them as a phylum "local" so neither falsely satisfies the
             // orphan rule for an unrelated impl (both are primitive-ish builtins, handled by the
-            // primitive-repr arm anyway).
-            if !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&name.as_str()) {
+            // primitive-repr arm anyway). DN-138 WU-4: the conditionally-seeded prelude types
+            // (`Vec` — `CONDITIONAL_PRELUDE_TYPE_NAMES`) get the SAME exclusion — when present
+            // they are identical everywhere, so they are never a real per-nodule orphan-rule
+            // "local" either.
+            if !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&name.as_str())
+                && !CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&name.as_str())
+            {
                 coherence.types.insert(name.clone());
             }
         }
@@ -2260,7 +2425,10 @@ fn check_phylum_inner(
             types: regs
                 .types
                 .keys()
-                .filter(|n| !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&n.as_str()))
+                .filter(|n| {
+                    !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&n.as_str())
+                        && !CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&n.as_str())
+                })
                 .cloned()
                 .collect(),
             fns: regs.fns.keys().cloned().collect(),
@@ -2517,6 +2685,10 @@ pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, Check
     types.insert(p.name.clone(), p);
     let u = unit_prelude();
     types.insert(u.name.clone(), u);
+    // DN-138 WU-4: the conditional prelude-type seed spine (currently just `Vec` —
+    // `CONDITIONAL_PRELUDE_TYPE_NAMES`), run BEFORE `register_types` since a struct's own
+    // `Vec[...]` field is resolved against `types` immediately below.
+    seed_vec_type_if_used(&mut types, nodule);
     register_types(&mut types, nodule)?;
     let mut traits = register_traits(&types, nodule)?;
     // DN-129 §5 (M-1091): every built-in prelude trait — `Fuse` (M-965 F-A1), `Ord3` (DN-122 §13 /
@@ -9146,6 +9318,24 @@ impl Cx<'_> {
                 }
                 Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
             }
+            // DN-138 WU-4 (increment 2, §6): `bin_to_bytes(x: Binary{N}) -> Bytes` — the missing
+            // raw byte conversion `derive(Hash)`'s `ScalarBinary` route needs. The operand must be
+            // a concrete `Binary{N}` (a non-`Binary` operand is an explicit static refusal — G2);
+            // total and deterministic over every width (`bit.to_bytes` zero-pads on the MSB side up
+            // to a whole byte, mirroring `width_cast`'s own zero-extend convention, DN-41).
+            "bin_to_bytes" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Binary(_)) {
+                    return self.err(format!(
+                        "`bin_to_bytes` expects a concrete `Binary{{N}}` operand, got {recv} \
+                         (DN-138 WU-4; never a default width)"
+                    ));
+                }
+                Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
+            }
             _ => Ok(None),
         }
     }
@@ -10633,6 +10823,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103;
         // `mycelium-core::content::Canon`/`id::ContentHash`) surfaced as a prim.
         "hash_blake3" => "hash.blake3",
+        // DN-138 WU-4 (increment 2, §6): the missing raw `Binary{N} -> Bytes` conversion
+        // `derive(Hash)`'s `ScalarBinary` route needs.
+        "bin_to_bytes" => "bit.to_bytes",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
         // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41): the

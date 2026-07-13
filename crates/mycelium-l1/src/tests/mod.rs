@@ -49,5 +49,6 @@ mod substrate;
 mod totality;
 mod type_strictness;
 mod usefulness;
+mod vec_prelude_seed;
 mod via_ordering;
 mod wrapping;
