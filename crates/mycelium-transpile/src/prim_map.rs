@@ -43,6 +43,54 @@
 //! *the* transpiler-side path for these units). Forcing a second, unfaithful Call/MethodCall
 //! binding here would be the "guessed API" VR-5 forbids — reported as a FLAG, not guessed.
 //!
+//! # L4 (DN-136 Phase-2, M-1100) — conversion-method mapping, verify-first findings
+//!
+//! **`clone` ADDED (identity, `wired: true`).** `Clone::clone`'s sole effect (per Rust's own
+//! contract) is producing an owned copy with **no representation change** — in a value-semantic
+//! grammar (ADR-003) that is exactly identity. The frozen [`crate::emit`] call-emission format is
+//! always `"{myc_prim}({args})"` (`emit.rs`'s `visit_method_call`, unchanged by this leaf); a row
+//! with `myc_prim: ""` therefore emits `"(recv)"` — a **parenthesized-grouping** expression
+//! (`primary ::= ... | '(' expr ')'`, `docs/spec/grammar/mycelium.ebnf:406`), confirmed
+//! `myc-check`-clean and semantically identical to the bare receiver by direct probe against
+//! `target/debug/myc-check` for a `Binary{64}`, `Bool`, `Bytes`, and a user struct receiver, and for
+//! a receiver expression that is itself a `match` block (this leaf's own `src/tests/prim_map.rs`
+//! carries the committed regression + a live-oracle witness). Gated on
+//! [`ReceiverGate::AnyKnown`] (any receiver whose type resolves at all — never a guess on an
+//! unresolved receiver, VR-5) since identity holds regardless of the concrete type.
+//!
+//! **`to_owned` DELIBERATELY WITHHELD (found, not guessed away — mitigation #14).** Same semantic
+//! bucket as `clone` (`crate::emit::is_unmappable_conversion_method`'s own doc comment groups both
+//! under "ownership/representation identity"), but an EXISTING, deliberately-locked-in regression
+//! test this leaf does not own —
+//! `src/tests/emit.rs::conversion_noop_method_gaps_never_fabricates_unknown_prim` (the "#72
+//! co-poison fix") — asserts `fn f(s: &str) -> String { s.to_owned() }` gaps the WHOLE function.
+//! `&str`/`String` both map to the known type `Bytes` (`crate::map::map_type_inner`), so an
+//! `AnyKnown`-gated `to_owned` row WOULD fire here and flip that test's asserted outcome (from "the
+//! whole fn gaps" to "the fn emits `(s)` cleanly") — a genuine behavior change to a file this leaf
+//! is scoped OUT of (`src/tests/emit.rs` pairs with `emit.rs`, itself off-limits per this leaf's own
+//! scope). Rather than silently break that lock or reach into a file this leaf does not own,
+//! `.to_owned()` is left exactly as the existing fallback (`is_unmappable_conversion_method`)
+//! handles it today — unchanged, still gapped — and this finding is FLAGged to the integrating
+//! parent: a trivial follow-on leaf (add the `to_owned` row + update that one regression test's now
+//! -stale expectation, in the file that owns it) closes this residual.
+//!
+//! **`to_string` NOT ADDED (gap unchanged).** DN-127/DN-129 landed `impl Show[Binary{64}]`/
+//! `Show[Bytes]`/`Show[Bool] for ...` with `render(x) => Bytes`, and `render(recv)` DOES
+//! `myc-check`-clean (probed) — but `Show` is a **prelude trait seeded conditionally**: "iff some
+//! nodule in the linked env declares an impl of it" (DN-129 §5). The primary `checked_fraction` vet
+//! metric (`crate::vet`) runs the oracle in **single-file** mode; an isolated emitted `.myc` file
+//! has no guarantee that a `Show` impl for the receiver's concrete type is in scope (no automatic
+//! `use std.fmt;` import is emitted anywhere in this pipeline — that is an `emit.rs`-owned,
+//! out-of-scope mechanism). Firing `render(recv)` unconditionally would risk an unresolved-trait
+//! `myc check` failure the row could not predict — exactly the "never guess a real conversion"
+//! instruction this leaf was given. Left gapped, unchanged.
+//!
+//! **`into` NOT ADDED (gap unchanged).** `Into::into`'s target type is determined by Rust's
+//! bidirectional type inference from the *call site's expected type* (an assignment target, a
+//! return position, …) — this `syn`-level, per-expression table has no expected-type context at
+//! all (only [`crate::emit::TypeEnv`]'s *receiver*-type tracking), so "identity when source/target
+//! coincide" is undecidable here without guessing the target. Left gapped, unchanged.
+//!
 //! CU-3 (float<->int conversion) is also excluded: DN-34 §8.16 records a *directional* ruling
 //! ("prims for the total directions") but no confirmed prim **name**, and Rust's natural spelling
 //! for a value conversion is the `as` cast (`syn::Expr::Cast`), which is out of this `Call`/
@@ -81,6 +129,12 @@ pub enum ReceiverGate {
     Exact(&'static str),
     /// The receiver's mapped type text must be some concrete `Binary{N}` (any width).
     AnyBinaryWidth,
+    /// The receiver's type must resolve at all (any concrete mapped type) — no further
+    /// constraint. Added by L4 (DN-136 Phase-2, M-1100) for ownership/representation-identity
+    /// conversions (`.clone()`, …) whose identity holds regardless of the concrete type; still
+    /// requires *some* known type (never fires on a wholly-unresolved receiver — VR-5, the same
+    /// no-guess discipline `Exact`/`AnyBinaryWidth` already apply).
+    AnyKnown,
 }
 
 /// One forward-mapped Rust `Expr::MethodCall` pattern (see module docs).
@@ -90,7 +144,12 @@ pub struct PrimMapping {
     pub rust_method: &'static str,
     /// The Mycelium prim/surface call name — a bare, no-import-needed identifier when `wired`; a
     /// forward-declared (not-yet-real) name otherwise (still cited, never fabricated wholesale —
-    /// see each row's `citation`).
+    /// see each row's `citation`). **Identity-conversion convention (L4, DN-136 Phase-2,
+    /// M-1100):** the empty string `""` is a deliberate, documented sentinel — the emitter's fixed
+    /// `"{myc_prim}({args})"` format then renders `"(recv)"`, a parenthesized-grouping expression
+    /// (grammar `primary`), which is the receiver **unchanged** (confirmed `myc-check`-clean by
+    /// direct probe; see the module-doc L4 section). Used only by `wired: true` rows whose whole
+    /// semantic content is "identity" — never a fabricated bare identifier.
     pub myc_prim: &'static str,
     /// Kernel backend landed? `true` -> emit the real call; `false` -> always refuse
     /// (PENDING-BACKEND, never emitted).
@@ -212,6 +271,28 @@ pub const TABLE: &[PrimMapping] = &[
         citation: "RFC-0034 §10; M-791; DN-34 §8.16 item 2; see wrapping_add's citation \
                    (identical basis)",
     },
+    // L4 (DN-136 Phase-2, M-1100) — conversion-method mapping. `myc_prim: ""` is the documented
+    // identity-emission sentinel (see this row's own field doc + the module-doc L4 section):
+    // `Clone::clone`'s sole effect is an owned copy with no representation change (value
+    // semantics, ADR-003), so the receiver passed through unchanged (via a parenthesized-grouping
+    // `(recv)`) is exact, never a guess. `to_owned`/`to_string`/`into` are deliberately NOT rows
+    // here — see the module-doc L4 section for each one's own verify-first finding.
+    PrimMapping {
+        rust_method: "clone",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyKnown,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1100",
+        citation: "DN-136 Phase-2 §4 L4 (this leaf); ADR-003 (value semantics — no reference/\
+                   ownership distinction); Clone::clone's own contract (\"returns a duplicate of \
+                   the value\", no representation change); grammar primary ::= ... | '(' expr \
+                   ')' (docs/spec/grammar/mycelium.ebnf:406); confirmed myc-check-clean by direct \
+                   probe against target/debug/myc-check for Binary{64}/Bool/Bytes/a user struct \
+                   receiver and a match-block receiver expression (see \
+                   src/tests/prim_map.rs's committed regression + live-oracle witness)",
+    },
 ];
 
 /// Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method`
@@ -229,6 +310,7 @@ pub fn receiver_gate_matches(gate: ReceiverGate, receiver_ty: Option<&str>) -> b
     match (gate, receiver_ty) {
         (ReceiverGate::Exact(want), Some(got)) => want == got,
         (ReceiverGate::AnyBinaryWidth, Some(got)) => crate::emit::binary_width(got).is_some(),
+        (ReceiverGate::AnyKnown, Some(_)) => true,
         (_, None) => false,
     }
 }
