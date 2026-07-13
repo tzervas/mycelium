@@ -905,9 +905,19 @@ pub(crate) fn unit_prelude() -> DataInfo {
 /// **Guarantee: `Exact`** (VR-5) — `Nil`/`Cons` are total constructors; this is a bare structural
 /// shape with no approximation, identical to the hand-written `lib/std/collections.myc` declaration
 /// it mirrors (this seed and that hand-written source are two independent, disclosed copies of the
-/// SAME shape — never unified/imported, per DN-138 Alt A's decision against auto-`use std.*`; a
-/// transpiled file's `Vec` never actually imports `std.collections`, so no identity clash arises in
-/// practice, a residual disclosed here rather than engineered against speculatively, YAGNI).
+/// SAME shape — never unified/imported, per DN-138 Alt A's decision against auto-`use std.*`).
+///
+/// **Honest correction (post-landing review): the residual this seed and the hand-written
+/// `lib/std/collections.myc` copy can clash is NOT about `use`/import at all — it is about bare
+/// PHYLUM CO-MEMBERSHIP.** A transpiled file never importing `std.collections` only means the
+/// SAME-NODULE identity never clashes; it says nothing about a MULTI-NODULE phylum where nodule
+/// `a` hand-declares its own `type Vec[A] = …` (any shape) and a SEPARATE nodule `b` in the SAME
+/// phylum triggers this seed — both end up with a top-level name `"Vec"` in their own registries,
+/// with no `use` in sight. [`PhylumEnv::link`] is where this is actually resolved: a genuine
+/// hand-written `Vec` differing from this seed's shape, co-present with a nodule that needs the
+/// seed, is a real cross-nodule name conflict the v0 flat namespace cannot represent — `link`
+/// refuses it via the same never-silent `collide` path an ordinary duplicate type name uses,
+/// rather than picking either shape silently (see `link`'s own doc at its `Vec`-seeding step).
 pub(crate) fn vec_prelude() -> DataInfo {
     DataInfo {
         name: "Vec".to_owned(),
@@ -927,6 +937,23 @@ pub(crate) fn vec_prelude() -> DataInfo {
             },
         ],
     }
+}
+
+/// Is `(name, info)` EXACTLY this crate's own `Vec` seed fact (both the name AND the registered
+/// `DataInfo` value match [`vec_prelude`])? The value check is load-bearing (mirrors
+/// [`crate::preseed::PreludeInstanceSeed::is_this_seeds_fact`]'s identical "key AND value" shape,
+/// applied to a prelude TYPE seed instead of a trait-instance seed): a nodule's OWN, genuinely
+/// hand-written `type Vec[A] = …` that happens to share the bare name `"Vec"` but differs in
+/// shape must NEVER be silently mistaken for the seed's own (ambient, identical-everywhere) fact —
+/// it is a real per-nodule declaration and must flow through the ordinary
+/// [`OwnDecls`]/[`PhylumEnv::link`] collision machinery like any other type name (post-landing
+/// review finding: a name-only check here previously let `link` silently REPLACE a genuine
+/// hand-written `Vec` with this seed's `Nil | Cons` shape whenever ANY other nodule of the same
+/// phylum happened to trigger the seed — never-silent per house rule #2/G2 demands this be either
+/// a loud `collide()` refusal or an unambiguous, checked win, never a silent overwrite).
+#[must_use]
+fn is_vec_prelude_fact(name: &str, info: &DataInfo) -> bool {
+    CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&name) && *info == vec_prelude()
 }
 
 /// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
@@ -1549,18 +1576,6 @@ impl PhylumEnv {
         types.insert(p.name.clone(), p);
         let u = unit_prelude();
         types.insert(u.name.clone(), u);
-        // DN-138 WU-4: `Vec` (a CONDITIONAL prelude type, unlike `Bool`/`Unit` above) is present
-        // in the link iff SOME nodule's own checked `Env` actually declared it — mirrors
-        // `PreludeTraitSeed::seed_for_link`'s "present iff used somewhere" rule (never
-        // unconditional — see `CONDITIONAL_PRELUDE_TYPE_NAMES`'s doc for why `Vec`'s non-empty
-        // `params` makes an unconditional seed a real mono-fast-path regression).
-        if self
-            .nodules
-            .iter()
-            .any(|(_, e)| e.types.contains_key("Vec"))
-        {
-            types.insert("Vec".to_owned(), vec_prelude());
-        }
         let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
         for seed in PRELUDE_TRAIT_SEEDS {
             seed.seed_for_link(&mut traits, &self.nodules);
@@ -1681,6 +1696,39 @@ impl PhylumEnv {
         // nodules independently triggered the same seed.
         for seed in PRELUDE_INSTANCE_SEEDS {
             seed.seed_instance_for_link(&mut instances, &self.nodules);
+        }
+
+        // DN-138 WU-4 (post-landing review fix): `Vec`, a CONDITIONAL prelude type (unlike the
+        // unconditional `Bool`/`Unit` above), is inserted here — AFTER the per-nodule `own.types`
+        // merge loop above has already merged any GENUINE hand-written `Vec` (now correctly
+        // included there via `is_vec_prelude_fact`'s value check, not excluded by bare name) —
+        // and NEVER by blindly overwriting whatever the merge loop already produced.
+        //
+        // Mirrors `PreludeTraitSeed::seed_for_link`'s "present iff used somewhere" trigger, but the
+        // INSERTION itself goes through the same collision discipline every other name in this
+        // function uses: if `types` already holds something at `"Vec"` (a genuine per-nodule
+        // declaration the merge loop above inserted) that is NOT identical to this seed's own
+        // fact, that is a real, irreconcilable phylum-wide conflict — a nodule's checked functions
+        // that rely on the seeded `Nil | Cons` shape (their OWN per-nodule check already resolved
+        // against it) cannot be soundly linked against a DIFFERENT hand-written `Vec` from another
+        // nodule (its constructors likely don't even exist), and the reverse (silently keeping the
+        // hand-written shape and dropping the seed) is equally unsound for whichever nodule
+        // actually needed the seed. Refusing loudly via the existing `collide` path — never a
+        // silent pick either way — is the only never-silent resolution the v0 flat namespace
+        // affords (G2). If the two shapes happen to be IDENTICAL (a user who hand-wrote the exact
+        // same `Nil | Cons(A, Vec[A])` shape), there is no real conflict and this is a no-op.
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.types.get("Vec") == Some(&vec_prelude()))
+        {
+            match types.get("Vec") {
+                None => {
+                    types.insert("Vec".to_owned(), vec_prelude());
+                }
+                Some(existing) if *existing == vec_prelude() => {}
+                Some(_) => return Err(collide("type", "Vec")),
+            }
         }
 
         Ok(Env {
@@ -2384,16 +2432,18 @@ fn check_phylum_inner(
         for name in regs.traits.keys() {
             coherence.traits.insert(name.clone());
         }
-        for name in regs.types.keys() {
+        for (name, info) in &regs.types {
             // The unconditionally-seeded prelude types (`Bool`, `Unit` — DN-137) are registered
             // into every nodule; skip them as a phylum "local" so neither falsely satisfies the
             // orphan rule for an unrelated impl (both are primitive-ish builtins, handled by the
-            // primitive-repr arm anyway). DN-138 WU-4: the conditionally-seeded prelude types
-            // (`Vec` — `CONDITIONAL_PRELUDE_TYPE_NAMES`) get the SAME exclusion — when present
-            // they are identical everywhere, so they are never a real per-nodule orphan-rule
-            // "local" either.
+            // primitive-repr arm anyway). DN-138 WU-4: a nodule's `"Vec"` entry gets the SAME
+            // exclusion ONLY when it is EXACTLY this crate's own seeded fact ([`is_vec_prelude_fact`]
+            // — a value check, not a bare name check, post-landing review fix): a genuinely
+            // hand-written `Vec` (differing shape) is a real per-nodule local type and must
+            // participate in the orphan rule normally, never be silently treated as the ambient
+            // seed just because it shares the name.
             if !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&name.as_str())
-                && !CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&name.as_str())
+                && !is_vec_prelude_fact(name, info)
             {
                 coherence.types.insert(name.clone());
             }
@@ -2420,16 +2470,24 @@ fn check_phylum_inner(
         // `regs` is consumed below. Exclude the injected prelude `Bool`/`Unit` (DN-137) and every
         // conditionally-seeded built-in prelude trait (DN-129 §5: `PRELUDE_TRAIT_SEEDS` —
         // `Fuse`/`Ord3`/`Show`/`Init`/`Fault`) — they are identical everywhere and are seeded once
-        // by `link`, never a per-nodule collision.
+        // by `link`, never a per-nodule collision. **DN-138 WU-4 (post-landing review fix): a
+        // `"Vec"` entry is excluded ONLY when it is EXACTLY this crate's own seed fact
+        // ([`is_vec_prelude_fact`] — a value check).** A genuinely hand-written `Vec` in this
+        // nodule (any shape, including one that happens to equal the seed's shape by coincidence)
+        // is a REAL own declaration and must flow through `link`'s ordinary collision-checked
+        // merge — silently excluding it by bare name (the pre-fix behavior) let `link` overwrite a
+        // hand-written `Vec` with the seed's `Nil | Cons` shape whenever some OTHER nodule of the
+        // same phylum happened to trigger the seed, with no error at all (never-silent violation,
+        // G2 — see `link`'s own `Vec`-seeding step for the paired fix).
         own.push(OwnDecls {
             types: regs
                 .types
-                .keys()
-                .filter(|n| {
+                .iter()
+                .filter(|(n, info)| {
                     !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&n.as_str())
-                        && !CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&n.as_str())
+                        && !is_vec_prelude_fact(n, info)
                 })
-                .cloned()
+                .map(|(n, _)| n.clone())
                 .collect(),
             fns: regs.fns.keys().cloned().collect(),
             traits: regs

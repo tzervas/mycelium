@@ -139,3 +139,71 @@ fn two_nodules_each_independently_using_vec_do_not_collide_at_link() {
         .expect("link succeeds -- no false cross-nodule Vec collision");
     assert!(linked.types.contains_key("Vec"));
 }
+
+/// **CRITICAL (post-landing review finding, fixed here): a nodule's GENUINE hand-written `Vec`
+/// must never be SILENTLY overwritten by the seed's `Nil | Cons` shape just because some OTHER
+/// nodule of the same phylum happens to trigger it.** Nodule `a` hand-declares its own
+/// `type Vec[A] = OnlyOne(A);` (a single-ctor shape, nothing like the seed); nodule `b` mentions
+/// `Vec[Binary{64}]` as a field and so triggers the CONDITIONAL seed in its OWN registration.
+/// `check_phylum` succeeds (each nodule checks fine against its OWN registry — `a` against its
+/// hand-written `Vec`, `b` against the seeded one). The unsound outcome this test forbids is
+/// `link()` SUCCEEDING with `a`'s `Vec` silently replaced by the seed (or vice versa) — the v0
+/// flat single-namespace model cannot represent both shapes at once, and `b`'s already-checked
+/// functions rely on the seeded `Nil`/`Cons` constructors existing in the LINKED env, so
+/// silently keeping `a`'s shape would ALSO be unsound (missing constructors at eval time), not
+/// just "the hand-written one should always win". The only never-silent resolution is a loud
+/// `collide()` refusal — asserted here directly (never a silent pick either way, G2/VR-5).
+#[test]
+fn a_hand_written_vec_in_one_nodule_never_silently_loses_or_wins_against_a_seed_in_another() {
+    let ph: Phylum = parse_phylum(
+        "phylum app\n\
+         nodule a;\n\
+         type Vec[A] = OnlyOne(A);\n\
+         nodule b;\n\
+         type RecB = RecB(Vec[Binary{64}]);",
+    )
+    .expect("parses as a phylum");
+    let penv = check_phylum(&ph).expect(
+        "each nodule checks fine independently -- a against its own hand-written Vec, b against \
+         its own seeded Vec",
+    );
+    let err = penv.link().expect_err(
+        "link MUST refuse loudly -- a hand-written Vec co-present with a nodule that \
+                      needs the seeded shape is a real, irreconcilable phylum-wide conflict, never \
+                      a silent pick either way",
+    );
+    assert!(
+        err.message.to_lowercase().contains("vec"),
+        "expected the collision error to name `Vec`, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.to_lowercase().contains("collision")
+            || err.message.to_lowercase().contains("collide"),
+        "expected an explicit cross-nodule collision message, got: {}",
+        err.message
+    );
+}
+
+/// The companion control: if nodule `a` hand-declares a `Vec` that happens to be structurally
+/// IDENTICAL to the seed's shape, there is no real conflict — but note this is expected to be
+/// unreachable in practice for a HAND-WRITTEN declaration, since DN-112 Rank-1 home-qualification
+/// stamps a hand-written type's identity with its OWN declaring nodule's home (never the
+/// `PRELUDE_HOME` the seed uses) — so even a byte-for-byte textual duplicate never structurally
+/// equals `vec_prelude()` and this path is not exercised by ordinary user code. Documented, not
+/// silently assumed: a genuine collision (this test's sibling above) is the realistic outcome for
+/// ANY hand-written `Vec`, not just a differently-shaped one.
+#[test]
+fn a_hand_written_vec_never_structurally_equals_the_seed_even_if_textually_identical() {
+    let e = env(
+        "nodule a;\ntype Vec[A] = Nil | Cons(A, Vec[A]);\nfn f(x: Vec[Binary{8}]) => Binary{8} = 0b0000_0000;",
+    );
+    let hand_written = e.types.get("Vec").expect("Vec is declared");
+    assert_ne!(
+        hand_written,
+        &vec_prelude(),
+        "a hand-written Vec's home is its OWN declaring nodule (DN-112 Rank 1), never \
+         PRELUDE_HOME -- it must never structurally equal the seed's fact even when textually \
+         identical"
+    );
+}

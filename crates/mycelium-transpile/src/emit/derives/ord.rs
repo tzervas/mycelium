@@ -61,8 +61,12 @@ fn recognizes(name: &str) -> bool {
 
 /// **DN-138 WU-4 — the LEAF `cmp` expression for a value pair of kind `ft`** (a field, or a `Vec`
 /// element recursed into by [`vec_ord_aux`]) — mirrors [`super::show::leaf_show_expr`]'s shape for
-/// `Ord3`: a `Binary{64}` `ScalarBinary` dispatches the seeded instance directly; a
-/// narrower/wider width is `width_cast` up to `Binary{64}` first (DN-41, WU-4 unblock). `None` for
+/// `Ord3`: a `Binary{64}` `ScalarBinary` dispatches the seeded instance directly; a NARROWER width
+/// is `width_cast` up to `Binary{64}` first (DN-41, WU-4 unblock). **A width WIDER than 64
+/// (`u128`/`i128` -> `Binary{128}`) is an honest, disclosed GAP, never composed** (post-landing
+/// review fix — mirrors [`super::show::leaf_show_expr`]'s identical fix): a NARROWING
+/// `width_cast` can `EvalError::Overflow` at runtime for a real wide value, which would silently
+/// overstate this leaf's scope past DN-138 §6's stated `u8`/`u16`/`u32` widths. `None` also for
 /// `Float`/`Deferred`/`VecOf` (depth-1 scope: a `Vec`-of-`Vec` element is not a supported leaf).
 fn leaf_cmp_expr(a: &str, b: &str, ft: &str) -> Option<String> {
     match field_derive_kind(ft) {
@@ -73,7 +77,10 @@ fn leaf_cmp_expr(a: &str, b: &str, ft: &str) -> Option<String> {
             Some(format!("cmp({a}, {b})"))
         }
         FieldDeriveKind::ScalarBinary => {
-            scalar_binary_width(ft)?;
+            let w = scalar_binary_width(ft)?;
+            if w > 64 {
+                return None; // a NARROWING width_cast can overflow at runtime -- honest gap.
+            }
             let w64 = zero_bin_literal(64);
             Some(format!(
                 "cmp(width_cast({a}, {w64}), width_cast({b}, {w64}))"
@@ -107,9 +114,13 @@ fn vec_ord_aux(mangled: &str, elem_ft: &str) -> String {
 /// (past the ADR-040 `Float` pre-check, which always fires first).
 fn ord_ineligible_reason(ft: &str) -> String {
     match field_derive_kind(ft) {
-        FieldDeriveKind::ScalarBinary => {
-            unreachable!("every ScalarBinary width now composes via width_cast, WU-4")
-        }
+        FieldDeriveKind::ScalarBinary => format!(
+            "a scalar WIDER than the seeded `Ord3` instance's `Binary{{64}}` (`{ft}`, e.g. a \
+             `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can overflow at \
+             runtime for a real wide value, so this leaf leaves it an honest gap rather than \
+             compose a call that would `myc-check` clean but THROW at eval time (post-landing \
+             review fix, DN-138 section 6's stated scope is u8/u16/u32 only)"
+        ),
         FieldDeriveKind::VecOf => format!(
             "a `Vec` field whose element type `{}` has no `Ord3` route of its own (a \
              `Vec`-of-`Vec` or a `Float`/other-bracketed element -- DN-138 section 6, WU-4's \

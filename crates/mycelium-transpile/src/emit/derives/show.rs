@@ -16,11 +16,17 @@ fn recognizes(name: &str) -> bool {
 
 /// **DN-138 WU-4 — the LEAF `render` expression for a value of kind `ft`** (a field, or a `Vec`
 /// element recursed into by [`vec_show_aux`]): `UserNamed`/`BytesLike`/`BoolLike` and a
-/// `ScalarBinary` at ANY width all resolve — a `Binary{64}` field dispatches the seeded `Show`
-/// instance directly; a NARROWER/wider width is `width_cast` up to `Binary{64}` first (DN-41; DN-138
-/// §6 increment-2 unblock — never a silent width mismatch, `width_cast`'s own checked-narrow/
-/// zero-extend-widen contract stays the runtime safety net). `None` for `Float`/`Deferred`/`VecOf`
-/// (a `Vec`-of-`Vec` element is NOT a supported leaf — DN-138 WU-4's disclosed depth-1 scope).
+/// `ScalarBinary` AT OR NARROWER THAN `Binary{64}` all resolve — a `Binary{64}` field dispatches
+/// the seeded `Show` instance directly; a NARROWER width is `width_cast` up to `Binary{64}` first
+/// (DN-41; DN-138 §6 increment-2 unblock). **A width WIDER than 64 (`u128`/`i128` map to
+/// `Binary{128}`, `map.rs`) is an honest, disclosed GAP, never composed** (post-landing review
+/// fix): `width_cast(v, Binary{64})` for a `Binary{128}` value is a NARROWING cast, and
+/// `width_cast`'s own checked-narrow contract REFUSES at runtime (`EvalError::Overflow`) for any
+/// value `>= 2^64` — composing it unconditionally would let a derived `Debug` (a Rust operation
+/// that never panics) `myc-check`-clean but THROW at eval time for a real `u128` value, silently
+/// overstating this leaf's scope beyond DN-138 §6's stated `u8`/`u16`/`u32` widths. `None` also for
+/// `Float`/`Deferred`/`VecOf` (a `Vec`-of-`Vec` element is NOT a supported leaf — DN-138 WU-4's
+/// disclosed depth-1 scope).
 fn leaf_show_expr(v: &str, ft: &str) -> Option<String> {
     match field_derive_kind(ft) {
         FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
@@ -29,7 +35,9 @@ fn leaf_show_expr(v: &str, ft: &str) -> Option<String> {
         FieldDeriveKind::ScalarBinary if is_seeded_scalar_width(ft) => Some(format!("render({v})")),
         FieldDeriveKind::ScalarBinary => {
             let w = scalar_binary_width(ft)?;
-            let _ = w; // width itself unused beyond existence-check; the witness is always Binary{64}
+            if w > 64 {
+                return None; // a NARROWING width_cast can overflow at runtime -- honest gap.
+            }
             Some(format!("render(width_cast({v}, {}))", zero_bin_literal(64)))
         }
         FieldDeriveKind::Float | FieldDeriveKind::Deferred | FieldDeriveKind::VecOf => None,
@@ -119,6 +127,15 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
                      `Vec`-of-`Vec` or a `Float`/other-bracketed element -- DN-138 section 6, \
                      WU-4's disclosed depth-1 scope)",
                     vec_element(ft).unwrap_or(ft)
+                )
+            } else if field_derive_kind(ft) == FieldDeriveKind::ScalarBinary {
+                format!(
+                    "a scalar WIDER than the seeded `Show` instance's `Binary{{64}}` (`{ft}`, e.g. \
+                     a `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can \
+                     overflow at runtime for a real wide value, so this leaf leaves it an honest \
+                     gap rather than compose a call that would `myc-check` clean but THROW at \
+                     eval time (post-landing review fix, DN-138 section 6's stated scope is \
+                     u8/u16/u32 only)"
                 )
             } else {
                 "a primitive repr (or `Seq`/tuple/other bracketed shape) with no ambient `Show` \

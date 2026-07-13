@@ -3246,6 +3246,16 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
             "WithVecOfUser",
         ),
+        // DN-138 WU-4 (post-landing review fix) -- a `u128` field is WIDER than the seeded
+        // `Binary{64}` instance: `PartialEq` (width-generic `eq` prim) and `Default` (a literal
+        // zero at the field's own width, no width_cast at all) still compose cleanly; `Debug`/
+        // `PartialOrd` honestly GAP it instead of composing a `width_cast` that would `myc-check`
+        // clean but overflow at runtime for a real value >= 2^64 (see `derive_debug_and_partialord_
+        // gap_a_wide_scalar_never_a_runtime_throwing_width_cast` below for the negative half).
+        (
+            "#[derive(Default, PartialEq)]\nstruct Wide(u128);",
+            "Wide",
+        ),
     ];
     for (i, (rust, item)) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
@@ -3642,6 +3652,77 @@ fn derive_eq_and_debug_both_compose_over_a_narrow_scalar_dn138_wu4() {
     assert!(
         debug_myc.contains("width_cast(p0,"),
         "expected the width_cast-wrapped render call, got:\n{debug_myc}"
+    );
+}
+
+/// **HIGH (post-landing review finding, fixed here): a WIDE `ScalarBinary` (`u128`/`i128` ->
+/// `Binary{128}`) must NEVER compose `Debug`/`PartialOrd` via a NARROWING `width_cast` down to the
+/// seeded `Binary{64}` instance** -- `width_cast`'s own checked-narrow contract overflows at
+/// runtime for any value `>= 2^64` (`prims.rs::prim_width_cast`), so composing it unconditionally
+/// would `myc-check` clean but THROW at eval time for a real wide value -- silently overstating
+/// DN-138 section 6's stated `u8`/`u16`/`u32` scope. Both rows must leave it an honest,
+/// non-fabricated gap instead (never a partial/wrong-but-plausible-looking impl, G2).
+#[test]
+fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast() {
+    let (debug_myc, debug_report) =
+        transpile_source("#[derive(Debug)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !debug_myc.contains("width_cast"),
+        "Debug must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{debug_myc}"
+    );
+    assert!(
+        debug_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Debug")),
+        "expected a DeriveAttr gap citing Debug for the wide scalar field, got {:?}",
+        debug_report.gaps
+    );
+
+    let (ord_myc, ord_report) =
+        transpile_source("#[derive(PartialOrd)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !ord_myc.contains("width_cast"),
+        "PartialOrd must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{ord_myc}"
+    );
+    assert!(
+        ord_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialOrd")),
+        "expected a DeriveAttr gap citing PartialOrd for the wide scalar field, got {:?}",
+        ord_report.gaps
+    );
+
+    // The companion positive control: PartialEq (width-generic prim, no cast at all) and Default
+    // (a literal zero at the field's own width, no cast either) both still compose CLEAN for the
+    // identical wide field -- this asymmetry is real and intentional, not a regression (pinned
+    // directly here, and via the live oracle in `derive_forms_check_clean_against_real_toolchain`'s
+    // `Wide` case).
+    let (_, eq_report) = transpile_source("#[derive(PartialEq)]\nstruct Wide(u128);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !eq_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "PartialEq must still compose over a wide (u128) scalar (width-generic eq prim, no \
+         width_cast at all), got {:?}",
+        eq_report.gaps
+    );
+    let (_, default_report) =
+        transpile_source("#[derive(Default)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !default_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "Default must still compose over a wide (u128) scalar (a literal zero at its own width, \
+         no width_cast at all), got {:?}",
+        default_report.gaps
     );
 }
 
