@@ -2077,6 +2077,255 @@ fn self_receiving_inherent_method_is_left_unmangled() {
     );
 }
 
+// --- DN-133 (M-1094) — qualified/associated-function call-site emission ------------------------
+//
+// `visit_call`'s resolution-gated mangled-call arm: `Type::method(...)` emits the mangled
+// `Type__method(args)` call ONLY when that exact declaration is a PROVEN-emitted no-`self`
+// inherent-impl associated fn (same-file, or a resolved M-1084 cross-nodule sibling); otherwise an
+// honest gap, never a fabricated bare-last-segment call (the D4 lesson, G2/VR-5).
+
+/// The core positive case: a receiver-less associated fn (`Foo::new`) is declared EARLIER in the
+/// file, and a LATER free fn calls it qualified (`Foo::new(x)`) — this file's own single
+/// left-to-right pass already recorded the real emission by the time the call is reached, so it
+/// resolves to the mangled `Foo__new(x)` call (never the fabricated bare `new(x)`).
+#[test]
+fn qualified_call_to_same_file_associated_fn_resolves_and_mangles() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                pub fn make(x: u32) -> Foo { Foo::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the same-file fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must emit (the qualified call must resolve, not gap): {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("Foo__new(x)"),
+        "expected the mangled call `Foo__new(x)` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("= new(x)") && !myc.contains(" new(x)"),
+        "must never emit the fabricated bare-last-segment call `new(x)`, got:\n{myc}"
+    );
+}
+
+/// `Self::method(...)` resolves via the already-threaded enclosing impl type: a SECOND
+/// receiver-less method in the same impl block calls an EARLIER sibling method (declaration
+/// order within the impl) via `Self::new(...)`.
+#[test]
+fn qualified_call_via_self_resolves_within_own_impl() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                    pub fn default_new() -> Self { Self::new(0u32) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the `Self::` fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo"),
+        "impl Foo must emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("Foo__new(") && myc.contains("Foo__default_new("),
+        "expected both mangled decls in the emitted text, got:\n{myc}"
+    );
+    // The `Self::new(0u32)` call site itself must resolve to the mangled name, not gap.
+    assert!(
+        !report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "the `Self::new(...)` call must resolve, not gap: gaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A FORWARD reference — the call site appears BEFORE the impl block in file order — stays gapped:
+/// this file's single left-to-right pass has not yet observed `Foo::new`'s real emission at the
+/// point `make`'s body is emitted, so the same-file tier correctly does NOT resolve it (never a
+/// prediction, only an observed fact — VR-5/G2). A real, honest boundary, not a bug: closing it
+/// would require a second file-local pass (out of this leaf's scope; the M-1084 cross-nodule tier
+/// is exactly this kind of two-pass mechanism, applied across FILES).
+#[test]
+fn qualified_call_forward_reference_still_gaps() {
+    let rust = "pub struct Foo(u32);\n\
+                pub fn make(x: u32) -> Foo { Foo::new(x) }\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the forward-reference fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped (forward reference, never resolved): emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// An unresolved type (never declared/impl'd anywhere in this file) gaps — never a guess.
+#[test]
+fn qualified_call_to_unknown_type_gaps() {
+    let rust = "fn make(x: u32) -> u32 { Bar::create(x) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the unknown-type fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A primitive/std associated fn (no emitted decl — e.g. `i128::try_from`) always gaps: it falls
+/// out naturally from the resolution gate (no impl ever mangles a primitive), not a special case.
+#[test]
+fn primitive_associated_fn_call_always_gaps() {
+    let rust = "fn conv(x: u32) -> u32 { i128::try_from(x) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the primitive fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "conv"),
+        "`conv` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A `self`-receiving method's bare name is NEVER mangled (`self_receiving_inherent_method_is_left_unmangled`
+/// above), so a UFCS-style qualified call naming one (`Foo::get(v)`) never resolves either — no
+/// false positive just because the type/method names happen to match a real declaration.
+#[test]
+fn qualified_call_naming_a_self_receiving_method_still_gaps() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn get(&self) -> u32 { self.0 }\n\
+                }\n\
+                pub fn call_it(v: Foo) -> u32 { Foo::get(v) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the self-method-UFCS fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "call_it"),
+        "`call_it` must stay gapped (a `self`-receiving method is never mangled, so its \
+         qualified-call form never resolves): emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+}
+
+/// Regression: a cross-*module* free-function path (`a::b::c()`, 3+ segments) is unaffected by
+/// this DN-133 arm — it stays exactly the pre-existing gap (out of this leaf's scope, DN-133 §2
+/// sub-kind 3; routes through the Import/symtab free-fn resolver instead).
+#[test]
+fn cross_module_free_fn_path_gap_is_unchanged() {
+    let rust = "fn f() -> u32 { a::b::c() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the free-fn-path fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "`f` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no established Mycelium surface form")),
+        "expected the pre-existing qualified-call gap reason (unchanged), got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-133/M-1094: the resolved mangled call is run
+/// through the REAL `myc-check` oracle (T-A3 — "emit iff check accepts"), proving the emitted
+/// `Foo__new(x)` call actually type-checks against the mangled decl, exactly like
+/// `inherent_impl_no_self_name_collision_is_mangled_and_checks_clean` proves the DECL side alone.
+/// Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn qualified_call_resolved_mangled_check_clean_against_real_toolchain() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let rust = "pub struct Foo(u32);\n\
+                pub struct Bar(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                impl Bar {\n\
+                    pub fn new(x: u32) -> Self { Bar(x) }\n\
+                }\n\
+                pub fn make_foo(x: u32) -> Foo { Foo::new(x) }\n\
+                pub fn make_bar(x: u32) -> Bar { Bar::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the two-type fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "make_foo")
+            && report.emitted_items.iter().any(|n| n == "make_bar"),
+        "both qualified calls must resolve and emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("Foo__new(x)") && myc.contains("Bar__new(x)"),
+        "expected both mangled calls in the emitted text (never cross-wired to the wrong type), \
+         got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-qualcall-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the resolved mangled-call nodule must check CLEAN with the real myc-check oracle \
+         (T-A3: emit iff check accepts) — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
 //
 // Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are

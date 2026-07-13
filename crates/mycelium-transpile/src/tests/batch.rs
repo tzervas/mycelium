@@ -512,6 +512,63 @@ fn resolved_cross_nodule_reference_marks_the_sibling_item_pub() {
     );
 }
 
+/// DN-133 (M-1094) tier (ii) — the currently-honest boundary of the cross-nodule resolution gate,
+/// pinned rather than silently assumed: `bar.rs` imports `Foo` from a batch sibling `foo.rs` (the
+/// `use` leaf itself DOES resolve — `Foo` the struct is a real emitted item), and calls its
+/// receiver-less constructor qualified (`Foo::new(x)`). This does **not** yet resolve to the
+/// mangled `Foo__new` — the batch symbol table indexes each sibling's emitted items by their own
+/// TOP-LEVEL name (`GapReport::emitted_items`), and an inherent `impl` block is recorded under its
+/// own coarse `"impl Foo"` name, not each individual mangled method it contains (see
+/// `emit.rs::cross_nodule_resolve_mangled`'s doc). So this stays a real, FLAGged residual (never a
+/// false positive — VR-5/G2), not a silently-assumed close; a follow-up that also indexes each
+/// mangled per-method name in the batch table would close it.
+#[test]
+fn qualified_call_to_cross_nodule_associated_fn_is_a_currently_honest_no_op() {
+    let tmp = TempDir::new("dn133-cross-nodule");
+    tmp.write(
+        "foo.rs",
+        "pub struct Foo(u32);\nimpl Foo {\n    pub fn new(x: u32) -> Self { Foo(x) }\n}\n",
+    );
+    tmp.write(
+        "bar.rs",
+        "use crate::foo::Foo;\npub fn make(x: u32) -> Foo { Foo::new(x) }\n",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let bar = results
+        .iter()
+        .find(|r| r.path.file_name().unwrap() == "bar.rs")
+        .expect("bar.rs result present");
+
+    // The `use crate::foo::Foo;` leaf itself DOES resolve — a real, home-qualified `use` line.
+    assert!(
+        bar.myc.contains("use foo.Foo;") || bar.myc.contains(".Foo;"),
+        "expected the `Foo` import to resolve (unaffected by this DN-133 tier), got:\n{}",
+        bar.myc
+    );
+    // But `make`'s qualified call to `Foo::new` still gaps today — pinned, not silently assumed.
+    assert!(
+        !bar.report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must still gap (the cross-nodule mangled-method tier is a no-op today, per this \
+         test's own doc): emitted={:?}",
+        bar.report.emitted_items
+    );
+    assert!(
+        bar.report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        bar.report
+            .gaps
+            .iter()
+            .map(|g| &g.reason)
+            .collect::<Vec<_>>()
+    );
+}
+
 /// A batch with **no** in-batch cross-referencing `use` (every file is import-independent) is
 /// byte-identical to the pre-gap-close-2 driver: every `use` still gaps, nothing is ever marked
 /// `pub`. Guards against the two-pass driver silently changing behavior for the common case.

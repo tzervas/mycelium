@@ -150,11 +150,16 @@ pub(crate) fn transpile_source_with_ctx(
         module: &current_module,
         crate_ident: current_crate.as_deref(),
     };
+    // DN-133 (M-1094) tier (ii): this file's own `use`-imported type names -> their ordered
+    // cross-nodule symbol-table lookup key(s) — see `imported_type_keys`'s doc.
+    let imported_type_keys =
+        imported_type_keys(&parsed.items, current_crate.as_deref(), &current_module);
     crate::emit::with_emit_ctx(
         resolvable,
         layouts,
         symtab.clone(),
         pub_needed.clone(),
+        imported_type_keys,
         || {
             for item in &parsed.items {
                 let (line, col) = span_line_col(item);
@@ -338,6 +343,40 @@ fn struct_layouts(items: &[Item]) -> HashMap<String, Vec<Option<String>>> {
                 syn::Fields::Unit => Vec::new(),
             };
             out.insert(s.ident.to_string(), fields);
+        }
+    }
+    out
+}
+
+/// DN-133 (M-1094) tier (ii): for every locally `use`-imported type NAME in this file, the
+/// ordered cross-nodule symbol-table lookup key(s)
+/// ([`SymbolTable::candidate_lookup_keys`]) that head would resolve through — consumed by
+/// [`crate::emit::cross_nodule_resolve_mangled`] so a qualified/associated-fn call site
+/// (`Type::method(...)`) can try a batch sibling's own emitted-name set for the mangled
+/// `{Type}__{method}` decl (see `emit.rs::EmitCtx::imported_type_keys`'s doc for this tier's
+/// currently-honest scope). Reuses [`symtab::use_candidates`]/
+/// [`SymbolTable::candidate_lookup_keys`] — the SAME resolution policy [`dispatch_use`] already
+/// applies to a plain `use` (DRY, one policy, not two divergent copies). Only a
+/// [`CandidateKind::Name`] leaf names a single importable item (a rename/glob/self-module leaf
+/// carries no plain name to key on, so it is simply not entered here — consistent with
+/// [`dispatch_use`]'s own handling of those kinds elsewhere). Empty in single-file/non-batch mode
+/// (no sibling table will ever hit — byte-identical no-op).
+fn imported_type_keys(
+    items: &[Item],
+    current_crate: Option<&str>,
+    current_module: &[String],
+) -> HashMap<String, Vec<String>> {
+    let mut out = HashMap::new();
+    for item in items {
+        let Item::Use(u) = item else { continue };
+        let Some(candidates) = symtab::use_candidates(&u.tree, current_module) else {
+            continue;
+        };
+        for c in &candidates {
+            if let CandidateKind::Name(name) = &c.kind {
+                let keys = SymbolTable::candidate_lookup_keys(current_crate, current_module, c);
+                out.insert(name.clone(), keys);
+            }
         }
     }
     out
