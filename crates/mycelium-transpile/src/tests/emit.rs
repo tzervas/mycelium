@@ -3031,3 +3031,115 @@ fn derive_forms_check_clean_against_real_toolchain() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// ---------------------------------------------------------------------------------------------
+// DN-136/P1-a (M-1096) — the emit hook-dispatch interfaces-first refactor's byte-identical
+// differential (the DoD gate, DN-136 §8 / §3 "the migration is mechanical and behavior-
+// preserving ... the cases() corpus and the differential harness emit byte-identical text
+// before/after"). This is the one place the whole `cases()` corpus is asserted BYTE-IDENTICAL
+// (not the substring `contains` checks the fixtures above use) against a golden snapshot
+// captured from the PRE-refactor emitter (`origin/dev@642851ac`, before the P1-a handler-table
+// migration touched `map_pattern_inner`/`lower_struct_derives`/`visit_call`).
+// ---------------------------------------------------------------------------------------------
+
+/// One case's captured emission outcome — deliberately independent of [`crate::gap::Gap`]'s own
+/// `Serialize`-only derive (that type has no `Deserialize`), so this snapshot struct is the
+/// stable, round-trippable golden format on its own terms.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct CaseSnapshot {
+    /// The exact `.myc` text `transpile_source` produced for the whole fixture (every emitted
+    /// item, joined) — the primary byte-identical signal.
+    myc: String,
+    emitted_items: Vec<String>,
+    /// `(category.as_str(), reason, item_name)` per gap, in report order — catches an accidental
+    /// message-text drift during the handler-table move, not just an emitted-text drift.
+    gaps: Vec<(String, String, Option<String>)>,
+}
+
+fn snapshot_case(case: &Case) -> CaseSnapshot {
+    let (myc, report) = transpile_source(case.rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("case `{}` failed to parse/transpile: {e}", case.name));
+    CaseSnapshot {
+        myc,
+        emitted_items: report.emitted_items,
+        gaps: report
+            .gaps
+            .iter()
+            .map(|g| {
+                (
+                    g.category.as_str().to_string(),
+                    g.reason.clone(),
+                    g.item_name.clone(),
+                )
+            })
+            .collect(),
+    }
+}
+
+const EMIT_HOOK_GOLDEN_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/tests/fixtures/emit_hook_golden.json"
+);
+
+/// **One-off golden-snapshot generator — NOT part of the regression gate (`#[ignore]`).**
+///
+/// Run manually (`cargo test -p mycelium-transpile --lib generate_emit_hook_golden_snapshot -- \
+/// --ignored --exact`) to (re)write `src/tests/fixtures/emit_hook_golden.json`. This was run
+/// exactly ONCE, against the PRE-refactor emitter (`origin/dev@642851ac`, before the P1-a
+/// handler-table migration), to capture the golden reference
+/// [`emit_hook_refactor_byte_identical_differential`] below checks the post-refactor emitter
+/// against. **Never re-run this to "fix" a failing differential** — a red differential means the
+/// migration changed behavior (a regression to find and fix in the migration, not the snapshot);
+/// only re-run it when a *separately reviewed, intentional* emitter behavior change lands (VR-5 —
+/// regenerating the oracle to match a regression would silently launder it).
+#[test]
+#[ignore = "one-off golden-snapshot generator for the DN-136/P1-a byte-identical differential; \
+            run manually with --ignored, never as part of the regression gate"]
+fn generate_emit_hook_golden_snapshot() {
+    use std::collections::BTreeMap;
+    let snapshot: BTreeMap<&'static str, CaseSnapshot> = cases()
+        .iter()
+        .map(|case| (case.name, snapshot_case(case)))
+        .collect();
+    let json = serde_json::to_string_pretty(&snapshot).expect("serialize golden snapshot");
+    std::fs::write(EMIT_HOOK_GOLDEN_PATH, json).expect("write golden snapshot fixture");
+}
+
+/// **The DN-136/P1-a Definition-of-Done gate.** Re-derives every `cases()` fixture's emission
+/// through the (post-refactor) emitter and asserts it is BYTE-IDENTICAL to the golden snapshot
+/// captured from the pre-refactor emitter (see [`generate_emit_hook_golden_snapshot`]'s doc). A
+/// case present in `cases()` but absent from the golden snapshot (or vice versa) is itself a
+/// failure — the corpus must not silently grow/shrink without a deliberate re-snapshot (G2).
+#[test]
+fn emit_hook_refactor_byte_identical_differential() {
+    use std::collections::BTreeMap;
+    let golden: BTreeMap<String, CaseSnapshot> =
+        serde_json::from_str(include_str!("fixtures/emit_hook_golden.json"))
+            .expect("golden snapshot fixture parses as JSON");
+    let live = cases();
+    assert_eq!(
+        golden.len(),
+        live.len(),
+        "cases() corpus size ({}) drifted from the golden snapshot ({}) — regenerate the \
+         snapshot deliberately (see generate_emit_hook_golden_snapshot's doc), never silently",
+        live.len(),
+        golden.len()
+    );
+    for case in &live {
+        let expected = golden.get(case.name).unwrap_or_else(|| {
+            panic!(
+                "case `{}` is not in the golden snapshot — a case was added/renamed without a \
+                 deliberate re-snapshot",
+                case.name
+            )
+        });
+        let actual = snapshot_case(case);
+        assert_eq!(
+            &actual, expected,
+            "case `{}`: emit-hook-refactored output differs from the pre-refactor (DN-136 \
+             P1-a) golden snapshot — the handler-table migration must be byte-identical \
+             (mechanical move only, never a behavior change)",
+            case.name
+        );
+    }
+}
