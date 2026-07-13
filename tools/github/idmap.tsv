@@ -632,3 +632,13 @@ M-1066	1484	4863522359
 M-1067	1485	4863522365
 M-1068	1487	4863522404
 M-1069	1486	4863522388
+# appended by sync_issues.py (2 new)
+M-1079	1519	4868229610
+M-1080	1520	4868229673
+# appended manually (tracking-truth reconciliation, 2026-07-12) -- sync_issues.py --apply
+# aborted mid-batch on M-1072's missing 'priority:P4' label before it could checkpoint
+# idmap.tsv (see append_idmap() call site at end of the --apply loop, sync_issues.py:876);
+# a retry re-created M-1070/M-1071 as duplicates (#1539/#1540, closed as dup of #1537/#1538).
+# Recording the surviving canonical mapping here so a future sync run does not recreate them.
+M-1070	1537	4869665644
+M-1071	1538	4869665824

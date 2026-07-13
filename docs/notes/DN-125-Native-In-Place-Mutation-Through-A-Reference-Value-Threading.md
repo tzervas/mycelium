@@ -434,3 +434,31 @@ table (the `&mut` row) and an append-only paragraph added to DN-118 §5, both po
   differential-witnessed. Minted **M-1081** (transpiler `&mut self`/`&mut T` value-threading lowering)
   this close-out, `depends_on: [M-1079]` (DN-124 phylum-mode vet harness, for measurable
   `checked_fraction` credit on the cross-nodule call sites the lowering rewrites).
+- 2026-07-12 — **Build landed + an aliasing hole closed (append-only, M-1081 now `status: done`).**
+  The §5 lowering landed in PR #1527 (`6cae69eb`): `emit::map_signature`'s `FnArg::Receiver` arm and
+  `map.rs`'s `&mut T` params both value-thread with call-site rebind (S1/S2/S3), the §6.1 uniqueness
+  gate FLAGs unprovable receivers never-silently, §6.2 interior-`&mut`-returning methods are excluded
+  and flagged, and `Drop::drop(&mut self)` routes to the reclamation lane per §4 Rank 1. A follow-up
+  re-review (PR #1530, `ae4007bf`) found a genuine **silent-corruption hole** this note's own
+  adversarial stress-test (§6) did not anticipate: `let y = other;`, where `other` is *itself* another
+  threaded `&mut` binding, moves `other`'s live reference into the name `y` — this emitter's
+  `try_threaded_assign`/`threaded_deref_lhs` matching is purely name-based (no scope-tracking), so a
+  later `*y = ..;` kept folding onto the *original* `y` binding regardless of the rebind, producing a
+  wrong value on **both** threaded outputs while the emission still `myc check`-cleaned (the
+  transparency rule's sharpest failure mode — wrong-but-clean, not merely gapped). Closed by
+  `aliased_threaded_binding` in `emit_mutating_block_as_expr_inner`, which REFUSES
+  (`Category::Other`, never-silent, G2/VR-5) any `let <threaded-name> = <rhs>;` whose RHS is a bare
+  path naming a *different* threaded binding — sound by construction, since every threaded binding's
+  source type is a non-`Copy` `&mut T`, so a bare-path RHS can only be a reference move, never a value
+  copy; the pre-existing, genuinely-safe independent-value shadow (`let y = <plain local/literal/
+  deref/call>;`) is unaffected. Verified: 3 new tests in `mut_thread.rs` (the repro asserting a
+  recorded gap rather than a wrong value, its symmetric-direction twin, and a safe-shadow regression)
+  plus all 14 pre-existing `mut_thread` tests, all green
+  (`cargo test -p mycelium-transpile --lib -- tests::mut_thread`, re-verified 2026-07-12 at the
+  tracking-truth reconciliation: 14/14). This note's §6 adversarial narrowings are corrected by this
+  entry, not rewritten (house rule #3): the two originally-identified FLAG boundaries (unprovable
+  uniqueness, interior-`&mut`-return) were real and complete for the *non-aliased* case; the aliasing
+  hole above is a **third** FLAG boundary this build discovered, now closed with the same never-silent
+  discipline. `tools/github/issues.yaml`'s M-1081 entry and `CHANGELOG.md` carry the landing basis
+  (applied at the same tracking-truth reconciliation this entry records, rather than minting a
+  separate M-id for already-landed, already-tested work).

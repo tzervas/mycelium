@@ -16564,6 +16564,19 @@ issues:
       ratified. The build itself (the two fixtures plus the py2rust end-to-end fixture) remains
       unbuilt; `status:todo` unchanged.
 
+      **Append-only note (2026-07-12, PR #1531, `cd84768a`, tracking-truth reconciliation basis).**
+      DoD item 2 **landed**: `crates/mycelium-l1/src/type_strictness.rs` (the `TypeStrictness`
+      demotion switch over `Cx::check_ascribe`/`check_fn_body`) plus DN-126 §4's mechanical-
+      strictification classifier (`strictify`); both DoD-item-2 fixtures are pinned in
+      `crates/mycelium-l1/src/tests/type_strictness.rs`
+      (`loose_mode_flags_the_ascription_mismatch_instead_of_refusing`,
+      `strict_mode_refuses_the_ascription_mismatch`) -- 11/11 green
+      (`cargo test -p mycelium-l1 --lib -- tests::type_strictness`), strict-mode default behavior
+      unchanged. **DoD item 3 (the py2rust end-to-end Python fixture) remains genuinely unbuilt** --
+      py2rust is explicitly deferred until "Rust-native is solid + py2rust matured" (`.claude/kickoffs/
+      gap-close-2.md`), so this is not a near-term residual, not an oversight. `status:todo` stays
+      correct (kept honest — 2 of 3 DoD items landed, not silently upgraded to done, VR-5).
+
   - id: M-1078
     title: "M-1078 -- records/named-fields faithfulness + self-hosted struct-pattern surface (DN-123)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -16614,7 +16627,7 @@ issues:
   - id: M-1079
     title: "M-1079 -- vet-harness phylum visibility: partial PhylumReport verdicts + phylum-mode --vet wiring + dual-report measurement basis (DN-124)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P2, status:done]
     epic: E28-1
     depends_on: [M-1060]
     doc_refs:
@@ -16671,10 +16684,23 @@ issues:
         tests run in cloud (`cargo test -p mycelium-check`, `-p mycelium-transpile`); the full sweep
         is desktop-held (`just check-canary` per-promotion; `just check-full` on the desktop).
 
+      **Status flip (2026-07-12, PR #1521 `eb6bc0e2`, tracking-truth reconciliation basis — mit
+      #14).** All three units landed and verified green against `dev`: Unit 1 —
+      `PhylumErrorKind`/`NoduleClass`/`NoduleVerdict` in `crates/mycelium-check/src/lib.rs`
+      (`check_phylum_sources` populating per-nodule verdicts for every parsed nodule, not only an
+      all-clean phylum); Unit 2 — `mycelium-transpile/src/vet.rs`'s `MycChecker::vet_phylum` +
+      `VetReport::{with_phylum,checked_fraction_phylum,delta_basis}` dual-reporting alongside the
+      oracle-mode fraction; Unit 3 — `gen/myc-drafts/regenerate.sh` batches the semcore SCC as one
+      phylum and surfaces the `--vet --phylum` dual-report line. `cargo test -p mycelium-check`
+      (13/13) and `cargo test -p mycelium-transpile --lib` (98/98, re-verified in an isolated
+      worktree at `eb6bc0e2` itself — a first pass of this note misquoted 113/113, the count read
+      later in the session after M-1080/M-1081/M-1089's tests had also landed on top; corrected
+      per a PR #1543 review finding, VR-5) both green. `status: done`.
+
   - id: M-1080
     title: "M-1080 -- external-trait-impls MVP: transpiler rule-swap (WU-A) + prelude-seed target-trait availability (WU-B) (DN-122)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-1060, M-1079]
     doc_refs:
@@ -16728,10 +16754,24 @@ issues:
       *landed* `CoherenceView` today is phylum-wide/pub-blind, not home-qualified (VR-5 --
       Accepted-but-unbuilt is not a landed reuse). `depends_on`/`status` here unchanged by this note.
 
+      **Status flip (2026-07-12, PR #1522 `b97b008e` + re-measure `06b4d7a7`, tracking-truth
+      reconciliation basis — mit #14).** WU-A (`crates/mycelium-transpile/src/emit.rs`'s
+      `use <trait-home>.<Trait>` emission) and WU-B (`crates/mycelium-l1/src/ord3.rs`'s prelude-seed)
+      both landed with T-A1/T-A2/T-A3 (`crates/mycelium-transpile/src/tests/emit.rs`, incl. the
+      live-oracle `myc check` proof) and T-B1/T-B2 (`crates/mycelium-l1/src/tests/ord3.rs`) green
+      (`cargo test -p mycelium-l1 --lib -- tests::ord3`: 4/4; `-p mycelium-transpile --lib --
+      tests::emit`: 19/19). The Phase-0 re-measure ran under M-1079's landed phylum-mode basis
+      (regenerated at `eb6bc0e2`): OQ-7's single-param-vs-two-type split measures **0% on the
+      witnessed wave-1 corpus** (114 Impl-gaps, all method-body shapes, none foreign-trait-impl
+      shaped) — an honest 0-corpus-delta result, not a fabricated leverage figure (VR-5); the DoD's
+      "reports the split before the leverage tag moves off `Declared`" item is satisfied by this
+      measured (not merely unmeasured) 0%. WU-C stays explicitly out of scope. `status: done`
+      (mechanism landed + differential-witnessed; corpus payoff honestly 0 today).
+
   - id: M-1081
     title: "M-1081 -- transpiler &mut self / &mut T value-threading lowering: by-value receiver/param + call-site rebind, uniqueness-gated, differential-witnessed (DN-125)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: [M-1079]
     doc_refs:
@@ -16786,6 +16826,25 @@ issues:
         at first land and becomes zero-copy only as DN-33's static analysis and DN-35 SS5's
         reuse-write land (E12 Increment 3, desktop-held) -- that later landing does not gate this
         issue's own correctness DoD.
+
+      **Status flip (2026-07-12, PR #1527 `6cae69eb` + follow-up PR #1530 `ae4007bf`, tracking-truth
+      reconciliation basis — mit #14).** `emit::map_signature`'s `FnArg::Receiver` `&mut self` lowering
+      and `map.rs`'s `&mut T` param lowering both landed (value-threading + call-site rebind, S1/S2/S3),
+      with the uniqueness gate, the interior-`&mut`-return exclusion, and `Drop::drop` routed to the
+      reclamation lane, all per DN-125 SS5/SS6. PR #1530's re-review found and closed a genuine
+      silent-corruption hole: `let y = other;` where `other` is itself another threaded `&mut` binding
+      moved `other`'s live reference into `y` under this emitter's name-based (no-scope-tracking)
+      matching, so a later `*y = ..;` silently mutated the wrong binding while still `myc check`-clean.
+      Fixed by `aliased_threaded_binding` in `emit_mutating_block_as_expr_inner`, which REFUSES
+      (`Category::Other`, never-silent) any `let <threaded-name> = <rhs>;` whose RHS is a bare path
+      naming a *different* threaded binding (the only shape that can alias, since every threaded
+      binding's source type is a non-`Copy` `&mut T`). Verified: `cargo test -p mycelium-transpile
+      --lib -- tests::mut_thread` 14/14 green (3 new: the aliasing repro asserting a recorded gap not a
+      wrong value, its symmetric-direction twin, and the safe-independent-value-shadow regression).
+      `status: done`. **Documentation debt closed in this same reconciliation pass**: PR #1530's own
+      FLAG (a DN-125 append-only note on the aliasing hole + a CHANGELOG entry) is applied directly
+      here rather than minting a separate M-id for already-landed, already-tested work (see DN-125's
+      `Meta — changelog` + `CHANGELOG.md`).
 
   - id: M-1082
     title: "M-1082 -- Display / int-to-string generic-Display kernel prim + write!/format! value-returning lowering (unblocks 26/30 &mut Formatter Impl gaps)"
@@ -17096,6 +17155,20 @@ issues:
         emits unbounded `type Foo[T]` + bounded methods.
       - `Declared` until built; `Empirical` once witnessed; no `Proven` claim (VR-5).
 
+      **Partial-landing note (2026-07-12, PR #1529 `6822a78c`, tracking-truth reconciliation basis —
+      mit #14).** The **kernel/L1 side is landed**: Parse (`parse.rs`'s `parse_impl_item` now calls
+      the bounded `parse_type_params_bounded` for the inherent-impl slot), Desugar (`checkty.rs`'s
+      Phase-0 prepend carries the impl param's real `bounds`), Check+mono (discharged dictionary-free
+      via the existing fn-bound path, zero new discharge code), and the Witnesses (`tests/check.rs`'s
+      `impl_slot_bound_is_accepted` + 3 reject-case tests, `tests/mono.rs`'s
+      `an_impl_slot_bound_calling_a_trait_method_monomorphizes`) — 34/34 green
+      (`cargo test -p mycelium-l1 --lib -- tests::mono`) + 3/3 (`--test check -- impl_slot_bound`).
+      **The Transpiler DoD item is NOT landed** — `crates/mycelium-transpile/src/emit.rs:355-359`
+      still explicitly refuses any type parameter carrying a bound in the emitted `.myc` type-param
+      list, so a Rust `impl<T: Bound> Foo<T>` still hard-gaps at emission rather than lowering to the
+      now-checker-accepted bounded impl slot. `status:todo` stays correct, **scoped to this residual
+      only** (the transpiler emission item); the L1/kernel DoD items above are done.
+
   - id: M-1089
     title: "M-1089 -- struct-variant pattern transpiler build: variant-aware StructLayout + Pat::Struct map_pattern arm (DN-132 P1, DN-34 SS8.22 finding #5 follow-on)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -17144,6 +17217,20 @@ issues:
       - Differential-witnessed on the DN-34 SS8.22 struct-variant-pattern targets before any
         `Empirical` upgrade past `Declared` (VR-5).
 
+      **Partial-landing note (2026-07-12, PR #1535 `f109b0d5`, landed mid-session, tracking-truth
+      reconciliation basis — mit #14).** The **`Pat::Struct` arm in `map_pattern_inner`** landed
+      (`emit.rs`): named-field patterns resolve via `struct_layout`, OQ-4/OQ-5/OQ-3(a) are all
+      tested, and `Self { .. }`/`Foo { x, y }` for a **plain in-file struct** now maps to the
+      positional `Ctor` surface -- 22/22 green (`cargo test -p mycelium-transpile --lib --
+      tests::emit`). **The `StructLayout` variant-awareness item is NOT landed**: `transpile.rs`'s
+      `struct_layouts` (line 315) still only walks `Item::Struct`, not `Item::Enum` variants with
+      `Fields::Named` -- confirmed by direct read against `dev`. So the DoD's own headline user
+      story, `Self::NotFound { path, .. }` (an enum struct-variant pattern), still has **no**
+      resolvable layout and will gap, not resolve -- this is the still-open producer-side residual
+      the landing PR's own commit message names explicitly as out of its 3-file scope. `status:todo`
+      stays correct, **scoped to this residual only** (the `transpile.rs` enum-variant layout
+      population); the consumer-side `emit.rs` arm is done.
+
   - id: M-1090
     title: "M-1090 -- native formatting build: std to_dec/digit_byte + Show prelude trait + transpiler write!/format! lowering (DN-127)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -17185,6 +17272,21 @@ issues:
         (`Declared` until run).
       - Float render (OQ-1) and width-generic `to_dec` stay explicit residuals, not part of this MVP.
 
+      **Partial-landing note (2026-07-12, tracking-truth reconciliation basis — mit #14).**
+      **WU-1 landed**: `lib/std/fmt.myc` carries `to_dec`/`to_dec_s`/`digit_byte` plus `impl Show` for
+      the primitive reprs, `myc-check`-clean (`./target/debug/myc-check lib/std/fmt.myc` → `ok`) and
+      differential-witnessed (`cargo test -p mycelium-l1 --test std_fmt`: 19/19 green). **WU-2
+      landed**: `Show[T] { fn render(x: T) => Bytes; }` is seeded via DN-129's shared
+      `seed_prelude_trait` mechanism (`crates/mycelium-l1/src/show.rs` +
+      `crates/mycelium-l1/src/tests/show.rs`'s T-B1-style visibility test, part of the 18/18 green
+      `tests::show`/`tests::preseed` run). **WU-3 is NOT landed**: no `write!`/`format!` lowering rule
+      exists in `crates/mycelium-transpile/src/emit.rs` — a Rust `write!(f, "{}", n)` body still
+      hard-gaps rather than lowering to a `bytes_concat`-fragment render, so the single largest
+      `Impl`-class bucket (30 pure gaps, DN-34 SS8.22) this issue names is not yet closed. The
+      M-1006/DN-124 re-measure has not run (nothing to measure without WU-3). `status:todo` stays
+      correct, **scoped to this residual only** (WU-3, the transpiler emission rule); WU-1/WU-2 are
+      done.
+
   - id: M-1091
     title: "M-1091 -- Init + Fault prelude traits + shared seed_prelude_trait helper (DN-129)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -17223,3 +17325,19 @@ issues:
         with the boundary recorded).
       - DN-128's `derive Default` witnessed lowering into an `Init` impl (the cross-note gate).
       - `Declared` until built; `Empirical` once witnessed (VR-5).
+
+      **Partial-landing note (2026-07-12, PRs #1526 `cd56c540`/`18904a83` + regression pin #1533
+      `88917c8d`, tracking-truth reconciliation basis — mit #14).** The **first three DoD items are
+      landed**: the shared `seed_prelude_trait` spine (`crates/mycelium-l1/src/preseed.rs`) with
+      `Fuse`/`Ord3` migrated onto it behavior-identically; `Init[T]`
+      (`crates/mycelium-l1/src/init.rs`) and `Fault[T]` (`crates/mycelium-l1/src/fault.rs`) seeded
+      via the same spine; T-B1-style visibility tests in `tests/init.rs`/`tests/fault.rs`; OQ-2
+      resolved as the **bare-marker** option (`Fault[T] {}`, no supertrait bound — verified
+      `TraitInfo` has no supertrait/bound field and the codebase has no supertrait mechanism at all,
+      so the `Fault: Show` bound is honestly NOT built, documented as a convention in `fault.rs`'s
+      module doc rather than silently assumed). 18/18 green
+      (`cargo test -p mycelium-l1 --lib -- tests::init tests::fault tests::show tests::preseed`).
+      **The fourth DoD item — DN-128's `derive Default` witnessed lowering into an `Init` impl — is
+      NOT landed**: it depends on **M-1086** (DN-128 std-derive lowering library), which remains
+      unbuilt (the emit-lane pending). `status:todo` stays correct, **scoped to this residual only**
+      (the DN-128 cross-note gate, blocked on M-1086); the seed/helper/visibility/OQ-2 items are done.
