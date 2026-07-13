@@ -16692,7 +16692,10 @@ issues:
       `VetReport::{with_phylum,checked_fraction_phylum,delta_basis}` dual-reporting alongside the
       oracle-mode fraction; Unit 3 — `gen/myc-drafts/regenerate.sh` batches the semcore SCC as one
       phylum and surfaces the `--vet --phylum` dual-report line. `cargo test -p mycelium-check`
-      (13/13) and `cargo test -p mycelium-transpile --lib` (113/113) both green. `status: done`.
+      (13/13) and `cargo test -p mycelium-transpile --lib` (98/98, re-verified in an isolated
+      worktree at `eb6bc0e2` itself — a first pass of this note misquoted 113/113, the count read
+      later in the session after M-1080/M-1081/M-1089's tests had also landed on top; corrected
+      per a PR #1543 review finding, VR-5) both green. `status: done`.
 
   - id: M-1080
     title: "M-1080 -- external-trait-impls MVP: transpiler rule-swap (WU-A) + prelude-seed target-trait availability (WU-B) (DN-122)"

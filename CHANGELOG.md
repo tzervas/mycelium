@@ -26,7 +26,10 @@ population is not, so it stays `todo` scoped to that residual (see below).
   `eb6bc0e2`): `mycelium-check`'s per-nodule `PhylumReport` verdicts, `mycelium-transpile`'s
   phylum-mode dual-report (`checked_fraction_phylum`/`delta_basis`), and
   `gen/myc-drafts/regenerate.sh`'s semcore-as-one-phylum batching. `cargo test -p mycelium-check`
-  (13/13) + `-p mycelium-transpile --lib` (113/113) green.
+  (13/13) + `-p mycelium-transpile --lib` (98/98, re-verified in an isolated worktree at
+  `eb6bc0e2` itself — a first pass of this note misquoted 113/113, the count read later in the
+  session after M-1080/M-1081/M-1089's tests had also landed on top; corrected per a PR review
+  finding, VR-5) green.
 - **M-1080** (DN-122 external-trait-impls MVP) — **done** (mechanism landed, honest 0-corpus-delta).
   WU-A/WU-B landed (PR #1522, `b97b008e`) with T-A1–T-A3/T-B1–T-B2 green. The Phase-0 re-measure
   (under M-1079's landed phylum-mode basis, `06b4d7a7`) measures OQ-7's single-param-vs-two-type
