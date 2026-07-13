@@ -46,6 +46,7 @@ mod reveal_roundtrip_e3;
 mod show;
 mod substrate;
 mod totality;
+mod type_strictness;
 mod usefulness;
 mod via_ordering;
 mod wrapping;

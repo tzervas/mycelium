@@ -98,6 +98,12 @@ pub(crate) mod show;
 pub mod substrate;
 pub mod token;
 pub mod totality;
+/// DN-126 (M-1077) — the **type-strictness axis**: loose/duck-typed on the interpreted path vs.
+/// strict-gates-compile, plus the type-hint-driven mechanical-strictification classifier
+/// ([`type_strictness::strictify`]). Orthogonal to [`checkty`]'s [`checkty::CheckError`]'s hard-vs-
+/// demotable posture (which this module's [`type_strictness::TypeStrictness`] switches) — see the
+/// module doc for the exact, honestly-narrow set of demotable sites this landing covers.
+pub mod type_strictness;
 pub(crate) mod usefulness;
 
 #[cfg(test)]
@@ -129,3 +135,6 @@ pub use reveal::{
 };
 pub use substrate::{ReleaseEvent, SubstrateError, SubstrateHandle, SubstrateProvenance};
 pub use totality::Totality;
+pub use type_strictness::{
+    strictify, Resolution, StrictifyOutcome, TypeFlag, TypeFlagKind, TypeStrictness,
+};
