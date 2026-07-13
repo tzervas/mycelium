@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-136 |
-| **Status** | **Draft** (2026-07-12). Design only — **builds nothing** and edits no `crates/**`. Every mechanism below is `Declared`/unbuilt until its FLAGGED build issue lands and is differential-witnessed (VR-5). It **recommends, does not ratify** (house rule #3); status moves forward only through the strict DN-review gate, applied by the maintainer/integrating parent — never self-ratified here. `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows are **FLAGGED** (§9), not applied. |
+| **Status** | **Accepted** (2026-07-12) — ratified through the strict 9-criterion DN-review gate on a **clean re-pass** after the derive-guarantee + DoD-witness + citation patch (see §10 and the ratification changelog). Ratification is the **delegated DN-review gate** (maintainer standing automation + explicit task this session), not a self-ratify by the note (house rule #3 preserved — the note itself only *recommends*; the independent gate *ratifies*). **Accepted authorizes the interfaces-first Phase-1 build** (§5) against the frozen contracts (Alt B; the ordered-pass-preservation invariant as a build-blocking contract; the §4.1 collision-safe `struct_layouts` `resolve`). It remains **design only** — **builds nothing** and edits no `crates/**`; every mechanism is `Declared`/unbuilt until its FLAGGED build issue lands and is differential-witnessed (VR-5), and a guarantee tag upgrades `Declared → Empirical` only on that green differential. `Doc-Index.md`/`CHANGELOG.md`/`issues.yaml` rows remain **FLAGGED** (§9), applied by the integrating parent. Prior status: Draft (2026-07-12). |
 | **Task** | Design **Phase 1** of the remaining-gaps bulk drive: predevelop the shared **interface points** in `crates/mycelium-transpile` so bulk gap-closing leaves become **purely additive against frozen contracts** (no shared-`emit.rs` serialization). Deliver the emit hook-dispatch interface (ranked alternatives + a migration-preserves-soundness plan), a per-shared-interface stable-vs-needs-work assessment, the Phase-1 build decomposition + parallelism, the Phase-2 bulk-drive map, and an adversarial stress-test. **Does not touch `emit.rs`** (it is under concurrent edit by the residual-tail leaves M-1092/M-1093/M-1094 — DN-133/134/135). Parallel-cluster slot: **DN-136** (mit #1 — DN-133/134/135 taken by the residual-tail cluster; DN-136 verified free at `origin/dev` (`1bc7956b`, re-affirmed at `c044452d`)). |
 | **Decides** | *Proposes, for ratification:* (1) the **verified diagnosis** — `emit.rs`'s dispatch is **already half-centralized** (`walk_expr`/`ExprVisitor`, `visit.rs:50/126`; `dispatch_item`, `transpile.rs:404`; the `prim_map::TABLE` registry, `prim_map.rs:140`), so the residual collision surface is **three sub-dispatch axes** *inside* the big handler bodies (pattern-kind in `map_pattern_inner`, derive/trait-shape in `emit_impl`, call-shape in `visit_call`/`visit_method_call`) — **not** a whole-module rewrite. (2) The **recommended interface**: generalize the **already-landed `prim_map::TABLE` pattern** into a **static per-axis handler-table** (Alt B), one submodule file per handler, consulted by the **unchanged single ordered pass** — ranked over a trait-object registry (Alt A) and a chained-visitor (Alt C). (3) The **one hard invariant that makes hook-ification sound**: the *ordered-pass-preservation* invariant — the table changes **who** handles a construct, never **when** or **in what order** constructs are visited, and the single `&mut EmitCtx` stays threaded through the one left-to-right pass. Parallelism is **development-time** (leaves author disjoint handler files), **never emission-time**. (4) The **per-interface** assessment (§4): `struct_layouts` **needs** the DN-134 collision-safe interface (design it here as the shared contract both M-1089/M-1093 consume); `map.rs` type-dispatch **needs** a light type-map table; `gap.rs Category`, `symtab.rs` (M-1084), and the prelude-trait seed set are **additive-as-is**. |
 | **Feeds** | The remaining-gaps bulk drive (the `language-completeness-gap-inventory.md` §3 worklist) — turns each Phase-2 gap-class into an additive leaf; DN-133/134/135/M-1092/1093/1094 (the residual-tail, whose landed `local_mangled` ordering + `struct_layouts` collision-safety are the two soundness witnesses this interface must preserve); DN-132/DN-128 (pattern + derive landed capabilities the migration must not regress); DN-99 (surface-gap register). |
@@ -134,7 +134,7 @@ pub const TABLE: &[PatternHandler] = &[ or_pat::ROW, tuple_pat::ROW, struct_vari
   at `2270`; the conversion/desugar arms and generic fall-through follow it).
 - **KC-3/KISS:** **best** — it is *literally the pattern already in the tree* (`prim_map`), so it adds no
   new concept; a reviewer who understands `prim_map` understands every axis.
-- **Testability:** the `cases()` corpus (`src/tests/emit.rs`, 88 `Case` entries at `c044452d`) and the differential/conformance
+- **Testability:** the `cases()` corpus (`src/tests/emit.rs`, 89 `Case` entries at `c044452d`) and the differential/conformance
   harnesses pass unchanged — the emitted text per case is invariant (§3).
 - **Verdict:** **Rank 1.** Smallest, proven, additive, ordering-safe.
 
@@ -478,6 +478,27 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
 
 ## §10 Changelog
 
+- **2026-07-12** — **Draft → Accepted (ratified, strict 9-criterion DN-review gate, delegated ratification).**
+  Re-ran the full gate against the code at `c044452d` on the patched note (`f425e4da`). **Clean pass:**
+  every previously-failing item is fixed and verified against source — (1 · grounding) all refreshed
+  anchors resolve exactly (`derive_show_impl:3809`, `derive_init_impl:3861`, `field_derive_eligible:3777`
+  each `return Err` on an ineligible field; `lower_struct_derives:3899`; `emit_struct:4212/4222` does
+  `sub_gaps.extend(derive_gaps)` then **still** `Ok(Emitted{…})`; `map_pattern_inner:3492`,
+  `emit_impl:4601`, `emit_enum:3982`, `visit_call:2150`, `visit_method_call:2253`, `prim_map::lookup:2270`,
+  `map.rs:148/162`, `symtab.rs:121/273/330`, `transpile.rs:332/404`, `gap.rs:17`, `prim_map.rs:88/140/221`,
+  `visit.rs:50/126`); (7b · adversarial-derive) the two-level guarantee now matches the code (per-impl
+  field-atomicity in the rule + per-derive independence in the driver, item still emits) — no item-level
+  all-or-nothing claim remains; (8 · DoD) the derive witness is now differential-consistent (asserts the
+  *current* behavior, so byte-identical before/after is satisfiable); (9 · consistency) the derive model is
+  stated uniformly across §0/§2/§3/§7/§8. Previously-passing criteria (2 VR-5 · 3 G2 · 4 append-only ·
+  5/6 KC-3 · 7a ordered-pass · 7c `struct_layouts` collision) re-confirmed unaffected. **One residual nit
+  corrected in this ratification commit:** the descriptive `cases()` count read `88`; the live count at
+  `c044452d` is **89** `Case` literals (three independent counts agree; maintainer confirmed the
+  residual-tail fix added one case) — updated §2 and the amendment changelog line. Ratification is the
+  delegated DN-review gate (maintainer standing automation + explicit task), **not** a self-ratify (house
+  rule #3): the note recommends, the independent gate accepts. Accepted authorizes the interfaces-first
+  Phase-1 build (§5); the note still builds nothing (`Declared` until each FLAGGED build issue lands +
+  differential-witnessed, VR-5). Doc-Index/CHANGELOG/issues rows stay FLAGGED (§9) for the integrating parent.
 - **2026-07-12** — **Draft amendment (post strict-gate review).** The gate PASSED the architecture (Alt B
   verified a true `prim_map` generalization; the §7 ordered-pass invariant and the §4.1 `struct_layouts`
   collision-safety held under adversarial stress) but FAILED two items, both fixed here surgically without
@@ -493,7 +514,8 @@ FLAG, the integrating parent applies once). **FLAG to the integrating parent:**
   Debug refuses the whole Debug impl"). **Grounding hygiene:** re-pinned from `1bc7956b` to current dev
   `c044452d` (M-1092/DN-135 combinator landed, +~397 lines) and refreshed every anchor — `map.rs:145→162`,
   `symtab.rs:160→121/273/330`, the `prim_map` scan to `visit_method_call:2253`/`lookup:2270` (not the
-  `visit_call:2178` misattribution), `cases()` `~161→88`, and all shifted `emit.rs` anchors
+  `visit_call:2178` misattribution), `cases()` `~161→89` (89 `Case` literals at `c044452d`; an earlier
+  amendment said 88 — the residual-tail fix added one case, maintainer-confirmed), and all shifted `emit.rs` anchors
   (`map_pattern_inner:3492`, `emit_impl:4601`, `emit_struct:4108`, `emit_enum:3982`, the derive fns).
   Status stays **Draft** (re-gate pending; no self-ratify — house rule #3).
 - **2026-07-12** — initial **Draft**. Designed Phase 1 of the remaining-gaps bulk drive: the emit
