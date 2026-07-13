@@ -3,8 +3,8 @@
 //! free-standing `derive_init_impl` helper.
 
 use super::{
-    field_derive_kind, is_seeded_scalar_width, DeriveCtx, DeriveHandler, DeriveOutcome,
-    FieldDeriveKind,
+    field_derive_kind, is_seeded_scalar_width, scalar_binary_width, zero_bin_literal, DeriveCtx,
+    DeriveHandler, DeriveOutcome, FieldDeriveKind,
 };
 use crate::gap::{Category, GapReason};
 
@@ -12,41 +12,65 @@ fn recognizes(name: &str) -> bool {
     name == "Default"
 }
 
+/// **DN-138 WU-4 — the per-field `Default`/`init` expression.** `UserNamed`/`BytesLike`/`BoolLike`
+/// and a `ScalarBinary` AT `Binary{64}` all resolve via the bare, trait-dispatched `init()` call
+/// (unchanged, DN-138 increment 1). A NARROWER/wider `ScalarBinary` (WU-4 unblock) does **not**
+/// route through the seeded `Binary{64}`-only `Init` instance at all — `width_cast`'s value operand
+/// needs a concretely-typed argument, and a bare `init()` has none to offer until AFTER its own
+/// "seed from expected" resolution runs (verified: `width_cast(init(), …)` cannot type-check, since
+/// `width_cast`'s own arm checks its value operand with `expected: None`, RFC-0019 §4.4's expected-
+/// type-propagation never reaches inside it) — so a narrow field's default is instead a **literal
+/// zero at the field's own width** ([`zero_bin_literal`]), needing no instance at all (`Exact`, by
+/// construction — a zero bit-pattern is trivially representable at any width). **`Vec[T]` fields
+/// (WU-4) are default-initialized to `Nil` directly — regardless of the element type** (Rust's own
+/// `Vec::default()` is the EMPTY vec; there is no element to recursively default, so this needs no
+/// element-kind dependency and no auxiliary fn at all, unlike `Show`/`PartialEq`/`PartialOrd`/`Hash`
+/// over the SAME field kind).
+fn field_init_expr(ft: &str) -> Option<String> {
+    match field_derive_kind(ft) {
+        FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
+            Some("init()".to_owned())
+        }
+        FieldDeriveKind::ScalarBinary if is_seeded_scalar_width(ft) => Some("init()".to_owned()),
+        FieldDeriveKind::ScalarBinary => {
+            let w = scalar_binary_width(ft)?;
+            Some(zero_bin_literal(w))
+        }
+        FieldDeriveKind::VecOf => Some("Nil".to_owned()),
+        FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
+    }
+}
+
 /// **Fieldless (unit) struct:** `fn init() => T = T;` — the bare nullary constructor, always
 /// succeeds (live-oracle-proven, `src/tests/emit.rs`). **Struct with fields:**
 /// `T(init(), init(), …)`, one bare `init()` per field IN DECLARATION ORDER — no qualified
-/// `Type::init()` call is needed (RFC-0019 §4.4's "seed from expected" path). Gated per field via
-/// [`field_derive_kind`] (DN-138 §4.5) — the identical classification [`super::show`]'s `compose`
-/// uses. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary`-at-`Binary{64}`
-/// fields now compose (the seeded `Init` instance resolves the bare `init()` call by its expected
-/// type — DN-138 §4.1 Alt A); `Float`/`Deferred`/a wrong-width `ScalarBinary` stay honest gaps
-/// (increment 2, DN-138 §6).
+/// `Type::init()` call is needed (RFC-0019 §4.4's "seed from expected" path), except a narrow
+/// `ScalarBinary`/`VecOf` field, which gets its own literal expression ([`field_init_expr`]) — see
+/// its doc for why. Gated per field via [`field_init_expr`] (DN-138 §4.5's classification, routed
+/// per WU-4's expression table). **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/
+/// `ScalarBinary` (any width — WU-4)/`VecOf` (any element — WU-4) fields all now compose;
+/// `Float`/`Deferred` stay honest gaps.
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     if field_types.is_empty() {
         return Ok(format!(
             "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name};\n}};"
         ));
     }
+    let mut calls: Vec<String> = Vec::with_capacity(field_types.len());
     for (i, ft) in field_types.iter().enumerate() {
-        let eligible = match field_derive_kind(ft) {
-            FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
-                true
-            }
-            FieldDeriveKind::ScalarBinary => is_seeded_scalar_width(ft),
-            FieldDeriveKind::Float | FieldDeriveKind::Deferred => false,
-        };
-        if !eligible {
+        let Some(expr) = field_init_expr(ft) else {
             return Err(GapReason::new(
                 Category::DeriveAttr,
                 format!(
                     "struct `{ty_name}` derive(Default): field {i} has type `{ft}`, a primitive \
-                     repr with no landed `Init` instance anywhere in the corpus yet — the whole \
-                     derive is left an honest gap rather than a partial/fabricated init (G2)"
+                     repr (or `Seq`/tuple/other bracketed shape) with no landed `Init` route yet \
+                     — the whole derive is left an honest gap rather than a partial/fabricated \
+                     init (G2)"
                 ),
             ));
-        }
+        };
+        calls.push(expr);
     }
-    let calls = vec!["init()".to_string(); field_types.len()];
     Ok(format!(
         "impl Init[{ty_name}] for {ty_name} {{\n  fn init() => {ty_name} =\n    {ty_name}({args});\n}};",
         args = calls.join(", ")

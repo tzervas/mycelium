@@ -40,9 +40,11 @@
 //! Guarantee: `Empirical` (live-oracle-verified, `src/tests/emit.rs`); the field-eligibility
 //! heuristic stays `Declared` (same VR-5 boundary as every other row in this axis).
 
+use std::collections::BTreeMap;
+
 use super::{
-    field_derive_kind, is_seeded_scalar_width, DeriveCtx, DeriveHandler, DeriveOutcome,
-    FieldDeriveKind,
+    field_derive_kind, is_seeded_scalar_width, mangle_ty, scalar_binary_width, vec_element,
+    zero_bin_literal, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind,
 };
 use crate::gap::{Category, GapReason};
 
@@ -57,20 +59,77 @@ fn recognizes(name: &str) -> bool {
     name == "PartialOrd"
 }
 
+/// **DN-138 WU-4 — the LEAF `cmp` expression for a value pair of kind `ft`** (a field, or a `Vec`
+/// element recursed into by [`vec_ord_aux`]) — mirrors [`super::show::leaf_show_expr`]'s shape for
+/// `Ord3`: a `Binary{64}` `ScalarBinary` dispatches the seeded instance directly; a NARROWER width
+/// is `width_cast` up to `Binary{64}` first (DN-41, WU-4 unblock). **A width WIDER than 64
+/// (`u128`/`i128` -> `Binary{128}`) is an honest, disclosed GAP, never composed** (post-landing
+/// review fix — mirrors [`super::show::leaf_show_expr`]'s identical fix): a NARROWING
+/// `width_cast` can `EvalError::Overflow` at runtime for a real wide value, which would silently
+/// overstate this leaf's scope past DN-138 §6's stated `u8`/`u16`/`u32` widths. `None` also for
+/// `Float`/`Deferred`/`VecOf` (depth-1 scope: a `Vec`-of-`Vec` element is not a supported leaf).
+fn leaf_cmp_expr(a: &str, b: &str, ft: &str) -> Option<String> {
+    match field_derive_kind(ft) {
+        FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
+            Some(format!("cmp({a}, {b})"))
+        }
+        FieldDeriveKind::ScalarBinary if is_seeded_scalar_width(ft) => {
+            Some(format!("cmp({a}, {b})"))
+        }
+        FieldDeriveKind::ScalarBinary => {
+            let w = scalar_binary_width(ft)?;
+            if w > 64 {
+                return None; // a NARROWING width_cast can overflow at runtime -- honest gap.
+            }
+            let w64 = zero_bin_literal(64);
+            Some(format!(
+                "cmp(width_cast({a}, {w64}), width_cast({b}, {w64}))"
+            ))
+        }
+        FieldDeriveKind::Float | FieldDeriveKind::Deferred | FieldDeriveKind::VecOf => None,
+    }
+}
+
+/// **DN-138 WU-4 — the `Vec[T]`-recursive `Ord3` auxiliary.** Composes a plain top-level
+/// `fn ord_vec_<mangled elem>(a: Vec[ELEM], b: Vec[ELEM]) => Binary{8} = …;` — a lexicographic
+/// fold mirroring [`compose`]'s own right-to-left field fold, but over a cons-list: `Nil`/`Nil` is
+/// EQ, a shorter list is LT a longer one with an equal-prefix, and a `Cons`/`Cons` pair
+/// short-circuits on the element [`leaf_cmp_expr`] before recursing on the tails. A plain fn, not
+/// `impl Ord3[Vec[ELEM]] for Vec[ELEM]` — the SAME per-file single-instance coherence-collision
+/// concern [`super::show::vec_show_aux`]'s doc explains, applied to `Ord3`. **Disclosed residual**
+/// (identical to `vec_show_aux`'s): two different structs in one file needing the same
+/// `ord_vec_<mangled>` collide as a duplicate-function refusal, out of this leaf's scope.
+fn vec_ord_aux(mangled: &str, elem_ft: &str) -> String {
+    let elem_expr =
+        leaf_cmp_expr("ha", "hb", elem_ft).expect("eligibility already checked by caller");
+    format!(
+        "fn ord_vec_{mangled}(a: Vec[{elem_ft}], b: Vec[{elem_ft}]) => Binary{{8}} =\n  match a {{ \
+         Nil => match b {{ Nil => {ORD3_EQ}, Cons(_, _) => 0b00000000 }}, Cons(ha, ta) => match b \
+         {{ Nil => 0b00000010, Cons(hb, tb) => match {elem_expr} {{ {ORD3_EQ} => \
+         ord_vec_{mangled}(ta, tb), other => other }} }} }};"
+    )
+}
+
 /// The precise, honest reason `ft` is ineligible for `derive(PartialOrd)` composition right now
-/// (past the ADR-040 `Float` pre-check, which always fires first) — mirrors
-/// [`super::show::show_ineligible_reason`]'s DN-138 distinction, reworded for `Ord3`.
+/// (past the ADR-040 `Float` pre-check, which always fires first).
 fn ord_ineligible_reason(ft: &str) -> String {
     match field_derive_kind(ft) {
         FieldDeriveKind::ScalarBinary => format!(
-            "a narrower/wider scalar than the one seeded `Ord3` instance (`Binary{{64}}`) — a \
-             `{ft}` field needs a `width_cast` this leaf does not yet compose (increment 2, \
-             DN-138 §6)"
+            "a scalar WIDER than the seeded `Ord3` instance's `Binary{{64}}` (`{ft}`, e.g. a \
+             `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can overflow at \
+             runtime for a real wide value, so this leaf leaves it an honest gap rather than \
+             compose a call that would `myc-check` clean but THROW at eval time (post-landing \
+             review fix, DN-138 section 6's stated scope is u8/u16/u32 only)"
         ),
-        FieldDeriveKind::Deferred => format!(
-            "`{ft}`, a `Seq`/`Vec[T]`/tuple or other bracketed shape with no `Ord3` instance yet \
-             (structural recursion over it is increment 2, DN-138 §6 — WU-4)"
+        FieldDeriveKind::VecOf => format!(
+            "a `Vec` field whose element type `{}` has no `Ord3` route of its own (a \
+             `Vec`-of-`Vec` or a `Float`/other-bracketed element -- DN-138 section 6, WU-4's \
+             disclosed depth-1 scope)",
+            vec_element(ft).unwrap_or(ft)
         ),
+        FieldDeriveKind::Deferred => {
+            format!("`{ft}`, a `Seq`/tuple or other bracketed shape with no `Ord3` instance yet")
+        }
         FieldDeriveKind::Float => {
             unreachable!("Float is refused ahead of this classifier by its own ADR-040 pre-check")
         }
@@ -111,12 +170,10 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
                 ),
             ));
         }
-        let eligible = match field_derive_kind(ft) {
-            FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
-                true
-            }
-            FieldDeriveKind::ScalarBinary => is_seeded_scalar_width(ft),
-            FieldDeriveKind::Float | FieldDeriveKind::Deferred => false,
+        let eligible = if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+            vec_element(ft).is_some_and(|elem| leaf_cmp_expr("_a", "_b", elem).is_some())
+        } else {
+            leaf_cmp_expr("_a", "_b", ft).is_some()
         };
         if !eligible {
             return Err(GapReason::new(
@@ -130,25 +187,49 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
             ));
         }
     }
+    let mut vec_aux: BTreeMap<String, String> = BTreeMap::new();
+    for ft in field_types {
+        if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+            if let Some(elem) = vec_element(ft) {
+                vec_aux
+                    .entry(mangle_ty(elem))
+                    .or_insert_with(|| elem.to_owned());
+            }
+        }
+    }
     let vars_a: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
     let vars_b: Vec<String> = (0..field_types.len()).map(|i| format!("q{i}")).collect();
+    let field_expr = |i: usize| -> String {
+        let ft = &field_types[i];
+        if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+            let elem = vec_element(ft).expect("VecOf implies vec_element(ft).is_some()");
+            format!("ord_vec_{}({}, {})", mangle_ty(elem), vars_a[i], vars_b[i])
+        } else {
+            leaf_cmp_expr(&vars_a[i], &vars_b[i], ft).expect("eligibility already checked above")
+        }
+    };
     let last = field_types.len() - 1;
-    let mut body = format!("cmp({}, {})", vars_a[last], vars_b[last]);
+    let mut body = field_expr(last);
     for i in (0..last).rev() {
         body = format!(
-            "match cmp({a}, {b}) {{ {ORD3_EQ} => {inner}, other => other }}",
-            a = vars_a[i],
-            b = vars_b[i],
+            "match {expr} {{ {ORD3_EQ} => {inner}, other => other }}",
+            expr = field_expr(i),
             inner = body
         );
     }
-    Ok(format!(
+    let mut out = String::new();
+    for (mangled, elem_ft) in &vec_aux {
+        out.push_str(&vec_ord_aux(mangled, elem_ft));
+        out.push_str("\n\n");
+    }
+    out.push_str(&format!(
         "impl Ord3[{ty_name}] for {ty_name} {{\n  fn cmp(a: {ty_name}, b: {ty_name}) => \
          Binary{{8}} =\n    match a {{ {ty_name}({pa}) => match b {{ {ty_name}({pb}) => {body} \
          }} }};\n}};",
         pa = vars_a.join(", "),
         pb = vars_b.join(", ")
-    ))
+    ));
+    Ok(out)
 }
 
 /// A **generic** struct refuses `derive(PartialOrd)` — a derived instance for a generic type
