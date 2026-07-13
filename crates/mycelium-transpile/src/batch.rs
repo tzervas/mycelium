@@ -89,17 +89,40 @@ pub fn output_rel_path(file: &Path, root: &Path) -> Result<PathBuf, PathBuf> {
 /// referencing-siblings case, e.g. `--files checkty.rs,elab.rs,eval.rs`), so no existing single-crate
 /// `--files` output changes.
 ///
-/// Returns the empty path (`""`) when the file set is empty or shares no common ancestor at all
-/// (e.g. paths on unrelated absolute roots) — `Path::strip_prefix("")` always succeeds and returns
-/// the path unchanged, so `output_rel_path` against an empty root still yields an injective mapping
-/// (distinct source paths ⇒ distinct relative paths) rather than silently colliding a second time;
-/// the caller's existing per-file `Err`/warning path remains the last-resort backstop (G2).
-pub fn common_ancestor(files: &[PathBuf]) -> PathBuf {
+/// **`None` — genuinely no common ancestor (bug-fixed here, was `Some(PathBuf::new())`).** Returned
+/// for an empty file set, or when the set mixes **absolute and relative** paths (their `Path`
+/// component sequences are fundamentally incompatible — a `RootDir` component never matches a bare
+/// `Normal` one — so no directory is a real prefix of every file). The previous behavior collapsed
+/// this case to the empty path `""`; because `Path::strip_prefix("")` **always succeeds** and hands
+/// the input back unchanged, `output_rel_path` would then return the ABSOLUTE members of the set
+/// **unchanged and `Ok`**, never routing through its `Err` fallback — so the caller's per-file
+/// warning path was never actually reached for exactly the case it was documented as backstopping
+/// (a stale claim, corrected here). Downstream, `out_dir.join(<that unchanged absolute path>)`
+/// silently **discards `out_dir`** (`Path::join`'s absolute-path-override), writing the `.myc`/
+/// `.gap.json` pair outside the declared `--out-dir` with no warning at all — a G2 silent
+/// misplacement. Returning `None` instead makes the caller detect the no-common-ancestor case
+/// explicitly and route every file through the bare-stem fallback (with a warning), so this can
+/// never happen (see `write_batch_and_maybe_vet`'s `root: Option<&Path>` handling).
+///
+/// A same-absoluteness file set that shares no path *components* (e.g. relative
+/// `mycelium-std-rand/src/lib.rs` vs `mycelium-std-time/src/lib.rs`, which diverge at their very
+/// first component) is **not** the `None` case: it degenerates to `Some(PathBuf::new())` — the
+/// intentional "root is the invocation's own working directory" case that is exactly what makes the
+/// multi-crate-root fix above work (`output_rel_path` against `""` keeps each file's full relative,
+/// crate-qualified path unchanged and `Ok`, never mis-writing since a *relative* path staying
+/// relative never triggers `Path::join`'s absolute-override). The unsafe case is specifically an
+/// absolute member of the set landing on an unchanged-and-`Ok` empty-root strip — which requires a
+/// *mixed* set to reach, since an all-absolute set's shared root (`/` on Unix) is never empty.
+pub fn common_ancestor(files: &[PathBuf]) -> Option<PathBuf> {
     let mut iter = files.iter();
-    let first = match iter.next() {
-        Some(f) => f,
-        None => return PathBuf::new(),
-    };
+    let first = iter.next()?;
+
+    let first_is_absolute = first.is_absolute();
+    if files.iter().any(|f| f.is_absolute() != first_is_absolute) {
+        // Mixed absolute/relative — see the doc above for why this specific case is the unsafe one.
+        return None;
+    }
+
     let mut common: Vec<std::ffi::OsString> = first
         .parent()
         .unwrap_or_else(|| Path::new(""))
@@ -123,7 +146,17 @@ pub fn common_ancestor(files: &[PathBuf]) -> PathBuf {
             .count();
         common.truncate(shared);
     }
-    common.into_iter().collect()
+
+    if common.is_empty() && first_is_absolute {
+        // Defensive/unreachable on Unix (a shared absolute root always keeps at least the leading
+        // `RootDir` component) — but if every file is absolute and they still share NOTHING (e.g.
+        // different filesystem roots/drives on another platform), that is also genuinely "no common
+        // ancestor", and returning `Some(PathBuf::new())` here would reproduce the exact bug this
+        // `Option` return exists to prevent.
+        return None;
+    }
+
+    Some(common.into_iter().collect())
 }
 
 /// One file's contribution to a [`BatchSummary`].

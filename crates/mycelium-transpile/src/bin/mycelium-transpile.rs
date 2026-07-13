@@ -314,7 +314,7 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
         );
         return ExitCode::FAILURE;
     }
-    write_batch_and_maybe_vet(&files, input_dir, out_dir, vet)
+    write_batch_and_maybe_vet(&files, Some(input_dir), out_dir, vet)
 }
 
 /// **M-1079/DN-124 §3.2**: batch an **explicit, caller-named** file set — no directory discovery,
@@ -327,10 +327,13 @@ fn run_batch(input_dir: &Path, out_dir: &Path, vet: bool) -> ExitCode {
 /// `--files` case, DN-124 §6 Attack 1a's boundary constraint remains the caller's responsibility)
 /// degenerates to that shared directory exactly as before, while a set spanning MULTIPLE crate roots
 /// (e.g. batching several crates' `src/lib.rs` in one run) now walks up to their shared ancestor so
-/// every file's output is crate-qualified instead of colliding on a bare stem.
+/// every file's output is crate-qualified instead of colliding on a bare stem. When there is
+/// genuinely no common ancestor (`common_ancestor` returns `None` — a mixed absolute/relative
+/// `--files` set), `write_batch_and_maybe_vet` routes every file through its bare-stem fallback with
+/// a warning rather than mis-writing outside `out_dir` (see that function's `root: Option<&Path>`).
 fn run_explicit_files(files: &[PathBuf], out_dir: &Path, vet: bool) -> ExitCode {
     let root = common_ancestor(files);
-    write_batch_and_maybe_vet(files, &root, out_dir, vet)
+    write_batch_and_maybe_vet(files, root.as_deref(), out_dir, vet)
 }
 
 /// Shared batch-write + optional-vet tail for both directory-discovered ([`run_batch`]) and
@@ -340,9 +343,16 @@ fn run_explicit_files(files: &[PathBuf], out_dir: &Path, vet: bool) -> ExitCode 
 /// oracle-mode vet loop **plus** phylum-mode dual-reporting over `out_dir` as one real phylum
 /// (DN-124 §3.1/M-A; both directory mode and `--files` name a real phylum boundary, so both dual-
 /// report identically).
+///
+/// `root: None` means there is no safe root to mirror the source tree under (directory mode always
+/// passes `Some` — the discovered directory itself; only `--files` can hit `None`, via
+/// `batch::common_ancestor`'s no-common-ancestor case). Every file then falls back to its bare stem
+/// individually, with a warning — never `output_rel_path`'s `Ok` arm, which would require a `root`
+/// to strip against; this is what keeps the no-common-ancestor case from ever silently writing
+/// outside `out_dir` (the bug `common_ancestor`'s `Option` return closes; see its doc).
 fn write_batch_and_maybe_vet(
     files: &[PathBuf],
-    root: &Path,
+    root: Option<&Path>,
     out_dir: &Path,
     vet: bool,
 ) -> ExitCode {
@@ -368,16 +378,34 @@ fn write_batch_and_maybe_vet(
         std::collections::BTreeMap::new();
     for r in &results {
         // Path relative to `root`, `.rs` extension stripped (pure logic in `batch.rs` so it is unit
-        // -tested there). Fall back to the bare stem if the path is somehow not under `root`
-        // (never-silent — warned, not silently mis-placed).
-        let rel_noext = match output_rel_path(&r.path, root) {
-            Ok(rel) => rel,
-            Err(fallback) => {
+        // -tested there). Fall back to the bare stem if the path is somehow not under `root`, or if
+        // there is no `root` at all (never-silent — warned, not silently mis-placed; see
+        // `write_batch_and_maybe_vet`'s doc for why `root: None` must NEVER take the `Ok` arm below).
+        let rel_noext = match root {
+            Some(root) => match output_rel_path(&r.path, root) {
+                Ok(rel) => rel,
+                Err(fallback) => {
+                    eprintln!(
+                        "mycelium-transpile: WARNING {} is not under the batch root {} — falling \
+                         back to a bare-stem output name",
+                        r.path.display(),
+                        root.display()
+                    );
+                    fallback
+                }
+            },
+            None => {
+                let fallback = PathBuf::from(
+                    r.path
+                        .file_stem()
+                        .and_then(|s| s.to_str())
+                        .unwrap_or("output"),
+                );
                 eprintln!(
-                    "mycelium-transpile: WARNING {} is not under the batch root {} — falling back \
-                     to a bare-stem output name",
-                    r.path.display(),
-                    root.display()
+                    "mycelium-transpile: WARNING {} — no common ancestor for this --files set \
+                     (mixed absolute/relative paths, or divergent roots) — falling back to a \
+                     bare-stem output name",
+                    r.path.display()
                 );
                 fallback
             }
@@ -401,7 +429,11 @@ fn write_batch_and_maybe_vet(
         }
     }
 
-    let (batch_summary, union) = summarize(&results, root);
+    // `summarize`/`build_remap_manifest`'s `derive_phylum` already degrades gracefully (falls back
+    // to `"unknown"`) for a root with no usable file name (`src/remap.rs::derive_phylum` doc) — so
+    // the `None` (no-common-ancestor) case passes an empty placeholder rather than needing its own
+    // signature change through `summarize`/`build_remap_manifest`.
+    let (batch_summary, union) = summarize(&results, root.unwrap_or_else(|| Path::new("")));
 
     let summary_path = out_dir.join("summary.json");
     match serde_json::to_string_pretty(&batch_summary) {

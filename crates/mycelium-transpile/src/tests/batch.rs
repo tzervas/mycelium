@@ -281,7 +281,7 @@ fn common_ancestor_of_siblings_in_one_dir_is_that_dir() {
         PathBuf::from("crates/mycelium-l1/src/elab.rs"),
         PathBuf::from("crates/mycelium-l1/src/eval.rs"),
     ];
-    let root = common_ancestor(&files);
+    let root = common_ancestor(&files).expect("a real common ancestor exists for these siblings");
     assert_eq!(root, PathBuf::from("crates/mycelium-l1/src"));
     // And every file's output_rel_path against that root is the bare stem, exactly as before.
     for (f, want) in [
@@ -303,7 +303,8 @@ fn common_ancestor_of_three_crate_roots_yields_three_distinct_outputs() {
         PathBuf::from("crates/mycelium-std-rand/src/lib.rs"),
         PathBuf::from("crates/mycelium-std-time/src/lib.rs"),
     ];
-    let root = common_ancestor(&files);
+    let root =
+        common_ancestor(&files).expect("a real common ancestor exists across these crate roots");
     assert_eq!(root, PathBuf::from("crates"));
 
     let outs: Vec<PathBuf> = files
@@ -327,6 +328,68 @@ fn common_ancestor_of_three_crate_roots_yields_three_distinct_outputs() {
     );
 }
 
+/// **HIGH regression (PR #1545 review) — the `--files` output-collision fix's OWN bug**: a
+/// `--files` set with NO common ancestor (mixed absolute + relative paths) must return `None`, not
+/// the empty path. Before this fix, `common_ancestor` collapsed this case to `Some(PathBuf::new())`
+/// (a bare `PathBuf`, no `Option` at all); because `Path::strip_prefix("")` **always succeeds** and
+/// hands the input back unchanged, `output_rel_path` against that empty root then returned the
+/// ABSOLUTE member of the set **unchanged and `Ok`** — never the `Err` fallback the doc comment
+/// claimed was the backstop. This assertion alone is the direct fix witness: it does not even
+/// TYPECHECK against the pre-fix signature (`fn common_ancestor(...) -> PathBuf`, no `Option`), and
+/// the pre-fix *value* for this exact input was the empty `PathBuf` — the unsafe case, not `None`.
+#[test]
+fn common_ancestor_of_mixed_absolute_and_relative_files_is_none() {
+    let files = vec![
+        PathBuf::from("checkty.rs"),               // relative
+        PathBuf::from("/tmp/other-crate/elab.rs"), // absolute — the escape vector
+    ];
+    let root = common_ancestor(&files);
+    assert!(
+        root.is_none(),
+        "a mixed absolute/relative --files set has no real common ancestor, got {root:?}"
+    );
+}
+
+/// The full G2 property `common_ancestor`'s `None` return exists to guarantee, exercised end-to-end
+/// against `batch.rs`'s public API: a `--files` set with no common ancestor must NEVER produce an
+/// output path that escapes the declared `--out-dir`, however the caller routes on
+/// `common_ancestor`'s result. This mirrors the CLI's own `write_batch_and_maybe_vet` routing
+/// (`root: Option<&Path>` — `Some` takes `output_rel_path`'s `Ok`/`Err` arms, `None` always falls
+/// back to the bare stem, never `output_rel_path`'s `Ok` arm) purely against the tested library
+/// functions, so it is a real regression guard, not a reimplementation that could drift from the
+/// bin's actual logic.
+///
+/// **Non-vacuous**: against the pre-fix `common_ancestor` (`Some(PathBuf::new())` for this exact
+/// input), the `Some` arm below would run `output_rel_path(&"/tmp/other-crate/elab.rs", "")`, which
+/// returns `Ok("/tmp/other-crate/elab.rs")` (`strip_prefix("")` is a no-op) — an ABSOLUTE
+/// `rel_noext` — and `out_dir.join(<absolute>)` then discards `out_dir` entirely
+/// (`Path::join`'s absolute-path-override), so the `starts_with(out_dir)` assertion below would
+/// FAIL for that file. With the fix (`None`), the `None` arm's bare-stem fallback is always
+/// relative, so the join always stays under `out_dir` and the assertion passes.
+#[test]
+fn no_common_ancestor_files_set_never_escapes_out_dir() {
+    let out_dir = Path::new("/some/declared/out-dir");
+    let files = vec![
+        PathBuf::from("checkty.rs"),               // relative
+        PathBuf::from("/tmp/other-crate/elab.rs"), // absolute — the escape vector
+    ];
+    let root = common_ancestor(&files);
+
+    for f in &files {
+        let rel_noext = match &root {
+            Some(root) => output_rel_path(f, root).unwrap_or_else(|fallback| fallback),
+            None => PathBuf::from(f.file_stem().and_then(|s| s.to_str()).unwrap_or("output")),
+        };
+        let written = out_dir.join(&rel_noext);
+        assert!(
+            written.starts_with(out_dir),
+            "output path {written:?} for {f:?} escaped the declared out-dir {out_dir:?} \
+             (rel_noext={rel_noext:?}, root={root:?}) — the exact G2 silent-misplacement bug this \
+             test guards against"
+        );
+    }
+}
+
 /// End-to-end (through `transpile_batch` + real file writes, not just path arithmetic): batching two
 /// real crates that each declare same-named `src/lib.rs` files with DIFFERENT content must write two
 /// distinct `.myc` files whose content is NOT cross-contaminated — the full regression the CLI bug
@@ -348,7 +411,8 @@ fn two_crate_roots_transpile_to_distinct_uncontaminated_myc_outputs() {
         tmp.path().join("mycelium-std-rand/src/lib.rs"),
         tmp.path().join("mycelium-std-time/src/lib.rs"),
     ];
-    let root = common_ancestor(&files);
+    let root =
+        common_ancestor(&files).expect("a real common ancestor exists for these two crate roots");
     assert_eq!(
         root,
         tmp.path().to_path_buf(),
