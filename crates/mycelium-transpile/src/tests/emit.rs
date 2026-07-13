@@ -497,28 +497,31 @@ fn cases() -> Vec<Case> {
                 contains: "impl Init[OsEntropy] for OsEntropy {\n  fn init() => OsEntropy =\n    OsEntropy;\n};",
             },
         },
-        // DN-128 (M-1086) — `derive(Debug)` on a struct with a PRIMITIVE field (`u8`/`Binary{8}`)
-        // stays an honest gap: no ambient `Show[Binary{8}]` instance exists in the freshly
-        // transpiled file (verified against the real `myc-check` oracle — see this leaf's report /
-        // `derive_forms_check_clean_against_real_toolchain` below). The struct's own `type`
-        // declaration still emits (only the derive impl is dropped).
+        // DN-128 (M-1086) — `derive(Debug)` on a struct with a PRIMITIVE field with no `Show`
+        // route stays an honest gap. **DN-138 WU-4 update:** a narrow `u8`/`Binary{8}` field is NO
+        // LONGER this fixture (WU-4's `width_cast` unblock composes it — see
+        // `derive_forms_check_clean_against_real_toolchain`'s `Narrow` case); `f64`/`Float` is the
+        // one primitive repr that stays a genuine, disclosed gap for every row (ADR-040 §2.3/§2.4 —
+        // no `Show[Float]` is ever seeded). The struct's own `type` declaration still emits (only
+        // the derive impl is dropped).
         Case {
             name: "derive_debug_primitive_field_gaps_never_fabricates",
-            rust: "#[derive(Debug)]\nstruct Pair(u8, bool);",
+            rust: "#[derive(Debug)]\nstruct Pair(f64, bool);",
             expect: Expect::EmittedAndGapped {
                 item: "Pair",
-                contains: "type Pair = Pair(Binary{8}, Bool);",
+                contains: "type Pair = Pair(Float, Bool);",
                 sub_gap_category: Category::DeriveAttr,
             },
         },
         // DN-128 (M-1086) — `derive(Default)` on a struct with a PRIMITIVE field stays an honest
-        // gap for the identical reason (no landed `Init[Binary{8}]` anywhere in the corpus yet).
+        // gap for the identical reason. **DN-138 WU-4 update:** see the `Debug` case above — `f64`
+        // replaces the now-unblocked `u8` fixture.
         Case {
             name: "derive_default_primitive_field_gaps_never_fabricates",
-            rust: "#[derive(Default)]\nstruct Pair(u8, bool);",
+            rust: "#[derive(Default)]\nstruct Pair(f64, bool);",
             expect: Expect::EmittedAndGapped {
                 item: "Pair",
-                contains: "type Pair = Pair(Binary{8}, Bool);",
+                contains: "type Pair = Pair(Float, Bool);",
                 sub_gap_category: Category::DeriveAttr,
             },
         },
@@ -3016,21 +3019,21 @@ fn mvp_cmp_emit_check_agreement() {
 // ---------------------------------------------------------------------------------------------
 
 /// A gapped `derive(Debug)`/`derive(Default)` (the primitive-field case) must NEVER leak a
-/// fabricated `impl Show[...]`/`impl Init[...]` fragment into the `.myc` text — the
-/// `derive_debug_primitive_field_gaps_never_fabricates` / `derive_default_primitive_field_gaps_
-/// never_fabricates` fixtures above only assert the sub-gap category is present; this pins the
-/// complementary "nothing partial leaked" half directly (G2 — mirrors
-/// `widen_bool_from_call_produces_no_fabricated_myc_text`'s pattern).
+/// fabricated `impl Show[...]`/`impl Init[...]` fragment into the `.myc` text (G2 — mirrors
+/// `widen_bool_from_call_produces_no_fabricated_myc_text`'s pattern). **DN-138 WU-4 note:** a
+/// narrow `u8`/`Binary{8}` field is NO LONGER a gapping fixture (WU-4's `width_cast`/literal-zero
+/// unblock composes it — see `derive_forms_check_clean_against_real_toolchain`'s `Narrow` case);
+/// `f64`/`Float` is the fixture that stays a genuine, disclosed gap for EVERY row (ADR-040).
 #[test]
 fn derive_gap_never_leaks_partial_impl_text() {
-    let (myc_debug, _) = transpile_source("#[derive(Debug)]\nstruct Pair(u8, bool);", "f.rs", "f")
+    let (myc_debug, _) = transpile_source("#[derive(Debug)]\nstruct Pair(f64, bool);", "f.rs", "f")
         .expect("parses/transpiles");
     assert!(
         !myc_debug.contains("impl Show"),
         "a gapped derive(Debug) must never emit a partial `impl Show`, got:\n{myc_debug}"
     );
     let (myc_default, _) =
-        transpile_source("#[derive(Default)]\nstruct Pair(u8, bool);", "f.rs", "f")
+        transpile_source("#[derive(Default)]\nstruct Pair(f64, bool);", "f.rs", "f")
             .expect("parses/transpiles");
     assert!(
         !myc_default.contains("impl Init"),
@@ -3212,15 +3215,36 @@ fn derive_forms_check_clean_against_real_toolchain() {
             "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Rec(u64, String, bool);",
             "Rec",
         ),
-        // DN-138 -- `PartialEq` is prim-routed (the `eq` prim is width-generic, RFC-0032 D1), so it
-        // ALSO composes over a narrow `Binary{8}` scalar the trait-dispatched rows still gap
-        // (only `Binary{64}` is seeded, increment 2 for narrower widths).
-        ("#[derive(PartialEq)]\nstruct Narrow(u8);", "Narrow"),
-        // DN-138 -- `Hash` composes over `Bytes`/`Bool` fields (no scalar field present); the
-        // scalar route stays deferred (no `Binary{N} -> Bytes` raw-byte prim yet, DN-138 §6).
+        // DN-138 WU-4 (increment 2): a NARROW scalar (`u8`, not the seeded `Binary{64}`) now
+        // composes for the trait-dispatched rows too, via a `width_cast` up to `Binary{64}`
+        // (`Show`/`Ord3`) or a literal-zero-at-width (`Init`) -- no longer just `PartialEq`.
         (
-            "#[derive(Hash)]\nstruct HashableRec(String, bool);",
+            "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Narrow(u8);",
+            "Narrow",
+        ),
+        // DN-138 WU-4 (increment 2): `Hash` now composes over a `ScalarBinary` field too, via the
+        // new `bin_to_bytes` raw-byte prim (`hash_blake3(bin_to_bytes(p))`).
+        (
+            "#[derive(Hash)]\nstruct HashableRec(String, bool, u64);",
             "HashableRec",
+        ),
+        // DN-138 WU-4 (increment 2) -- THE headline corpus-payoff shape: a `Vec<T>` field, the one
+        // increment-1 explicitly left gapped in every named corpus struct (`CheckError`/`CtorInfo`/
+        // `EvaluatorOpts`). All five field-gating derives compose over a `Vec<u64>` + `String`
+        // struct with zero DeriveAttr gaps -- `Show`/`PartialOrd` route the `Vec` field through a
+        // per-element auxiliary fn (`show_vec_Binary_64`/`ord_vec_Binary_64`), `Default` seeds
+        // `Nil`, `PartialEq`/`Hash` route through `eq_vec_Binary_64`/`hash_vec_Binary_64`.
+        (
+            "#[derive(Debug, Default, PartialEq, PartialOrd, Hash)]\nstruct WithVec(Vec<u64>, String);",
+            "WithVec",
+        ),
+        // DN-138 WU-4 -- a `Vec` of a `UserNamed` element type (mirrors the real corpus's
+        // `CtorInfo.fields: Vec<Ty>` shape once `Ty` itself is derivable) composes too, chaining
+        // through the ELEMENT's own same-file derived instance/fns.
+        (
+            "#[derive(Debug, Default, PartialEq)]\nstruct Elem(u64);\n\
+             #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
+            "WithVecOfUser",
         ),
     ];
     for (i, (rust, item)) in rust_snippets.iter().enumerate() {
@@ -3292,10 +3316,14 @@ fn derive_eq_gap_never_leaks_partial_fn_text() {
     // DN-138 note: `u8`/`bool` fields alone are NO LONGER a gapping fixture for `PartialEq` — the
     // seeded `Show`/`Init`/`Ord3` unblock (DN-138) also routes `PartialEq` to the width-generic
     // `eq` prim (any `Binary{N}`) and an inline `Bool` match, so BOTH now compose (see
-    // `derive_eq_composes_over_scalar_bytes_bool_fields_dn138` below). A `Vec<T>` field is still a
-    // genuine, disclosed gap (`Deferred` — increment 2, WU-4), so it is the fixture here instead.
+    // `derive_eq_composes_over_scalar_bytes_bool_fields_dn138` below). **DN-138 WU-4 update:** a
+    // `Vec<u8>` field is ALSO no longer a gapping fixture (`ScalarBinary` is `PartialEq`-eligible
+    // at any width, so `VecOf(ScalarBinary)` composes too — see `WithVec` in
+    // `derive_forms_check_clean_against_real_toolchain`). `Vec<f64>` (`VecOf(Float)` — the ONE
+    // element kind with no equality route at all, ADR-040) is the fixture that stays a genuine,
+    // disclosed gap.
     let (myc, report) = transpile_source(
-        "#[derive(PartialEq)]\nstruct Pair(Vec<u8>, bool);",
+        "#[derive(PartialEq)]\nstruct Pair(Vec<f64>, bool);",
         "f.rs",
         "f",
     )
@@ -3395,12 +3423,18 @@ fn derive_ord_fieldless_composes() {
 }
 
 /// A gapped `derive(PartialOrd)` (the primitive-field case) must NEVER leak a fabricated
-/// `impl Ord3[...]` fragment into the `.myc` text.
+/// `impl Ord3[...]` fragment into the `.myc` text. **DN-138 WU-4 update:** a narrow `u8` field is
+/// NO LONGER a gapping fixture (WU-4's `width_cast` unblock composes it — see the `Narrow` case in
+/// `derive_forms_check_clean_against_real_toolchain`); `Vec<f64>` (`VecOf(Float)`, still ineligible
+/// for every row) is the fixture that stays a genuine, disclosed gap.
 #[test]
 fn derive_ord_gap_never_leaks_partial_impl_text() {
-    let (myc, report) =
-        transpile_source("#[derive(PartialOrd)]\nstruct Pair(u8, bool);", "f.rs", "f")
-            .expect("parses/transpiles");
+    let (myc, report) = transpile_source(
+        "#[derive(PartialOrd)]\nstruct Pair(Vec<f64>, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
     assert!(
         !myc.contains("impl Ord3"),
         "a gapped derive(PartialOrd) must never emit a partial `impl Ord3`, got:\n{myc}"
@@ -3492,11 +3526,15 @@ fn derive_hash_fieldless_composes() {
 }
 
 /// A gapped `derive(Hash)` (the primitive-field case) must NEVER leak a fabricated `fn hash_*`
-/// fragment into the `.myc` text.
+/// fragment into the `.myc` text. **DN-138 WU-4 update:** a `u8`/`ScalarBinary` field is NO LONGER
+/// a gapping fixture (the new `bin_to_bytes` prim unblocks it, any width — see `HashableRec` in
+/// `derive_forms_check_clean_against_real_toolchain`); `Vec<f64>` (`VecOf(Float)`, still
+/// ineligible) is the fixture that stays a genuine, disclosed gap.
 #[test]
 fn derive_hash_gap_never_leaks_partial_fn_text() {
-    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct Pair(u8, bool);", "f.rs", "f")
-        .expect("parses/transpiles");
+    let (myc, report) =
+        transpile_source("#[derive(Hash)]\nstruct Pair(Vec<f64>, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
     assert!(
         !myc.contains("fn hash_"),
         "a gapped derive(Hash) must never emit a partial `fn hash_*`, got:\n{myc}"
@@ -3565,12 +3603,13 @@ fn derive_composes_over_scalar_bytes_bool_fields_dn138() {
     );
 }
 
-/// **DN-138 §3's heterogeneity finding, directly exercised:** `PartialEq` is PRIM-ROUTED (the bare
-/// `eq` prim is width-generic, RFC-0032 D1), so it ALSO composes over a NARROW `Binary{8}` scalar —
-/// unlike `Debug` (trait-dispatched through the ONE seeded `Binary{64}` instance), which still
-/// gaps the identical field (a narrower width is increment 2, DN-138 §6).
+/// **DN-138 §3's heterogeneity finding — the WIDTH half is CLOSED by WU-4.** `PartialEq` was
+/// always width-generic (the bare `eq` prim, RFC-0032 D1). Before WU-4, `Debug` (trait-dispatched
+/// through the ONE seeded `Binary{64}` instance) gapped an identical NARROW `Binary{8}` field;
+/// WU-4 closes that via a `width_cast` wrapper (`show.rs`/`ord.rs`) — so BOTH now compose over the
+/// same narrow scalar, over the SAME struct, with zero DeriveAttr gaps.
 #[test]
-fn derive_eq_composes_over_a_narrow_scalar_unlike_the_trait_dispatched_rows() {
+fn derive_eq_and_debug_both_compose_over_a_narrow_scalar_dn138_wu4() {
     let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct Narrow(u8);", "f.rs", "f")
         .expect("parses/transpiles");
     assert!(
@@ -3587,24 +3626,26 @@ fn derive_eq_composes_over_a_narrow_scalar_unlike_the_trait_dispatched_rows() {
         "expected the bare eq prim call, got:\n{myc}"
     );
 
-    // The SAME field, but `Debug` (trait-dispatched, width-restricted to the seeded Binary{64})
-    // still gaps — the disclosed increment-2 residual, not a regression.
-    let (_, debug_report) = transpile_source("#[derive(Debug)]\nstruct Narrow(u8);", "f.rs", "f")
-        .expect("parses/transpiles");
+    // The SAME field, `Debug` — WU-4's `width_cast` wrapper now ALSO composes (no longer a gap).
+    let (debug_myc, debug_report) =
+        transpile_source("#[derive(Debug)]\nstruct Narrow(u8);", "f.rs", "f")
+            .expect("parses/transpiles");
     assert!(
-        debug_report
+        !debug_report
             .gaps
             .iter()
             .any(|g| g.category == Category::DeriveAttr),
-        "Debug must still gap a narrow Binary{{8}} scalar (only Binary{{64}} is seeded — increment \
-         2 for narrower widths), got {:?}",
+        "Debug must now compose over a narrow Binary{{8}} scalar too (WU-4's width_cast unblock), \
+         got {:?}",
         debug_report.gaps
+    );
+    assert!(
+        debug_myc.contains("width_cast(p0,"),
+        "expected the width_cast-wrapped render call, got:\n{debug_myc}"
     );
 }
 
-/// `Hash` composes over `Bytes`/`Bool` fields (no scalar field present) — the ONE row whose scalar
-/// route stays deferred (no `Binary{N} -> Bytes` raw-byte prim exists yet, DN-138 §6), so a
-/// scalar-free struct is what demonstrates ITS unblock cleanly.
+/// `Hash` composes over `Bytes`/`Bool` fields (no scalar field present).
 #[test]
 fn derive_hash_composes_over_bytes_and_bool_fields() {
     let (myc, report) = transpile_source(
@@ -3631,19 +3672,24 @@ fn derive_hash_composes_over_bytes_and_bool_fields() {
     );
 }
 
-/// `Hash` still gaps over a scalar field — unchanged by this leaf (no `Binary{N} -> Bytes` raw-byte
-/// prim exists yet; increment 2, DN-138 §6), an honest, disclosed residual not a regression.
+/// **DN-138 WU-4 unblock:** `Hash` now composes over a scalar field too, via the new
+/// `bin_to_bytes` raw-byte prim (`hash_blake3(bin_to_bytes(p))`) — previously an honest,
+/// disclosed gap (no such prim existed).
 #[test]
-fn derive_hash_still_gaps_over_a_scalar_field() {
-    let (_, report) = transpile_source("#[derive(Hash)]\nstruct Rec(u64);", "f.rs", "f")
+fn derive_hash_composes_over_a_scalar_field_dn138_wu4() {
+    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct Rec(u64);", "f.rs", "f")
         .expect("parses/transpiles");
     assert!(
-        report
+        !report
             .gaps
             .iter()
-            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Hash")),
-        "Hash must still gap a scalar field (no raw-byte prim yet), got {:?}",
+            .any(|g| g.category == Category::DeriveAttr),
+        "Hash must now compose over a scalar field (the new bin_to_bytes prim), got {:?}",
         report.gaps
+    );
+    assert!(
+        myc.contains("hash_blake3(bin_to_bytes(p0))"),
+        "expected the bin_to_bytes-routed hash call, got:\n{myc}"
     );
 }
 

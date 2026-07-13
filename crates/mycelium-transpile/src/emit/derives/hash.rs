@@ -25,7 +25,12 @@
 //! Guarantee: `Empirical` (live-oracle-verified, `src/tests/emit.rs`); the field-eligibility
 //! heuristic stays `Declared` (same VR-5 boundary as every other row in this axis).
 
-use super::{field_derive_kind, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind};
+use std::collections::BTreeMap;
+
+use super::{
+    field_derive_kind, mangle_ty, vec_element, DeriveCtx, DeriveHandler, DeriveOutcome,
+    FieldDeriveKind,
+};
 use crate::gap::{Category, GapReason};
 
 fn recognizes(name: &str) -> bool {
@@ -52,8 +57,11 @@ fn hash_fn_name(ty_name: &str) -> String {
 ///   conditionally seeded when SOME impl of `Show` is itself declared here, which a `Hash`-only
 ///   derive does not guarantee; a self-contained inline match sidesteps that cross-trait
 ///   dependency entirely, a disclosed, deliberate leaf-scoped design choice, VR-5).
-/// - `ScalarBinary` -> **deferred** (`None`): no `Binary{N} -> Bytes` raw-byte prim exists yet
-///   (DN-138 §2/§6) — hashing a scalar needs one, increment 2.
+/// - `ScalarBinary` (WU-4 unblock, any width) -> `hash_blake3(bin_to_bytes(p))` — the new DN-138
+///   WU-4 `bin_to_bytes` prim supplies the previously-missing `Binary{N} -> Bytes` raw-byte
+///   conversion, width-generic (no seeded-instance width restriction, unlike `Show`/`Ord3`).
+/// - `VecOf` (WU-4) -> `hash_vec_<mangled elem>(p)`, a per-element-type recursive auxiliary
+///   ([`vec_hash_aux`]) — only when the element itself has a hash route (depth-1 scope).
 /// - `Float`/`Deferred` -> `None` (ineligible, as before).
 fn field_hash_expr(p: &str, ft: &str) -> Option<String> {
     match field_derive_kind(ft) {
@@ -62,8 +70,32 @@ fn field_hash_expr(p: &str, ft: &str) -> Option<String> {
         FieldDeriveKind::BoolLike => Some(format!(
             "hash_blake3(match {p} {{ True => \"True\", False => \"False\" }})"
         )),
-        FieldDeriveKind::ScalarBinary | FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
+        FieldDeriveKind::ScalarBinary => Some(format!("hash_blake3(bin_to_bytes({p}))")),
+        FieldDeriveKind::VecOf => {
+            let elem = vec_element(ft)?;
+            field_hash_expr("_unused", elem)?;
+            Some(format!("hash_vec_{}({p})", mangle_ty(elem)))
+        }
+        FieldDeriveKind::Float | FieldDeriveKind::Deferred => None,
     }
+}
+
+/// **DN-138 WU-4 — the `Vec[T]`-recursive `Hash` auxiliary.** Composes a plain top-level
+/// `fn hash_vec_<mangled elem>(a: Vec[ELEM]) => Bytes = …;` folding [`hash_blake3`] over the
+/// cons-list structure (mirrors [`compose`]'s own type-name-prefixed fold, applied one level
+/// deeper): `Nil` hashes the literal `"Nil"`; `Cons(h, t)` hashes the concatenation of the
+/// element's own hash-input expression ([`field_hash_expr`], recursively reused) and the
+/// recursive tail's hash. A plain fn — same "no landed `Hash` prelude trait to dispatch through"
+/// shape this row's own top-level doc already establishes, one level deeper. **Disclosed residual**
+/// (identical to [`super::show::vec_show_aux`]'s): two different structs in one file needing the
+/// same `hash_vec_<mangled>` collide as a duplicate-function refusal, out of this leaf's scope.
+fn vec_hash_aux(mangled: &str, elem_ft: &str) -> String {
+    let elem_expr = field_hash_expr("h", elem_ft).expect("eligibility already checked by caller");
+    format!(
+        "fn hash_vec_{mangled}(a: Vec[{elem_ft}]) => Bytes =\n  match a {{ Nil => \
+         hash_blake3(\"Nil\"), Cons(h, t) => hash_blake3(bytes_concat({elem_expr}, \
+         hash_vec_{mangled}(t))) }};"
+    )
 }
 
 /// Left-fold `parts` into a single `bytes_concat(...)` chain — a local copy of
@@ -85,10 +117,9 @@ fn bytes_concat_chain(parts: &[String]) -> String {
 /// `src/tests/emit.rs`). **Struct with fields:** `hash_blake3(bytes_concat("T", ...))` folding
 /// each field's hash-input expression (routed per [`field_hash_expr`] — DN-138 §4.5), gated per
 /// field — refuses the WHOLE derive (never a partial/fabricated hash, G2) the moment any field is
-/// ineligible. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike` fields now compose (routed to
-/// `hash_<Type>`/`hash_blake3` directly/an inline `Bool`-to-`Bytes` encoding — never a seeded
-/// instance); `ScalarBinary` (no `Binary{N} -> Bytes` prim yet) and `Deferred` still gap
-/// (increment 2, DN-138 §6).
+/// ineligible. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary` (any width,
+/// via the new `bin_to_bytes` prim — WU-4)/`VecOf` (any eligible element — WU-4) fields all now
+/// compose; only `Float`/`Deferred` still gap.
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let fname = hash_fn_name(ty_name);
     if field_types.is_empty() {
@@ -98,16 +129,17 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     }
     for (i, ft) in field_types.iter().enumerate() {
         if field_hash_expr("p", ft).is_none() {
-            let why = match field_derive_kind(ft) {
-                FieldDeriveKind::ScalarBinary => {
-                    "a scalar field, but no `Binary{N} -> Bytes` raw-byte prim exists yet to hash \
-                     it (increment 2, DN-138 §6)"
-                        .to_owned()
-                }
-                _ => "a primitive repr (or `Seq`/`Vec[T]`/tuple/other bracketed shape) with no \
-                      derived (or hand-written) structural-hash route yet (increment 2, DN-138 \
-                      §6 for the bracketed shapes)"
-                    .to_owned(),
+            let why = if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+                format!(
+                    "a `Vec` field whose element type `{}` has no hash route of its own (a \
+                     `Vec`-of-`Vec` or a `Float`/other-bracketed element -- DN-138 section 6, \
+                     WU-4's disclosed depth-1 scope)",
+                    vec_element(ft).unwrap_or(ft)
+                )
+            } else {
+                "a primitive repr (or `Seq`/tuple/other bracketed shape) with no derived (or \
+                 hand-written) structural-hash route yet"
+                    .to_owned()
             };
             return Err(GapReason::new(
                 Category::DeriveAttr,
@@ -118,17 +150,33 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
             ));
         }
     }
+    let mut vec_aux: BTreeMap<String, String> = BTreeMap::new();
+    for ft in field_types {
+        if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+            if let Some(elem) = vec_element(ft) {
+                vec_aux
+                    .entry(mangle_ty(elem))
+                    .or_insert_with(|| elem.to_owned());
+            }
+        }
+    }
     let vars: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
     let mut parts = vec![format!("\"{ty_name}\"")];
     for (i, ft) in field_types.iter().enumerate() {
         parts.push(field_hash_expr(&vars[i], ft).expect("eligibility already checked above"));
     }
     let inner = bytes_concat_chain(&parts);
-    Ok(format!(
+    let mut out = String::new();
+    for (mangled, elem_ft) in &vec_aux {
+        out.push_str(&vec_hash_aux(mangled, elem_ft));
+        out.push_str("\n\n");
+    }
+    out.push_str(&format!(
         "fn {fname}(a: {ty_name}) => Bytes =\n    match a {{ {ty_name}({pats}) => \
          hash_blake3({inner}) }};",
         pats = vars.join(", ")
-    ))
+    ));
+    Ok(out)
 }
 
 /// A **generic** struct refuses `derive(Hash)` — a derived fn for a generic type needs DN-130's
