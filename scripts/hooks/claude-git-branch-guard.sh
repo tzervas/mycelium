@@ -102,6 +102,30 @@
 # scripts/checks/branch-guard.sh is the backstop layer (git pre-commit/pre-push hooks + the
 # `/branch-guard` skill); it judges the CURRENT branch directly via `git rev-parse` at hook-invocation
 # time (no command-string parsing at all), so it was already immune to this class of false-positive.
+#
+# --- mitigation #12, variant 5 (2026-07-13, adversarial hardening): newline segmentation + -------
+# --- indirection closure; ALSO widens the fast-path pre-filter below -----------------------------
+# An adversarial security review of variant 4 found two PRE-EXISTING Critical false-negatives (not
+# caused by variant 4, present before it): (1) `split_top_level` never actually split on newlines —
+# `shlex` silently consumed an unquoted newline as whitespace, so a plain multi-line bash block
+# (`git add -A\ngit commit -m wip\ngit push origin main`) flattened into ONE segment, judged only by
+# its first line; (2) literal-`git`-only matching missed an absolute path to the binary, a leading
+# `NAME=value` shell-assignment prefix shifting git off the first token, `eval`/`sh -c`/`bash -c`/
+# `xargs` hiding git in an opaque argument string, and a bare `$VAR`/`${VAR}` in the command-word
+# position. Both are fixed in `branch_guard_parse.py` (see its own module docstring for the full
+# design + the fail-safe boundary each fix respects); this bash layer required exactly ONE change,
+# below: the cheap fast-path pre-filter (previously `\bgit\b` only) is WIDENED to also trigger
+# python3 on `$`/backtick (any variable/substitution — including a fully-obfuscated command word
+# that never contains the literal substring "git" at all, e.g. a base64-decoded variable) and on
+# eval/xargs/sh/bash/zsh/dash/ksh by name — otherwise a sufficiently obfuscated command could skip
+# the python parser ENTIRELY at this pre-filter, before ever reaching its (correct) analysis. This
+# necessarily makes the pre-filter trigger far more often (a bare `$HOME` now triggers it) — that is
+# an accepted, deliberate cost: the pre-filter's own comment already says it exists only to skip the
+# python3 spawn for "obviously-unrelated" commands, and a command containing an unresolved variable
+# is no longer "obviously unrelated" once bare variables must be scrutinized (variant 5, CRITICAL 2).
+# Also see INFORMATIONAL 3 in branch_guard_parse.py: a detached HEAD (or an outright branch-
+# resolution failure — both surface as the literal string "HEAD") now fails closed for any op whose
+# verdict needs the current branch, rather than silently matching no protected pattern and ALLOWing.
 
 set -uo pipefail
 
@@ -127,10 +151,17 @@ cd "$run_dir" 2>/dev/null || exit 0
 # seed for its `cd`/`-C` effective-cwd resolution, which requires an unambiguous absolute base.
 run_dir="$(pwd)"
 
-# Fast path: only inspect commands that actually mention 'git' as a word (cheap pre-filter; the real
-# parse below is authoritative — this is purely to skip the python3 spawn for obviously-unrelated
-# commands like `ls -la`).
-printf '%s' "$cmd" | grep -qE '\bgit\b' || exit 0
+# Fast path: only inspect commands that could plausibly involve git, directly or through
+# indirection (cheap pre-filter; the real parse below is authoritative — this is purely to skip the
+# python3 spawn for obviously-unrelated commands like `ls -la`). Widened in variant 5 beyond a bare
+# `\bgit\b` word match: also triggers on `$`/backtick (ANY variable or substitution — including a
+# command word fully obfuscated to never contain the literal substring "git", e.g. a base64-decoded
+# variable) and on the named indirection wrappers (`eval`/`xargs`/`sh`/`bash`/`zsh`/`dash`/`ksh`) —
+# so a sufficiently obfuscated command cannot skip the python parser at this pre-filter before ever
+# reaching its (correct) analysis. This trades some of the pre-filter's cheapness for correctness —
+# a command containing an unresolved variable is no longer "obviously unrelated" to git once bare
+# variables must be scrutinized (branch_guard_parse.py, CRITICAL 2).
+printf '%s' "$cmd" | grep -qE '\b(git|eval|xargs|sh|bash|zsh|dash|ksh)\b|\$|`' || exit 0
 
 current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)"
 protected="${MYC_PROTECTED_BRANCHES:-main integration dev claude/head/*}"

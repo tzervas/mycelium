@@ -275,6 +275,101 @@ check ALLOW claude/leaf/x "git -C <dir> push explicit refspec, no run-dir suppli
   'git -C /some/dir push origin claude/leaf/x'
 
 echo ""
+echo "=== variant 5 (adversarial hardening): CRITICAL 1 — newline-separated compound commands ==="
+# Exact payload class from the security review: a plain multi-line bash block, exactly how an
+# agent's multi-line Bash tool call is often written. Before this fix, shlex silently consumed the
+# unquoted newline as whitespace, flattening the whole block into ONE segment judged only by its
+# FIRST line's leading word.
+check BLOCK dev $'multi-line commit+push, HEAD=dev — the exact review payload (add is inert, commit BLOCKs before push is even reached)' \
+  $'git add -A\ngit commit -m wip\ngit push origin main'
+check BLOCK dev "echo then commit on a newline, HEAD=dev (review's second literal example)" \
+  $'echo hi\ngit commit -m wip'
+check BLOCK dev "read-only line then an explicit protected push on the next line" \
+  $'git status\ngit push origin main'
+check ALLOW claude/leaf/x "multi-line block on a non-protected leaf branch stays ALLOW (no regression)" \
+  $'git add -A\ngit commit -m wip\ngit push origin claude/leaf/x'
+
+echo ""
+echo "--- newline INSIDE a quoted commit message must NOT be mis-split (quote-awareness proof) ---"
+check ALLOW claude/leaf/x "a literal newline inside a quoted -m message, leaf branch — single commit, unaffected" \
+  $'git commit -m "line1\nline2"'
+check BLOCK dev "a literal newline inside a quoted -m message, HEAD=dev — still recognized as ONE commit, still BLOCKed" \
+  $'git commit -m "line1\nline2"'
+
+echo ""
+echo "=== variant 5 (adversarial hardening): CRITICAL 2 — command-word indirection ==="
+echo "--- must BLOCK: real git reached via indirection, on a protected branch ---"
+check BLOCK dev "absolute path to the git binary (basename match)" \
+  '/usr/bin/git commit -m wip'
+check BLOCK dev "env FOO=bar git commit — env's assignment shifts git off seg[1]" \
+  'env FOO=bar git commit -m wip'
+check BLOCK dev "bare FOO=bar git commit — no 'env' needed at all" \
+  'FOO=bar git commit -m wip'
+
+echo ""
+echo "--- must fail CLOSED (UNSAFE): git hidden behind an opaque/unparsed wrapper ---"
+check UNSAFE dev "eval 'git commit ...' — the guard cannot parse eval's argument string" \
+  "eval 'git commit -m wip'"
+check UNSAFE dev "sh -c 'git commit ...' — an inline shell script string" \
+  "sh -c 'git commit -m wip'"
+check UNSAFE dev "bash -c \"git push origin main\" — an inline shell script string" \
+  'bash -c "git push origin main"'
+check UNSAFE dev "xargs git add -A — xargs's own argument IS the real command" \
+  'xargs git add -A'
+check UNSAFE claude/leaf/x "eval/sh -c/xargs are UNSAFE regardless of branch (fail-closed, not branch-gated) — still UNSAFE even on a leaf branch" \
+  "eval 'git commit -m wip'"
+
+echo ""
+echo "--- must fail CLOSED (UNSAFE): a variable in the COMMAND-WORD position itself ---"
+# shellcheck disable=SC2016  # single-quoted on purpose: literal argv test data, not for local expansion.
+check UNSAFE dev 'GIT=git; $GIT commit -- a bare $VAR as the effective command word' \
+  'GIT=git; $GIT commit -m wip'
+# shellcheck disable=SC2016
+check UNSAFE dev '${GIT} commit -- braced variable form, same indirection' \
+  '${GIT} commit -m wip'
+
+echo ""
+echo "--- additional hardening beyond the reviewer's literal examples: unmodeled wrapper flags ---"
+check UNSAFE dev "env -i FOO=bar git commit — env's OWN flag (-i) is not specially parsed; fails closed rather than silently inert" \
+  'env -i FOO=bar git commit -m wip'
+
+echo ""
+echo "--- DRY proof: cd-detection shares the same prefix consumption as git-detection ---"
+check ALLOW dev "env FOO=bar cd <leaf-worktree> && commit — prefixed cd is tracked exactly like a prefixed git invocation" \
+  "env FOO=bar cd $LEAF_WT && git commit -m wip" "$DEV_WT"
+
+echo ""
+echo "--- must remain ALLOW: ordinary, unambiguous, non-git commands are untouched ---"
+check ALLOW dev "ls -la — an ordinary non-git command, HEAD=dev" 'ls -la'
+check ALLOW dev "python3 script.py — an ordinary external program, HEAD=dev" 'python3 script.py'
+check ALLOW dev "sudo ls -la — a modeled wrapper around an ordinary command" 'sudo ls -la'
+
+echo ""
+echo "--- documented, deliberately out-of-scope boundary: a script FILE (no -c) is not opened ---"
+# sh/bash *without* -c runs an external script FILE, not an inline string this guard could parse —
+# structurally identical to any other external program potentially shelling out to git (make,
+# npm run test, python foo.py, ...), which this guard does not attempt to cover (unbounded). Only
+# the inline eval/-c/xargs indirection explicitly named by the review is closed.
+check ALLOW dev "bash script.sh (no -c) — documented scope boundary, NOT covered by this hardening" \
+  'bash deploy.sh'
+
+echo ""
+echo "=== variant 5 (adversarial hardening): INFORMATIONAL 3 — detached HEAD fails closed ==="
+DETACHED_WT="$FIXTURE_ROOT/detached-worktree"
+git init -q -b main "$DETACHED_WT"
+git -C "$DETACHED_WT" -c user.email=t@e.com -c user.name=t -c commit.gpgsign=false commit -q --allow-empty -m c1
+FIRST_SHA="$(git -C "$DETACHED_WT" rev-parse HEAD)"
+git -C "$DETACHED_WT" -c user.email=t@e.com -c user.name=t -c commit.gpgsign=false commit -q --allow-empty -m c2
+git -C "$DETACHED_WT" checkout -q "$FIRST_SHA"  # now genuinely detached
+
+check UNSAFE dev "cd into a genuinely DETACHED worktree, then commit — 'HEAD' is ambiguous, fails CLOSED" \
+  "cd $DETACHED_WT && git commit -m wip" "$LEAF_WT"
+check UNSAFE dev "git -C <detached-worktree> commit — same ambiguity via scoped -C" \
+  "git -C $DETACHED_WT commit -m wip" "$LEAF_WT"
+check UNSAFE HEAD "current branch is already the literal 'HEAD' sentinel (payload cwd itself detached/unresolved), then commit" \
+  'git commit -m wip'
+
+echo ""
 echo "----------------------------------------------------------------------"
 echo "TOTAL: pass=$pass fail=$fail"
 if [[ $fail -ne 0 ]]; then
