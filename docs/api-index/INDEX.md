@@ -463,15 +463,15 @@
 | `mycelium_core::prim::PrimRef::new` | fn | `crates/mycelium-core/src/prim.rs:125` | Build a prim reference from a declaration hash. |
 | `mycelium_core::prim::PrimSig::arity` | fn | `crates/mycelium-core/src/prim.rs:87` | The prim's arity (operand count). |
 | `mycelium_core::prim::PrimTable::builtins` | fn | `crates/mycelium-core/src/prim.rs:232` | The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic |
-| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:800` | Whether a prim named `name` is registered. |
-| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:763` | The content hash of the prim registered under kernel name `name`, if any. |
-| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:814` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
-| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:787` | The declaration registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:811` | Whether a prim named `name` is registered. |
+| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:774` | The content hash of the prim registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:825` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
+| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:798` | The declaration registered under kernel name `name`, if any. |
 | `mycelium_core::prim::PrimTable::insert` | fn | `crates/mycelium-core/src/prim.rs:167` | Register (or replace) a prim declaration under build-time kernel name `name`, returning its |
-| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:794` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
-| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:806` | The registered kernel names, sorted. |
-| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:769` | A [`PrimRef`] for the prim named `name`, if registered. |
-| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:781` | The declaration a [`PrimRef`] points at, if registered. |
+| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:805` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
+| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:817` | The registered kernel names, sorted. |
+| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:780` | A [`PrimRef`] for the prim named `name`, if registered. |
+| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:792` | The declaration a [`PrimRef`] points at, if registered. |
 | `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:25` | — |
 | `mycelium_core::recon::ReconInfo::bound` | fn | `crates/mycelium-core/src/recon.rs:245` | The attached `{ε, δ, strength}` bound certificate. |
 | `mycelium_core::recon::ReconInfo::codebooks` | fn | `crates/mycelium-core/src/recon.rs:230` | The content-addressed codebook references. |
@@ -755,17 +755,17 @@
 | `mycelium_interp::parallel` | mod | `crates/mycelium-interp/src/lib.rs:110` | — |
 | `mycelium_interp::plan_parallel` | fn | `crates/mycelium-interp/src/parallel.rs:160` | Compute the [`ParallelPlan`] for `node` — the explicit, side-effect-free decision procedure |
 | `mycelium_interp::prims` | mod | `crates/mycelium-interp/src/lib.rs:111` | — |
-| `mycelium_interp::prims::FLT_CMP_CONFORMANCE_METHOD:` | const | `crates/mycelium-interp/src/prims.rs:2290` | The method recorded in the `EmpiricalFit` basis of every float-comparison result |
-| `mycelium_interp::prims::FLT_CMP_CONFORMANCE_TRIALS:` | const | `crates/mycelium-interp/src/prims.rs:2286` | The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`, |
-| `mycelium_interp::prims::FLT_CONFORMANCE_METHOD:` | const | `crates/mycelium-interp/src/prims.rs:2082` | The method recorded in the `EmpiricalFit` basis of every `flt.*` result (ADR-040 §2.6). |
-| `mycelium_interp::prims::FLT_CONFORMANCE_TRIALS:` | const | `crates/mycelium-interp/src/prims.rs:2079` | The trial count of the M-898 IEEE reference-case corpus (`src/tests/prims.rs`, |
+| `mycelium_interp::prims::FLT_CMP_CONFORMANCE_METHOD:` | const | `crates/mycelium-interp/src/prims.rs:2328` | The method recorded in the `EmpiricalFit` basis of every float-comparison result |
+| `mycelium_interp::prims::FLT_CMP_CONFORMANCE_TRIALS:` | const | `crates/mycelium-interp/src/prims.rs:2324` | The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`, |
+| `mycelium_interp::prims::FLT_CONFORMANCE_METHOD:` | const | `crates/mycelium-interp/src/prims.rs:2120` | The method recorded in the `EmpiricalFit` basis of every `flt.*` result (ADR-040 §2.6). |
+| `mycelium_interp::prims::FLT_CONFORMANCE_TRIALS:` | const | `crates/mycelium-interp/src/prims.rs:2117` | The trial count of the M-898 IEEE reference-case corpus (`src/tests/prims.rs`, |
 | `mycelium_interp::prims::PrimFn` | type | `crates/mycelium-interp/src/prims.rs:52` | A primitive implementation: a pure function from argument values to a result value (or an error). |
 | `mycelium_interp::prims::PrimRegistry::empty` | fn | `crates/mycelium-interp/src/prims.rs:64` | An empty registry. |
-| `mycelium_interp::prims::PrimRegistry::get` | fn | `crates/mycelium-interp/src/prims.rs:274` | Look up a primitive by name. |
-| `mycelium_interp::prims::PrimRegistry::names` | fn | `crates/mycelium-interp/src/prims.rs:280` | The registered primitive names (sorted). |
-| `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:268` | Register (or replace) a primitive. |
+| `mycelium_interp::prims::PrimRegistry::get` | fn | `crates/mycelium-interp/src/prims.rs:276` | Look up a primitive by name. |
+| `mycelium_interp::prims::PrimRegistry::names` | fn | `crates/mycelium-interp/src/prims.rs:282` | The registered primitive names (sorted). |
+| `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:270` | Register (or replace) a primitive. |
 | `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:125` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
-| `mycelium_interp::prims::eval_wrapping` | fn | `crates/mycelium-interp/src/prims.rs:1132` | Evaluate `prim` (one of `bin.add`/`bin.sub`/`bin.mul`) under the **named** `wrapping` opt-out |
+| `mycelium_interp::prims::eval_wrapping` | fn | `crates/mycelium-interp/src/prims.rs:1134` | Evaluate `prim` (one of `bin.add`/`bin.sub`/`bin.mul`) under the **named** `wrapping` opt-out |
 | `mycelium_interp::supervise` | mod | `crates/mycelium-interp/src/lib.rs:112` | — |
 | `mycelium_interp::supervise::CancelToken::cancel` | fn | `crates/mycelium-interp/src/supervise.rs:48` | Request cancellation. |
 | `mycelium_interp::supervise::CancelToken::check` | fn | `crates/mycelium-interp/src/supervise.rs:63` | Observe the token at a checkpoint: an explicit [`Cancelled`] if cancellation was requested, else |
@@ -785,7 +785,7 @@
 | `mycelium_l1::CheckError` | struct | `crates/mycelium-l1/src/checkty.rs:181` | An explicit check failure (never a silent pass or a guess — S5/G2). |
 | `mycelium_l1::ClosureSpecialization` | struct | `crates/mycelium-l1/src/mono.rs:495` | RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow, |
 | `mycelium_l1::ElabError` | enum | `crates/mycelium-l1/src/elab.rs:51` | Why a definition could not be elaborated to L0 — always explicit, never a partial artifact |
-| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:719` | The checked program environment: registry + function table. |
+| `mycelium_l1::Env` | struct | `crates/mycelium-l1/src/checkty.rs:747` | The checked program environment: registry + function table. |
 | `mycelium_l1::Evaluator` | struct | `crates/mycelium-l1/src/eval.rs:556` | The L1 evaluator over a checked [`Env`]. |
 | `mycelium_l1::ForageDecision` | struct | `crates/mycelium-l1/src/eval.rs:272` | One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the |
 | `mycelium_l1::ForageError` | enum | `crates/mycelium-l1/src/eval.rs:282` | Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated |
@@ -797,15 +797,15 @@
 | `mycelium_l1::NoduleHeader` | struct | `crates/mycelium-l1/src/nodule.rs:25` | A recognised nodule header marker (DN-06 §6). |
 | `mycelium_l1::NoduleHeaderError` | struct | `crates/mycelium-l1/src/nodule.rs:51` | An ill-formed nodule header marker — never-silent (G2): the author wrote `// nodule:` but the |
 | `mycelium_l1::ParseError` | struct | `crates/mycelium-l1/src/error.rs:9` | A parse/lex failure at a source position. |
-| `mycelium_l1::Phyla` | struct | `crates/mycelium-l1/src/checkty.rs:1696` | The **resolved dependency set** of one phylum being checked (DN-113 §5.1) — additive over |
+| `mycelium_l1::Phyla` | struct | `crates/mycelium-l1/src/checkty.rs:1976` | The **resolved dependency set** of one phylum being checked (DN-113 §5.1) — additive over |
 | `mycelium_l1::Phylum` | struct | `crates/mycelium-l1/src/ast.rs:16` | A **phylum** — the library-scale static grouping above `nodule` (DN-06; RFC-0006 §4.3; M-662). |
-| `mycelium_l1::PhylumEnv` | struct | `crates/mycelium-l1/src/checkty.rs:1286` | The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the |
+| `mycelium_l1::PhylumEnv` | struct | `crates/mycelium-l1/src/checkty.rs:1497` | The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the |
 | `mycelium_l1::ReleaseEvent` | struct | `crates/mycelium-l1/src/substrate.rs:252` | A recorded **scope-exit release** — the DN-71 §8 FLAG-4 v0 drop-without-consume posture (M-904). |
 | `mycelium_l1::RenderError` | enum | `crates/mycelium-l1/src/reveal.rs:595` | A [`render_surface`] refusal — never a silent gap or a `todo!()` (house rule #2/G2). |
 | `mycelium_l1::Rendered` | struct | `crates/mycelium-l1/src/reveal.rs:575` | The output of [`render_surface`]: best-effort surface text for a closed L0 [`Node`], plus an |
 | `mycelium_l1::Resolution` | enum | `crates/mycelium-l1/src/type_strictness.rs:110` | The checker's **principal-resolution verdict** for a demoted hole (DN-126 §4.1 — the soundness |
 | `mycelium_l1::Resolved` | struct | `crates/mycelium-l1/src/ambient.rs:148` | The resolved twin plus its provenance trace. |
-| `mycelium_l1::ResolvedPhylum` | struct | `crates/mycelium-l1/src/checkty.rs:1641` | A dependency phylum, already **checked and linked** (DN-113 §5.1) — the unit [`Phyla`] holds one |
+| `mycelium_l1::ResolvedPhylum` | struct | `crates/mycelium-l1/src/checkty.rs:1921` | A dependency phylum, already **checked and linked** (DN-113 §5.1) — the unit [`Phyla`] holds one |
 | `mycelium_l1::RevealError` | enum | `crates/mycelium-l1/src/reveal.rs:181` | Errors from the `reveal` primitives ([`reveal_l0`], [`reelaborate`]). |
 | `mycelium_l1::StrictifyOutcome` | struct | `crates/mycelium-l1/src/type_strictness.rs:176` | The result of DN-126 §4's mechanical-strictification classification pass (steps 1-3: run strict, |
 | `mycelium_l1::SubstrateError` | enum | `crates/mycelium-l1/src/substrate.rs:279` | Why a `Substrate` operation was refused — always explicit (never-silent; G2/VR-5). |
@@ -868,40 +868,40 @@
 | `mycelium_l1::ast::ViaDecl` | struct | `crates/mycelium-l1/src/ast.rs:152` | A delegation clause inside an `object` body: `via <field_idx> : <TraitName>` (DN-53 M-811). |
 | `mycelium_l1::ast::Vis::is_pub` | fn | `crates/mycelium-l1/src/ast.rs:53` | Is this item exported to other nodules of the phylum (`pub`)? |
 | `mycelium_l1::ast::WidthRef` | enum | `crates/mycelium-l1/src/ast.rs:424` | A width reference in a [`BaseType::Binary`] or [`BaseType::Ternary`] descriptor — either a |
-| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:2758` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
-| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:1885` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
-| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:2687` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
-| `mycelium_l1::check_phylum` | fn | `crates/mycelium-l1/src/checkty.rs:1910` | Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and |
-| `mycelium_l1::check_phylum_matured` | fn | `crates/mycelium-l1/src/checkty.rs:1920` | Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule |
-| `mycelium_l1::check_phylum_matured_with_deps` | fn | `crates/mycelium-l1/src/checkty.rs:1941` | [`check_phylum_with_deps`] with the explicit `matured_scope` gate (see [`check_phylum_matured`]). |
-| `mycelium_l1::check_phylum_with_deps` | fn | `crates/mycelium-l1/src/checkty.rs:1933` | Like [`check_phylum`], but resolving cross-phylum `use dep::a.b.Item` references against `deps` |
+| `mycelium_l1::check_and_resolve` | fn | `crates/mycelium-l1/src/checkty.rs:3206` | Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program |
+| `mycelium_l1::check_nodule` | fn | `crates/mycelium-l1/src/checkty.rs:2165` | Check a whole nodule: build the registry (prelude + declarations), then type every function |
+| `mycelium_l1::check_nodule_matured` | fn | `crates/mycelium-l1/src/checkty.rs:3135` | Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`, |
+| `mycelium_l1::check_phylum` | fn | `crates/mycelium-l1/src/checkty.rs:2190` | Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and |
+| `mycelium_l1::check_phylum_matured` | fn | `crates/mycelium-l1/src/checkty.rs:2200` | Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule |
+| `mycelium_l1::check_phylum_matured_with_deps` | fn | `crates/mycelium-l1/src/checkty.rs:2221` | [`check_phylum_with_deps`] with the explicit `matured_scope` gate (see [`check_phylum_matured`]). |
+| `mycelium_l1::check_phylum_with_deps` | fn | `crates/mycelium-l1/src/checkty.rs:2213` | Like [`check_phylum`], but resolving cross-phylum `use dep::a.b.Item` references against `deps` |
 | `mycelium_l1::checkty` | mod | `crates/mycelium-l1/src/lib.rs:43` | — |
 | `mycelium_l1::checkty::CheckError::at` | fn | `crates/mycelium-l1/src/checkty.rs:201` | Public, ergonomic constructor: a check failure at `site` with `message`. |
 | `mycelium_l1::checkty::CtorInfo` | struct | `crates/mycelium-l1/src/checkty.rs:237` | One constructor of a registered data type. |
 | `mycelium_l1::checkty::DataInfo` | struct | `crates/mycelium-l1/src/checkty.rs:249` | A registered data type. |
-| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:778` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
-| `mycelium_l1::checkty::Env::fn_decl` | fn | `crates/mycelium-l1/src/checkty.rs:794` | The function declaration named `name`, if any. |
-| `mycelium_l1::checkty::Env::fn_totality` | fn | `crates/mycelium-l1/src/checkty.rs:802` | The totality verdict for function `name`, if it has been classified. |
-| `mycelium_l1::checkty::Env::instance` | fn | `crates/mycelium-l1/src/checkty.rs:816` | The registered instance for `(trait_name, head)`, if any (RFC-0019 §4.5). |
-| `mycelium_l1::checkty::Env::trait_info` | fn | `crates/mycelium-l1/src/checkty.rs:809` | The registered trait named `name`, if any (RFC-0019 §4.2). |
-| `mycelium_l1::checkty::Env::type_info` | fn | `crates/mycelium-l1/src/checkty.rs:787` | The registered data type named `name`, if any. |
+| `mycelium_l1::checkty::Env::ctor` | fn | `crates/mycelium-l1/src/checkty.rs:806` | Find the data type owning constructor `ctor`, with its index — `None` if no type has it. |
+| `mycelium_l1::checkty::Env::fn_decl` | fn | `crates/mycelium-l1/src/checkty.rs:822` | The function declaration named `name`, if any. |
+| `mycelium_l1::checkty::Env::fn_totality` | fn | `crates/mycelium-l1/src/checkty.rs:830` | The totality verdict for function `name`, if it has been classified. |
+| `mycelium_l1::checkty::Env::instance` | fn | `crates/mycelium-l1/src/checkty.rs:844` | The registered instance for `(trait_name, head)`, if any (RFC-0019 §4.5). |
+| `mycelium_l1::checkty::Env::trait_info` | fn | `crates/mycelium-l1/src/checkty.rs:837` | The registered trait named `name`, if any (RFC-0019 §4.2). |
+| `mycelium_l1::checkty::Env::type_info` | fn | `crates/mycelium-l1/src/checkty.rs:815` | The registered data type named `name`, if any. |
 | `mycelium_l1::checkty::InstanceInfo` | struct | `crates/mycelium-l1/src/checkty.rs:290` | A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5). |
 | `mycelium_l1::checkty::MAX_CHECK_DEPTH:` | const | `crates/mycelium-l1/src/checkty.rs:42` | The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02). |
-| `mycelium_l1::checkty::Phyla::deps` | fn | `crates/mycelium-l1/src/checkty.rs:1731` | Read-only access to the declared dependencies, by their local name — a Law-of-Demeter-friendly |
-| `mycelium_l1::checkty::Phyla::empty` | fn | `crates/mycelium-l1/src/checkty.rs:1705` | An empty dependency set (no `[dependencies]`) — the additive-identity `Phyla` every |
-| `mycelium_l1::checkty::Phyla::from_deps` | fn | `crates/mycelium-l1/src/checkty.rs:1714` | Build a `Phyla` directly from already-resolved dependencies, keyed by their consumer-local |
-| `mycelium_l1::checkty::PhylumEnv::link` | fn | `crates/mycelium-l1/src/checkty.rs:1357` | **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations |
-| `mycelium_l1::checkty::PhylumEnv::nodule` | fn | `crates/mycelium-l1/src/checkty.rs:1322` | The checked [`Env`] of the nodule whose path equals `path`, if present. |
-| `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:1313` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
-| `mycelium_l1::checkty::ResolvedPhylum::resolve` | fn | `crates/mycelium-l1/src/checkty.rs:1676` | **The v1 single-node resolution entry point (DN-113 §5.1) — for a caller resolving ONE |
+| `mycelium_l1::checkty::Phyla::deps` | fn | `crates/mycelium-l1/src/checkty.rs:2011` | Read-only access to the declared dependencies, by their local name — a Law-of-Demeter-friendly |
+| `mycelium_l1::checkty::Phyla::empty` | fn | `crates/mycelium-l1/src/checkty.rs:1985` | An empty dependency set (no `[dependencies]`) — the additive-identity `Phyla` every |
+| `mycelium_l1::checkty::Phyla::from_deps` | fn | `crates/mycelium-l1/src/checkty.rs:1994` | Build a `Phyla` directly from already-resolved dependencies, keyed by their consumer-local |
+| `mycelium_l1::checkty::PhylumEnv::link` | fn | `crates/mycelium-l1/src/checkty.rs:1568` | **The phylum-wide runtime link (M-1024; ENB-1).** Fold every nodule's *checked* declarations |
+| `mycelium_l1::checkty::PhylumEnv::nodule` | fn | `crates/mycelium-l1/src/checkty.rs:1533` | The checked [`Env`] of the nodule whose path equals `path`, if present. |
+| `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:1524` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
+| `mycelium_l1::checkty::ResolvedPhylum::resolve` | fn | `crates/mycelium-l1/src/checkty.rs:1956` | **The v1 single-node resolution entry point (DN-113 §5.1) — for a caller resolving ONE |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:277` | A registered **trait** (RFC-0019 §4.2; LR-2). |
 | `mycelium_l1::checkty::Width` | enum | `crates/mycelium-l1/src/checkty.rs:59` | A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an |
-| `mycelium_l1::checkty::check_and_resolve_with_strictness` | fn | `crates/mycelium-l1/src/checkty.rs:2778` | DN-126 (M-1077) — like [`check_and_resolve`], but under an explicit |
-| `mycelium_l1::checkty::check_nodule_with_strictness` | fn | `crates/mycelium-l1/src/checkty.rs:2789` | Like [`check_and_resolve_with_strictness`], returning just the checked [`Env`] + flags (drops the |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:10335` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:10284` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::check_and_resolve_with_strictness` | fn | `crates/mycelium-l1/src/checkty.rs:3226` | DN-126 (M-1077) — like [`check_and_resolve`], but under an explicit |
+| `mycelium_l1::checkty::check_nodule_with_strictness` | fn | `crates/mycelium-l1/src/checkty.rs:3237` | Like [`check_and_resolve_with_strictness`], returning just the checked [`Env`] + flags (drops the |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:10815` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:10764` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::checkty::type_head` | fn | `crates/mycelium-l1/src/checkty.rs:309` | The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is |
-| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:10325` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
+| `mycelium_l1::checkty::vsa_kernel_model_id` | fn | `crates/mycelium-l1/src/checkty.rs:10805` | Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` — |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:45` | — |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:1380` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
 | `mycelium_l1::elab::lit_value` | fn | `crates/mycelium-l1/src/elab.rs:106` | Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation — |
@@ -2790,7 +2790,7 @@
 | `mycelium_transpile::emit::emit_enum` | fn | `crates/mycelium-transpile/src/emit.rs:3856` | `enum` -> `type_item` (`type Name = C1 \| C2(T1, T2) \| ...;`). |
 | `mycelium_transpile::emit::emit_expr` | fn | `crates/mycelium-transpile/src/emit.rs:1890` | Translate one Rust expression. |
 | `mycelium_transpile::emit::emit_fn` | fn | `crates/mycelium-transpile/src/emit.rs:4105` | Top-level `fn` -> `fn_item`. |
-| `mycelium_transpile::emit::emit_impl` | fn | `crates/mycelium-transpile/src/emit.rs:4475` | `impl` -> `impl_item` (trait-instance or inherent form). |
+| `mycelium_transpile::emit::emit_impl` | fn | `crates/mycelium-transpile/src/emit.rs:4516` | `impl` -> `impl_item` (trait-instance or inherent form). |
 | `mycelium_transpile::emit::emit_struct` | fn | `crates/mycelium-transpile/src/emit.rs:3982` | `struct` -> a single-constructor `type_item`. |
 | `mycelium_transpile::emit::emit_trait` | fn | `crates/mycelium-transpile/src/emit.rs:4154` | `trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ... |
 | `mycelium_transpile::emit::is_cfg_test` | fn | `crates/mycelium-transpile/src/emit.rs:429` | Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains("test")` check, not a |
@@ -2813,11 +2813,11 @@
 | `mycelium_transpile::map::tokens_to_string` | fn | `crates/mycelium-transpile/src/map.rs:16` | Render a `syn` node's tokens back to text, for gap snippets and unmapped-type messages only |
 | `mycelium_transpile::output_rel_path` | fn | `crates/mycelium-transpile/src/batch.rs:67` | The **path-qualified** output stem (extension-stripped, relative to the run's `out-dir`) for a |
 | `mycelium_transpile::prim_map` | mod | `crates/mycelium-transpile/src/lib.rs:39` | — |
-| `mycelium_transpile::prim_map::PrimMapping` | struct | `crates/mycelium-transpile/src/prim_map.rs:172` | One forward-mapped Rust `Expr::MethodCall` pattern (see module docs). |
-| `mycelium_transpile::prim_map::ReceiverGate` | enum | `crates/mycelium-transpile/src/prim_map.rs:142` | The gate on a `wired: true` row's **receiver** — required so a coincidentally-same-named method |
-| `mycelium_transpile::prim_map::TABLE:` | const | `crates/mycelium-transpile/src/prim_map.rs:229` | The table. |
-| `mycelium_transpile::prim_map::lookup` | fn | `crates/mycelium-transpile/src/prim_map.rs:351` | Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method` |
-| `mycelium_transpile::prim_map::receiver_gate_matches` | fn | `crates/mycelium-transpile/src/prim_map.rs:358` | Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known |
+| `mycelium_transpile::prim_map::PrimMapping` | struct | `crates/mycelium-transpile/src/prim_map.rs:180` | One forward-mapped Rust `Expr::MethodCall` pattern (see module docs). |
+| `mycelium_transpile::prim_map::ReceiverGate` | enum | `crates/mycelium-transpile/src/prim_map.rs:150` | The gate on a `wired: true` row's **receiver** — required so a coincidentally-same-named method |
+| `mycelium_transpile::prim_map::TABLE:` | const | `crates/mycelium-transpile/src/prim_map.rs:237` | The table. |
+| `mycelium_transpile::prim_map::lookup` | fn | `crates/mycelium-transpile/src/prim_map.rs:395` | Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method` |
+| `mycelium_transpile::prim_map::receiver_gate_matches` | fn | `crates/mycelium-transpile/src/prim_map.rs:402` | Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known |
 | `mycelium_transpile::remap` | mod | `crates/mycelium-transpile/src/lib.rs:40` | — |
 | `mycelium_transpile::render_remap_md` | fn | `crates/mycelium-transpile/src/remap.rs:205` | Render the human-readable **`REMAP.md`** view of a [`RemapManifest`] — a **pure projection**: it |
 | `mycelium_transpile::reserved` | mod | `crates/mycelium-transpile/src/lib.rs:41` | — |
@@ -2832,9 +2832,9 @@
 | `mycelium_transpile::transpile_file` | fn | `crates/mycelium-transpile/src/transpile.rs:26` | Parse `path` and transpile every top-level item. |
 | `mycelium_transpile::transpile_source` | fn | `crates/mycelium-transpile/src/transpile.rs:56` | Transpile already-read source text. |
 | `mycelium_transpile::type_map` | mod | `crates/mycelium-transpile/src/lib.rs:44` | — |
-| `mycelium_transpile::type_map::TABLE:` | const | `crates/mycelium-transpile/src/type_map.rs:66` | The table. |
-| `mycelium_transpile::type_map::TypeMapRow` | struct | `crates/mycelium-transpile/src/type_map.rs:42` | One named-type mapping row. |
-| `mycelium_transpile::type_map::lookup` | fn | `crates/mycelium-transpile/src/type_map.rs:222` | Look up `rust_name` in [`TABLE`] (first match; the table has no duplicate `rust_name` entries |
+| `mycelium_transpile::type_map::TABLE:` | const | `crates/mycelium-transpile/src/type_map.rs:73` | The table. |
+| `mycelium_transpile::type_map::TypeMapRow` | struct | `crates/mycelium-transpile/src/type_map.rs:49` | One named-type mapping row. |
+| `mycelium_transpile::type_map::lookup` | fn | `crates/mycelium-transpile/src/type_map.rs:244` | Look up `rust_name` in [`TABLE`] (first match; the table has no duplicate `rust_name` entries |
 | `mycelium_transpile::vet` | mod | `crates/mycelium-transpile/src/lib.rs:45` | — |
 | `mycelium_transpile::vet::MAX_DIAGNOSTIC_LEN:` | const | `crates/mycelium-transpile/src/vet.rs:189` | Cap on a stored diagnostic line's length (report-size hygiene). |
 | `mycelium_transpile::vet::MycChecker::from_env` | fn | `crates/mycelium-transpile/src/vet.rs:461` | The checker configured from the environment. |
@@ -4729,7 +4729,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::checkty::DataInfo::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::DataInfo::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::DataInfo::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::checkty::Env` | dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:719 — one canonical row kept |
+| `mycelium_l1::checkty::Env` | dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:747 — one canonical row kept |
 | `mycelium_l1::checkty::Env::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Env::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Env::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4737,19 +4737,19 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::checkty::InstanceInfo::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::InstanceInfo::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::InstanceInfo::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::checkty::Phyla` | dedup-alias: same definition as `mycelium_l1::Phyla` at crates/mycelium-l1/src/checkty.rs:1696 — one canonical row kept |
+| `mycelium_l1::checkty::Phyla` | dedup-alias: same definition as `mycelium_l1::Phyla` at crates/mycelium-l1/src/checkty.rs:1976 — one canonical row kept |
 | `mycelium_l1::checkty::Phyla::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Phyla::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Phyla::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Phyla::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Phyla::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Phyla::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::checkty::PhylumEnv` | dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:1286 — one canonical row kept |
+| `mycelium_l1::checkty::PhylumEnv` | dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:1497 — one canonical row kept |
 | `mycelium_l1::checkty::PhylumEnv::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::PhylumEnv::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::PhylumEnv::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::PhylumEnv::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::checkty::ResolvedPhylum` | dedup-alias: same definition as `mycelium_l1::ResolvedPhylum` at crates/mycelium-l1/src/checkty.rs:1641 — one canonical row kept |
+| `mycelium_l1::checkty::ResolvedPhylum` | dedup-alias: same definition as `mycelium_l1::ResolvedPhylum` at crates/mycelium-l1/src/checkty.rs:1921 — one canonical row kept |
 | `mycelium_l1::checkty::ResolvedPhylum::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::ResolvedPhylum::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::ResolvedPhylum::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -4771,13 +4771,13 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_l1::checkty::Width::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Width::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::checkty::Width::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
-| `mycelium_l1::checkty::check_and_resolve` | dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:2758 — one canonical row kept |
-| `mycelium_l1::checkty::check_nodule` | dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1885 — one canonical row kept |
-| `mycelium_l1::checkty::check_nodule_matured` | dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:2687 — one canonical row kept |
-| `mycelium_l1::checkty::check_phylum` | dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1910 — one canonical row kept |
-| `mycelium_l1::checkty::check_phylum_matured` | dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1920 — one canonical row kept |
-| `mycelium_l1::checkty::check_phylum_matured_with_deps` | dedup-alias: same definition as `mycelium_l1::check_phylum_matured_with_deps` at crates/mycelium-l1/src/checkty.rs:1941 — one canonical row kept |
-| `mycelium_l1::checkty::check_phylum_with_deps` | dedup-alias: same definition as `mycelium_l1::check_phylum_with_deps` at crates/mycelium-l1/src/checkty.rs:1933 — one canonical row kept |
+| `mycelium_l1::checkty::check_and_resolve` | dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:3206 — one canonical row kept |
+| `mycelium_l1::checkty::check_nodule` | dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:2165 — one canonical row kept |
+| `mycelium_l1::checkty::check_nodule_matured` | dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:3135 — one canonical row kept |
+| `mycelium_l1::checkty::check_phylum` | dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:2190 — one canonical row kept |
+| `mycelium_l1::checkty::check_phylum_matured` | dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:2200 — one canonical row kept |
+| `mycelium_l1::checkty::check_phylum_matured_with_deps` | dedup-alias: same definition as `mycelium_l1::check_phylum_matured_with_deps` at crates/mycelium-l1/src/checkty.rs:2221 — one canonical row kept |
+| `mycelium_l1::checkty::check_phylum_with_deps` | dedup-alias: same definition as `mycelium_l1::check_phylum_with_deps` at crates/mycelium-l1/src/checkty.rs:2213 — one canonical row kept |
 | `mycelium_l1::elab::ElabError` | dedup-alias: same definition as `mycelium_l1::ElabError` at crates/mycelium-l1/src/elab.rs:51 — one canonical row kept |
 | `mycelium_l1::elab::ElabError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::elab::ElabError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

@@ -17621,12 +17621,14 @@ issues:
   - id: M-1102
     title: "M-1102 -- DN-137 native unit-type build: prelude Unit = Unit + type_map::TABLE row"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
       - corpus:DN-137
       - src:crates/mycelium-transpile/src/map.rs
+      - src:crates/mycelium-transpile/src/type_map.rs
+      - src:crates/mycelium-l1/src/checkty.rs
     body: |
       Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
       M-1102 free before minting; M-1101 was highest at filing time), per the DN-136 Phase-2
@@ -17648,4 +17650,225 @@ issues:
         `-> ()` return maps to `=> Unit` with a trailing `Unit` value expression, `myc check`-clean,
         differential-witnessed.
       - `Declared` until built; `Empirical` once witnessed (VR-5).
-      Not yet started. `status: todo`.
+
+      **Status flip (2026-07-13, tracking-truth reconciliation close-out, mitigation #14 -- verified
+      landed against the code before flipping, not rubber-stamped).** Build landed in two commits
+      merged via PR #1588 (`fb0bb22f`, "DN-137 native unit-type Unit (prelude seed + type_map
+      ()->Unit, no kernel edit); unit-gap 30->0"), *after* this issue was filed as `todo`: `a94a6bfc`
+      (`mycelium-l1`) hand-seeds `checkty::unit_prelude` alongside the existing `Bool` prelude at both
+      injection sites (`register_nodule_decls`, `PhylumEnv::link`), factored via
+      `PRELUDE_UNCONDITIONAL_TYPE_NAMES` (DRY with `Bool`); mirrored into the self-hosted
+      `semcore.myc` frontend for the M-1013 marshalling differential; retires two pre-existing tests'
+      own hand-declared `type Unit = Unit;` workaround, now redundant (`1fadf936`). `cargo test -p
+      mycelium-l1`: green (611 passed, 1 ignored, 0 failed). `535301e8` (`mycelium-transpile`) adds
+      the synthetic `"()"` row to `type_map::TABLE` (`map.rs`'s `MapTypeVisitor::visit_tuple`
+      zero-element arm, since `()` is `syn::Type::Tuple` and never reaches the path-keyed lookup),
+      with two new live myc-check differentials (`src/tests/type_map.rs`:
+      `unit_return_position_checks_clean_against_real_toolchain`,
+      `result_unit_return_type_transpiles_and_checks_clean_against_real_toolchain`), both
+      `myc-check`-clean, both skip gracefully when `myc-check` isn't built. `cargo test -p
+      mycelium-transpile`: green (207 passed, 1 ignored, 0 failed). Honest measured delta (Empirical,
+      same-source stash-based A/B, M-1003 wave-1 13-target corpus): unit-type "no representable
+      value" gap 30 -> 0; `Other`-class gap 220 -> 200 (not the full -30 -- some items proceed past
+      signature-mapping into body processing and surface pre-existing downstream gaps in other
+      categories, disclosed not silently absorbed). `status: done`.
+
+  - id: M-1103
+    title: "M-1103 -- D4 generic self-type mangling hard-parse-fail regression fix (regression-and-recovery of M-1101)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-1101]
+    doc_refs:
+      - corpus:DN-34#§8-poc-results-the-first-code-spike-m-873-kickoff-trx-2026-07-01-empirical
+      - src:crates/mycelium-transpile/src/emit.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1103 free before minting; M-1102 was highest at filing time). The fixing leaf itself named
+      this exact slot ("next free: M-1103") in its FLAG. A **regression-and-recovery of M-1101**
+      (DN-34 §8.13/8.14's "D4" inherent-impl associated-fn mangler, `mangled_inherent_fn_name`,
+      landed PR #1553/DN-131): once DN-131/M-1101 taught `emit_impl` to accept an impl-level generic
+      parameter instead of gapping the whole block, a receiver-less associated fn on a generic self
+      type (`impl<T> Foo<T> { fn new(..) }`, or a concrete monomorphized `impl Foo<Concrete> { fn
+      new(..) }`) mangled to the INVALID identifier `Foo[T]__method` -- a **hard parse failure** the
+      instant `myc check` (or any Mycelium parser) reads the emission, poisoning the whole containing
+      file under the vet loop's file-gated all-or-nothing `checked_fraction` (the D4-mangling
+      regression named in DN-140's own header: std-time `checked_fraction` dipped 6.34%->5.35%).
+
+      Landed: PR #1590 (merge `8f9cddaf`, fix commit `6c31887a`,
+      `fix(transpile): D4 generic self-type mangling hard-parse-fail regression`). Confirmed live on
+      `mycelium-std-time`'s real `DeclaredTime<T>::new`/`DeclaredTimeEntropy<T>::new`: before the fix,
+      transpiling `crates/mycelium-std-time/src/lib.rs` and running the emitted `.myc` through
+      `myc-check` produced a literal parse-error at the exact `DeclaredTime[T]__new` site; after the
+      fix it produces a check-error naming an unrelated, pre-existing, already-documented residual
+      (the `as_nanos` self-receiving-method collision, out of D4's scope by its own doc) -- the file
+      now parses, closing the parser-poisoning class of failure. Fix: gap the
+      receiver-less-associated-fn-on-a-generic-self-type case per method
+      (`self_ty_is_generic_application`, a purely syntactic check), rather than stripping the self
+      type to its base name (which would reintroduce the exact collision D4 exists to prevent --
+      `impl Foo<A>`/`impl Foo<B>` are distinct, non-conflicting Rust items that could each declare a
+      same-named receiver-less associated fn). The call side (`emit/calls/qualified_assoc.rs`) needed
+      no change -- it only ever mangles the call's bare head segment (never bracketed), so
+      decl/call consistency holds by construction, pinned by a new test. Tests
+      (`crates/mycelium-transpile/src/tests/emit.rs`): both trigger shapes (impl-level generic,
+      concrete instantiation) never emit an invalid identifier and gap with a named reason; a
+      decl/call consistency test; a live `myc-check` oracle test proving the emission is no longer a
+      parse-error (skips gracefully without a built `myc-check`). `status: done`.
+
+      **Append-only regression-and-recovery note (DN-34 §8, house rule #3 -- see the Meta changelog
+      entry added at this close-out, "§8.23 added").** Documented as parse-error -> check-error on
+      `mycelium-std-time`, per this issue's own landed-basis text above; the pre-existing `as_nanos`
+      residual is named separately and stays out of D4's scope (VR-5, not silently subsumed).
+
+  - id: M-1104
+    title: "M-1104 -- DN-138 WU-1/WU-2/WU-3: primitive/std derive-instance availability (DeriveAttr-class unblock, increment 1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-138
+      - src:crates/mycelium-l1/src/preseed.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-transpile/src/emit/derives/mod.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1104 free before minting; M-1103 was highest at filing time). **Landed code with no prior
+      issues.yaml row** (mit #14/#1 finding -- same class as M-1092/M-1093/M-1094: DN-138 §9 FLAGged
+      "mint the build issues for WU-1/WU-2/WU-3" for the integrating parent, but no prior close-out
+      session applied it before this build landed). Builds DN-138 (Accepted 2026-07-13,
+      `docs/notes/DN-138-Primitive-Std-Type-Derive-Instance-Availability.md`) increment 1: makes
+      primitive/std-type derive-instances (`Init`/`Ord3`/`Show`) available in a freshly-transpiled
+      file via Alt A (a conditional `PRELUDE_INSTANCE_SEEDS` spine alongside the landed
+      `PRELUDE_TRAIT_SEEDS`), plus the `field_derive_kind` classifier replacing the boolean
+      `field_derive_eligible` and routing the five field-gating derive rows per kind.
+
+      Landed: PR #1589 (merge `2cd9b773`, "DN-138 DeriveAttr unblock -- primitive/std
+      derive-instance availability + sig-pin guardrail; DeriveAttr gaps 67->50"). WU-1
+      (`lib/std/fmt.myc`/`cmp.myc`): the missing `Init`/`Ord3` primitive/std instances authored.
+      WU-2 (`mycelium-l1/src/preseed.rs`+`checkty.rs`): `PRELUDE_INSTANCE_SEEDS` +
+      `seed_instance_for_nodule` (conditional, redeclare-refusing -- corrected mid-build to
+      `entry().or_insert()`-only, never erroring, after WU-3's own testing found the literal
+      redeclare-refusal broke pre-existing hand-declared instances, mitigation #14/VR-5); the §5
+      obl.-1 sig-pin differential went through **two hardening rounds** before it genuinely caught a
+      seed naming a non-existent instance (`dd976dca`/`2c2f7857` -- oracle self-contamination via
+      `check_nodule`'s unconditional re-seeding, then a `thread_local` suppression flag proven a
+      no-op across `mycelium_stack::with_deep_stack`'s spawned OS-thread boundary; the correct fix
+      builds the oracle via `register_nodule_decls`+`register_instances` directly, no thread spawn
+      to cross). WU-3 (`crates/mycelium-transpile/src/emit/derives/*.rs`): `field_derive_kind`
+      (`UserNamed`/`ScalarBinary`/`BytesLike`/`BoolLike`/`Float`/`Deferred`) replaces the boolean
+      gate; trait-dispatched rows (`show.rs`/`init.rs`/`ord.rs`) compose via the seeded instance,
+      prim-routed rows (`eq.rs`/`hash.rs`) route directly to the prim (never a seeded instance,
+      since e.g. `eq_Binary{8}` isn't a legal name). Measured (Empirical, git-stash A/B over the
+      union-backlog 6-crate corpus, `mycelium-std-{cmp,iter,collections,text,fmt,math}`): DeriveAttr
+      gap count 67 -> 50 (23 unrelated `#[must_use]` drops, 15 enum-level derives out of scope, 10
+      deliberately-unrecognized bare `Eq`/`Ord` names, 2 genuine residual -- both narrow-width
+      `Binary{16}` fields, exactly the increment-2 scope **M-1105** picks up). `cargo fmt` / `clippy
+      -D warnings` / `cargo test -p mycelium-l1` (621 lib) / `-p mycelium-transpile` (217 lib) + 7
+      `phylum_exec` all green. `status: done`.
+
+  - id: M-1105
+    title: "M-1105 -- DN-138 WU-4: Vec-recursive derive instances + narrow-width unblock (increment 2)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-1104]
+    doc_refs:
+      - "corpus:DN-138#§8-build-decomposition-flagged-issues-minted-by-the-integrating-parent"
+      - src:crates/mycelium-transpile/src/emit/derives/mod.rs
+      - src:crates/mycelium-core/src/prim.rs
+      - src:crates/mycelium-l1/src/tests/vec_prelude_seed.rs
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1105 free before minting; M-1104 was highest at filing time), per DN-138 §8's own explicit
+      "WU-4 (increment 2, deferred -- separate DN/issue)" row and §9 FLAG ("mint... a follow-on for
+      WU-4"). Closes the DN-138 §8 worklist increment-2: `Vec[T]`-recursive instances + eligibility,
+      a `Binary{N} -> Bytes` prim for hash-over-scalar, and narrow-width scalar `Show`/`Ord3` via
+      `width_cast`.
+
+      Landed: PR #1591 (merge `2d469efc`, "DN-138 WU-4: Vec-recursive derive instances +
+      narrow-width unblock + bin_to_bytes prim"). Batch 1 (`c3867357`): a new conditional
+      prelude-type seed spine (`CONDITIONAL_PRELUDE_TYPE_NAMES`/`vec_prelude`/
+      `seed_vec_type_if_used`) makes `Vec[A] = Nil | Cons(A, Vec[A])` resolvable in a
+      freshly-transpiled file, conditional-on-need (mirrors the trait/instance seed spines,
+      extended to a TYPE seed -- a necessary precondition DN-138's own framing did not name
+      explicitly, mitigation #14); the missing `bin_to_bytes` (kernel id `bit.to_bytes`) raw
+      `Binary{N} -> Bytes` prim for `derive(Hash)`'s `ScalarBinary` route (total/Exact, zero-pads
+      to a whole byte then packs MSB-first); 8 new white-box tests
+      (`crates/mycelium-l1/src/tests/vec_prelude_seed.rs`). Batch 2 (`7bfc883a`): the five
+      field-gating derive rows compose over `Vec[T]` (`FieldDeriveKind::VecOf`, one bracket-level
+      deep, the disclosed depth-1 scope) and narrow `ScalarBinary` fields (a `width_cast` wrapper up
+      to the seeded `Binary{64}` instance for `show`/`ord`; `hash` via the new `bin_to_bytes` prim);
+      a `Vec[T]` field routes through a per-element-type auxiliary plain fn (not a trait instance --
+      `Vec`'s coherence head admits only one instance per file). **Post-review fixes** (`d3d54f17`,
+      addressing 2 strict-review findings): CRITICAL -- `PhylumEnv::link()` no longer silently
+      replaces a nodule's own hand-declared `Vec` (`is_vec_prelude_fact` key-and-value check routes
+      through the collision-checked merge; a hand-written `Vec` now wins or collides loudly
+      (`CheckError`), never a silent replace); HIGH -- `leaf_show_expr`/`leaf_cmp_expr` now honestly
+      gap `ScalarBinary` widths >64 instead of emitting a narrowing `width_cast` to `Binary{64}` that
+      passes `myc-check` but throws `Overflow` at runtime for `u128`/`i128` values.
+
+      Measured (Empirical, git-stash A/B over the union-backlog corpus): DeriveAttr gap count
+      50 (post-WU-1/2/3, M-1104) -> **48** (this leaf). Verify-first re-check over the real corpus
+      (`crates/mycelium-l1/src/{checkty,eval}.rs`): `CheckError`/`EvaluatorOpts` now compose
+      Debug/Default/PartialEq/PartialOrd/Hash with zero real DeriveAttr gaps; `CtorInfo` stays
+      honestly blocked by a separate, pre-existing M-1006 resolvability gate (its `fields: Vec<Ty>`
+      element type is not itself in-file-resolvable), disclosed, out of this leaf's scope. `cargo
+      fmt` / `clippy -D warnings` / `cargo test -p mycelium-l1` / `-p mycelium-transpile` / `-p
+      mycelium-core` / `-p mycelium-interp` all green (post-review-fix run). `status: done`.
+
+  - id: M-1106
+    title: "M-1106 -- DN-140 build: implement valid_ident (unified reserved+illegal-char identifier escape) + length-prefix mangler composition"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    epic: E28-1
+    depends_on: [M-1103]
+    doc_refs:
+      - corpus:DN-140
+      - src:crates/mycelium-transpile/src/reserved.rs
+      - "src:crates/mycelium-transpile/src/emit.rs:4302"
+    body: |
+      Filed 2026-07-13 at the tracking-truth reconciliation close-out (mitigation #1 -- verified
+      M-1106 free before minting; M-1105 was highest at filing time), per DN-140 §10's FLAG ("a
+      FLAGGED build issue for the `valid_ident` implementation... `doc_refs: corpus:DN-140`,
+      `src:crates/mycelium-transpile/src/reserved.rs`,
+      `src:crates/mycelium-transpile/src/emit.rs:4302`"). DN-140 (Accepted 2026-07-13,
+      `docs/notes/DN-140-Unified-Valid-Identifier-Emission-Contract.md`, ratified by a 3-round
+      strict DN-review gate) unifies the reserved-word escape (DN-139, subsumed), the
+      nodule-path-segment escape (`sanitize_nodule_path`), and the previously-unhandled
+      illegal-character class (the D4 bracket-regression M-1103 fixed by gapping, not escaping) into
+      one total, deterministic, position-independent, idempotent `valid_ident` function, composed
+      with a length-prefix encoding of the D4 mangler's type<->method boundary
+      (`_<len>vt<len>vm`) so that boundary is injective **by construction**, not merely
+      collision-checked.
+
+      Definition of Done (DN-140 §9, restated as this issue's build gate):
+      - A shared `valid_ident` helper (subsuming `guard_ident`/`sanitize_nodule_path`) applied at
+        every identifier declaration + reference site the emitter controls, both pattern and value
+        positions; identity on already-valid non-reserved names (stable exports untouched); a fixed
+        `_kw` suffix on a valid-shaped reserved word (DN-139's rule); a delimited variable-width
+        `_u{HEX}_` per-illegal-character escape (covering ASCII punctuation and non-ASCII code
+        points alike, e.g. `DeclaredTime[T]` -> `DeclaredTime_u5B_T_u5D_`).
+      - Every non-identity rewrite emits a reified `// Declared: renamed <original> -> <escaped>
+        (<why>, DN-140)` comment (G2 -- EXPLAIN-visible in the emitted text itself).
+      - The mangler (`emit.rs:4302-4304` + `record_local_mangled_assoc_fn`) `valid_ident`-validates
+        its parts **and** length-prefix-encodes the type<->method boundary, both the internal
+        resolution key and the emitted identifier deriving from the same injective encoding --
+        eliminating the M-1103 bracket-regression class by construction, not by per-method gapping.
+      - A per-unit self-collision check: two distinct originals mapping to the same emitted
+        identifier in one nodule GAP both (never a silent overwrite) -- the backstop for the one
+        disclosed residual (the char-escape sentinel self-collision, DN-140 §8②).
+      - Property tests: totality over Unicode; idempotence; reserved/illegal branch-output-space
+        disjointness; length-prefix boundary injectivity (no two distinct `(vt, vm)` pairs encode
+        equal; `enc` round-trips via decode); char-escape injectivity on the evidenced corpus (§8②
+        residual documented, not asserted away).
+      - No guarantee upgraded past `Declared` until a differential (a hand round-trip per position
+        class: does the escaped `.myc` behave identically to the Rust source, and does `myc check`
+        accept it) witnesses byte/behavior faithfulness (VR-5). Headline numbers to move: the D4
+        bracket-regression reversal (std-time `checked_fraction` back over 6.34%) plus the 53
+        ReservedWord gaps DN-140 §10/the wave-3 worklist name.
+      - Closes the ReservedWord gap class (53 gaps, `docs/planning/DN-136-phase2-wave3-worklist.md`
+        rank-7) and the `__`-mangle latent collision DN-140 §8① names.
+
+      `Declared` until built; `Empirical`/`Proven` only as each property test and the differential
+      witness it (VR-5 -- no upgrade past a checked basis). Not yet started. `status: todo`.
