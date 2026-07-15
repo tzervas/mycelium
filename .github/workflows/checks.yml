@@ -43,7 +43,7 @@ jobs:
           node-version: "24"
 
       - name: Install just
-        uses: extractions/setup-just@v2
+        uses: extractions/setup-just@v4
 
       - name: Set up uv (drives the experiments/ Python 3.13 tests — M-092)
         uses: astral-sh/setup-uv@v6
