@@ -28173,6 +28173,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::reserved::Rewrite",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 136,
+      "summary": "DN-140 §4 — metadata for a non-identity rewrite (G2 / EXPLAIN).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::RewriteKind",
+      "kind": "enum",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 128,
+      "summary": "DN-140 §4 — why a non-identity [`valid_ident`] rewrite happened.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::ValidIdent",
+      "kind": "struct",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 143,
+      "summary": "DN-140 §4 — a guaranteed-legal Mycelium identifier plus optional rewrite metadata.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::declared_rewrite_comment",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 248,
+      "summary": "G2 reification line for a non-identity [`valid_ident`] rewrite (DN-140 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::reserved::guard_ident",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -28180,6 +28224,28 @@
       "file": "crates/mycelium-transpile/src/reserved.rs",
       "line": 278,
       "summary": "Guard an identifier the emitter is about to place into `.myc` surface text.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::has_valid_ident_shape",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 157,
+      "summary": "Whether `s` matches `^[A-Za-z_][A-Za-z0-9_]*$` (Mycelium identifier shape, reserved or not).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::is_legal_non_reserved_ident",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 167,
+      "summary": "Whether `text` is a legal, non-reserved Mycelium identifier (DN-140 §2).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -28195,6 +28261,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_transpile::reserved::length_prefix_mangle",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 262,
+      "summary": "DN-140 length-prefix inherent-fn mangle: `_` + `dec(|vt|)` + `vt` + `dec(|vm|)` + `vm` (§7).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::mangled_inherent_fn_name",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 267,
+      "summary": "Compose [`valid_ident`] on both parts, then length-prefix mangle (DN-140 §7).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_transpile::reserved::sanitize_nodule_path",
       "kind": "fn",
       "crate": "mycelium-transpile",
@@ -28202,6 +28290,17 @@
       "file": "crates/mycelium-transpile/src/reserved.rs",
       "line": 332,
       "summary": "**Gap-close-2 Phase-0 regression fix, revised (PR #1517 review HIGH — cross-file nodule-path",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::valid_ident",
+      "kind": "fn",
+      "crate": "mycelium-transpile",
+      "module": "mycelium_transpile::reserved",
+      "file": "crates/mycelium-transpile/src/reserved.rs",
+      "line": 212,
+      "summary": "Map an arbitrary identifier-position string to a legal Mycelium identifier (DN-140 §4).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -51871,6 +51970,42 @@
     {
       "symbol": "mycelium_transpile::remap::render_remap_md",
       "reason": "dedup-alias: same definition as `mycelium_transpile::render_remap_md` at crates/mycelium-transpile/src/remap.rs:205 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::Rewrite::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::Rewrite::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::Rewrite::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::RewriteKind::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::RewriteKind::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::RewriteKind::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::ValidIdent::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::ValidIdent::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_transpile::reserved::ValidIdent::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_transpile::transpile::transpile_file",

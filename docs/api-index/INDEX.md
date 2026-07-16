@@ -2823,9 +2823,18 @@
 | `mycelium_transpile::reserved` | mod | `crates/mycelium-transpile/src/lib.rs:41` | — |
 | `mycelium_transpile::reserved::RESERVED:` | const | `crates/mycelium-transpile/src/reserved.rs:41` | The Mycelium reserved-word set — a verbatim snapshot of `mycelium-l1`'s `token::keyword` table |
 | `mycelium_transpile::reserved::RESERVED_SEGMENT_SUFFIX:` | const | `crates/mycelium-transpile/src/reserved.rs:124` | Suffix appended to escape a reserved-word identifier or nodule-path segment (DN-139/DN-140). |
+| `mycelium_transpile::reserved::Rewrite` | struct | `crates/mycelium-transpile/src/reserved.rs:136` | DN-140 §4 — metadata for a non-identity rewrite (G2 / EXPLAIN). |
+| `mycelium_transpile::reserved::RewriteKind` | enum | `crates/mycelium-transpile/src/reserved.rs:128` | DN-140 §4 — why a non-identity [`valid_ident`] rewrite happened. |
+| `mycelium_transpile::reserved::ValidIdent` | struct | `crates/mycelium-transpile/src/reserved.rs:143` | DN-140 §4 — a guaranteed-legal Mycelium identifier plus optional rewrite metadata. |
+| `mycelium_transpile::reserved::declared_rewrite_comment` | fn | `crates/mycelium-transpile/src/reserved.rs:248` | G2 reification line for a non-identity [`valid_ident`] rewrite (DN-140 §9). |
 | `mycelium_transpile::reserved::guard_ident` | fn | `crates/mycelium-transpile/src/reserved.rs:278` | Guard an identifier the emitter is about to place into `.myc` surface text. |
+| `mycelium_transpile::reserved::has_valid_ident_shape` | fn | `crates/mycelium-transpile/src/reserved.rs:157` | Whether `s` matches `^[A-Za-z_][A-Za-z0-9_]*$` (Mycelium identifier shape, reserved or not). |
+| `mycelium_transpile::reserved::is_legal_non_reserved_ident` | fn | `crates/mycelium-transpile/src/reserved.rs:167` | Whether `text` is a legal, non-reserved Mycelium identifier (DN-140 §2). |
 | `mycelium_transpile::reserved::is_reserved` | fn | `crates/mycelium-transpile/src/reserved.rs:119` | Whether `word` is a Mycelium reserved word (would not lex as an `Ident`). |
+| `mycelium_transpile::reserved::length_prefix_mangle` | fn | `crates/mycelium-transpile/src/reserved.rs:262` | DN-140 length-prefix inherent-fn mangle: `_` + `dec(\|vt\|)` + `vt` + `dec(\|vm\|)` + `vm` (§7). |
+| `mycelium_transpile::reserved::mangled_inherent_fn_name` | fn | `crates/mycelium-transpile/src/reserved.rs:267` | Compose [`valid_ident`] on both parts, then length-prefix mangle (DN-140 §7). |
 | `mycelium_transpile::reserved::sanitize_nodule_path` | fn | `crates/mycelium-transpile/src/reserved.rs:332` | **Gap-close-2 Phase-0 regression fix, revised (PR #1517 review HIGH — cross-file nodule-path |
+| `mycelium_transpile::reserved::valid_ident` | fn | `crates/mycelium-transpile/src/reserved.rs:212` | Map an arbitrary identifier-position string to a legal Mycelium identifier (DN-140 §4). |
 | `mycelium_transpile::summarize` | fn | `crates/mycelium-transpile/src/batch.rs:384` | Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s. |
 | `mycelium_transpile::transpile` | mod | `crates/mycelium-transpile/src/lib.rs:43` | — |
 | `mycelium_transpile::transpile_batch` | fn | `crates/mycelium-transpile/src/batch.rs:264` | Transpile every file in `files` (already-discovered `.rs` paths), collecting a |
@@ -8507,6 +8516,15 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_transpile::remap::RemapSource::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::remap::build_remap_manifest` | dedup-alias: same definition as `mycelium_transpile::build_remap_manifest` at crates/mycelium-transpile/src/remap.rs:160 — one canonical row kept |
 | `mycelium_transpile::remap::render_remap_md` | dedup-alias: same definition as `mycelium_transpile::render_remap_md` at crates/mycelium-transpile/src/remap.rs:205 — one canonical row kept |
+| `mycelium_transpile::reserved::Rewrite::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::Rewrite::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::Rewrite::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::RewriteKind::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::RewriteKind::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::RewriteKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::ValidIdent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::ValidIdent::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_transpile::reserved::ValidIdent::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_transpile::transpile::transpile_file` | dedup-alias: same definition as `mycelium_transpile::transpile_file` at crates/mycelium-transpile/src/transpile.rs:26 — one canonical row kept |
 | `mycelium_transpile::transpile::transpile_source` | dedup-alias: same definition as `mycelium_transpile::transpile_source` at crates/mycelium-transpile/src/transpile.rs:56 — one canonical row kept |
 | `mycelium_transpile::type_map::TypeMapRow::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
