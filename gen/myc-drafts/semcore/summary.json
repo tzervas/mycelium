@@ -1,0 +1,204 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-l1/src/checkty.rs",
+      "total_items": 147,
+      "non_test_items": 147,
+      "emitted": 7,
+      "gaps": 147,
+      "expressible_pct": 4.761904761904762,
+      "category_counts": {
+        "Closure": 4,
+        "DeriveAttr": 6,
+        "GenericBound": 7,
+        "Impl": 15,
+        "Import": 5,
+        "MultiStmtBody": 9,
+        "NamedFieldDrop": 1,
+        "Other": 60,
+        "ReservedWord": 27,
+        "Struct": 13
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "total_items": 47,
+      "non_test_items": 47,
+      "emitted": 2,
+      "gaps": 48,
+      "expressible_pct": 4.25531914893617,
+      "category_counts": {
+        "Closure": 1,
+        "DeriveAttr": 1,
+        "GenericBound": 5,
+        "Impl": 3,
+        "Import": 6,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 2,
+        "Other": 20,
+        "PayloadVariant": 1,
+        "ReservedWord": 6
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/eval.rs",
+      "total_items": 42,
+      "non_test_items": 42,
+      "emitted": 4,
+      "gaps": 46,
+      "expressible_pct": 9.523809523809524,
+      "category_counts": {
+        "DeriveAttr": 3,
+        "GenericBound": 5,
+        "Impl": 12,
+        "Import": 13,
+        "NamedFieldDrop": 2,
+        "Other": 5,
+        "PayloadVariant": 1,
+        "ReservedWord": 3,
+        "Struct": 2
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "total_items": 47,
+      "non_test_items": 47,
+      "emitted": 3,
+      "gaps": 56,
+      "expressible_pct": 6.382978723404255,
+      "category_counts": {
+        "Closure": 1,
+        "GenericBound": 2,
+        "Impl": 1,
+        "Import": 15,
+        "MultiStmtBody": 2,
+        "Other": 23,
+        "PayloadVariant": 1,
+        "ReservedWord": 5,
+        "Struct": 6
+      }
+    },
+    {
+      "file": "crates/mycelium-l1/src/fuse.rs",
+      "total_items": 10,
+      "non_test_items": 10,
+      "emitted": 1,
+      "gaps": 15,
+      "expressible_pct": 10.0,
+      "category_counts": {
+        "Import": 8,
+        "Other": 6,
+        "ReservedWord": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 293,
+    "non_test_items": 293,
+    "emitted": 17,
+    "gaps": 312,
+    "expressible_pct": 5.802047781569966,
+    "category_counts": {
+      "Closure": 6,
+      "DeriveAttr": 10,
+      "GenericBound": 19,
+      "Impl": 31,
+      "Import": 47,
+      "MultiStmtBody": 14,
+      "NamedFieldDrop": 5,
+      "Other": 114,
+      "PayloadVariant": 3,
+      "ReservedWord": 42,
+      "Struct": 21
+    }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-l1",
+      "target_phylum": "l1"
+    },
+    "nodules": [
+      {
+        "target_nodule": "l1.checkty",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-l1/src/checkty.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "l1.elab",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-l1/src/elab.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "l1.eval",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-l1/src/eval.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "l1.mono",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-l1/src/mono.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      },
+      {
+        "target_nodule": "l1.fuse",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-l1/src/fuse.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
+  }
+}

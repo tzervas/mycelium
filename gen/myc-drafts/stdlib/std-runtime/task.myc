@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.task
 // Task, TaskCtx, Poll, SweepOrder, Deadlock — task surface (ADR-020 v0 R1).
 //
 // # Guarantee (Declared — Task purity contract)
@@ -9,15 +9,18 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.task;
 
 // Context passed to a running task — carries cancellation signal and scope ref.
 type TaskCtx = TaskCtx(Bool);
 
 impl TaskCtx {
-  fn new() => TaskCtx = TaskCtx(False);
+  // Declared: renamed `new` -> `TaskCtx__new` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn TaskCtx__new() => TaskCtx = TaskCtx(False);
   // Returns `true` if this task's scope has been cancelled.
   fn is_cancelled(self: TaskCtx) => Bool = (match self { TaskCtx(p0) => p0 });
+  // Cancel this context (used by `Scope` when cancellation is requested).
+  fn cancel(self: TaskCtx) => TaskCtx = let self = TaskCtx(True) in self;
 };
 
 // Poll result for an async task step.
@@ -27,3 +30,14 @@ type Poll[T] = Ready(T) | Pending;
 //
 // Guarantee: **Exact** — the sweep order is deterministic given the same queue state.
 type SweepOrder = Fifo | Priority;
+
+// Deadlock descriptor: returned when a scope cannot make progress.
+//
+// Guarantee: **Empirical** — detection is complete for the supported channel graph
+// (DAG channels); cyclic graphs are an open follow-up (FLAG: ADR-020 §7).
+pub type Deadlock = Deadlock(Binary{64});
+
+impl Deadlock {
+  // Declared: renamed `new` -> `Deadlock__new` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn Deadlock__new(task_count: Binary{64}) => Deadlock = Deadlock(task_count);
+};

@@ -137,7 +137,9 @@ fn builtins_are_present_and_resolvable() {
     // refresh.) DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion) added
     // `bit.truncate` (the explicit total lossy Binary narrow) — the first `Declared` intrinsic in
     // Π (its own honest lossy tag, never `Exact`; pinned separately below), bringing Π to 69.
-    assert_eq!(t.entries().len(), 69);
+    // DN-138 WU-4 added `bit.to_bytes` (the missing `Binary{N} -> Bytes` raw-byte conversion
+    // `derive(Hash)`'s `ScalarBinary` route needs, `Exact`), bringing Π to 70.
+    assert_eq!(t.entries().len(), 70);
 }
 
 // DN-51 §2 D3/§6: `bit.truncate` is the first `Declared` intrinsic in Π — the explicit, total,
@@ -547,10 +549,12 @@ fn names_returns_registered_sorted_names() {
     // classification predicates + CU-6 bit.popcount/bit.clz/bit.ctz — bringing Π to 66 + CU-3
     // bin.to_flt/flt.to_bin, the never-silent Binary↔Float conversions (ADR-040 §2.4) — bringing
     // Π to 68 + DN-51 §2 D3/§6 bit.truncate, the explicit total lossy Binary narrow (first
-    // `Declared` intrinsic) — bringing Π to 69).
+    // `Declared` intrinsic) — bringing Π to 69 + DN-138 WU-4 bit.to_bytes, the missing raw
+    // `Binary{N} -> Bytes` conversion `derive(Hash)`'s `ScalarBinary` route needs — bringing Π to
+    // 70).
     assert_eq!(
         ns.len(),
-        69,
+        70,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

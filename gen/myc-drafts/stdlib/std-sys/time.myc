@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.time
 // \[Declared\] OS clock floor. Thin wrappers over Rust `std::time`.
 //
 // Declared — no audit of platform clock resolution or monotonicity guarantees beyond
@@ -16,6 +16,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.time;
 
 

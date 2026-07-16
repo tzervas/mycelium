@@ -14,7 +14,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 109,
+      "line": 115,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +24,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 110,
+      "line": 116,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +34,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 111,
+      "line": 117,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +44,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 112,
+      "line": 118,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +54,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -64,7 +64,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 114,
+      "line": 120,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -74,7 +74,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 115,
+      "line": 121,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -84,7 +84,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 116,
+      "line": 122,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -94,7 +94,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 117,
+      "line": 123,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -104,7 +104,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 118,
+      "line": 124,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -114,7 +114,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 119,
+      "line": 125,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -124,7 +124,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 120,
+      "line": 126,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -134,7 +134,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 121,
+      "line": 127,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -144,7 +144,7 @@
     },
     {
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 123,
+      "line": 129,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

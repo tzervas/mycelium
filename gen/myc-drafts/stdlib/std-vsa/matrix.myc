@@ -1,4 +1,4 @@
-// nodule: std.vsa
+// nodule: std.vsa.matrix
 // The `std.vsa` guarantee matrix — RFC-0016 §4.5.
 //
 // Encodes, as a data table, the per-`(model, op)` guarantee tags that the
@@ -16,6 +16,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.vsa;
+nodule std.vsa.matrix;
 
 

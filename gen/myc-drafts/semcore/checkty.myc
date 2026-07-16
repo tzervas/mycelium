@@ -1,0 +1,71 @@
+// nodule: l1.checkty
+// The **v0 monomorphic typechecker** (RFC-0007 §4.4) plus the program environment it checks
+// against: the data-type registry (declarations are registry entries, never term nodes —
+// RFC-0007 §4.2) and the function table. Every refusal is an explicit [`CheckError`] — generics,
+// `spore`, value-level integers without context, and a `wild` block outside the audited FFI floor
+// (the `@std-sys` context gate, M-661/LR-9) are *refused with a reason*, never guessed at. A `wild`
+// inside a `@std-sys` nodule is the audited FFI escape: gated (it must declare the `ffi` effect),
+// its body trusted/opaque (not recursively checked — audited, not verified, VR-5/ADR-014), and its
+// execution staged ([`crate::elab`] lowers it to a `Residual`).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule l1.checkty;
+
+// A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an
+// abstract width parameter (DN-42 / M-753). Width variables (`Var`) are introduced in step (b)
+// and survive only during generic-fn checking; they must not reach elaboration.
+pub type Width = Lit(Binary{32}) | Var(Bytes);
+
+// An explicit check failure (never a silent pass or a guess — S5/G2).
+pub type CheckError = CheckError(Bytes, Bytes);
+
+// What introduced a performed effect, for the coverage diagnostic. `Ord` so the `(effect, source)`
+// set is deterministic (a stable first-miss). A **`Call`** is a top-level fn or trait-method call
+// (M-660); **`Wild`** is the `wild` FFI floor (M-661 — `wild` performs `ffi`).
+type EffectSource = Call(Bytes) | Wild;
+
+// A minimal, per-call fresh-name generator for [`Cx::stage3_substitute_expr`]'s (A)-style
+// RHS-local-binder renaming (M-1054 Stage 3, DN-117 §2 step 1) — the check-time-only analogue of
+// [`crate::elab::Elab::fresh`]. `%`-prefixed (surface-illegal — `crate::lexer::is_ident_start`
+// forbids `%`, mirrored by every other synthetic-name scheme in this module/`elab.rs`), so a
+// minted name can never collide with a real surface identifier; the counter makes distinct mints
+// within one substitution walk distinct from each other. Not persisted past one
+// `check_sugar_call` invocation — a fresh instance every time (no cross-call state, unlike
+// `elab.rs`'s `SUGAR_EXPANSION_SITE`, which needs cross-invocation uniqueness for the *real*,
+// elaboration-time expansion; this walk's renamed binders are discarded with the rest of the
+// substituted term).
+type Stage3Fresh = Stage3Fresh(Binary{64});
+
+// **Test-only** twin of [`infer_type`] with an **active** affine tracker
+// ([`Tracker::seeded`], seeded from `scope` — the caller's own pre-existing local bindings, e.g.
+// a `Substrate`-typed local a fixture wants tracked), instead of `infer_type`'s deliberate
+// [`Tracker::inert`]. Needed because every M-1054 Stage 1b/Stage 3 white-box fixture checks a bare
+// call `Expr` directly (no surface grammar for `value_params` yet — DN-110 §8.6, so there is no
+// `check_nodule`/`fn`-body route to a real, active-tracker `Cx`) via `infer_type`, whose `inert`
+// tracker is exactly right for its own (post-check re-inference) job but makes every `self.affine`
+// interaction inside [`Cx::check_sugar_call`]'s Stage-3 (OQ-H4/DN-117) mechanism a no-op — the
+// per-argument tracker-touch trigger and the substituted-`Expr` double-consume walk both need a
+// real, active tracker to do anything. `#[cfg(test)]`-gated (never a shipped alternate entry
+// point — the one production `infer_type` stays `Tracker::inert()`, unconditionally).
+fn infer_type_with_active_affine(env: Env, scope: Vec[(Bytes, Ty)], e: Expr) => (Vec[(Bytes, Ty)], Result[Ty, CheckError]) = (scope, infer_type_with_active_affine_inner(env, scope, e, False));
+
+// **Test-only, non-vacuity sabotage twin** of [`infer_type_with_active_affine`] (M-1054 Stage 3,
+// DN-117 §5 item 2): identical, except every `Cx::check_sugar_call` reached while checking `e`
+// runs its Stage-3 walk over the **unsubstituted** RHS (see
+// `Cx::stage3_sabotage_skip_substitution`'s own doc comment) — simulating "the substituted-`Expr`
+// splice never happened," to prove that splice is load-bearing: a fixture that must genuinely
+// REFUSE under the real mechanism (composite/hidden-affine duplication) should wrongly **ACCEPT**
+// here.
+fn infer_type_with_active_affine_sabotaged(env: Env, scope: Vec[(Bytes, Ty)], e: Expr) => (Vec[(Bytes, Ty)], Result[Ty, CheckError]) = (scope, infer_type_with_active_affine_inner(env, scope, e, True));
+
+// **M-1054 Stage 2 (G1, DN-115 §4.1)** — a pure **name** predicate ("is `name` any kernel-
+// recognized prim at all", ignoring argument shape) covering every dispatcher [`Cx::check_app`]
+// tries: the width-preserving [`prim_family`] set, plus [`VSA_PRIM_NAMES`] and the float-prim
+// groups via [`float_prim_name_is_recognized`] (the two argument-shape-matching dispatchers —
+// [`Cx::try_check_vsa_prim`] / [`Cx::try_check_float_prim`] — have no name-only view of their own;
+// this is that view). Used by [`Cx::rhs_first_free_id`] to close the over-refusal gap DN-115 §4.1
+// flags: previously only `prim_family` was consulted there, so a legitimate VSA/float prim in a
+// `lower`-rule RHS was wrongly refused as a free identifier even though [`Cx::check_app`] would
+// have resolved it fine at an ordinary call site.
+fn prim_name_is_recognized(name: Bytes) => Bool = is_some(prim_family(name)) || contains(VSA_PRIM_NAMES, name) || float_prim_name_is_recognized(name);

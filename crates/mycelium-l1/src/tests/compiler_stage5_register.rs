@@ -1095,10 +1095,11 @@ fn encode_impl_decl_list(ids: &[ImplDecl]) -> String {
 }
 
 fn encode_inherent_impl_decl(iid: &InherentImplDecl) -> String {
-    // DN-103 / M-1026: IID carries the impl-level type-parameter slot (unbounded names) first.
+    // DN-103 / M-1026, bounded per DN-131 / M-1088: IID carries the impl-level type-parameter slot
+    // (now bounded `TypeParam`s, via the same `encode_type_param_list` the `fn` slot uses) first.
     format!(
         "IID({}, {}, {})",
-        encode_names(&iid.params),
+        encode_type_param_list(&iid.params),
         encode_typeref(&iid.for_ty),
         encode_fn_decl_list(&iid.methods)
     )

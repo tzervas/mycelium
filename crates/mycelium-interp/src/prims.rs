@@ -188,6 +188,8 @@ impl PrimRegistry {
         r.register("bytes.eq", prim_bytes_eq);
         // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103) surfaced as a prim.
         r.register("hash.blake3", prim_hash_blake3);
+        // DN-138 WU-4 (increment 2, §6): the missing raw `Binary{N} -> Bytes` conversion.
+        r.register("bit.to_bytes", prim_bin_to_bytes);
         // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). The user-`Data` fuse
         // does **not** register a prim — it elaborates to the resolved `Fuse::join` call (DN-58 §A.5);
         // the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3), so only the
@@ -1773,6 +1775,42 @@ fn prim_hash_blake3(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         args,
         Repr::Bytes,
         Payload::Bytes(digest.as_bytes().to_vec()),
+        ApproxRule::Refuse,
+    )
+}
+
+// --- DN-138 WU-4 (increment 2, §6): `bit.to_bytes` -- the missing raw Binary{N} -> Bytes prim ---
+//
+// `derive(Hash)`'s `ScalarBinary` route had no way to turn a scalar field into `Bytes` for
+// `hash.blake3` to consume -- `to_dec`/`digit_byte` (`lib/std/fmt.myc`) render a DECIMAL ASCII
+// string, not raw bytes. This prim closes exactly that gap: a total, deterministic bit-repacking.
+
+/// `bit.to_bytes : Binary{N} -> Bytes` (DN-138 WU-4) — zero-pads the `N`-bit unsigned magnitude on
+/// the MSB side up to a whole number of bytes (the same zero-extend convention `bit.width_cast`'s
+/// widen case uses, DN-41), then packs MSB-first. Total over every `Binary{N}` (`N = 0` produces an
+/// empty `Bytes`). Guarantee **`Exact`** — a deterministic bit-repacking, no approximation.
+fn prim_bin_to_bytes(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bits = as_bits(prim, args[0])?;
+    let n = bits.len();
+    let pad = (8 - n % 8) % 8;
+    let mut out = Vec::with_capacity((n + pad) / 8);
+    let mut acc: u8 = 0;
+    let mut count = 0usize;
+    for bit in std::iter::repeat_n(false, pad).chain(bits.iter().copied()) {
+        acc = (acc << 1) | u8::from(bit);
+        count += 1;
+        if count == 8 {
+            out.push(acc);
+            acc = 0;
+            count = 0;
+        }
+    }
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(out),
         ApproxRule::Refuse,
     )
 }

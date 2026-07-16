@@ -51,5 +51,53 @@
   "total_checked_clean_items": 0,
   "class_counts": {
     "Clean": 5
-  }
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.vsa.encoding",
+        "file": "encoding.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.vsa",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.vsa.matrix",
+        "file": "matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.vsa.ops",
+        "file": "ops.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.vsa.recon",
+        "file": "recon.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 0
 }

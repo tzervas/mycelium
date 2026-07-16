@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.fs
 // \[Declared\] Filesystem syscall floor. Thin wrappers over Rust `std::fs`.
 //
 // Declared — no audit of OS FS semantics; wiring from `std-fs` deferred to a future wave.
@@ -12,7 +12,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.fs;
 
 // \[Declared\] Check whether a path exists on the filesystem.
 //

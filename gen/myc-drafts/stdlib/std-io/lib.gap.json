@@ -1,6 +1,10 @@
 {
   "source": "crates/mycelium-std-io/src/lib.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:ByteCount,ByteOffset,FieldPath,IoError,ReadValueError,SerError",
+    "use:Format",
+    "use:read_all"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -14,7 +18,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 109,
+      "line": 115,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +28,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 110,
+      "line": 116,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +38,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 111,
+      "line": 117,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +48,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 112,
+      "line": 118,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +58,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 116,
+      "line": 122,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -64,33 +68,13 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 123,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: { ByteCount , ByteOffset , FieldPath , IoError , ReadValueError , SerError } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 126,
+      "line": 132,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 129,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use serialize::deserialize` — `deserialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -98,13 +82,113 @@
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::from_json` — `from_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::serialize` — `serialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::to_json` — `to_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read` — `read` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read_value` — `read_value` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::write` — `write` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Budget` — `Budget` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Sink` — `Sink` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Source` — `Source` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Substrate` — `Substrate` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 138,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
       "snippet": "pub use guarantee_matrix :: MATRIX as GUARANTEE_MATRIX ;",
-      "reason": "`use` import (rename `MATRIX as GUARANTEE_MATRIX`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use guarantee_matrix::MATRIX as GUARANTEE_MATRIX` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `GUARANTEE_MATRIX` in this file's body); flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 136,
+      "line": 142,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

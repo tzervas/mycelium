@@ -98,17 +98,14 @@ fn cases() -> Vec<Case> {
             rust: "Arr<T, 4>",
             expect: Gap(GenericBound),
         },
-        // A reserved-word HEAD still gaps (ReservedWord) — never emit un-lexable text, even for a
-        // fully-mappable argument list. `Exact` is a guarantee-strength keyword (crate::reserved).
+        // DN-140 (M-1106): reserved-word heads escape via `valid_ident` before generic application.
         Case {
             rust: "Exact<u8>",
-            expect: Gap(Category::ReservedWord),
+            expect: Ok("Exact_kw[Binary{8}]"),
         },
-        // A reserved *repr* keyword head (`Seq`) also gaps rather than emitting `Seq[..]` (the
-        // transpiler has no sanctioned rename — VR-5/G2).
         Case {
             rust: "Seq<u8>",
-            expect: Gap(Category::ReservedWord),
+            expect: Ok("Seq_kw[Binary{8}]"),
         },
         // ── Shared-reference erasure (`&T` -> mapped referent; ADR-003 value semantics, this leaf) ──
         // A `&T` over an ordinary named type erases to that type (the real-corpus shape, e.g.

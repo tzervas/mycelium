@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.guarantee_matrix
 // Per-operation guarantee matrix for `std.runtime` (ADR-020 v0 / SC-2 / VR-5).
 //
 // Every exported operation has an entry here. The matrix is asserted in tests, not
@@ -6,6 +6,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.guarantee_matrix;
 
 

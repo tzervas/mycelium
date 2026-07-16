@@ -1,4 +1,4 @@
-// nodule: std.io
+// nodule: std.io.guarantee_matrix
 // The `std.io` + `serialize` guarantee matrix encoded as **data** (RFC-0016 §4.5).
 //
 // Every exported operation has exactly one row in [`MATRIX`].  The matrix is the
@@ -29,7 +29,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.io;
+nodule std.io.guarantee_matrix;
 
 // Fallibility classification for an exported op (C1).
 type Fallibility = Total | Fallible;

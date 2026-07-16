@@ -1,19 +1,10 @@
 {
   "source": "crates/mycelium-std-content/src/content_ref.rs",
   "emitted_items": [
+    "use:MalformedDigest",
     "RefKind"
   ],
   "gaps": [
-    {
-      "file": "crates/mycelium-std-content/src/content_ref.rs",
-      "line": 19,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: MalformedDigest ;",
-      "reason": "`use` import (single path ending `MalformedDigest`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
     {
       "file": "crates/mycelium-std-content/src/content_ref.rs",
       "line": 20,
@@ -21,7 +12,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -61,7 +52,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl RefKind { # [doc = \" The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an\"] # [doc = \" unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).\"] fn from_prefix (prefix : & str) -> Option < RefKind > { Some (match prefix { \"value\" => RefKind :: Value , \"def\" => RefKind :: Def , \"op\" => RefKind :: Operation , \"policy\" => RefKind :: Policy , \"spore\" => RefKind :: Spore , \"other\" => RefKind :: Other , _ => return None , }) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported literal pattern kind (only bool/int literal patterns map)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported expression form `return None`",
       "item_name": "RefKind"
     },
     {

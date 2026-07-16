@@ -1,15 +1,12 @@
 {
   "_about": "Declared per-PR/issue milestone+label overrides for Mycelium. The escape hatch for items with no inferable milestone (no task-id, no mapped scope). Each entry is an explicit, ratified per-item decision — NOT inference — and wins over task-id and scope fallback with highest precedence (G2: never-invent complement). Consumed by gh-issues-sync.py --prs/--issues.",
-
   "_policy": "Keys are POSITIVE PR/issue numbers (as strings; '-67'/non-numeric keys fail --validate and abort a live load — never silently skipped). Each value is an object with a required 'milestone' (must be an exact title from milestones.json; validated by --validate) and an optional 'labels' list (union-added, never removed; each must exist in labels.json). A typo in 'milestone' or an unknown label name fails --validate before any live run. Routing: --prs applies overrides whose number is a PR; --issues applies overrides whose number is an issue on the repo (e.g. #67) — each path reports what it applied vs routed to its sibling, so no override is silently unaccounted-for. Rationale for each override is recorded in '_rationale' (informational only; not consumed by the engine). Flag items the maintainer should confirm before treating as final are noted in '_confirm'.",
-
   "_confirm": [
     "#67: RFC-0006 is the L1/L2/L3 layering RFC — Phase 4 (ABI/language integration) seems right, but could be Phase 5 (Self-Hosting & Core Library) if it is considered a surface-language self-hosting prerequisite. Confirm.",
     "#69: Early L1 parser prototype — placed in Phase 4 (the L1/grammar track lives there per milestone description), but could be Phase 1 (Minimal Viable Core) if this is a bootstrap parser. Confirm.",
     "#70: ADR-012 lexicon integration doc — placed in Phase 1 (lexicon is a foundation-spec item), but could be Phase 0 (Confirm & Specify) if ADR-012 is a spec-ratification decision. Confirm.",
     "#293: RP-8 perf optimization + tool-extraction spike — placed in Phase 8 (Toolchain & Release Engineering, the natural home for tool-extraction), but could be Phase 3 (Tooling, Projections & Acceleration) for the perf side. Confirm."
   ],
-
   "overrides": {
     "1": {
       "milestone": "Phase 0 — Confirm & Specify",
@@ -47,5 +44,35 @@
       "_rationale": "docs(RP-8): performance optimization + tool-extraction spike — tool-extraction is the Phase 8 toolchain concern (M-361 epic anchor). FLAG: the perf side could be Phase 3. Confirm with maintainer.",
       "_confirm": true
     }
+  },
+  "orphans": {
+    "_about": "Orphan reconciliation ledger owned by sync_issues.py (the engine ignores this block). allowlist = tracked non-task issues; superseded = duplicate issues recorded, not deleted.",
+    "allowlist": [],
+    "superseded": [
+      {
+        "number": 126,
+        "canonical": 87,
+        "task_id": "M-302",
+        "title": "M-302 — interp<->native differential (extend M-151)"
+      },
+      {
+        "number": 127,
+        "canonical": 97,
+        "task_id": "M-330",
+        "title": "M-330 — AI co-authoring loop (generate -> feedback -> self-correct)"
+      },
+      {
+        "number": 128,
+        "canonical": 104,
+        "task_id": "M-342",
+        "title": "M-342 — Extend the AOT path to the data + recursion fragment (RFC-0011 Q5)"
+      },
+      {
+        "number": 129,
+        "canonical": 110,
+        "task_id": "M-348",
+        "title": "M-348 — Provision libMLIR (desktop/WSL) to unblock the native MLIR->LLVM path"
+      }
+    ]
   }
 }

@@ -12,11 +12,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/dataflow.myc",
       "source_file": "crates/mycelium-std-runtime/src/dataflow.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.runtime.dataflow.<use>`: `use std.runtime.task.Deadlock`: no such name `std.runtime.task.Deadlock` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 16,
-      "emitted_items": 3
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/guarantee_matrix.myc",
@@ -41,7 +41,7 @@
       "source_file": "crates/mycelium-std-runtime/src/network.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `allocate`: unknown function/constructor/prim `fetch_add`",
+      "diagnostic": "check-error: check error in `ChannelNodeId__allocate`: unknown function/constructor/prim `fetch_add`",
       "non_test_items": 24,
       "emitted_items": 5
     },
@@ -86,9 +86,9 @@
       "source_file": "crates/mycelium-std-runtime/src/region.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `allocate`: duplicate function",
+      "diagnostic": "check-error: check error in `as_u64`: duplicate function",
       "non_test_items": 18,
-      "emitted_items": 4
+      "emitted_items": 5
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/scheduler.myc",
@@ -102,11 +102,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/scope_region.myc",
       "source_file": "crates/mycelium-std-runtime/src/scope_region.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.runtime.scope_region.<use>`: `use std.runtime.region.ClosedRegion`: no such name `std.runtime.region.ClosedRegion` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 6,
-      "emitted_items": 0
+      "emitted_items": 1
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-runtime/supervision.myc",
@@ -124,14 +124,134 @@
       "exit_code": 0,
       "diagnostic": "",
       "non_test_items": 12,
-      "emitted_items": 4
+      "emitted_items": 6
     }
   ],
   "total_non_test_items": 132,
-  "total_emitted_items": 22,
-  "total_checked_clean_items": 13,
+  "total_emitted_items": 28,
+  "total_checked_clean_items": 12,
   "class_counts": {
-    "CheckError": 2,
-    "Clean": 12
-  }
+    "CheckError": 4,
+    "Clean": 10
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.runtime.colony_kw",
+        "file": "colony.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.dataflow",
+        "file": "dataflow.myc",
+        "class": "CheckError",
+        "site": "PollTask",
+        "on": null,
+        "message": "`impl` for unknown trait `PollTask` (RFC-0019 §4.5)"
+      },
+      {
+        "nodule": "std.runtime.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.network",
+        "file": "network.myc",
+        "class": "CheckError",
+        "site": "ChannelNodeId__allocate",
+        "on": null,
+        "message": "unknown function/constructor/prim `fetch_add`"
+      },
+      {
+        "nodule": "std.runtime.policy_mech",
+        "file": "policy_mech.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.r2_residual",
+        "file": "r2_residual.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.rc",
+        "file": "rc.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.reclamation",
+        "file": "reclamation.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.region",
+        "file": "region.myc",
+        "class": "CheckError",
+        "site": "as_u64",
+        "on": null,
+        "message": "duplicate function"
+      },
+      {
+        "nodule": "std.runtime.scheduler",
+        "file": "scheduler.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.scope_region",
+        "file": "scope_region.myc",
+        "class": "CheckError",
+        "site": "as_u64",
+        "on": null,
+        "message": "duplicate function"
+      },
+      {
+        "nodule": "std.runtime.supervision",
+        "file": "supervision.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.runtime.task",
+        "file": "task.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": "duplicate function"
+  },
+  "total_checked_clean_items_phylum": 12
 }

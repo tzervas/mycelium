@@ -12,7 +12,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 58,
+      "line": 64,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -22,37 +22,37 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 60,
+      "line": 66,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: { Bound , BoundBasis , BoundKind , GuaranteeStrength , NormKind } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::Bound` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::BoundBasis` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::BoundKind` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::NormKind` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 61,
+      "line": 67,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_numerics :: { accuracy_to_probability as kern_accuracy_to_probability , basis_strength , check_error_claim , check_union_claim , compose_error_bound , CheckOutcome , ProbBound , } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_numerics::accuracy_to_probability as kern_accuracy_to_probability` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `kern_accuracy_to_probability` in this file's body); flagged, not guessed (VR-5/G2); `use mycelium_numerics::basis_strength` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::check_error_claim` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::check_union_claim` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::compose_error_bound` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::CheckOutcome` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::ProbBound` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use mycelium_numerics :: { ErrorBound , ErrorOp , ProbBound as KernelProbBound } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_numerics::ErrorBound` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::ErrorOp` — `mycelium_numerics` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_numerics::ProbBound as KernelProbBound` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `KernelProbBound` in this file's body); flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 71,
+      "line": 77,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -62,7 +62,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 87,
+      "line": 93,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -72,7 +72,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 101,
+      "line": 107,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -82,7 +82,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 132,
+      "line": 138,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -92,7 +92,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 158,
+      "line": 164,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -102,17 +102,17 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 177,
+      "line": 183,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for NumErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { NumErr :: BadEps => write ! (f , \"eps is negative or non-finite (out-of-range ε)\") , NumErr :: BadDelta => { write ! (f , \"delta is not in [0,1] or non-finite (out-of-range δ)\") } NumErr :: NoRule => write ! (f , \"no sound ε propagation rule for this op/configuration (refuse, never fabricate)\") , NumErr :: NormMismatch => { write ! (f , \"input norms disagree — cannot combine without norm-coercion rule\") } NumErr :: Overflow => write ! (f , \"composed ε overflowed to non-finite — refused (not a vacuous bound)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "NumErr"
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 202,
+      "line": 208,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -122,7 +122,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 202,
+      "line": 208,
       "col": 1,
       "category": "NamedFieldDrop",
       "rust_construct": "NamedFieldDrop",
@@ -132,17 +132,17 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 216,
+      "line": 222,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl core :: fmt :: Display for CheckErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { CheckErr :: Rejected { recomputed , claimed , } => write ! (f , \"claimed ε={claimed:.2e} is tighter than the re-derivation {recomputed:.2e} \\\n                 (rejected — not a silent pass)\") , CheckErr :: Malformed => write ! (f , \"certificate is ill-formed (malformed)\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut core :: fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `core :: fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "CheckErr"
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 236,
+      "line": 242,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -152,7 +152,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 269,
+      "line": 275,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -162,7 +162,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 416,
+      "line": 422,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -172,7 +172,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 439,
+      "line": 445,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -182,7 +182,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 493,
+      "line": 499,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -192,7 +192,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 511,
+      "line": 517,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -202,7 +202,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 532,
+      "line": 538,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -212,7 +212,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 577,
+      "line": 583,
       "col": 1,
       "category": "MultiStmtBody",
       "rust_construct": "MultiStmtBody",
@@ -222,7 +222,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 640,
+      "line": 646,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -232,7 +232,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 669,
+      "line": 675,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -242,7 +242,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 696,
+      "line": 702,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -252,7 +252,7 @@
     },
     {
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 741,
+      "line": 747,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -267,7 +267,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {

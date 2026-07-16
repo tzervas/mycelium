@@ -1209,15 +1209,18 @@ impl Parser {
     /// other follower is an explicit parse error naming both forms.
     fn parse_impl_item(&mut self) -> Result<Item, ParseError> {
         self.expect(&Tok::Impl, "`impl`")?;
-        // Impl-level type parameters (`impl[T] Foo[T] { … }`; DN-103 / M-1026 / ENB-3). The `[T, …]`
-        // slot sits *immediately after* `impl`, before the head. Unambiguous: no `base_type` begins
-        // with `[` (heads are repr keywords or a `Named` identifier; type *arguments* `[…]` are a
-        // *suffix* on a `Named` head), so a leading `[` here is always the params slot. A bare
-        // `impl Foo[T] { … }` (next token is the identifier `Foo`) leaves this empty — the M-664
-        // identity, every existing program unchanged. A `: bound` inside the slot is the never-silent
-        // refusal `parse_type_params_opt` already raises for a `type`/`trait` head (bounds live only
-        // on `fn` type-params, RFC-0019 §4.1).
-        let impl_params = self.parse_type_params_opt()?;
+        // Impl-level type parameters (`impl[T] Foo[T] { … }`; DN-103 / M-1026 / ENB-3), **bounded**
+        // as of DN-131 / M-1088 (`impl[T: Cmp] Foo[T] { … }`) via the same bounded parser the `fn`
+        // type-param slot already uses. The `[T, …]` slot sits *immediately after* `impl`, before the
+        // head. Unambiguous: no `base_type` begins with `[` (heads are repr keywords or a `Named`
+        // identifier; type *arguments* `[…]` are a *suffix* on a `Named` head), so a leading `[` here
+        // is always the params slot. A bare `impl Foo[T] { … }` (next token is the identifier `Foo`)
+        // leaves this empty — the M-664 identity, every existing program unchanged. An unbounded
+        // `impl[T]` yields `TypeParam { bounds: [] }` (the RFC-0019 §4.1 identity), so every DN-103
+        // program still parses byte-identically. The trait-instance tail's non-empty-slot refusal
+        // (below) is unaffected — it fires on *any* non-empty slot, bounded or not (DN-131 §3/§6:
+        // generic trait-instance impls are DN-130's scope, not this one's).
+        let impl_params = self.parse_type_params_bounded()?;
         // The head is a base type: a trait ref `Trait[args]?` parses as `Named(trait, args)`, and an
         // inherent target `T` (`Binary{8}`, `Foo[X]`, …) parses as its own base type. Disambiguate
         // *after* the head by the follower.
@@ -1262,8 +1265,9 @@ impl Parser {
                 methods,
             }))
         } else if self.at(&Tok::LBrace) {
-            // Inherent block: `impl[T]? T { fn … }` (M-664 + DN-103). The head *is* the target type;
-            // `impl_params` are the impl-level generics (empty for the plain M-664 block).
+            // Inherent block: `impl[T: Bound]? T { fn … }` (M-664 + DN-103, bounded per DN-131). The
+            // head *is* the target type; `impl_params` are the impl-level generics (empty for the
+            // plain M-664 block).
             let for_ty = TypeRef::unguaranteed(head);
             let methods = self.parse_impl_body()?;
             Ok(Item::InherentImpl(InherentImplDecl {

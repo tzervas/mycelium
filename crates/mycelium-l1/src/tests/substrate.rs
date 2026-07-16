@@ -257,7 +257,8 @@ fn a_never_consumed_parameter_is_released_at_scope_exit_and_the_release_is_recor
     // `f` never references `s` at all — it is abandoned at the end of `f`'s own call frame. The v0
     // drop posture (accepted 2026-07-02) releases it deterministically and records the event: never
     // a silent leak (G2).
-    let env = env("nodule d;\ntype Unit = Unit;\nfn f(s: Substrate{Sock}) => Unit = Unit;");
+    // `Unit` is the built-in prelude type (DN-137/M-1102) — no local redeclaration needed.
+    let env = env("nodule d;\nfn f(s: Substrate{Sock}) => Unit = Unit;");
     let h = a_handle("Sock");
     let ev = Evaluator::new(&env);
     ev.call("f", vec![L1Value::Substrate(h.clone())])
@@ -287,7 +288,8 @@ fn a_tail_call_from_a_fn_with_a_substrate_param_is_not_tco_and_still_releases() 
     // param it is not TCO-eligible, its frame is kept, and the abandoned `s` is still released and
     // recorded. (If the precondition ignored substrate params, `f`'s frame would be elided at the
     // `g()` tail call and `s` would leak → zero release events.)
-    let env = env("nodule d;\ntype Unit = Unit;\nfn g() => Unit = Unit;\n\
+    // `Unit` is the built-in prelude type (DN-137/M-1102) — no local redeclaration needed.
+    let env = env("nodule d;\nfn g() => Unit = Unit;\n\
          fn f(s: Substrate{Sock}) => Unit = g();");
     let h = a_handle("Sock");
     let ev = Evaluator::new(&env);

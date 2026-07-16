@@ -18,7 +18,6 @@ M-102	12	4617125568
 M-103	13	4617125604
 M-104	14	4617125650
 M-110	15	4617125702
-M-111	16	4617125746
 M-112	17	4617125811
 M-120	18	4617126032
 M-121	19	4617126211
@@ -632,3 +631,142 @@ M-1066	1484	4863522359
 M-1067	1485	4863522365
 M-1068	1487	4863522404
 M-1069	1486	4863522388
+# appended by sync_issues.py (2 new)
+M-1079	1519	4868229610
+M-1080	1520	4868229673
+# appended manually (tracking-truth reconciliation, 2026-07-12) -- sync_issues.py --apply
+# aborted mid-batch on M-1072's missing 'priority:P4' label before it could checkpoint
+# idmap.tsv (see append_idmap() call site at end of the --apply loop, sync_issues.py:876);
+# a retry re-created M-1070/M-1071 as duplicates (#1539/#1540, closed as dup of #1537/#1538).
+# Recording the surviving canonical mapping here so a future sync run does not recreate them.
+M-1070	1537	4869665644
+M-1071	1538	4869665824
+# appended by sync_issues.py (1 new)
+M-1072	1556	4870920064
+# appended by sync_issues.py (1 new)
+M-1073	1557	4870920196
+# appended by sync_issues.py (1 new)
+M-1074	1558	4870920508
+# appended by sync_issues.py (1 new)
+M-1075	1559	4870920653
+# appended by sync_issues.py (1 new)
+M-1076	1560	4870920775
+# appended by sync_issues.py (1 new)
+M-1077	1561	4870920915
+# appended by sync_issues.py (1 new)
+M-1078	1562	4870921065
+# appended by sync_issues.py (1 new)
+M-1081	1563	4870921193
+# appended by sync_issues.py (1 new)
+M-1082	1564	4870927056
+# appended by sync_issues.py (1 new)
+M-1083	1565	4870927189
+# appended by sync_issues.py (1 new)
+M-1084	1566	4870927313
+# appended by sync_issues.py (1 new)
+M-1085	1567	4870927451
+# appended by sync_issues.py (1 new)
+M-1086	1568	4870927606
+# appended by sync_issues.py (1 new)
+M-1087	1569	4870927841
+# appended by sync_issues.py (1 new)
+M-1088	1570	4870927991
+# appended by sync_issues.py (1 new)
+M-1089	1571	4870928128
+# appended by sync_issues.py (1 new)
+M-1090	1572	4870928277
+# appended by sync_issues.py (1 new)
+M-1091	1573	4870928428
+# appended by sync_issues.py (1 new)
+M-1092	1574	4870928596
+# appended by sync_issues.py (1 new)
+M-1093	1575	4870928712
+# appended by sync_issues.py (1 new)
+M-1094	1576	4870928838
+# appended by sync_issues.py (1 new)
+M-1095	1577	4870929135
+# appended by sync_issues.py (1 new)
+M-1096	1578	4870929288
+# appended by sync_issues.py (1 new)
+M-1097	1579	4870929443
+# appended by sync_issues.py (1 new)
+M-1098	1580	4870929574
+# appended by sync_issues.py (1 new)
+M-1099	1581	4870929735
+# appended by sync_issues.py (1 new)
+M-1100	1582	4870929909
+# appended by sync_issues.py (1 new)
+M-1101	1583	4870930062
+# appended by sync_issues.py (1 new)
+M-1102	1584	4870930206
+# appended by sync_issues.py (1 new)
+M-1103	1594	4875505107
+# appended by sync_issues.py (1 new)
+M-1104	1595	4875505373
+# appended by sync_issues.py (1 new)
+M-1105	1596	4875505651
+# appended by sync_issues.py (1 new)
+M-1106	1597	4875505814
+# appended by gh-issues-sync.py (38 new)
+M-1020	1442	4863521371
+M-1021	1439	4863521363
+M-1022	1437	4863521361
+M-1023	1441	4863521366
+M-1024	1438	4863521362
+M-1025	1440	4863521368
+M-1026	1443	4863521457
+M-1027	1444	4863521465
+M-1036	1445	4863521466
+M-1028	1446	4863521471
+M-1029	1447	4863521480
+M-1030	1448	4863521483
+M-1031	1449	4863521569
+M-1032	1450	4863521594
+M-1033	1451	4863521656
+M-1034	1452	4863521703
+M-1035	1453	4863521718
+M-1037	1454	4863521749
+M-1038	1455	4863521821
+M-1039	1456	4863521838
+M-1040	1457	4863521849
+M-1041	1460	4863521870
+M-1042	1458	4863521864
+M-1043	1459	4863521869
+M-1044	1461	4863521935
+M-1045	1462	4863521941
+M-1046	1463	4863521961
+M-1047	1465	4863521967
+M-1048	1464	4863521968
+M-1049	1466	4863522005
+M-1050	1467	4863522027
+M-1051	1468	4863522043
+M-1052	1469	4863522071
+M-1053	1470	4863522074
+M-1055	1472	4863522136
+M-1057	1474	4863522159
+M-1059	1476	4863522179
+M-1060	1477	4863522192
+# appended by sync_issues.py (1 new)
+M-1107	1606	4898348731
+# appended by sync_issues.py (1 new)
+M-1108	1607	4898348830
+# appended by sync_issues.py (1 new)
+M-1109	1608	4898349078
+# appended by sync_issues.py (1 new)
+M-1110	1609	4898349327
+# appended by sync_issues.py (1 new)
+M-1111	1610	4898349435
+# appended by sync_issues.py (1 new)
+M-1113	1612	4898351232
+# appended by sync_issues.py (1 new)
+M-1114	1613	4898351408
+# appended by sync_issues.py (1 new)
+M-1115	1614	4898351558
+# appended by sync_issues.py (1 new)
+M-1116	1615	4898351635
+# appended by sync_issues.py (1 new)
+M-1117	1616	4898351705
+# appended by sync_issues.py (1 new)
+M-1118	1617	4898351761
+M-1112	1611	4898349536
+# appended by gh-issues-sync.py (1 new)

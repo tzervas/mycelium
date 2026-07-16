@@ -199,7 +199,8 @@ fn ok_or_on_none_names_absence_as_err() {
     assert_three_way("ok_or(None)", &src, expected);
 }
 
-/// `ok_or_else(None, f)` → `Err(f(U))` — the lazily-computed error (Unit substitution).
+/// `ok_or_else(None, f)` → `Err(f(Unit))` — the lazily-computed error (the built-in prelude
+/// `Unit` type, DN-137/M-1102).
 #[test]
 fn ok_or_else_on_none_computes_error() {
     let driver = "fn lazy_err(_u: Unit) => Binary{8} = not(0b0000_0000);\nfn mk_none() => Option[Binary{8}] = None;\nfn main() => Result[Binary{8},Binary{8}] = ok_or_else(mk_none(), lazy_err);";
@@ -326,7 +327,8 @@ fn unwrap_or_option_on_none_returns_default() {
     assert_three_way("unwrap_or_option(None)", &src, expected);
 }
 
-/// `unwrap_or_else_option(None, f)` → `f(U)` — the computed default (Unit substitution).
+/// `unwrap_or_else_option(None, f)` → `f(Unit)` — the computed default (the built-in prelude
+/// `Unit` type, DN-137/M-1102).
 #[test]
 fn unwrap_or_else_option_on_none_computes_default() {
     let driver = "fn lazy_default(_u: Unit) => Binary{8} = not(0b0000_0000);\nfn mk_none() => Option[Binary{8}] = None;\nfn main() => Binary{8} = unwrap_or_else_option(mk_none(), lazy_default);";

@@ -13,12 +13,17 @@
 //! (`TypeMismatch` vs `UnresolvedName`) it cannot structurally distinguish (VR-5: report what is known,
 //! never invent). Per-op guarantee tags computed by the checker are untouched.
 
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::{Path, PathBuf};
 
-use mycelium_l1::{check_nodule, parse};
+use mycelium_l1::ast::Item;
+use mycelium_l1::{check_nodule, parse, UsePath};
 use mycelium_lsp::{
     derive_baseline, present, ClassRegistry, DiagnosticPolicy, Level, ReasonedError,
 };
+
+#[cfg(test)]
+mod tests;
 
 /// What kind of refusal a finding records.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -215,11 +220,25 @@ pub fn check_project(dir: &Path) -> Result<Report, ResolveError> {
 // files into a single `Phylum` and runs [`mycelium_l1::check_phylum`], the kernel's cross-nodule
 // resolver — additive, alongside (never replacing) the per-file modes above.
 //
-// Honesty (VR-5/G2): `check_phylum` is **all-or-nothing** — it returns either the whole `PhylumEnv`
-// or one `CheckError`. On success every nodule is reported `Clean`; on failure we report that single
-// `CheckError` faithfully and fabricate **no** per-nodule verdicts we cannot know. A parse failure or
-// a duplicate `nodule` path is refused **before** assembly (never a silent collision in the
-// phylum-wide export table). The guarantee is `Empirical` (real toolchain).
+// Honesty (VR-5/G2): the kernel `check_phylum` is **all-or-nothing** — it returns either the whole
+// `PhylumEnv` or one `CheckError`; the whole-phylum `PhylumReport::ok`/`error` pair reports that
+// faithfully, unchanged. **P-A (DN-124 §2, Accepted 2026-07-12)** additionally gives `PhylumReport` a
+// *partial*, per-nodule verdict on `nodules` even when the whole phylum did **not** check clean — a
+// **driver-level** import-closure sub-phylum re-check that reuses [`mycelium_l1::check_phylum`]
+// **unchanged** (KC-3/DRY: zero kernel growth). A parse failure or a duplicate `nodule` path is still
+// refused **before** assembly, and `nodules` stays empty there (identity itself is ambiguous/unknown —
+// no partial credit is attempted; conservative, never fabricated).
+//
+// **The load-bearing soundness invariant (DN-124 §2.1):** a nodule *N* is reported `Clean` **iff**
+// (a) *N* itself checks clean **and** (b) every nodule in *N*'s transitive in-batch import closure
+// checks clean. Concretely: assemble the sub-phylum `{N} ∪ closure(N)` (via the intra-phylum `use`
+// edges) and run the **unmodified** kernel `check_phylum` on just that sub-phylum. A missing or
+// failing dependency can only make *N* `CheckError`/`Blocked`, **never** `Clean` (DN-124 §6 Attacks
+// 1b/2, held). When the whole phylum *does* check clean, every nodule is trivially `Clean` without
+// re-checking (a clean superset entails every closed subset also checks clean — dropping unrelated
+// members can only remove candidate coherence conflicts, never introduce one, and every `use` *N*
+// resolves within the full phylum resolves identically within `{N} ∪ closure(N)` by construction).
+// The guarantee is `Empirical` (real toolchain).
 
 /// What kind of refusal blocked a phylum from checking clean.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -255,13 +274,68 @@ pub struct PhylumError {
     pub message: String,
 }
 
-/// A per-nodule verdict, emitted **only** when the whole phylum checked clean (never fabricated).
+/// A per-nodule verdict class (P-A, DN-124 §2.2/§2.3). Never fabricated (G2): built either
+/// trivially (the whole phylum checked clean) or by the import-closure sub-phylum re-check — always
+/// grounded in a real `check_phylum` run, never guessed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NoduleClass {
+    /// *N*'s whole transitive import closure checked clean (the DN-124 §2.1 soundness invariant).
+    Clean,
+    /// *N*'s own closure sub-phylum failed, attributed to *N* itself — either the failure's site was
+    /// resolved to *N*'s own nodule path, or the attribution was **not cleanly recoverable** from the
+    /// evidence (most check-error sites are bare item names, not nodule-qualified — VR-5: never claim
+    /// a finer `Blocked` class than the evidence supports; report the weaker class instead).
+    CheckError {
+        /// The failure's site, as reported by the kernel checker.
+        site: String,
+        /// The failure's message, as reported by the kernel checker.
+        message: String,
+    },
+    /// *N*'s own closure sub-phylum failed, and the failure was **confidently** attributed (via a
+    /// nodule-qualified site, e.g. an unresolved `<use>`) to a **different** nodule in *N*'s import
+    /// closure — named explicitly, never a silent "it's someone's fault" (G2).
+    Blocked {
+        /// The dotted path of the closure member the failure was attributed to.
+        on: String,
+        /// The failure's message, as reported by the kernel checker.
+        message: String,
+    },
+}
+
+impl NoduleClass {
+    /// The stable lowercase-agnostic label used in the `--json` contract
+    /// (`"Clean"`/`"CheckError"`/`"Blocked"`).
+    #[must_use]
+    pub fn label(&self) -> &'static str {
+        match self {
+            NoduleClass::Clean => "Clean",
+            NoduleClass::CheckError { .. } => "CheckError",
+            NoduleClass::Blocked { .. } => "Blocked",
+        }
+    }
+
+    /// Whether this class credits the checked numerator (only [`NoduleClass::Clean`] does).
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        matches!(self, NoduleClass::Clean)
+    }
+}
+
+/// A per-nodule verdict. As of **P-A (DN-124, Accepted 2026-07-12)** this is populated for **every**
+/// nodule of a phylum that was successfully assembled (parsed, no duplicate paths) — not only on a
+/// clean phylum (the pre-DN-124 all-or-nothing behavior).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct NoduleVerdict {
     /// The nodule's dotted path (`a`, `core.binary`).
     pub nodule: String,
-    /// The verdict class — currently always `"Clean"` (only emitted on a clean phylum).
-    pub class: &'static str,
+    /// The originating source's file label (the `sources`/directory-walk key this nodule was parsed
+    /// from) — the join key a consumer needs to credit a specific **emitted file**'s items off a
+    /// nodule-keyed verdict (a nodule's dotted path need not equal its file's path/stem). Threaded
+    /// through 1:1 by construction: [`check_phylum_sources`] only reaches nodule-verdict computation
+    /// after every source has parsed, so `nodules[i]` and `sources[i]` share an index.
+    pub file: String,
+    /// The verdict class.
+    pub class: NoduleClass,
 }
 
 /// The result of checking a set of sources **as one phylum**.
@@ -273,7 +347,12 @@ pub struct PhylumReport {
     pub files_checked: usize,
     /// The single blocking refusal, if any (`None` iff `ok`).
     pub error: Option<PhylumError>,
-    /// One `Clean` verdict per nodule — populated **only** when `ok` (VR-5: never a guessed verdict).
+    /// One verdict per nodule (P-A, DN-124 §2.3) — populated whenever the phylum was successfully
+    /// **assembled** (every source parsed, no duplicate `nodule` paths); left empty on a `Parse`/
+    /// `Duplicate` refusal (nodule identity itself is ambiguous/unknown there — no partial credit is
+    /// attempted, VR-5). **Never conflated with `ok`**: `ok`/`error` stay the whole-phylum verdict
+    /// unchanged; `nodules` is the additional, strictly-more-informative partial view. A reader can
+    /// never mistake "k nodules Clean" for "the phylum builds" — both signals are always present.
     pub nodules: Vec<NoduleVerdict>,
 }
 
@@ -304,10 +383,15 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
     let files_checked = sources.len();
 
     // 1. Parse each source. Any parse failure refuses the whole phylum (never a silent partial).
+    // `files` stays index-parallel to `nodules` — see [`NoduleVerdict::file`]'s doc.
     let mut nodules: Vec<mycelium_l1::Nodule> = Vec::with_capacity(files_checked);
+    let mut files: Vec<String> = Vec::with_capacity(files_checked);
     for (file, src) in sources {
         match parse(src) {
-            Ok(nodule) => nodules.push(nodule),
+            Ok(nodule) => {
+                nodules.push(nodule);
+                files.push(file.clone());
+            }
             Err(e) => {
                 return PhylumReport {
                     ok: false,
@@ -353,12 +437,16 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
     };
     match mycelium_l1::check_phylum(&phylum) {
         Ok(_) => {
+            // A clean whole phylum trivially credits every nodule `Clean` — no re-check needed (see
+            // the module note above for why this is sound, not just an optimization).
             let verdicts = phylum
                 .nodules
                 .iter()
-                .map(|n| NoduleVerdict {
+                .zip(files.iter())
+                .map(|(n, file)| NoduleVerdict {
                     nodule: n.path.0.join("."),
-                    class: "Clean",
+                    file: file.clone(),
+                    class: NoduleClass::Clean,
                 })
                 .collect();
             PhylumReport {
@@ -368,18 +456,160 @@ pub fn check_phylum_sources(sources: &[(String, String)]) -> PhylumReport {
                 nodules: verdicts,
             }
         }
-        // All-or-nothing: report the one CheckError faithfully; do NOT guess which nodules are clean.
-        Err(ce) => PhylumReport {
-            ok: false,
-            files_checked,
-            error: Some(PhylumError {
-                kind: PhylumErrorKind::Check,
-                site: ce.site,
-                message: ce.message,
-            }),
-            nodules: Vec::new(),
-        },
+        Err(ce) => {
+            // P-A (DN-124 §2.2): the whole-phylum verdict stays exactly the faithful all-or-nothing
+            // `PhylumError` it always was — but `nodules` is now populated via the driver-level
+            // import-closure sub-phylum re-check, never fabricated.
+            let partial = compute_partial_verdicts(&phylum.nodules, &files);
+            PhylumReport {
+                ok: false,
+                files_checked,
+                error: Some(PhylumError {
+                    kind: PhylumErrorKind::Check,
+                    site: ce.site,
+                    message: ce.message,
+                }),
+                nodules: partial,
+            }
+        }
     }
+}
+
+// ---------------------------------------------------------------------------------------------------
+// P-A mechanism (DN-124 §2.2) — the driver-level import-closure sub-phylum re-check.
+
+/// Build the intra-phylum `use` **edge relation**: for each nodule (keyed by its dotted path), the
+/// dotted paths of the OTHER in-batch nodules its `use`s target. Mirrors exactly the target-path
+/// arithmetic [`mycelium_l1`]'s own `resolve_imports` uses (a specific `use a.b.Item` targets nodule
+/// `a.b`; a glob `use a.b.*` targets nodule `a.b`) — so an edge here means "this is the nodule
+/// `check_phylum`'s own resolver would look up for this `use`", not a guess.
+///
+/// Cross-phylum `use dep::…` references ([`UsePath::phylum`] `Some`) contribute **no** edge (DN-113/
+/// M-1060, DN-124 OQ-2 — out of scope for the driver-level MVP; a phylum whose only uses are
+/// cross-phylum degrades to each nodule's closure being itself, the conservative default: it cannot
+/// resolve such a use locally either way, so this can only under-credit, never over-credit).
+fn build_use_edges(nodules: &[mycelium_l1::Nodule]) -> BTreeMap<String, Vec<String>> {
+    let mut edges = BTreeMap::new();
+    for n in nodules {
+        let mut targets = Vec::new();
+        for item in &n.items {
+            if let Item::Use(UsePath {
+                phylum: None,
+                path,
+                glob,
+            }) = item
+            {
+                let target = if *glob {
+                    path.0.join(".")
+                } else if path.0.len() > 1 {
+                    path.0[..path.0.len() - 1].join(".")
+                } else {
+                    // A single-segment specific `use X` names no nodule (empty prefix) — malformed;
+                    // `resolve_imports` itself refuses this at check time. No edge to add here.
+                    continue;
+                };
+                targets.push(target);
+            }
+        }
+        edges.insert(n.path.0.join("."), targets);
+    }
+    edges
+}
+
+/// *N*'s transitive in-batch import closure, `{N} ∪ closure(N)` (DN-124 §2.1/§2.2) — a BFS over
+/// `edges`, restricted to nodule paths actually **present** in this batch. A `use` target not present
+/// in the batch contributes no edge: it is not a false-clean risk (DN-124 §6 Attack 2) — it simply
+/// leaves that `use` unresolved when the sub-phylum is later checked, a conservative under-credit.
+fn closure_of(
+    start: &str,
+    edges: &BTreeMap<String, Vec<String>>,
+    present: &BTreeSet<String>,
+) -> BTreeSet<String> {
+    let mut visited: BTreeSet<String> = BTreeSet::new();
+    let mut queue: VecDeque<String> = VecDeque::new();
+    queue.push_back(start.to_owned());
+    while let Some(cur) = queue.pop_front() {
+        if !visited.insert(cur.clone()) {
+            continue;
+        }
+        if let Some(targets) = edges.get(&cur) {
+            for t in targets {
+                if present.contains(t) && !visited.contains(t) {
+                    queue.push_back(t.clone());
+                }
+            }
+        }
+    }
+    visited
+}
+
+/// Attribute a [`mycelium_l1::CheckError`]'s `site` to the closure member it belongs to, when
+/// **cleanly recoverable**: most check-error sites are bare item names (a fn/type/trait name, never
+/// nodule-qualified — see `check_fn_body`/`register_nodule_decls` in `mycelium-l1`), so this can only
+/// confidently attribute the small set of sites the kernel *does* nodule-qualify (`<use>`/
+/// `<totality>`, via its own `qualify(&nodule.path, …)`). Picks the **longest** matching nodule-path
+/// prefix (the most specific enclosing nodule, for a batch with nested paths like `a` and `a.b`).
+/// Returns `None` when no closure member's path is a prefix of `site` — the honest "not cleanly
+/// recoverable" case (VR-5: [`compute_partial_verdicts`] falls back to the weaker `CheckError` there,
+/// never guesses `Blocked`).
+fn site_owner(site: &str, closure_paths: &BTreeSet<String>) -> Option<String> {
+    closure_paths
+        .iter()
+        .filter(|p| !p.is_empty() && (site == p.as_str() || site.starts_with(&format!("{p}."))))
+        .max_by_key(|p| p.len())
+        .cloned()
+}
+
+/// P-A (DN-124 §2.2): sound partial per-nodule verdicts via a driver-level import-closure sub-phylum
+/// re-check that reuses [`mycelium_l1::check_phylum`] **unchanged** (KC-3/DRY — zero kernel growth).
+/// Called only when the whole phylum did **not** check clean (see the call site for why the clean
+/// case needs no re-check). `files` is index-parallel to `nodules` (see [`NoduleVerdict::file`]).
+fn compute_partial_verdicts(
+    nodules: &[mycelium_l1::Nodule],
+    files: &[String],
+) -> Vec<NoduleVerdict> {
+    let edges = build_use_edges(nodules);
+    let present: BTreeSet<String> = nodules.iter().map(|n| n.path.0.join(".")).collect();
+
+    nodules
+        .iter()
+        .zip(files.iter())
+        .map(|(n, file)| {
+            let n_path = n.path.0.join(".");
+            let closure = closure_of(&n_path, &edges, &present);
+            let sub_nodules: Vec<mycelium_l1::Nodule> = nodules
+                .iter()
+                .filter(|m| closure.contains(&m.path.0.join(".")))
+                .cloned()
+                .collect();
+            let sub_phylum = mycelium_l1::Phylum {
+                path: None,
+                nodules: sub_nodules,
+            };
+            let class = match mycelium_l1::check_phylum(&sub_phylum) {
+                Ok(_) => NoduleClass::Clean,
+                Err(ce) => match site_owner(&ce.site, &closure) {
+                    Some(owner) if owner == n_path => NoduleClass::CheckError {
+                        site: ce.site,
+                        message: ce.message,
+                    },
+                    Some(owner) => NoduleClass::Blocked {
+                        on: owner,
+                        message: ce.message,
+                    },
+                    None => NoduleClass::CheckError {
+                        site: ce.site,
+                        message: ce.message,
+                    },
+                },
+            };
+            NoduleVerdict {
+                nodule: n_path,
+                file: file.clone(),
+                class,
+            }
+        })
+        .collect()
 }
 
 /// Resolve and check every `.myc` under `dir` **as one phylum** (the FS wrapper over
@@ -438,179 +668,4 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), ResolveError> {
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_clean_program_checks_ok() {
-        let r = check_sources(&[(
-            "ok.myc".to_owned(),
-            "nodule d;\nfn f(x: Binary{8}) => Binary{8} = x;\n".to_owned(),
-        )]);
-        assert!(r.is_ok(), "{:?}", r.findings);
-        assert_eq!(r.exit_code(), 0);
-    }
-
-    #[test]
-    fn a_parse_error_is_an_explicit_finding_exit_2() {
-        let r = check_sources(&[(
-            "bad.myc".to_owned(),
-            "nodule d\nfn f(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6})".to_owned(),
-        )]);
-        assert_eq!(r.findings.len(), 1);
-        assert_eq!(r.findings[0].kind, FindingKind::Parse);
-        assert_eq!(r.exit_code(), 2);
-    }
-
-    #[test]
-    fn a_check_error_is_routed_through_the_baseline_exit_3() {
-        // An undefined name is a check refusal (UnresolvedName-class), routed at the baseline level.
-        let r = check_sources(&[(
-            "c.myc".to_owned(),
-            "nodule d;\nfn f() => Binary{8} = nope(0b0);\n".to_owned(),
-        )]);
-        assert_eq!(r.exit_code(), 3, "{:?}", r.findings);
-        let c = r
-            .findings
-            .iter()
-            .find(|f| f.kind == FindingKind::Check)
-            .expect("a check finding");
-        // The M-362 baseline routes static-check refusals to the diagnostic stream at medium detail.
-        assert_eq!(c.level, Level::Medium, "{c:?}");
-        assert_eq!(c.route.as_deref(), Some("stream"), "{c:?}");
-    }
-
-    #[test]
-    fn aggregation_is_deterministic_and_reports_all_files() {
-        let r = check_sources(&[
-            (
-                "b.myc".to_owned(),
-                "nodule d;\nfn f() => Binary{8} = nope(0b0);\n".to_owned(),
-            ),
-            (
-                "a.myc".to_owned(),
-                "nodule d;\nfn g() => Binary{8} = also_nope(0b0);\n".to_owned(),
-            ),
-        ]);
-        // Both files reported, sorted by name (a before b).
-        assert_eq!(r.findings.len(), 2);
-        assert_eq!(r.findings[0].file, "a.myc");
-        assert_eq!(r.findings[1].file, "b.myc");
-        assert_eq!(r.exit_code(), 3);
-    }
-
-    #[test]
-    fn check_source_default_and_builders_are_additive_ergonomics() {
-        // M-644: the default-policy convenience checks one source via the same baseline path as
-        // check_sources (builds the builtin registry + derived policy, delegates to check_source).
-        let mut out = Vec::new();
-        check_source_default(
-            "a.myc",
-            "nodule d;\nfn g() => Binary{8} = also_nope(0b0);\n",
-            &mut out,
-        );
-        assert!(
-            !out.is_empty(),
-            "an unresolved call is a recorded check finding"
-        );
-        // The fluent builders compose a Report additively (no canonical constructor changed).
-        let f = out.remove(0).with_route("escalate".to_owned());
-        assert_eq!(f.route.as_deref(), Some("escalate"));
-        let r = Report::default().with_finding(f).with_files_checked(1);
-        assert_eq!(r.findings.len(), 1);
-        assert_eq!(r.files_checked, 1);
-    }
-
-    // --- Phylum-check mode (M-1006) -------------------------------------------------------------
-
-    #[test]
-    fn phylum_cross_nodule_reference_resolves() {
-        // Nodule `a` exports `helper` (`pub fn`); nodule `b` imports it (`use a.*`) and calls it. As
-        // one phylum this resolves (RFC-0006 §4.3, mirrors the l1 `cross_nodule_program_runs_three_way`).
-        let a = (
-            "a.myc".to_owned(),
-            "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
-        );
-        let b = (
-            "b.myc".to_owned(),
-            "nodule b;\nuse a.*;\nfn g(x: Binary{8}) => Binary{8} = helper(x);\n".to_owned(),
-        );
-        let report = check_phylum_sources(&[a, b.clone()]);
-        assert!(
-            report.ok,
-            "phylum should resolve `a.helper`: {:?}",
-            report.error
-        );
-        assert_eq!(report.exit_code(), 0);
-        assert_eq!(report.nodules.len(), 2);
-        assert!(report.nodules.iter().all(|v| v.class == "Clean"));
-
-        // Witness that the phylum path is what makes it resolve: the SAME `b.myc` checked in
-        // isolation (a phylum-of-one, the per-file path) FAILS — `a.helper` is unresolved there.
-        let isolated = check_sources(&[b]);
-        assert!(
-            !isolated.is_ok(),
-            "b.myc must NOT resolve `a.*` in isolation (proves the phylum lever): {:?}",
-            isolated.findings
-        );
-        assert_eq!(isolated.exit_code(), 3);
-    }
-
-    #[test]
-    fn phylum_duplicate_nodule_path_is_refused() {
-        // Two nodules both declare `nodule a;` — an ambiguous export table, refused never-silently (G2)
-        // BEFORE reaching check_phylum.
-        let report = check_phylum_sources(&[
-            (
-                "x.myc".to_owned(),
-                "nodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
-            ),
-            (
-                "y.myc".to_owned(),
-                "nodule a;\npub fn other(x: Binary{8}) => Binary{8} = x;\n".to_owned(),
-            ),
-        ]);
-        assert!(!report.ok);
-        assert_eq!(
-            report.error.as_ref().map(|e| e.kind),
-            Some(PhylumErrorKind::Duplicate),
-            "{:?}",
-            report.error
-        );
-        assert_eq!(report.exit_code(), 3);
-    }
-
-    #[test]
-    fn phylum_parse_error_is_reported() {
-        // Missing `;` after the nodule header — an unparseable nodule; the phylum cannot be assembled.
-        let report = check_phylum_sources(&[(
-            "bad.myc".to_owned(),
-            "nodule a\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\n".to_owned(),
-        )]);
-        assert!(!report.ok);
-        let e = report.error.as_ref().expect("a parse refusal");
-        assert_eq!(e.kind, PhylumErrorKind::Parse);
-        assert_eq!(e.site, "bad.myc", "parse site is the file label");
-        assert_eq!(report.exit_code(), 2);
-    }
-
-    #[test]
-    fn phylum_check_error_is_reported() {
-        // A single nodule with a real check error (an unresolved call) — check_phylum refuses.
-        let report = check_phylum_sources(&[(
-            "c.myc".to_owned(),
-            "nodule a;\nfn f() => Binary{8} = nope(0b0);\n".to_owned(),
-        )]);
-        assert!(!report.ok);
-        assert_eq!(
-            report.error.as_ref().map(|e| e.kind),
-            Some(PhylumErrorKind::Check),
-            "{:?}",
-            report.error
-        );
-        assert_eq!(report.exit_code(), 3);
-    }
 }

@@ -9,7 +9,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -19,7 +19,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_vsa :: VsaOp ;",
-      "reason": "`use` import (single path ending `VsaOp`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_vsa::VsaOp` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -46,10 +46,10 @@
       "file": "crates/mycelium-std-vsa/src/matrix.rs",
       "line": 222,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "Closure",
+      "rust_construct": "Closure",
       "snippet": "# [doc = \" Look up a row in [`GUARANTEE_MATRIX`] by model id and op.  Returns `None` for an unregistered\"] # [doc = \" model — an unregistered model has no honest tag to offer (the same convention as\"] # [doc = \" `mycelium_vsa::matrix_tag`).\"] # [must_use] pub fn std_matrix_tag (model_id : & str , op : VsaOp) -> Option < GuaranteeStrength > { GUARANTEE_MATRIX . iter () . find (| r | r . model_id == model_id && r . op == op) . map (| r | r . tag) }",
-      "reason": "unsupported expression form `| r | r . model_id == model_id && r . op == op`",
+      "reason": "closure parameter `r` has no explicit type annotation — Mycelium's `lambda` parameters are always `name: Type` (grammar `lambda_expr` / `param`) and this transpiler has no type-inference pass to recover an omitted Rust closure-param type",
       "item_name": "std_matrix_tag"
     }
   ],

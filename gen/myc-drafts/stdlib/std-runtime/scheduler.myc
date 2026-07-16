@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.scheduler
 // Re-export of the work-stealing OS-thread `Scheduler` (M-709 / M-861), relocated to
 // `mycelium-sched` (E25/M-862 dependency-cycle fix).
 //
@@ -24,6 +24,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.scheduler;
 
 

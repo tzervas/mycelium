@@ -1,9 +1,11 @@
 {
   "source": "crates/mycelium-std-runtime/src/dataflow.rs",
   "emitted_items": [
+    "use:Deadlock",
     "Step",
     "SweepDir",
-    "AlreadyDone"
+    "AlreadyDone",
+    "impl PollTask for AlreadyDone"
   ],
   "gaps": [
     {
@@ -13,7 +15,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: sync :: atomic :: { AtomicU64 , Ordering } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std.sync.atomic::AtomicU64` — `std.sync.atomic` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use std.sync.atomic::Ordering` — `std.sync.atomic` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -23,7 +25,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -33,17 +35,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use crate :: scheduler :: Scheduler ;",
-      "reason": "`use` import (single path ending `Scheduler`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
-      "line": 34,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: task :: Deadlock ;",
-      "reason": "`use` import (single path ending `Deadlock`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use scheduler::Scheduler` — `Scheduler` is not among sibling `scheduler`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -83,7 +75,7 @@
       "category": "Trait",
       "rust_construct": "Trait",
       "snippet": "# [doc = \" A communicating task that is **swept** (polled non-blockingly) rather than run to completion.\"] # [doc = \"\"] # [doc = \" `poll` must never block: park (return [`Step::Pending`]) instead of waiting on a channel, so a\"] # [doc = \" global stall is detectable as an explicit [`Deadlock`] rather than a hung thread (G2).\"] pub trait PollTask { # [doc = \" Take one non-blocking step. Returns [`Step::Done`] when the task has resolved.\"] fn poll (& mut self) -> Step ; }",
-      "reason": "trait `PollTask` method `poll` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence)",
+      "reason": "trait `PollTask` method `poll` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `self` parameter with no enclosing impl/trait context)",
       "item_name": "PollTask"
     },
     {
@@ -123,7 +115,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "fn sweep_indices (n : usize , dir : SweepDir) -> Vec < usize > { match dir { SweepDir :: Ascending => (0 .. n) . collect () , SweepDir :: Descending => (0 .. n) . rev () . collect () , } }",
-      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "unsupported expression form `0 .. n`",
       "item_name": "sweep_indices"
     },
     {
@@ -133,18 +125,8 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" Sweep `tasks` cooperatively until all resolve, or return [`Deadlock`] on a no-progress sweep.\"] # [doc = \"\"] # [doc = \" `progress()` reports the monotone count of channel work done *outside* the tasks' own resolution.\"] # [doc = \" A sweep counts as progress if **either** a task resolved **or** `progress()` advanced; a full\"] # [doc = \" sweep with neither, while tasks remain pending, is an explicit [`Deadlock`] — never a hang (G2).\"] # [doc = \"\"] # [doc = \" Guarantee: schedule is **`Exact`** (a fixed function of `dir`); deadlock detection is\"] # [doc = \" **`Empirical`** (complete for DAG channel graphs — see module docs).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`Deadlock`] (carrying the count of still-parked tasks) when a full sweep makes no\"] # [doc = \" progress while tasks remain pending.\"] pub fn run_dataflow (tasks : & mut [Box < dyn PollTask >] , dir : SweepDir , progress : impl Fn () -> u64 ,) -> Result < () , Deadlock > { let n = tasks . len () ; let mut done = vec ! [false ; n] ; let mut remaining = n ; let order = sweep_indices (n , dir) ; while remaining > 0 { let before = progress () ; let mut advanced = false ; for & i in & order { if done [i] { continue ; } if tasks [i] . poll () == Step :: Done { done [i] = true ; remaining -= 1 ; advanced = true ; } } if ! advanced && progress () == before && remaining > 0 { return Err (Deadlock :: new (remaining)) ; } } Ok (()) }",
-      "reason": "`& mut [Box < dyn PollTask >]` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unsupported Rust type form `[Box < dyn PollTask >]`",
       "item_name": "run_dataflow"
-    },
-    {
-      "file": "crates/mycelium-std-runtime/src/dataflow.rs",
-      "line": 159,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl PollTask for AlreadyDone { fn poll (& mut self) -> Step { Step :: Done } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `poll` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
-      "item_name": "AlreadyDone"
     },
     {
       "file": "crates/mycelium-std-runtime/src/dataflow.rs",
@@ -153,7 +135,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool**\"] # [doc = \" (M-709/M-864) — the \\\"checked across OS threads\\\" path (RFC-0008 §4.3 under the real scheduler).\"] # [doc = \"\"] # [doc = \" Each still-pending task is polled **at most once per sweep** on a worker thread; the tasks are\"] # [doc = \" disjoint objects (no shared mutable state but the channels, RT1), so the parallel polls are\"] # [doc = \" data-race-free. The deadlock decision is identical and order-independent: a stall is a stall in\"] # [doc = \" any sweep order, so it is surfaced as the same explicit [`Deadlock`] (G2), never a hung worker.\"] # [doc = \"\"] # [doc = \" **M-864 note:** `Scheduler::run_indexed` now requires `'static` job closures (the persistent\"] # [doc = \" pool's worker threads outlive any single call), so this sweep can no longer *borrow* `tasks[i]`\"] # [doc = \" by `&mut` across the call the way the pre-M-864 `thread::scope`-backed scheduler allowed. Each\"] # [doc = \" still-pending task is instead swapped **out** of `tasks` (taking ownership, `'static` by\"] # [doc = \" construction — only the borrow was ever the obstacle, not the boxed task itself) for the\"] # [doc = \" duration of the parallel poll, and swapped back the moment its result is in hand — the sweep's\"] # [doc = \" own book-keeping (`done`/`remaining`) and the deadlock decision are otherwise unchanged.\"] # [doc = \"\"] # [doc = \" Guarantee: deadlock detection **`Empirical`** (same basis as [`run_dataflow`], now exercised on\"] # [doc = \" real OS threads).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \" Returns [`Deadlock`] when a full parallel sweep makes no progress while tasks remain pending.\"] pub fn run_dataflow_scheduled (scheduler : & Scheduler , tasks : & mut [Box < dyn PollTask + Send >] , progress : impl Fn () -> u64 ,) -> Result < () , Deadlock > { let n = tasks . len () ; let mut done = vec ! [false ; n] ; let mut remaining = n ; while remaining > 0 { let before = progress () ; let pending : Vec < usize > = (0 .. n) . filter (| & i | ! done [i]) . collect () ; let taken : Vec < Box < dyn PollTask + Send > > = pending . iter () . map (| & i | std :: mem :: replace (& mut tasks [i] , Box :: new (AlreadyDone))) . collect () ; let jobs : Vec < _ > = taken . into_iter () . map (| mut t | { move | | { let became_done = matches ! (t . poll () , Step :: Done) ; (t , became_done) } }) . collect () ; let results = scheduler . run_indexed (jobs , None , None) ; let mut advanced = false ; for (& i , (t , became_done)) in pending . iter () . zip (results) { tasks [i] = t ; if became_done { done [i] = true ; remaining -= 1 ; advanced = true ; } } if ! advanced && progress () == before && remaining > 0 { return Err (Deadlock :: new (remaining)) ; } } Ok (()) }",
-      "reason": "`& mut [Box < dyn PollTask + Send >]` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "unsupported Rust type form `[Box < dyn PollTask + Send >]`",
       "item_name": "run_dataflow_scheduled"
     }
   ],

@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.rand
 // \[Declared\] Platform entropy floor. Reads from `/dev/urandom` via `std::fs`.
 //
 // # Implementation
@@ -32,7 +32,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.rand;
 
 // Errors from platform entropy operations.
 type EntropyError = Unavailable(Bytes);

@@ -229,13 +229,17 @@ pub enum Item {
 #[derive(Debug, Clone, PartialEq)]
 pub struct InherentImplDecl {
     /// Impl-level **type parameters** — the `[T, …]` slot after `impl` (`impl[T] Foo[T] { … }`;
-    /// DN-103 / M-1026 / ENB-3). **Unbounded names** (bounds live only on `fn` type-params — the
-    /// dictionary site, RFC-0019 §4.1 — so a `: bound` here is a never-silent parse refusal, mirroring
-    /// a `type`/`trait` head). Empty for the plain `impl T { … }` block (the identity — every M-664
-    /// program is unchanged). At the Phase-0 desugar these params are **prepended** to each lifted
-    /// method's `fn` type-parameters, so a generic inherent method becomes an ordinary generic free
-    /// function and monomorphization reuses the existing fn-generics path (KC-3/DRY).
-    pub params: Vec<String>,
+    /// DN-103 / M-1026 / ENB-3). **Bounded** as of DN-131 / M-1088: `impl[T: Cmp] Foo[T] { … }` is
+    /// parsed by the same bounded parser the `fn` type-param slot uses (`parse_type_params_bounded`,
+    /// RFC-0019 §4.1), so an unbounded `impl[T]` is just the `bounds: []` identity — every DN-103
+    /// program is unchanged. Empty for the plain `impl T { … }` block (empty vec — the M-664
+    /// identity). At the Phase-0 desugar these params are **prepended** to each lifted method's `fn`
+    /// type-parameters — bounds included — so a generic inherent method becomes an ordinary bounded
+    /// generic free function and monomorphization reuses the existing fn-generics/`check_bounds` path
+    /// unchanged (KC-3/DRY, DN-131 §4 — zero new discharge code). A `: bound` on a `type`/`trait`
+    /// decl head, or on the impl slot of a **trait-instance** impl, stays a never-silent parse
+    /// refusal (DN-131 §5/§6 — declined in v1).
+    pub params: Vec<TypeParam>,
     /// The type the methods are associated with (`impl Binary{8} { … }` ⇒ `Binary{8}`).
     pub for_ty: TypeRef,
     /// The method definitions, lifted verbatim to top-level `fn`s at desugar time.

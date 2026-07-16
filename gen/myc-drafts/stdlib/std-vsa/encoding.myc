@@ -1,4 +1,4 @@
-// nodule: std.vsa
+// nodule: std.vsa.encoding
 // Encoding utilities: compositions of the per-model vocabulary.
 //
 // Tag = meet of constituents (weakest-wins; RFC-0001 §4.7), **never upgraded**.  A sequence
@@ -17,6 +17,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.vsa;
+nodule std.vsa.encoding;
 
 

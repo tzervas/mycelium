@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.region
 // Layer-3 region-based batched scope reclamation — DN-32 §2.3 / RFC-0027 §10.3 / MEM-3.
 //
 // **Region = Scope.** A [`Region`] is the runtime embodiment of one node in the RT7 scope tree
@@ -67,7 +67,7 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.region;
 
 // The canonical scope-tree identity type for the region tier (MEM-3).
 //
@@ -77,13 +77,14 @@ nodule std.runtime;
 // to [`ScopeId`] for use in [`ReclamationRecord`] fields (the stable RFC-0027 §9 type).
 //
 // Guarantee: `Exact` — monotonic, unique per allocation (atomic counter, strictly increasing).
-type ScopeNodeId = ScopeNodeId(Binary{64});
+pub type ScopeNodeId = ScopeNodeId(Binary{64});
 
 impl ScopeNodeId {
   // Allocate a fresh, unique `ScopeNodeId`.
   //
   // Guarantee: `Exact` — strictly greater than all previously allocated ids.
-  fn allocate() => ScopeNodeId = ScopeNodeId(fetch_add(GLOBAL_SCOPE_ID, 1, Relaxed));
+  // Declared: renamed `allocate` -> `ScopeNodeId__allocate` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn ScopeNodeId__allocate() => ScopeNodeId = ScopeNodeId(fetch_add(GLOBAL_SCOPE_ID, 1, Relaxed));
   // Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).
   //
   // This is the canonical bridge between the region-tier allocation identity and the
@@ -112,7 +113,8 @@ impl RegionEpoch {
   // Allocate a fresh, monotonically-increasing `RegionEpoch`.
   //
   // Guarantee: `Exact` — strictly greater than all previously allocated epochs.
-  fn allocate() => RegionEpoch = RegionEpoch(fetch_add(GLOBAL_EPOCH, 1, Relaxed));
+  // Declared: renamed `allocate` -> `RegionEpoch__allocate` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn RegionEpoch__allocate() => RegionEpoch = RegionEpoch(fetch_add(GLOBAL_EPOCH, 1, Relaxed));
   // Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).
   //
   // Guarantee: `Exact` — lossless conversion.
@@ -120,3 +122,13 @@ impl RegionEpoch {
   // Return the underlying `u64` value.
   fn as_u64(self: RegionEpoch) => Binary{64} = (match self { RegionEpoch(p0) => p0 });
 };
+
+// Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit
+// reclamation batch.
+//
+// Carries the region's identity, the epoch assigned at close time, and the count of
+// deferred entries reclaimed. Useful for supervision observability, property tests, and
+// the sweep-order assertion (child epoch < parent epoch).
+//
+// Guarantee: `Exact` — all fields are deterministic functions of the close operation.
+pub type ClosedRegion = ClosedRegion(ScopeNodeId, RegionEpoch, Binary{64});

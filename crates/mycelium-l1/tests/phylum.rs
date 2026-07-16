@@ -256,10 +256,13 @@ fn a_cross_nodule_impl_is_accepted_trait_in_a_type_in_b_impl_in_b() {
 
 #[test]
 fn a_cross_nodule_impl_on_a_primitive_for_a_phylum_trait_is_accepted() {
-    // Trait `Show` in `a` (pub), impl for the primitive `Binary{8}` in `b`. The trait is phylum-local
+    // Trait `Probe` in `a` (pub), impl for the primitive `Binary{8}` in `b`. The trait is phylum-local
     // (coherence pub-blind), so even on a primitive `for`-type the impl is in-phylum ⇒ accepted.
+    // (Renamed from the original arbitrary fixture name `Show` when DN-127/M-1090 seeded a built-in
+    // prelude trait of that name — mitigation #14: this fixture's trait name is incidental to what
+    // the test actually exercises, so it moves rather than the built-in.)
     check(
-        "phylum p\nnodule a;\npub trait Show[A] { fn show(x: A) => A; };\nnodule b;\nuse a.Show;\nimpl Show[Binary{8}] for Binary{8} { fn show(x: Binary{8}) => Binary{8} = x; };",
+        "phylum p\nnodule a;\npub trait Probe[A] { fn probe(x: A) => A; };\nnodule b;\nuse a.Probe;\nimpl Probe[Binary{8}] for Binary{8} { fn probe(x: Binary{8}) => Binary{8} = x; };",
     )
     .expect("an impl for a primitive of a phylum-local trait is accepted");
 }

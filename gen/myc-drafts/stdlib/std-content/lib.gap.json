@@ -1,6 +1,8 @@
 {
   "source": "crates/mycelium-std-content/src/lib.rs",
   "emitted_items": [
+    "use:RefKind",
+    "use:MalformedDigest",
     "digest_eq",
     "names_of"
   ],
@@ -17,7 +19,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 85,
+      "line": 91,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -27,7 +29,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 86,
+      "line": 92,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -37,7 +39,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 87,
+      "line": 93,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -47,7 +49,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 88,
+      "line": 94,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -57,57 +59,47 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 90,
+      "line": 96,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use content_ref :: { ContentRef , RefKind } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use content_ref::ContentRef` — `ContentRef` is not among sibling `content_ref`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:RefKind"
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 91,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: MalformedDigest ;",
-      "reason": "`use` import (single path ending `MalformedDigest`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 92,
+      "line": 98,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 93,
+      "line": 99,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use name_registry :: NameRegistry ;",
-      "reason": "`use` import (single path ending `NameRegistry`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use name_registry::NameRegistry` — `NameRegistry` is not among sibling `name_registry`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 97,
+      "line": 103,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use mycelium_core :: content :: Names ;",
-      "reason": "`use` import (single path ending `Names`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core.content::Names` — `mycelium_core.content` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 101,
+      "line": 107,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -117,7 +109,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 124,
+      "line": 130,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -127,7 +119,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 146,
+      "line": 152,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -137,7 +129,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 166,
+      "line": 172,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -147,7 +139,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 184,
+      "line": 190,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -157,7 +149,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 223,
+      "line": 229,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -167,7 +159,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 242,
+      "line": 248,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -177,7 +169,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 264,
+      "line": 270,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

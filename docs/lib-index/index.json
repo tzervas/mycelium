@@ -25071,12 +25071,23 @@
       "tag": "Empirical/Declared"
     },
     {
+      "symbol": "compiler.semcore::checkty_unit_prelude",
+      "kind": "fn",
+      "phylum": "compiler",
+      "nodule": "compiler.semcore",
+      "file": "lib/compiler/semcore.myc",
+      "line": 4215,
+      "signature": "fn checkty_unit_prelude() => DataInfo",
+      "summary": "checkty_unit_prelude: checkty.rs::unit_prelude (DN-137 Alt D / M-1102) -- the second builtin prelude entry, `type Unit = Unit;` -- a payload-free, single-constructor data type (the arity-0 M-826 product-family member). Seeded the SAME way as `checkty_prelude`'s `Bool` (this mirror carries no `home` field at all -- see `unqualify_data_info`'s doc comment -- so the seed is just `DI(name, params, ctors)`, byte-identical in shape to `Bool`'s).",
+      "tag": "Empirical/Declared"
+    },
+    {
       "symbol": "compiler.semcore::nodule_uses_fuse",
       "kind": "fn",
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4213,
+      "line": 4221,
       "signature": "fn nodule_uses_fuse(items: Vec[Item]) => Bool",
       "summary": "`impl Fuse[...] for ...`? (Never based on whether `fuse(a, b)` is CALLED -- the repr-type fast path in `check_fuse` never touches the trait registry at all; restated from the oracle's own comment.)",
       "tag": "Empirical/Declared"
@@ -25087,7 +25098,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4229,
+      "line": 4237,
       "signature": "fn fuse_redeclare_err() => Bytes",
       "summary": "fuse_redeclare_err: checkty.rs 1372-1378 / 1381-1387 -- the never-silent refusal for either branch that finds `Fuse` already present in `traits` (a user nodule trying to redeclare the built-in). Both oracle call sites use the SAME message text (FLAG-semcore-32: error TEXT is not differential- compared -- only Ok/Err CLASSIFICATION is; this file's established convention throughout STEP 4/5).",
       "tag": "Empirical/Declared"
@@ -25098,7 +25109,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4236,
+      "line": 4244,
       "signature": "fn seed_fuse_trait(traits: Vec[TraitInfo], items: Vec[Item]) => Result[Vec[TraitInfo], Bytes]",
       "summary": "(already present, on EITHER branch) -- never a silent shadow of the built-in (G2/VR-5), mirroring how redeclaring `Bool` would collide in `types`.",
       "tag": "Empirical/Declared"
@@ -25109,7 +25120,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4250,
+      "line": 4258,
       "signature": "fn fns_contains(fns: Vec[Pair[Bytes, FnDecl]], name: Bytes) => Bool",
       "summary": "fns_contains: the `fns.contains_key`-equivalent membership scan over the FLAG-semcore-4 assoc-list fn registry `Vec[Pair[Bytes, FnDecl]]`.",
       "tag": "Empirical/Declared"
@@ -25120,7 +25131,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4261,
+      "line": 4269,
       "signature": "fn register_fns(items: Vec[Item], acc: Vec[Pair[Bytes, FnDecl]]) => Result[Vec[Pair[Bytes, FnDecl]], Bytes]",
       "summary": "register_fns: checkty.rs 1392-1400 -- Pass 2, the fn-signature registration loop. Non-`Item::Fn` items are skipped (the `let Item::Fn(fd) = item else { continue }` mirror); each fn's OWN type-parameter names (`fnsig_tyvar_names`, the `sig.param_names()` mirror) must have no duplicate, then the fn NAME must be free in the registry so far -- the first refusal wins, `Ok` with the built registry otherwise.",
       "tag": "Empirical/Declared"
@@ -25131,7 +25142,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4278,
+      "line": 4286,
       "signature": "type NoduleRegs = NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])",
       "summary": "NoduleRegs: mirrors checkty.rs::NoduleRegs (1336-1340) field-for-field (types, fns, traits). New ctor `NR` (FLAG-semcore-2 scheme; checked against every other family in this file, no collision).",
       "tag": "Empirical/Declared"
@@ -25142,7 +25153,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4278,
+      "line": 4286,
       "signature": "NR(Vec[DataInfo], Vec[Pair[Bytes, FnDecl]], Vec[TraitInfo])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25153,7 +25164,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4280,
+      "line": 4288,
       "signature": "fn nr_types(r: NoduleRegs) => Vec[DataInfo]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25164,7 +25175,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4283,
+      "line": 4291,
       "signature": "fn nr_fns(r: NoduleRegs) => Vec[Pair[Bytes, FnDecl]]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25175,7 +25186,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4286,
+      "line": 4294,
       "signature": "fn nr_traits(r: NoduleRegs) => Vec[TraitInfo]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25186,9 +25197,9 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4292,
+      "line": 4300,
       "signature": "fn register_nodule_decls(nod: Nodule) => Result[NoduleRegs, Bytes]",
-      "summary": "register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT order -- types (seeded with the Bool prelude), traits, the conditional Fuse seed, then fns -- and returns Ok(NoduleRegs) or the FIRST refusal.",
+      "summary": "register_nodule_decls: checkty.rs 1348-1401, top level. Runs the four passes in the oracle's EXACT order -- types (seeded with the Bool and Unit (DN-137) preludes), traits, the conditional Fuse seed, then fns -- and returns Ok(NoduleRegs) or the FIRST refusal.",
       "tag": "Empirical/Declared"
     },
     {
@@ -25197,7 +25208,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4353,
+      "line": 4361,
       "signature": "fn closure_field_ty(t: Ty) => Ty",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25208,7 +25219,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4359,
+      "line": 4367,
       "signature": "fn closure_param_ref(t: Ty) => TypeRef",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25219,7 +25230,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4366,
+      "line": 4374,
       "signature": "fn mangle_ty_in_ty(t: Ty) => Ty",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25230,7 +25241,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4384,
+      "line": 4392,
       "signature": "fn ty_to_source_base(t: Ty) => BaseType",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25241,7 +25252,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4399,
+      "line": 4407,
       "signature": "fn ty_to_source_ref(t: Ty) => TypeRef",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25252,7 +25263,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4404,
+      "line": 4412,
       "signature": "fn ty_to_source_ref_list(ts: Vec[Ty]) => Vec[TypeRef]",
       "summary": "ty_to_source_ref_list: map a constructor's applied type args through ty_to_source_ref (the direct recursive walk this nodule uses throughout — no first-class-fn `map` primitive, FLAG-semcore-5's KISS/YAGNI precedent for avoiding a generic higher-order helper in a bounded increment).",
       "tag": "Empirical/Declared"
@@ -25263,7 +25274,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4410,
+      "line": 4418,
       "signature": "fn ty_to_ref_base(t: Ty) => BaseType",
       "summary": "ty_to_ref_base: the MANGLED-NULLARY round-trip (an applied data type's arguments are baked into its mangled name, so it becomes a nullary `Named`) — used for a rewritten `FnDecl`/`Param`/ `Ascribe`'s emitted surface type.",
       "tag": "Empirical/Declared"
@@ -25274,7 +25285,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4425,
+      "line": 4433,
       "signature": "fn ty_to_ref(t: Ty) => TypeRef",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25285,7 +25296,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4429,
+      "line": 4437,
       "signature": "fn ty_to_ref_tagged(t: Ty, guarantee: Option[Strength]) => TypeRef",
       "summary": "ty_to_ref_tagged: like ty_to_ref, but attaches the CALLER-supplied `guarantee` (the source declaration's own `@ g` — never derived from `t`, never merged across instantiations).",
       "tag": "Empirical/Declared"
@@ -25296,7 +25307,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4434,
+      "line": 4442,
       "signature": "type WorkItem = WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]]) | WiData(Bytes, Vec[Ty]) | WiMethod(Bytes, Bytes, Ty)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25307,7 +25318,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4435,
+      "line": 4443,
       "signature": "WiFn(Bytes, Vec[Ty], Vec[Width], Vec[Pair[Binary{32}, Bytes]], Vec[Pair[Binary{32}, Bytes]])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25318,7 +25329,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4436,
+      "line": 4444,
       "signature": "WiData(Bytes, Vec[Ty])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25329,7 +25340,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4437,
+      "line": 4445,
       "signature": "WiMethod(Bytes, Bytes, Ty)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25340,7 +25351,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4440,
+      "line": 4448,
       "signature": "fn item_key(item: WorkItem) => Bytes",
       "summary": "item_key: the canonical dedup key of a work item — a kind-tagged mangled string.",
       "tag": "Empirical/Declared"
@@ -25351,7 +25362,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4503,
+      "line": 4511,
       "signature": "type LVal = LData(Bytes, Bytes, Vec[LVal]) | LReprBytes(Bytes) | LOpaque",
       "summary": "FLAG-semcore-36 (`LVal` -- the eval.rs::L1Value mirror, TRIMMED to what `try_match`'s ported fragment needs). `Data { ty, ctor, fields }` mirrors verbatim (`LData`, FLAG-semcore-2 `L`-prefix scheme extended: no collision against any family declared above). `Repr`/`Substrate`/`Fn` collapse into ONE nullary `LOpaque` (FLAG-semcore-35 explains why this is lossless for the ported arms). `binds` (Rust's `&mut Vec<(String, L1Value)>`, mutated by `push` -- APPEND order) is restated as the FLAG-semcore-6 value-threaded collapse: threaded through and RETURNED, and appended (not prepended, unlike the FLAG-semcore-13 assoc-list convention) via `bind_append` below, because `binds`' ORDER is part of the observable differential (`Vec` equality is order-sensitive) -- unlike `unify`'s substitution, whose FIRST-MATCH lookup semantics make prepend-order invisible. DN-105 / M-1035 (ENB-12): the `Bytes` repr value is LIFTED out of the `LOpaque` collapse into a dedicated `LReprBytes(Bytes)` carrier, so `lval_try_match`'s `PLit` arm can compare a `Bytes` scrutinee against a TEXT (`Str`) byte-string-literal pattern by byte content -- a REAL eval-match mirror of eval.rs's `try_match` `Pattern::Lit` `Repr`-case for the string-literal (#72) target (DN-105 §5). Every OTHER repr (`Binary`/`Ternary`/`Float`) plus `Substrate`/`Fn` stays collapsed into `LOpaque` (their `PLit` eval-match stays deferred -- FLAG-semcore-35), and the `0x..`-hex byte-string *value synthesis* stays deferred too (FLAG-semcore-25 -- `lit_value`'s `LBytes` arm), so a `0x..` pattern arm's eval propagates that deferral as an explicit `Err`, never a silent mismatch (G2). The Bytes carrier is thus a MINIMAL, targeted lift, not a full `L1Value` port.",
       "tag": "Empirical/Declared"
@@ -25362,7 +25373,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4503,
+      "line": 4511,
       "signature": "LData(Bytes, Bytes, Vec[LVal])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25373,7 +25384,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4503,
+      "line": 4511,
       "signature": "LOpaque",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25384,7 +25395,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4503,
+      "line": 4511,
       "signature": "LReprBytes(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25395,7 +25406,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4509,
+      "line": 4517,
       "signature": "fn bind_append(binds: Vec[Pair[Bytes, LVal]], n: Bytes, v: LVal) => Vec[Pair[Bytes, LVal]]",
       "summary": "bind_append: append one `(name, val)` binding to the END of `binds` -- mirrors Rust's `binds.push((n.clone(), val.clone()))` exactly (order-preserving; bounded by one pattern's own binder count, never source-input-driven, so no depth budget is warranted -- the same class of bounded structural recursion as `pat_append`/`ty_append` above).",
       "tag": "Empirical/Declared"
@@ -25406,7 +25417,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4522,
+      "line": 4530,
       "signature": "fn ctorinfo_any_named(ctors: Vec[CtorInfo], n: Bytes) => Bool",
       "summary": "lval_ident_is_ctor_of / ctorinfo_any_named: mirrors try_match's `Ident` guard `self.env.types.get(ty).is_some_and(|d| d.ctors.iter().any(|c| c.name == *n))` over the ALREADY -ported `types_lookup`/`di_ctors`/`ci_name` registry accessors (increment 8, M-1013 STEP 3) -- no new registry machinery needed, only the `.any(name == n)` scan.",
       "tag": "Empirical/Declared"
@@ -25417,7 +25428,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4528,
+      "line": 4536,
       "signature": "fn lval_ident_is_ctor_of(types: Vec[DataInfo], ty: Bytes, n: Bytes) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25428,7 +25439,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4539,
+      "line": 4547,
       "signature": "fn lval_try_match(types: Vec[DataInfo], pat: Pattern, val: LVal, binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]",
       "summary": "lval_try_match: the ported fragment (mirrors eval.rs::Evaluator::try_match's `Wildcard`/`Ident`/ `Ctor`/`Tuple`/`Or` arms exactly; `Lit` refuses per FLAG-semcore-35). `site` is DROPPED (the FLAG-semcore-13 precedent: the differential asserts `Ok`/`Err` + the resulting `(bool, binds)`, never the message bytes) -- both the oracle's `L1Error` and this fn's `Bytes` message collapse to `Err(())` on the marshalling harness's `decode_result`.",
       "tag": "Empirical/Declared"
@@ -25439,7 +25450,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4596,
+      "line": 4604,
       "signature": "fn lval_match_zip(types: Vec[DataInfo], subs: Vec[Pattern], fields: Vec[LVal], binds: Vec[Pair[Bytes, LVal]]) => Result[Pair[Bool, Vec[Pair[Bytes, LVal]]], Bytes]",
       "summary": "lval_match_zip: the `Ctor` arm's `for (sub, fv) in subs.iter().zip(fields.iter())` loop, restated as a fold that THREADS `binds` and short-circuits `Ok(false)` on the first sub-pattern mismatch -- mirrors Rust's `zip` early-stop-at-the-shorter-list semantics exactly (a length mismatch between `subs`/`fields` never occurs in a checked program; where it would, `zip` silently stops rather than erroring, and so does this fold, for byte-for-byte behavioral parity).",
       "tag": "Empirical/Declared"
@@ -25450,7 +25461,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4631,
+      "line": 4639,
       "signature": "fn paradigm_name(t: Ty) => Option[Bytes]",
       "summary": "paradigm_name: mirrors checkty.rs::paradigm_name (checkty.rs 7175-7197) — the swap-paradigm name of a representation type, for the never-silent cross-paradigm framing (RFC-0001 §4.1 / M-892). The four swap-paradigms (Binary/Ternary/Dense/VSA) name themselves; every other `Ty` is `None` — `Seq`/`Bytes`/`Float` are first-class reprs but not v0 swap-paradigms (RFC-0032 D3/D4, ADR-040 §5), and `Data`/`Substrate`/`Var`/`Fn` are not representation types at all (RFC-0024 §3). All 11 arms are enumerated EXPLICITLY (no `_` wildcard), exactly as the Rust does: a future `Ty` variant must force a paradigm decision here, never be absorbed into a silent `None` (G2 — never-silent).",
       "tag": "Empirical/Declared"
@@ -25461,7 +25472,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4657,
+      "line": 4665,
       "signature": "fn cons_list_scan(ctors: Vec[CtorInfo], name: Bytes, nparams: Binary{32}, nil: Option[Bytes], cons: Option[Bytes]) => Pair[Option[Bytes], Option[Bytes]]",
       "summary": "cons_list_scan: checkty.rs::cons_list_ctors's `for c in &di.ctors { match c.fields.len() ... }` mutable-accumulator loop, restated as a threaded fold over the ctor list carrying the `(nil_name?, cons_name?)` pair (the FLAG-semcore-6 value-threaded collapse of the two `mut` locals). The field-count dispatch mirrors the Rust exactly: 0 fields -> record `nil`; exactly 2 fields whose SECOND is the recursive `Data(name, ..)` self-reference at the type's own arity -> record `cons`; every other shape leaves the accumulator untouched. The 1-field and 3+-field shapes fall to Rust's OUTER `match c.fields.len() { _ => {} }` (the `Nil`/`Cons(_, _)` inner arms below); a 2-field ctor whose 2nd field is NOT the `Data(..)` self-reference falls to Rust's inner `if let Ty::Data(..) = &c.fields[1] { .. } else {}` (the `_` arm on `f1` below). `&c.fields[1]` (Rust indexing) is expressed structurally as the exactly-two-elements shape (`Cons(_, Cons(f1, Nil))`), destructured one level at a time per this nodule's single-level-pattern convention.",
       "tag": "Empirical/Declared"
@@ -25472,7 +25483,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4688,
+      "line": 4696,
       "signature": "fn cons_list_ctors(types: Vec[DataInfo], expected: Ty) => Option[Pair[Bytes, Bytes]]",
       "summary": "cons_list_ctors: mirrors checkty.rs::cons_list_ctors (checkty.rs 3592-3624) — recognizes whether `expected` is a 2-constructor linked-list type (one nullary \"nil\" ctor; one binary \"cons\" ctor whose SECOND field is the recursive `Data(name, ..)` self-reference at the type's own arity) and returns `(nil_name, cons_name)`; every non-conforming shape yields `None` (never a silent reinterpret — the `Seq{T,N}`/no-context paths stay untouched). Pure structural registry inspection: no Env, no evaluator, no kernel `Value`. `BTreeMap<String, DataInfo>` is the already-established FLAG-semcore-4 `Vec[DataInfo]` + `types_lookup` (no new deviation). The Rust `di.ctors.len() != 2` early-return is expressed by matching the ctor list's shape to exactly two elements before scanning (one level at a time per the single-level-pattern convention).",
       "tag": "Empirical/Declared"
@@ -25483,7 +25494,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4733,
+      "line": 4741,
       "signature": "fn strength_or(a: Option[Strength], b: Option[Strength]) => Option[Strength]",
       "summary": "strength_or: `Option[Strength]::or` — keep the left guarantee if present, else take the right. The exact semantics of `tr.guarantee.or(concrete.guarantee)`: an occurrence's own `@ g` wins over the concrete type's, and a bare occurrence inherits the concrete's guarantee.",
       "tag": "Empirical/Declared"
@@ -25494,7 +25505,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4736,
+      "line": 4744,
       "signature": "fn subst_typeref_list(trs: Vec[TypeRef], param: Bytes, concrete: TypeRef) => Vec[TypeRef]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -25505,7 +25516,7 @@
       "phylum": "compiler",
       "nodule": "compiler.semcore",
       "file": "lib/compiler/semcore.myc",
-      "line": 4743,
+      "line": 4751,
       "signature": "fn subst_type_param_in_typeref(tr: TypeRef, param: Bytes, concrete: TypeRef) => TypeRef",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -31517,6 +31528,94 @@
       "tag": "Empirical/Declared"
     },
     {
+      "symbol": "std.derive_prelude",
+      "kind": "nodule",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 7,
+      "signature": "nodule std.derive_prelude",
+      "summary": "DN-138 WU-1 — the missing primitive/std-type derive-instances: `Init`/`Ord3` over",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::init",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 27,
+      "signature": "fn init() => Binary{64}",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::init",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 35,
+      "signature": "fn init() => Bool",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::init",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 41,
+      "signature": "fn init() => Bytes",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::cmp",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 57,
+      "signature": "fn cmp(a: Binary{64}, b: Binary{64}) => Binary{8}",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::cmp",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 66,
+      "signature": "fn cmp(a: Bool, b: Bool) => Binary{8}",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::bytes_cmp_from",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 73,
+      "signature": "fn bytes_cmp_from(a: Bytes, b: Bytes, i: Binary{32}, la: Binary{32}, lb: Binary{32}) => Binary{8}",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.derive_prelude::cmp",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.derive_prelude",
+      "file": "lib/std/derive_prelude.myc",
+      "line": 102,
+      "signature": "fn cmp(a: Bytes, b: Bytes) => Binary{8}",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
       "symbol": "std.diag",
       "kind": "nodule",
       "phylum": "std",
@@ -32138,7 +32237,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 82,
+      "line": 87,
       "signature": "type Result[A, E] = Ok(A) | Err(E)",
       "summary": "Never-silent floor (C1/I1) carried over intact: every ported op either transforms the sum (the error/absence survives in the result), re-propagates it, or explicitly recovers it with an honest tag (never upgraded — VR-5). No ported op silently drops an `Err`/`None`. Result/Option — local mirrors of std.result/std.option (see the self-containment note above).",
       "tag": "Empirical/Declared"
@@ -32149,7 +32248,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 82,
+      "line": 87,
       "signature": "Err(E)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32160,7 +32259,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 82,
+      "line": 87,
       "signature": "Ok(A)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32171,7 +32270,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 84,
+      "line": 89,
       "signature": "type Option[A] = Some(A) | None",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32182,7 +32281,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 84,
+      "line": 89,
       "signature": "None",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32193,30 +32292,8 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 84,
+      "line": 89,
       "signature": "Some(A)",
-      "summary": null,
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.error::Unit",
-      "kind": "type",
-      "phylum": "std",
-      "nodule": "std.error",
-      "file": "lib/std/error.myc",
-      "line": 88,
-      "signature": "type Unit = U",
-      "summary": "Unit — a local nullary-marker substitute for the missing `() => T` closure-domain form (see the substitution note above). A single-constructor, no-field type — not a new *kind* of type (KC-3).",
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.error::Unit::U",
-      "kind": "ctor",
-      "phylum": "std",
-      "nodule": "std.error",
-      "file": "lib/std/error.myc",
-      "line": 88,
-      "signature": "U",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -32226,7 +32303,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 96,
+      "line": 97,
       "signature": "fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E]",
       "summary": "map/map_err/and_then/or_else duplicate std.result's landed combinators of the same name (see the self-containment note above) — same semantics, same guarantee (Declared: type-level contract; differential agreement Empirical, std_error.rs), carried at the SAME strength (VR-5). map: apply `f` to the success value; an Err passes through untouched (error preserved in sum).",
       "tag": "Empirical/Declared"
@@ -32237,7 +32314,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 100,
+      "line": 101,
       "signature": "fn map_err[A, E, F](r: Result[A, E], f: E => F) => Result[A, F]",
       "summary": "map_err: transform the error; an Ok passes through untouched (the Err-side mirror of map).",
       "tag": "Empirical/Declared"
@@ -32248,7 +32325,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 105,
+      "line": 106,
       "signature": "fn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E]",
       "summary": "and_then: monadic bind — apply `f` to the success value; an Err short-circuits and propagates (never dropped).",
       "tag": "Empirical/Declared"
@@ -32259,7 +32336,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 110,
+      "line": 111,
       "signature": "fn or_else[A, E](r: Result[A, E], f: E => Result[A, E]) => Result[A, E]",
       "summary": "or_else: explicit recovery hook — apply `f` to the error; an Ok passes through. `f` must yield a Result (recover or re-propagate — never a drop).",
       "tag": "Empirical/Declared"
@@ -32270,7 +32347,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 115,
+      "line": 116,
       "signature": "fn filter[A](o: Option[A], predicate: A => Bool) => Option[A]",
       "summary": "filter: Some(x) where predicate(x) is False becomes None — a typed transition (named absence), not a silent loss (I1/C1).",
       "tag": "Empirical/Declared"
@@ -32281,7 +32358,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 123,
+      "line": 124,
       "signature": "fn inspect[A, E, B](r: Result[A, E], f: A => B) => Result[A, E]",
       "summary": "inspect: peek the Ok side; the value and sum shape are unchanged. `.myc` closures carry no declared-effect annotations in HOF stage 1 (RFC-0024 §3) — unlike the Rust crate's `FnOnce(&T)`, `f`'s return value is computed and then discarded (never observed further), so this combinator is honestly a structural peek, not an effect-tracked one (no RFC-0016 C6 obligation to discharge since `.myc` has no closure-effect surface yet — captured, not faked).",
       "tag": "Empirical/Declared"
@@ -32292,7 +32369,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 132,
+      "line": 133,
       "signature": "fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E]",
       "summary": "inspect_err: peek the Err side; the value and propagation are unchanged (mirror of inspect).",
       "tag": "Empirical/Declared"
@@ -32303,7 +32380,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 142,
+      "line": 143,
       "signature": "fn ok_or[A, E](o: Option[A], err: E) => Result[A, E]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32314,9 +32391,9 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 147,
+      "line": 148,
       "signature": "fn ok_or_else[A, E](o: Option[A], f: Unit => E) => Result[A, E]",
-      "summary": "ok_or_else: None becomes Err(f(U)) — a lazily-computed error (see the Unit substitution note above; f is only invoked on the None arm, so laziness is preserved).",
+      "summary": "ok_or_else: None becomes Err(f(Unit)) — a lazily-computed error (see the Unit substitution note above; f is only invoked on the None arm, so laziness is preserved).",
       "tag": "Empirical/Declared"
     },
     {
@@ -32325,7 +32402,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 155,
+      "line": 156,
       "signature": "fn ok[A, E](r: Result[A, E]) => Option[A]",
       "summary": "ok: Result -> Option. FLAGGED LOSSY CONVERSION (spec §7-Q2/C3): the one op in this surface that discards `E` (Err -> None). C1-honest only because it is an explicitly-named, EXPLAIN-able lossy conversion (this doc comment), never an unflagged drop. Whether it should be gated behind an unmissable name (e.g. ok_discarding_err) awaits RFC-0016 §8-Q3 ratification (spec FLAG Q2, carried over unresolved — not this port's call to make).",
       "tag": "Empirical/Declared"
@@ -32336,7 +32413,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 160,
+      "line": 161,
       "signature": "fn flatten[A, E](r: Result[Result[A, E], E]) => Result[A, E]",
       "summary": "flatten: collapse a nested Result; the inner Err propagates to the outer — no wrapping is discarded silently.",
       "tag": "Empirical/Declared"
@@ -32347,7 +32424,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 172,
+      "line": 173,
       "signature": "fn unwrap_or[A, E](r: Result[A, E], fallback: A) => A",
       "summary": "unwrap_or/unwrap_or_else duplicate std.result's landed combinators of the same name (Result side); unwrap_or_option/unwrap_or_else_option duplicate std.option's `unwrap_or`/generalize it with a lazy default (Option side) — see the self-containment note above. Guarantee: Declared (RFC-0014 I2/VR-5 — the substituted default is asserted, not proven; downgrade is the rule). Never-silent (I1/C1): the caller supplies the default/closure explicitly — no panic, no sentinel. unwrap_or: the success value, else the caller-supplied fallback.",
       "tag": "Empirical/Declared"
@@ -32358,7 +32435,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 176,
+      "line": 177,
       "signature": "fn unwrap_or_else[A, E](r: Result[A, E], f: E => A) => A",
       "summary": "unwrap_or_else: the success value, else a computed fallback from the error.",
       "tag": "Empirical/Declared"
@@ -32369,7 +32446,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 180,
+      "line": 181,
       "signature": "fn unwrap_or_option[A](o: Option[A], fallback: A) => A",
       "summary": "unwrap_or_option: the held value, else the caller-supplied fallback (Option variant).",
       "tag": "Empirical/Declared"
@@ -32380,7 +32457,7 @@
       "phylum": "std",
       "nodule": "std.error",
       "file": "lib/std/error.myc",
-      "line": 185,
+      "line": 186,
       "signature": "fn unwrap_or_else_option[A](o: Option[A], f: Unit => A) => A",
       "summary": "unwrap_or_else_option: the held value, else a computed fallback (see the Unit substitution note above; f is only invoked on the None arm).",
       "tag": "Empirical/Declared"
@@ -32393,7 +32470,7 @@
       "file": "lib/std/fmt.myc",
       "line": 8,
       "signature": "nodule std.fmt",
-      "summary": "Self-hosted first-order formatting: hex-digit conversion and two-digit hex encoding.",
+      "summary": "Self-hosted first-order formatting: hex-digit conversion and two-digit hex encoding,",
       "tag": "Empirical/Declared"
     },
     {
@@ -32402,9 +32479,9 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 27,
+      "line": 30,
       "signature": "type HexPair = HP(Binary{8}, Binary{8})",
-      "summary": "of a Binary{8} byte. M-717 (E13-1, #462). Self-contained: no import of std.collections or std.text (not available in this worktree; must not be imported per worktree discipline). Guarantee: `hex_digit` is total over its finite nibble domain (Binary{8} inputs 0..15) — the case split is match-defined via `lt` + `add_u` making each in-range arm Exact; nibble >= 16 returns '?' (0x3F), never-silent (G2: the fallback is explicit, not a silent wrap). `nibble_lo(x)` is Exact (total bit-mask over Binary{8}). `nibble_hi(x)` is Exact over the 16 possible masked values via a 4-level lt binary-search match tree — implementable without a right-shift prim. `to_hex` is Declared (structural composition of nibble_hi/nibble_lo + hex_digit). Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials, std_fmt.rs). Honesty boundary: no reflective `display(Value)` — .myc has no Value introspection; fmt is first-order over concrete types only. Grounding: hand-computed values, three-way verified (L1≡L0≡AOT). crates/mycelium-std-fmt exists but exposes a different Ring-2 surface (no hex_digit/to_hex) — it is not the structural oracle. ── HexPair — the two ASCII hex-digit bytes of a byte encoding ──────────────────────────────────── HexPair: carries the high-nibble digit and the low-nibble digit as ASCII bytes (Binary{8}). Used as the return type of `to_hex` so the result is a first-class value pair. (A Bytes return would require bytes_concat which is not surface-callable — see FLAG-text-3 in text.myc.)",
+      "summary": "plus (DN-127/M-1090 WU-1) decimal int-to-Bytes rendering (`digit_byte`/`to_dec`/`to_dec_s`) and `impl Show` for the primitive reprs (`Binary{64}`, `Bytes`, `Bool`) — the value-to-text PROBLEM's native answer (pure `render: T => Bytes`, no new kernel prim, KC-3 held). of a Binary{8} byte. M-717 (E13-1, #462). Self-contained: no import of std.collections or std.text (not available in this worktree; must not be imported per worktree discipline). Guarantee: `hex_digit` is total over its finite nibble domain (Binary{8} inputs 0..15) — the case split is match-defined via `lt` + `add_u` making each in-range arm Exact; nibble >= 16 returns '?' (0x3F), never-silent (G2: the fallback is explicit, not a silent wrap). `nibble_lo(x)` is Exact (total bit-mask over Binary{8}). `nibble_hi(x)` is Exact over the 16 possible masked values via a 4-level lt binary-search match tree — implementable without a right-shift prim. `to_hex` is Declared (structural composition of nibble_hi/nibble_lo + hex_digit). Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials, std_fmt.rs). Honesty boundary: no reflective `display(Value)` — .myc has no Value introspection; fmt is first-order over concrete types only. Grounding: hand-computed values, three-way verified (L1≡L0≡AOT). crates/mycelium-std-fmt exists but exposes a different Ring-2 surface (no hex_digit/to_hex) — it is not the structural oracle. ── HexPair — the two ASCII hex-digit bytes of a byte encoding ──────────────────────────────────── HexPair: carries the high-nibble digit and the low-nibble digit as ASCII bytes (Binary{8}). Used as the return type of `to_hex` so the result is a first-class value pair. (A Bytes return would require bytes_concat which is not surface-callable — see FLAG-text-3 in text.myc.)",
       "tag": "Empirical/Declared"
     },
     {
@@ -32413,7 +32490,7 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 27,
+      "line": 30,
       "signature": "HP(Binary{8}, Binary{8})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32424,7 +32501,7 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 39,
+      "line": 42,
       "signature": "fn hex_digit(nibble: Binary{8}) => Binary{8}",
       "summary": "Guarantee: Exact over the finite in-range domain (0..15) — the `lt`/`add_u` computation is a closed-form arithmetic on the finite range; Declared for the fallback arm (structurally necessary; unreachable for well-formed nibbles, never-silent for malformed ones). The `lt` prim returns Binary{1}; we use a match { 0b1 => …, _ => … } bridge.",
       "tag": "Empirical/Declared"
@@ -32435,7 +32512,7 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 48,
+      "line": 51,
       "signature": "fn nibble_lo(x: Binary{8}) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -32446,7 +32523,7 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 60,
+      "line": 63,
       "signature": "fn nibble_hi(x: Binary{8}) => Binary{8}",
       "summary": "The masked value `m = and(x, 0b1111_0000)` is one of exactly 16 values; every Binary{8} produces exactly one leaf via the 4-branch binary search (Exact). Each leaf returns the nibble value (masked 0x00 → nibble 0, 0x10 → nibble 1, …, 0xf0 → nibble 15) as a Binary{8} constant.",
       "tag": "Empirical/Declared"
@@ -32457,8 +32534,74 @@
       "phylum": "std",
       "nodule": "std.fmt",
       "file": "lib/std/fmt.myc",
-      "line": 92,
+      "line": 95,
       "signature": "fn to_hex(x: Binary{8}) => HexPair",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::digit_byte",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 125,
+      "signature": "fn digit_byte(d: Binary{8}) => Bytes",
+      "summary": "SECOND CORRECTION over DN-127 §3's own sketch (found by `myc check`, not asserted — VR-5): the sketch wrote bare-decimal match patterns (`0 => \"0\", 1 => \"1\", …`), expecting RFC-0012 §4.3 ambient resolution to fill their width from the `Binary{8}` scrutinee. Empirically that does NOT happen outside an explicit `with paradigm Binary { … }` block: the ambient-resolution PRE-PASS (`crate::ambient::resolve`) only rewrites a bare `Literal::Int` to a width-resolvable `Literal::AmbientInt` when it is lexically inside such a block (`ambient.rs:761-784`, \"with no ambient it stays `Literal::Int`\" — the checker's *own* per-callsite anchoring, verified working for `lt(n, 10)`/`div_u(n, 10)`-style call ARGUMENTS above §6553-6588, never fires for a bare literal in this position because it never reaches the checker as `AmbientInt` in the first place). Confirmed by `myc check`: the original bare-decimal-pattern form failed with \"a bare integer literal has no representation family (no cross-family defaulting, Q6)\". Fixed here with explicit `Binary{8}` literals — no ambient dependency, and the same style every other `.myc` nodule in this tree already uses (`hex_digit` above, `text.myc`, `math.myc`) — never faked, never silently downgraded past what actually checks (VR-5/G2). `_ => \"?\"` is the never-silent fallback (G2) — unreachable for an in-range digit (`to_dec` below only ever narrows a value already proven `< 10` into this domain), explicit for a malformed one (mirrors `hex_digit`'s own `_ => 0b0011_1111` ('?')).",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::to_dec",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 161,
+      "signature": "fn to_dec(n: Binary{64}) => Bytes",
+      "summary": "Guarantee: Exact over the base case (a single in-range digit — `to_dec(0) = \"0\"`, the base case fires immediately since `0 < 10`); Declared for the recursive composition (structural, correct by construction for the itoa recurrence — decreasing, since `div_u(n, 10) < n` for `n >= 10` — not a machine-proven termination bound). Three-way differential agreement is Empirical (trials).",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::to_dec_s",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 196,
+      "signature": "fn to_dec_s(n: Binary{64}) => Bytes",
+      "summary": "Guarantee: Declared (structural composition of Exact/Declared parts). Honest residual (checked, not glossed): `neg_s` on the minimum representable `Binary{64}` value (two's-complement `i64::MIN`) has no positive-magnitude representation and is a never-silent runtime `Overflow` refusal (`neg_s`'s own contract, M-766) — `to_dec_s` inherits that refusal rather than silently wrapping or truncating (G2), for exactly that one boundary value.",
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::render",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 222,
+      "signature": "fn render(x: Binary{64}) => Bytes",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::render",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 228,
+      "signature": "fn render(x: Bytes) => Bytes",
+      "summary": null,
+      "tag": "Empirical/Declared"
+    },
+    {
+      "symbol": "std.fmt::render",
+      "kind": "fn",
+      "phylum": "std",
+      "nodule": "std.fmt",
+      "file": "lib/std/fmt.myc",
+      "line": 235,
+      "signature": "fn render(x: Bool) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -33420,28 +33563,6 @@
       "tag": "Empirical/Declared"
     },
     {
-      "symbol": "std.recover::Unit",
-      "kind": "type",
-      "phylum": "std",
-      "nodule": "std.recover",
-      "file": "lib/std/recover.myc",
-      "line": 107,
-      "signature": "type Unit = U",
-      "summary": "Unit — the nullary-marker substitute for the missing `() => T` closure-domain form (std.error.myc precedent).",
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.recover::Unit::U",
-      "kind": "ctor",
-      "phylum": "std",
-      "nodule": "std.recover",
-      "file": "lib/std/recover.myc",
-      "line": 107,
-      "signature": "U",
-      "summary": null,
-      "tag": "Empirical/Declared"
-    },
-    {
       "symbol": "std.recover::Guarantee",
       "kind": "type",
       "phylum": "std",
@@ -33449,7 +33570,7 @@
       "file": "lib/std/recover.myc",
       "line": 111,
       "signature": "type Guarantee = GExact | GProven | GEmpirical | GDeclared",
-      "summary": "Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).",
+      "summary": "Unit — the missing `() => T` closure-domain form (std.error.myc precedent) is filled by the built-in PRELUDE `Unit` type since DN-137/M-1102 (a hand-seeded `type Unit = Unit;`, `checkty::unit_prelude`); the local nullary-marker redeclaration this file used to carry here is gone (it would now collide with the prelude — \"duplicate type declaration\"). Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).",
       "tag": "Empirical/Declared"
     },
     {
@@ -36505,7 +36626,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 117,
+      "line": 118,
       "signature": "type Result[A, E] = Ok(A) | Err(E)",
       "summary": "Never-silent floor (C1/G2) carried over intact: a hash mismatch is the explicit, named HashMismatch(expected, found) — both hashes carried (G11) — never a silent accept; a missing/ambiguous deploy input is the named DeployError; an over-strength resonator manifest is unrepresentable through `manifest_new`/`regrowth_new` (the FR-C2 ceiling, VR-5). Guarantee tags (VR-5, carried at the SAME strength as the Rust crate's matrix): identity/verify/ manifest/validate/display ops Exact (deterministic, no accuracy semantics); germinate Empirical (the native deploy path is not proven end-to-end — the oracle's own tag, never upgraded by translation); the no-opaque-lowering check Declared (structural assertion, MLIR pending); matrix row DATA Declared (hand-transcribed, live-oracle-checked in std_spore.rs); differential agreement Empirical (std_spore.rs). ── local mirrors (single-nodule harness — see the substitution notes above) ────────────────────",
       "tag": "Empirical/Declared"
@@ -36516,7 +36637,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 117,
+      "line": 118,
       "signature": "Err(E)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36527,7 +36648,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 117,
+      "line": 118,
       "signature": "Ok(A)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36538,7 +36659,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 119,
+      "line": 120,
       "signature": "type Option[A] = Some(A) | None",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36549,7 +36670,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 119,
+      "line": 120,
       "signature": "None",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36560,7 +36681,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 119,
+      "line": 120,
       "signature": "Some(A)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36571,7 +36692,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 121,
+      "line": 122,
       "signature": "type Vec[A] = Nil | Cons(A, Vec[A])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36582,7 +36703,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 121,
+      "line": 122,
       "signature": "Cons(A, Vec[A])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36593,30 +36714,8 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 121,
+      "line": 122,
       "signature": "Nil",
-      "summary": null,
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.spores::Unit",
-      "kind": "type",
-      "phylum": "std",
-      "nodule": "std.spores",
-      "file": "lib/std/spore.myc",
-      "line": 124,
-      "signature": "type Unit = U",
-      "summary": "Unit — the nullary marker for `verify`'s `Ok(())` (std.error/std.recover precedent).",
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.spores::Unit::U",
-      "kind": "ctor",
-      "phylum": "std",
-      "nodule": "std.spores",
-      "file": "lib/std/spore.myc",
-      "line": 124,
-      "signature": "U",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -36626,9 +36725,9 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 128,
+      "line": 130,
       "signature": "type Guarantee = GExact | GProven | GEmpirical | GDeclared",
-      "summary": "Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).",
+      "summary": "Unit — the nullary marker for `verify`'s `Ok(())` (std.error/std.recover precedent) is the built-in PRELUDE `Unit` type since DN-137/M-1102 (`type Unit = Unit;`, `checkty::unit_prelude`); the local redeclaration this file used to carry here is gone (would now collide with the prelude — \"duplicate type declaration\"). Guarantee — the kernel `GuaranteeStrength` lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` as VALUE-level data, `G`-prefixed (reserved-keyword substitution; std.diag precedent).",
       "tag": "Empirical/Declared"
     },
     {
@@ -36637,7 +36736,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 128,
+      "line": 130,
       "signature": "GDeclared",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36648,7 +36747,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 128,
+      "line": 130,
       "signature": "GEmpirical",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36659,7 +36758,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 128,
+      "line": 130,
       "signature": "GExact",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36670,7 +36769,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 128,
+      "line": 130,
       "signature": "GProven",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36681,7 +36780,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 131,
+      "line": 133,
       "signature": "fn bool_and(a: Bool, b: Bool) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36692,7 +36791,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 134,
+      "line": 136,
       "signature": "fn bool_not(a: Bool) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36703,7 +36802,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 138,
+      "line": 140,
       "signature": "fn bool_text(b: Bool) => Bytes",
       "summary": "bool_text: the Rust `Display for bool` rendering (\"true\"/\"false\") — Exact.",
       "tag": "Empirical/Declared"
@@ -36714,7 +36813,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 142,
+      "line": 144,
       "signature": "fn cat(a: Bytes, b: Bytes) => Bytes",
       "summary": "cat: byte-string concatenation (the Exact, total bytes_concat prim — RFC-0032 D4).",
       "tag": "Empirical/Declared"
@@ -36725,7 +36824,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 145,
+      "line": 147,
       "signature": "fn b32_zero() => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36736,7 +36835,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 148,
+      "line": 150,
       "signature": "fn b32_one() => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36747,7 +36846,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 151,
+      "line": 153,
       "signature": "fn b32_two() => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36758,7 +36857,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 154,
+      "line": 156,
       "signature": "fn b32_three() => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36769,7 +36868,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 157,
+      "line": 159,
       "signature": "fn b32_four() => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36780,7 +36879,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 162,
+      "line": 164,
       "signature": "fn nonempty(b: Bytes) => Bool",
       "summary": "nonempty: True iff `b` has at least one byte (bytes_len is the Exact prim at Binary{32}; std.diag/std.recover precedent).",
       "tag": "Empirical/Declared"
@@ -36791,7 +36890,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 169,
+      "line": 171,
       "signature": "fn bytes_eq_from(a: Bytes, b: Bytes, i: Binary{32}, n: Binary{32}) => Bool",
       "summary": "bytes_eq_from: equal-length tail comparison over [i, n) — 4 bytes per recursion frame so a canonical 71-byte content-hash string fits the L1 depth budget (see the substitution note). Every bytes_get is bounds-guarded by the preceding `eq(index, n)` check, so the prim's out-of-range refusal is unreachable by construction (total on its domain). Exact.",
       "tag": "Empirical/Declared"
@@ -36802,7 +36901,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 199,
+      "line": 201,
       "signature": "fn bytes_eq(a: Bytes, b: Bytes) => Bool",
       "summary": "bytes_eq: whole byte-string equality composed from the D4 prims (no equality prim exists — the gap std.diag FLAGged; this is the honest composition, not a fabricated prim). Exact.",
       "tag": "Empirical/Declared"
@@ -36813,7 +36912,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 206,
+      "line": 208,
       "signature": "fn vec_is_empty[A](xs: Vec[A]) => Bool",
       "summary": "vec_is_empty: structural emptiness — Exact.",
       "tag": "Empirical/Declared"
@@ -36824,7 +36923,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 211,
+      "line": 213,
       "signature": "fn strength_rank(g: Guarantee) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36835,7 +36934,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 220,
+      "line": 222,
       "signature": "fn guarantee_eq(a: Guarantee, b: Guarantee) => Bool",
       "summary": "guarantee_eq: lattice-tag equality via the injective rank map — Exact.",
       "tag": "Empirical/Declared"
@@ -36846,7 +36945,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 227,
+      "line": 229,
       "signature": "type SporeErr = HashMismatch(Bytes, Bytes) | PublishErr(Bytes) | IoErr(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36857,7 +36956,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 227,
+      "line": 229,
       "signature": "HashMismatch(Bytes, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36868,7 +36967,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 227,
+      "line": 229,
       "signature": "IoErr(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36879,7 +36978,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 227,
+      "line": 229,
       "signature": "PublishErr(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36890,7 +36989,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 231,
+      "line": 233,
       "signature": "fn spore_err_display(e: SporeErr) => Bytes",
       "summary": "spore_err_display: the oracle's `Display for SporeErr`, byte-for-byte (differentially checked against `mycelium-std-spore` in std_spore.rs). Exact (deterministic concat of Exact prims).",
       "tag": "Empirical/Declared"
@@ -36901,7 +37000,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 247,
+      "line": 249,
       "signature": "type SporeUnit = Spore(Bytes, Vec[Bytes], Option[ReconManifest])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36912,7 +37011,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 247,
+      "line": 249,
       "signature": "Spore(Bytes, Vec[Bytes], Option[ReconManifest])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -36923,7 +37022,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 252,
+      "line": 254,
       "signature": "fn spore_carry(id: Bytes, surface: Vec[Bytes], m: Option[ReconManifest]) => SporeUnit",
       "summary": "spore_carry: wrap a kernel-minted identity + surface + manifest as a SporeUnit. This is the carry seam for FLAG-spore-2/-3 (the Rust constructors from_manifest/from_value run the M-368 pipeline; this handle only ever CARRIES their output). Exact; total.",
       "tag": "Empirical/Declared"
@@ -36934,7 +37033,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 256,
+      "line": 258,
       "signature": "fn identity(s: SporeUnit) => Bytes",
       "summary": "identity: the spore's canonical content-addressed identity (ADR-003). Exact; total.",
       "tag": "Empirical/Declared"
@@ -36945,7 +37044,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 260,
+      "line": 262,
       "signature": "fn spore_surface(s: SporeUnit) => Vec[Bytes]",
       "summary": "spore_surface: the germination surface (export list). Exact; total.",
       "tag": "Empirical/Declared"
@@ -36956,7 +37055,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 265,
+      "line": 267,
       "signature": "fn manifest_of(s: SporeUnit) => Option[ReconManifest]",
       "summary": "manifest_of: the reconstruction manifest, if carried — None is honest absence, never a fabricated empty manifest (C1/G2). Exact.",
       "tag": "Empirical/Declared"
@@ -36967,9 +37066,9 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 272,
+      "line": 274,
       "signature": "fn verify_identity(declared: Bytes, recomputed: Bytes) => Result[Unit, SporeErr]",
-      "summary": "verify_identity: the COMPARISON half of verify (FLAG-spore-2 carries the recomputation half to the kernel): equal → Ok(U); divergent → the explicit, named HashMismatch(declared, recomputed) — never a silent accept (C1/G2). `expected` is the declared identity, `found` the recomputed one (the oracle's field convention). Exact (deterministic comparison).",
+      "summary": "verify_identity: the COMPARISON half of verify (FLAG-spore-2 carries the recomputation half to the kernel): equal → Ok(Unit); divergent → the explicit, named HashMismatch(declared, recomputed) — never a silent accept (C1/G2). `expected` is the declared identity, `found` the recomputed one (the oracle's field convention). Exact (deterministic comparison).",
       "tag": "Empirical/Declared"
     },
     {
@@ -36978,7 +37077,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 279,
+      "line": 281,
       "signature": "fn verify(s: SporeUnit, recomputed: Bytes) => Result[Unit, SporeErr]",
       "summary": "verify: the spore self-check against a kernel-recomputed identity. Exact.",
       "tag": "Empirical/Declared"
@@ -36989,7 +37088,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 284,
+      "line": 286,
       "signature": "type ReconMode = IndexedRetrieval | CompositionalReconstruction",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37000,7 +37099,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 284,
+      "line": 286,
       "signature": "CompositionalReconstruction",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37011,7 +37110,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 284,
+      "line": 286,
       "signature": "IndexedRetrieval",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37022,7 +37121,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 287,
+      "line": 289,
       "signature": "type DecodeProcedure = Cleanup | Resonator",
       "summary": "The kernel DecodeProcedure — Cleanup (nearest-atom) or Resonator (probabilistic-only, FR-C2).",
       "tag": "Empirical/Declared"
@@ -37033,7 +37132,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 287,
+      "line": 289,
       "signature": "Cleanup",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37044,7 +37143,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 287,
+      "line": 289,
       "signature": "Resonator",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37055,7 +37154,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 292,
+      "line": 294,
       "signature": "type Basis = ProvenThm(Bytes) | EmpiricalFit(Binary{32}, Bytes) | UserDeclared",
       "summary": "Basis — the kernel BoundBasis: the evidence class behind a bound certificate. ProvenThm carries its citation; EmpiricalFit its trials (Binary{32} domain substitution) + method; UserDeclared is the unvalidated assertion (always flagged).",
       "tag": "Empirical/Declared"
@@ -37066,7 +37165,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 292,
+      "line": 294,
       "signature": "EmpiricalFit(Binary{32}, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37077,7 +37176,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 292,
+      "line": 294,
       "signature": "ProvenThm(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37088,7 +37187,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 292,
+      "line": 294,
       "signature": "UserDeclared",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37099,7 +37198,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 296,
+      "line": 298,
       "signature": "fn basis_strength(b: Basis) => Guarantee",
       "summary": "basis_strength: the honest strength a basis implies (the basis IS the evidence class — kernel BoundBasis::strength, mirrored exactly; VR-5). Exact.",
       "tag": "Empirical/Declared"
@@ -37110,7 +37209,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 301,
+      "line": 303,
       "signature": "fn exceeds_empirical_ceiling(b: Basis) => Bool",
       "summary": "exceeds_empirical_ceiling: True iff the basis implies a strength STRONGER than Empirical (rank < 2 — i.e. Exact or Proven): the FR-C2 probabilistic-regrowth ceiling test. Exact.",
       "tag": "Empirical/Declared"
@@ -37121,7 +37220,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 306,
+      "line": 308,
       "signature": "fn resonator_over_strength(dec: DecodeProcedure, b: Basis) => Bool",
       "summary": "resonator_over_strength: the FR-C2 violation predicate — a Resonator decode whose basis exceeds the Empirical ceiling. A Cleanup decode has no resonator ceiling. Exact.",
       "tag": "Empirical/Declared"
@@ -37132,7 +37231,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 310,
+      "line": 312,
       "signature": "type MalformedManifest = ResonatorOverStrength | KernelWf",
       "summary": "MalformedManifest — a refusal from manifest validation, explicitly named (C1/G2/G11).",
       "tag": "Empirical/Declared"
@@ -37143,7 +37242,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 310,
+      "line": 312,
       "signature": "KernelWf",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37154,7 +37253,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 310,
+      "line": 312,
       "signature": "ResonatorOverStrength",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37165,7 +37264,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 313,
+      "line": 315,
       "signature": "fn malformed_display(e: MalformedManifest) => Bytes",
       "summary": "malformed_display: the oracle's `Display for MalformedManifest`, byte-for-byte. Exact.",
       "tag": "Empirical/Declared"
@@ -37176,7 +37275,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 325,
+      "line": 327,
       "signature": "type ReconManifest = Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis)",
       "summary": "ReconManifest — the RFC-0003 §6 record: mode, model, dim, codebooks (kernel-minted content hashes, carried — FLAG-spore-2), decode procedure, and the bound's Basis (its {ε,δ} scalars are FLAG-spore-4). Construction goes through manifest_new (validates at build time) or manifest_validate (the deserialized-carry-in re-check).",
       "tag": "Empirical/Declared"
@@ -37187,7 +37286,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 325,
+      "line": 327,
       "signature": "Manifest(ReconMode, Bytes, Binary{32}, Vec[Bytes], DecodeProcedure, Basis)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37198,7 +37297,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 332,
+      "line": 334,
       "signature": "fn manifest_new(mode: ReconMode, model: Bytes, dim: Binary{32}, codebooks: Vec[Bytes], dec: DecodeProcedure, basis: Basis) => Result[ReconManifest, MalformedManifest]",
       "summary": "manifest_new: build + validate a manifest. Ports the EXPRESSIBLE kernel checks (FLAG-spore-5): model nonempty, dim >= 1, codebooks nonempty, and the FR-C2 ceiling — every kernel refusal maps to Err(KernelWf), exactly as the oracle's new() maps every `WfError` to `MalformedManifest::KernelWf` (the ResonatorOverStrength variant is validate's, below). Exact (a pure predicate; same inputs, same outcome).",
       "tag": "Empirical/Declared"
@@ -37209,7 +37308,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 358,
+      "line": 360,
       "signature": "fn manifest_validate(m: ReconManifest) => Result[ReconManifest, MalformedManifest]",
       "summary": "manifest_validate: the carry-in path (deserialized/kernel-built manifests) — the explicit defense-in-depth FR-C2 re-check (C1/G2: never silently trust a carry-in). Unlike Rust (where the private inner field makes an over-strength ReconInfo unrepresentable), `.myc` constructors are open, so this check is genuinely reachable here. Exact.",
       "tag": "Empirical/Declared"
@@ -37220,7 +37319,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 368,
+      "line": 370,
       "signature": "fn manifest_mode(m: ReconManifest) => ReconMode",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37231,7 +37330,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 371,
+      "line": 373,
       "signature": "fn manifest_model(m: ReconManifest) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37242,7 +37341,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 374,
+      "line": 376,
       "signature": "fn manifest_dim(m: ReconManifest) => Binary{32}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37253,7 +37352,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 377,
+      "line": 379,
       "signature": "fn manifest_codebooks(m: ReconManifest) => Vec[Bytes]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37264,7 +37363,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 380,
+      "line": 382,
       "signature": "fn manifest_decode(m: ReconManifest) => DecodeProcedure",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37275,7 +37374,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 386,
+      "line": 388,
       "signature": "fn declared_strength(m: ReconManifest) => Guarantee",
       "summary": "declared_strength: the strength from the manifest's bound certificate — derived from the basis, never fabricated (VR-5); always weaker-or-equal to Empirical for a Resonator decode (enforced at construction). Exact.",
       "tag": "Empirical/Declared"
@@ -37286,7 +37385,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 392,
+      "line": 394,
       "signature": "type RegrowthResult[T] = Regrown(T, Basis)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37297,7 +37396,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 392,
+      "line": 394,
       "signature": "Regrown(T, Basis)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37308,7 +37407,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 398,
+      "line": 400,
       "signature": "fn regrowth_new[T](payload: T, basis: Basis) => Result[RegrowthResult[T], MalformedManifest]",
       "summary": "regrowth_new: construct a regrowth result, REFUSING a basis stronger than Empirical (the FR-C2/VR-5 probabilistic-regrowth ceiling) with the explicit ResonatorOverStrength — never a silent accept. This makes an over-strength regrowth unrepresentable through this constructor (the ceiling holds by construction, not by comment). Exact.",
       "tag": "Empirical/Declared"
@@ -37319,7 +37418,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 405,
+      "line": 407,
       "signature": "fn regrowth_strength[T](r: RegrowthResult[T]) => Guarantee",
       "summary": "regrowth_strength: derived from the basis — never fabricated, never upgraded (VR-5). Exact.",
       "tag": "Empirical/Declared"
@@ -37330,7 +37429,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 409,
+      "line": 411,
       "signature": "fn is_empirical[T](r: RegrowthResult[T]) => Bool",
       "summary": "is_empirical: True iff the strength is exactly Empirical (the expected resonator case). Exact.",
       "tag": "Empirical/Declared"
@@ -37341,7 +37440,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 413,
+      "line": 415,
       "signature": "fn is_declared[T](r: RegrowthResult[T]) => Bool",
       "summary": "is_declared: True iff the strength is Declared (the weakest; user-asserted only). Exact.",
       "tag": "Empirical/Declared"
@@ -37352,7 +37451,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 419,
+      "line": 421,
       "signature": "type DeployTarget = InMemory | Local(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37363,7 +37462,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 419,
+      "line": 421,
       "signature": "InMemory",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37374,7 +37473,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 419,
+      "line": 421,
       "signature": "Local(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37385,7 +37484,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 425,
+      "line": 427,
       "signature": "type DeployVerification = Verification(Bool, Bool)",
       "summary": "Verification(content_hash_canonical, no_opaque_lowering): the EXPLAIN-able record of what a successful deploy checked (VR-4/C4). Both True on every success — germinate refuses first otherwise. The no_opaque_lowering half is Declared strength (structural assertion, MLIR toolchain pending).",
       "tag": "Empirical/Declared"
@@ -37396,7 +37495,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 425,
+      "line": 427,
       "signature": "Verification(Bool, Bool)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37407,7 +37506,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 430,
+      "line": 432,
       "signature": "type DeployError = MissingInput | AmbiguousInput(Vec[Bytes]) | DeployHashMismatch(Bytes, Bytes) | OpaqueStepDetected(Bytes)",
       "summary": "DeployError — an explicit deploy refusal, each variant naming its exact condition (G2/G11). `DeployHashMismatch(expected, actual)` renames the oracle's `HashMismatch` (constructor names are nodule-global; SporeErr owns `HashMismatch` — see the substitution note).",
       "tag": "Empirical/Declared"
@@ -37418,7 +37517,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 431,
+      "line": 433,
       "signature": "MissingInput",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37429,7 +37528,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 432,
+      "line": 434,
       "signature": "AmbiguousInput(Vec[Bytes])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37440,7 +37539,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 433,
+      "line": 435,
       "signature": "DeployHashMismatch(Bytes, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37451,7 +37550,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 434,
+      "line": 436,
       "signature": "OpaqueStepDetected(Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37462,7 +37561,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 438,
+      "line": 440,
       "signature": "type DeployResult = Deployed(Bytes, DeployVerification) | Failed(DeployError)",
       "summary": "DeployResult — Deployed(spore_id, verification) on success; Failed(err) is the explicit, never-silent failure carrier (no partial/best-effort variant exists — C1/G2).",
       "tag": "Empirical/Declared"
@@ -37473,7 +37572,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 438,
+      "line": 440,
       "signature": "Deployed(Bytes, DeployVerification)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37484,7 +37583,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 438,
+      "line": 440,
       "signature": "Failed(DeployError)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37495,7 +37594,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 444,
+      "line": 446,
       "signature": "fn detect_opaque_step(target: DeployTarget) => Option[Bytes]",
       "summary": "detect_opaque_step: the VR-4 hook — the v0 clean pipeline (pack → hash → deploy) contains no opaque steps by construction for the supported targets, so this returns None for both (the oracle's stub, mirrored exactly). Declared (structural assertion; MLIR toolchain pending — the oracle's own tag, carried).",
       "tag": "Empirical/Declared"
@@ -37506,7 +37605,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 449,
+      "line": 451,
       "signature": "fn surface_is_ambiguous(xs: Vec[Bytes]) => Bool",
       "summary": "surface_is_ambiguous: more than one exported surface symbol (the v0 ambiguity condition for an InMemory target with no entry-point selector). Exact.",
       "tag": "Empirical/Declared"
@@ -37517,7 +37616,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 456,
+      "line": 458,
       "signature": "fn germinate_checked(s: SporeUnit, recomputed: Bytes, target: DeployTarget) => Result[DeployResult, DeployError]",
       "summary": "germinate_checked: steps 3–5 of the oracle's germinate — hash canonicality (C4/ADR-003; mismatch → the named DeployHashMismatch, both hashes carried; a non-mismatch SporeErr from verify means the spore is not well-formed → MissingInput, the oracle's mapping), then the VR-4 opaque-step check, then success with the fully-checked Verification record.",
       "tag": "Empirical/Declared"
@@ -37528,7 +37627,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 480,
+      "line": 482,
       "signature": "fn germinate(s: SporeUnit, recomputed: Bytes, target: DeployTarget) => Result[DeployResult, DeployError]",
       "summary": "germinate: the ADR-013 native germination entry point (the oracle's check order, mirrored): (1) missing input — a Local target with an empty path refuses before any other work (G2); (2) ambiguous input — an InMemory target over a multi-symbol surface refuses with ALL candidates listed (G11); (3) hash canonicality; (4) no-opaque-lowering; (5) success. The kernel-recomputed identity is an explicit input (FLAG-spore-2). Empirical — the native deploy path is not proven end-to-end (the oracle's tag; MLIR pending; VR-5: never upgraded even though this structural mirror is a pure function).",
       "tag": "Empirical/Declared"
@@ -37539,7 +37638,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 500,
+      "line": 502,
       "signature": "fn deploy_error_display(e: DeployError) => Option[Bytes]",
       "summary": "deploy_error_display: the oracle's `Display for DeployError` — byte-for-byte for MissingInput / DeployHashMismatch / OpaqueStepDetected (differentially checked); None for AmbiguousInput (FLAG-spore-6: its rendering interpolates the decimal candidate count, which is not expressible — explicit absence, never a fabricated rendering). Exact where Some.",
       "tag": "Empirical/Declared"
@@ -37550,7 +37649,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 527,
+      "line": 529,
       "signature": "fn explain_deployed(spore_id: Bytes, v: DeployVerification) => Bytes",
       "summary": "explain_deployed: the Deployed-arm EXPLAIN of explain_deploy — a total, deterministic function of the deployed id + verification record, byte-for-byte the oracle's rendering (VR-4/SC-3/C3: it always mentions both the content-hash check and the opaque-lowering check — no silent omission). The Failed arm rides deploy_error_display (FLAG-spore-6). Exact.",
       "tag": "Empirical/Declared"
@@ -37561,7 +37660,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 545,
+      "line": 547,
       "signature": "type MatrixRow = Row(Bytes, Bytes, Bytes, Bytes, Bool, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37572,7 +37671,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 545,
+      "line": 547,
       "signature": "Row(Bytes, Bytes, Bytes, Bytes, Bool, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37583,7 +37682,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 548,
+      "line": 550,
       "signature": "fn row_op(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37594,7 +37693,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 551,
+      "line": 553,
       "signature": "fn row_guarantee(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37605,7 +37704,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 554,
+      "line": 556,
       "signature": "fn row_fallibility(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37616,7 +37715,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 557,
+      "line": 559,
       "signature": "fn row_effects(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37627,7 +37726,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 560,
+      "line": 562,
       "signature": "fn row_explainable(r: MatrixRow) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37638,7 +37737,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 563,
+      "line": 565,
       "signature": "fn row_never_silent(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37649,7 +37748,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 567,
+      "line": 569,
       "signature": "fn row_build() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37660,7 +37759,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 577,
+      "line": 579,
       "signature": "fn row_build_value() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37671,7 +37770,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 587,
+      "line": 589,
       "signature": "fn row_identity() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37682,7 +37781,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 597,
+      "line": 599,
       "signature": "fn row_explain() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37693,7 +37792,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 607,
+      "line": 609,
       "signature": "fn row_manifest_of() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37704,7 +37803,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 617,
+      "line": 619,
       "signature": "fn row_validate() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37715,7 +37814,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 627,
+      "line": 629,
       "signature": "fn row_manifest_hash() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37726,7 +37825,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 630,
+      "line": 632,
       "signature": "fn row_mode() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37737,7 +37836,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 640,
+      "line": 642,
       "signature": "fn row_declared_strength() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37748,7 +37847,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 650,
+      "line": 652,
       "signature": "fn row_reconstruct() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37759,7 +37858,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 660,
+      "line": 662,
       "signature": "fn row_deploy() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37770,7 +37869,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 670,
+      "line": 672,
       "signature": "fn row_germinate() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37781,7 +37880,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 680,
+      "line": 682,
       "signature": "fn row_verify_hash_canonical() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37792,7 +37891,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 690,
+      "line": 692,
       "signature": "fn row_no_opaque() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37803,7 +37902,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 700,
+      "line": 702,
       "signature": "fn row_explain_deploy() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37814,7 +37913,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 711,
+      "line": 713,
       "signature": "fn matrix() => Vec[MatrixRow]",
       "summary": "matrix: the full 15-row table, in the same order as guarantee_matrix.rs::MATRIX.",
       "tag": "Empirical/Declared"
@@ -37825,7 +37924,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 731,
+      "line": 733,
       "signature": "fn matrix_len(xs: Vec[MatrixRow]) => Binary{8}",
       "summary": "matrix_len: the row count as Binary{8} (15 rows fits trivially). O(n) spine-walk. Exact.",
       "tag": "Empirical/Declared"
@@ -37836,7 +37935,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 737,
+      "line": 739,
       "signature": "fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37847,7 +37946,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 744,
+      "line": 746,
       "signature": "fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool",
       "summary": "every_row_has_nonempty_op_and_guarantee (basic completeness).",
       "tag": "Empirical/Declared"
@@ -37858,7 +37957,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 747,
+      "line": 749,
       "signature": "fn all_guarantees_nonempty(xs: Vec[MatrixRow]) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -37869,7 +37968,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 755,
+      "line": 757,
       "signature": "fn manifest_rows_are_explainable() => Bool",
       "summary": "manifest_rows_are_explainable: the 12 selecting/converting rows expose a C3 EXPLAIN artifact (guarantee_matrix.rs::manifest_rows_are_explain_able, read off the typed Bool column).",
       "tag": "Empirical/Declared"
@@ -37880,7 +37979,7 @@
       "phylum": "std",
       "nodule": "std.spores",
       "file": "lib/std/spore.myc",
-      "line": 771,
+      "line": 773,
       "signature": "fn accessor_rows_not_explainable() => Bool",
       "summary": "accessor_rows_not_explainable: the pure-read rows (manifest_hash / mode / declared_strength) have no selection/approximation needing EXPLAIN (guarantee_matrix.rs precedent).",
       "tag": "Empirical/Declared"
@@ -40179,7 +40278,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 126,
+      "line": 128,
       "signature": "type Option[Opt] = Some(Opt) | None",
       "summary": "Never-silent floor (C1/G2) carried over intact: Skipped and Undetermined are first-class variants aggregated DISTINCTLY from Pass (\"green\" = checked-and-passed, never did-not-check); a missing/mismatched golden baseline is Skipped(NeedsRecord), never an auto-accept; an unavailable differential backend is Skipped(BackendUnavailable), never a silent pass; a generator that produces nothing is Skipped(NeedsRecord). Guarantee tags (VR-5, carried at the SAME strength as the Rust crate's matrix): every harness op is an Exact MECHANISM (a verdict is an exact, deterministic function of the run) and the harness never inflates the subject's tag — a passing for_all backs an Empirical claim about the property, never Proven; there is no op here that upgrades \"passed N trials\" into a proof. Three-way differential agreement is Empirical (trials, std_testing.rs). ── local mirrors (single-nodule harness — see the substitution notes above) ────────────────────",
       "tag": "Empirical/Declared"
@@ -40190,7 +40289,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 126,
+      "line": 128,
       "signature": "None",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40201,7 +40300,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 126,
+      "line": 128,
       "signature": "Some(Opt)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40212,7 +40311,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 128,
+      "line": 130,
       "signature": "type Vec[A] = Nil | Cons(A, Vec[A])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40223,7 +40322,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 128,
+      "line": 130,
       "signature": "Cons(A, Vec[A])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40234,30 +40333,8 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 128,
+      "line": 130,
       "signature": "Nil",
-      "summary": null,
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.testing::Unit",
-      "kind": "type",
-      "phylum": "std",
-      "nodule": "std.testing",
-      "file": "lib/std/testing.myc",
-      "line": 132,
-      "signature": "type Unit = U",
-      "summary": "Unit — the nullary-marker substitute for the missing `() => T` closure-domain form (std.error.myc precedent).",
-      "tag": "Empirical/Declared"
-    },
-    {
-      "symbol": "std.testing::Unit::U",
-      "kind": "ctor",
-      "phylum": "std",
-      "nodule": "std.testing",
-      "file": "lib/std/testing.myc",
-      "line": 132,
-      "signature": "U",
       "summary": null,
       "tag": "Empirical/Declared"
     },
@@ -40267,7 +40344,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 136,
+      "line": 134,
       "signature": "type Guarantee = GExact | GProven | GEmpirical | GDeclared",
       "summary": "Guarantee — the kernel GuaranteeStrength lattice as value-level data, G-prefixed (reserved-keyword substitution; std.diag/std.recover precedent).",
       "tag": "Empirical/Declared"
@@ -40278,7 +40355,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 136,
+      "line": 134,
       "signature": "GDeclared",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40289,7 +40366,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 136,
+      "line": 134,
       "signature": "GEmpirical",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40300,7 +40377,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 136,
+      "line": 134,
       "signature": "GExact",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40311,7 +40388,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 136,
+      "line": 134,
       "signature": "GProven",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40322,7 +40399,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "type SkipReason = Ignored | UnmetPrecondition | NeedsRecord | BackendUnavailable | ToolMissing",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40333,7 +40410,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "BackendUnavailable",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40344,7 +40421,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "Ignored",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40355,7 +40432,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "NeedsRecord",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40366,7 +40443,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "ToolMissing",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40377,7 +40454,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 140,
+      "line": 138,
       "signature": "UnmetPrecondition",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40388,7 +40465,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 144,
+      "line": 142,
       "signature": "type UndetReason = OracleUnavailable | BudgetExhaustedInconclusive | NonDeterministicInput",
       "summary": "UndetReason — ran but could not decide; distinct from both Pass and Skipped. A non-decision is never a Pass (C1/G2).",
       "tag": "Empirical/Declared"
@@ -40399,7 +40476,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 144,
+      "line": 142,
       "signature": "BudgetExhaustedInconclusive",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40410,7 +40487,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 144,
+      "line": 142,
       "signature": "NonDeterministicInput",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40421,7 +40498,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 144,
+      "line": 142,
       "signature": "OracleUnavailable",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40432,7 +40509,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 150,
+      "line": 148,
       "signature": "type FailRecord[F] = FRec(F, Binary{64}, Binary{8}, Bytes)",
       "summary": "FailRecord — the structured failure record: FRec(payload, seed, trial, context). The payload (generic F) is the REIFIED counterexample/diff value substituting Rust's Debug-formatted description String (FLAG-testing-3 — the EXPLAIN artifact in value form); the seed makes the failure reproducible (RT3); the trial index locates it; the context Bytes names the op.",
       "tag": "Empirical/Declared"
@@ -40443,7 +40520,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 150,
+      "line": 148,
       "signature": "FRec(F, Binary{64}, Binary{8}, Bytes)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40454,7 +40531,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 155,
+      "line": 153,
       "signature": "type Verdict[V] = Pass | Fail(FailRecord[V]) | Skipped(SkipReason) | Undetermined(UndetReason)",
       "summary": "Verdict — the outcome sum. Skipped and Undetermined are FIRST-CLASS variants, not flavours of Pass (the honesty crux): the aggregator below keeps their counts distinct, so \"green\" can never silently include \"did not actually check\".",
       "tag": "Empirical/Declared"
@@ -40465,7 +40542,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 155,
+      "line": 153,
       "signature": "Fail(FailRecord[V])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40476,7 +40553,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 155,
+      "line": 153,
       "signature": "Pass",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40487,7 +40564,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 155,
+      "line": 153,
       "signature": "Skipped(SkipReason)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40498,7 +40575,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 155,
+      "line": 153,
       "signature": "Undetermined(UndetReason)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40509,7 +40586,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 160,
+      "line": 158,
       "signature": "type Summary = Counts(Binary{8}, Binary{8}, Binary{8}, Binary{8})",
       "summary": "Summary — the aggregated outcome: Counts(passed, failed, skipped, undetermined). skipped and undetermined are DISTINCT from passed (C1/G2). Counts are Binary{8} (see the width substitution note: add_u refuses at 256 — never a silent wrap).",
       "tag": "Empirical/Declared"
@@ -40520,7 +40597,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 160,
+      "line": 158,
       "signature": "Counts(Binary{8}, Binary{8}, Binary{8}, Binary{8})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40531,7 +40608,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 165,
+      "line": 163,
       "signature": "type Budget = Trials(Binary{8})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40542,7 +40619,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 165,
+      "line": 163,
       "signature": "Trials(Binary{8})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40553,7 +40630,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 170,
+      "line": 168,
       "signature": "type GenStep[G] = Stepped(Option[G], Binary{64})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40564,7 +40641,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 170,
+      "line": 168,
       "signature": "Stepped(Option[G], Binary{64})",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40575,7 +40652,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 175,
+      "line": 173,
       "signature": "type GoldenBaseline[S] = GB(Binary{8}, S)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40586,7 +40663,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 175,
+      "line": 173,
       "signature": "GB(Binary{8}, S)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40597,7 +40674,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 179,
+      "line": 177,
       "signature": "type GoldenFail[W] = GFail(Binary{8}, W, W)",
       "summary": "GoldenFail — the reified golden mismatch: GFail(name_code, expected, produced) — the typed substitute for Rust's rendered \"expected …, got …; diff: …\" description (FLAG-testing-3).",
       "tag": "Empirical/Declared"
@@ -40608,7 +40685,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 179,
+      "line": 177,
       "signature": "GFail(Binary{8}, W, W)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40619,7 +40696,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 183,
+      "line": 181,
       "signature": "type DiffFail[D] = DFail(D, D)",
       "summary": "DiffFail — the reified differential disagreement: DFail(lhs, rhs) — both outputs, inspectable (C3); the input description rides in the FailRecord context.",
       "tag": "Empirical/Declared"
@@ -40630,7 +40707,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 183,
+      "line": 181,
       "signature": "DFail(D, D)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40641,7 +40718,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 187,
+      "line": 185,
       "signature": "type CertMode = Fast | Balanced | Certified",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40652,7 +40729,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 187,
+      "line": 185,
       "signature": "Balanced",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40663,7 +40740,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 187,
+      "line": 185,
       "signature": "Certified",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40674,7 +40751,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 187,
+      "line": 185,
       "signature": "Fast",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40685,7 +40762,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 191,
+      "line": 189,
       "signature": "type CertScope = ScGlobal | ScPhylum | ScNodule",
       "summary": "CertScope — the @certification declaration scopes (mycelium_proj::CertScope), least-specific first.",
       "tag": "Empirical/Declared"
@@ -40696,7 +40773,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 191,
+      "line": 189,
       "signature": "ScGlobal",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40707,7 +40784,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 191,
+      "line": 189,
       "signature": "ScNodule",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40718,7 +40795,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 191,
+      "line": 189,
       "signature": "ScPhylum",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40729,7 +40806,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 194,
+      "line": 192,
       "signature": "type CertDecl = Decl(CertScope, CertMode)",
       "summary": "CertDecl — one @certification declaration: Decl(scope, mode).",
       "tag": "Empirical/Declared"
@@ -40740,7 +40817,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 194,
+      "line": 192,
       "signature": "Decl(CertScope, CertMode)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40751,7 +40828,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 198,
+      "line": 196,
       "signature": "type ResolvedMode = RMode(CertMode, Option[CertScope])",
       "summary": "ResolvedMode — the resolution EXPLAIN: RMode(mode, source). source None = the project default (Fast) or a granular override (above the scope lattice), exactly as in mycelium_proj.",
       "tag": "Empirical/Declared"
@@ -40762,7 +40839,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 198,
+      "line": 196,
       "signature": "RMode(CertMode, Option[CertScope])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40773,7 +40850,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 202,
+      "line": 200,
       "signature": "type ModeScope = MScope(Bool, Bool, Bool)",
       "summary": "ModeScope — the typed per-mode predicate set: MScope(fast_in, balanced_in, certified_in) in CertMode::ALL order. Guarantee: Declared — a scope is a declaration, not a checked theorem.",
       "tag": "Empirical/Declared"
@@ -40784,7 +40861,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 202,
+      "line": 200,
       "signature": "MScope(Bool, Bool, Bool)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40795,7 +40872,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 206,
+      "line": 204,
       "signature": "type ModeTestConfig = MTC(Vec[CertDecl], Option[CertMode])",
       "summary": "ModeTestConfig — MTC(decls, granular): the configurable per-test scope; the granular override wins over all scope tiers (above the lattice).",
       "tag": "Empirical/Declared"
@@ -40806,7 +40883,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 206,
+      "line": 204,
       "signature": "MTC(Vec[CertDecl], Option[CertMode])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40817,7 +40894,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 209,
+      "line": 207,
       "signature": "type ModeVisit = MVisit(Vec[CertMode], Vec[CertMode])",
       "summary": "ModeVisit — MVisit(visited, skipped): the never-silent audit of which tiers ran.",
       "tag": "Empirical/Declared"
@@ -40828,7 +40905,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 209,
+      "line": 207,
       "signature": "MVisit(Vec[CertMode], Vec[CertMode])",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40839,7 +40916,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 214,
+      "line": 212,
       "signature": "type ModeViolation = NegativeFires(CertMode) | PositiveAbsent(CertMode)",
       "summary": "ModeViolation — the reified cross-mode assertion failure (FLAG-testing-6): the property fires where the scope says it should not (NegativeFires) or is absent where it must fire (PositiveAbsent) — exactly the two panic directions of the Rust assert.",
       "tag": "Empirical/Declared"
@@ -40850,7 +40927,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 214,
+      "line": 212,
       "signature": "NegativeFires(CertMode)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40861,7 +40938,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 214,
+      "line": 212,
       "signature": "PositiveAbsent(CertMode)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40872,7 +40949,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 219,
+      "line": 217,
       "signature": "type FallibilityClass = FalTotal | FalVerdict",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40883,7 +40960,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 219,
+      "line": 217,
       "signature": "FalTotal",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40894,7 +40971,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 219,
+      "line": 217,
       "signature": "FalVerdict",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40905,7 +40982,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 223,
+      "line": 221,
       "signature": "type EffectsClass = EffNone | EffIo | EffPerBackend",
       "summary": "EffectsClass — the typed half of the effects column: pure, io-declaring, or per-backend io (the \"only golden and differential declare IO\" discipline, typed instead of substring-matched).",
       "tag": "Empirical/Declared"
@@ -40916,7 +40993,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 223,
+      "line": 221,
       "signature": "EffIo",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40927,7 +41004,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 223,
+      "line": 221,
       "signature": "EffNone",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40938,7 +41015,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 223,
+      "line": 221,
       "signature": "EffPerBackend",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40949,7 +41026,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 228,
+      "line": 226,
       "signature": "type MatrixRow = Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool)",
       "summary": "MatrixRow — Row(op, tag, fallibility_class, fallibility_prose, effects_class, effects_prose, explainable). Row DATA is Declared (hand-transcribed from guarantee_matrix.rs::MATRIX); the structural checks below are Empirical over it (std_testing.rs three-way + live Rust oracle).",
       "tag": "Empirical/Declared"
@@ -40960,7 +41037,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 228,
+      "line": 226,
       "signature": "Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool)",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40971,7 +41048,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 232,
+      "line": 230,
       "signature": "fn bin_eq(a: Binary{8}, b: Binary{8}) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -40982,7 +41059,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 236,
+      "line": 234,
       "signature": "fn bool_and(a: Bool, b: Bool) => Bool",
       "summary": "bool_and / bool_or / bool_not / bool_eq: local total connectives (std.diag precedent).",
       "tag": "Empirical/Declared"
@@ -40993,7 +41070,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 239,
+      "line": 237,
       "signature": "fn bool_or(a: Bool, b: Bool) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41004,7 +41081,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 242,
+      "line": 240,
       "signature": "fn bool_not(a: Bool) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41015,7 +41092,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 245,
+      "line": 243,
       "signature": "fn bool_eq(a: Bool, b: Bool) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41026,7 +41103,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 249,
+      "line": 247,
       "signature": "fn bool_to_bin(a: Bool) => Binary{8}",
       "summary": "bool_to_bin: the 0/1 indicator (for scope_count).",
       "tag": "Empirical/Declared"
@@ -41037,7 +41114,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 254,
+      "line": 252,
       "signature": "fn zero64() => Binary{64}",
       "summary": "zero64: the Binary{64} zero (seed/trial placeholder in golden/differential FailRecords — Rust sets seed: 0, trial: 0 there).",
       "tag": "Empirical/Declared"
@@ -41048,7 +41125,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 259,
+      "line": 257,
       "signature": "fn vec_len[A](xs: Vec[A]) => Binary{8}",
       "summary": "vec_len: the number of elements as Binary{8}; add_u refuses at 256 on all paths — never a silent wrap (G2; the std.collections `len` contract, Empirical).",
       "tag": "Empirical/Declared"
@@ -41059,7 +41136,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 265,
+      "line": 263,
       "signature": "fn rng_default_seed() => Binary{64}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41070,7 +41147,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 270,
+      "line": 268,
       "signature": "fn rng_new(seed: Binary{64}) => Binary{64}",
       "summary": "rng_new: construct the initial state from a fixed seed; 0 is promoted (never a silent degenerate state). Exact.",
       "tag": "Empirical/Declared"
@@ -41081,7 +41158,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 276,
+      "line": 274,
       "signature": "fn rng_next(state: Binary{64}) => Binary{64}",
       "summary": "rng_next: advance the state and return it — Xorshift64 (x ^= x<<13; x ^= x>>7; x ^= x<<17), bit-exact vs Rust's Rng::next_u64 (whose output IS its new state). Exact: deterministic; the same state always yields the same output (C4/RT3).",
       "tag": "Empirical/Declared"
@@ -41092,7 +41169,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 288,
+      "line": 286,
       "signature": "fn rng_next_u32(state: Binary{64}) => Binary{32}",
       "summary": "rng_next_u32: the high 32 bits of the next draw, as Binary{32} — mirrors Rust's `(next_u64() >> 32) as u32`. The narrow is in-range by construction (the high 32 bits are zero after the shift), so the never-silent width_cast prim narrows Exactly (its second operand is a width witness whose bits are ignored). The caller threads the advanced state via rng_next.",
       "tag": "Empirical/Declared"
@@ -41103,7 +41180,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 300,
+      "line": 298,
       "signature": "fn budget_new(trials: Binary{8}) => Option[Budget]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41114,7 +41191,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 304,
+      "line": 302,
       "signature": "fn budget_trials(b: Budget) => Binary{8}",
       "summary": "budget_trials: the number of trials this budget permits. Exact.",
       "tag": "Empirical/Declared"
@@ -41125,7 +41202,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 308,
+      "line": 306,
       "signature": "fn budget_default() => Budget",
       "summary": "budget_default: the default budget (100 trials — Budget::DEFAULT). Exact.",
       "tag": "Empirical/Declared"
@@ -41136,7 +41213,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 312,
+      "line": 310,
       "signature": "fn budget_min() => Budget",
       "summary": "budget_min: the minimum budget (1 trial — Budget::MIN). Exact.",
       "tag": "Empirical/Declared"
@@ -41147,7 +41224,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 317,
+      "line": 315,
       "signature": "fn find_failing[T](candidates: Vec[T], prop: T => Bool) => Option[T]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41158,7 +41235,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 325,
+      "line": 323,
       "signature": "fn shrink_loop[T](best: T, candidates: Vec[T], shrink: T => Vec[T], prop: T => Bool, steps: Binary{16}) => T",
       "summary": "shrink_loop: descend through shrink candidates keeping the smallest still-failing value; the step count is bounded (Rust's literal 1000, at Binary{16}) so shrinking itself is bounded (C6).",
       "tag": "Empirical/Declared"
@@ -41169,7 +41246,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 342,
+      "line": 340,
       "signature": "fn shrink_to_minimal[T](initial: T, shrink: T => Vec[T], prop: T => Bool) => T",
       "summary": "shrink_to_minimal: shrink a failing value to a minimal counterexample (spec §3). The result is the REIFIED minimal value (FLAG-testing-3 — Rust renders it into the description String).",
       "tag": "Empirical/Declared"
@@ -41180,7 +41257,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 348,
+      "line": 346,
       "signature": "fn for_all_loop[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], prop: T => Bool, state: Binary{64}, seed: Binary{64}, remaining: Binary{8}, trial: Binary{8}, generated_any: Bool) => Verdict[T]",
       "summary": "for_all_loop: the trial spine — generate, check, recurse. generated_any distinguishes \"budget done, everything passed\" (Pass) from \"the generator never produced\" (Skipped(NeedsRecord) — C1: a property that could not run is reported, never a silent pass).",
       "tag": "Empirical/Declared"
@@ -41191,7 +41268,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 390,
+      "line": 388,
       "signature": "fn for_all[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], seed: Binary{64}, budget: Budget, prop: T => Bool) => Verdict[T]",
       "summary": "for_all: run a property over `budget` generated inputs. Returns the first failure (shrunk to a minimal counterexample, with the reproducing seed + trial index), Skipped(NeedsRecord) if the generator cannot produce, or Pass. The gen/shrink fn pair substitutes the Gen<T> trait instance (FLAG-testing-1). Guarantee: Exact as a MECHANISM (the verdict is an exact function of the run); a passing for_all backs an EMPIRICAL claim about the property — never Proven; no op here performs that upgrade (C2/VR-5 — the crux this module exists to prevent).",
       "tag": "Empirical/Declared"
@@ -41202,7 +41279,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 405,
+      "line": 403,
       "signature": "fn golden{N}(baseline: Option[GoldenBaseline[Binary{N}]], name: Binary{8}, produced: Binary{N}) => Verdict[GoldenFail[Binary{N}]]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41213,7 +41290,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 427,
+      "line": 425,
       "signature": "fn diff_compare{N}(input_desc: Bytes, lhs_out: Binary{N}, rhs_out: Binary{N}) => Verdict[DiffFail[Binary{N}]]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41224,7 +41301,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 449,
+      "line": 447,
       "signature": "fn differential{N}(input_desc: Bytes, lhs_available: Bool, lhs: Unit => Binary{N}, rhs_available: Bool, rhs: Unit => Binary{N}) => Verdict[DiffFail[Binary{N}]]",
       "summary": "differential: require lhs() == rhs() through two thunked backends. An unavailable backend is Skipped(BackendUnavailable) — NEVER a silent pass (C1/G2, the differential honesty crux); the thunks are only forced when both backends are available. Exact mechanism; the two-level §8-Q5 bar's tag/EXPLAIN level is the Rust crate's own FLAG-Q5, carried over unresolved.",
       "tag": "Empirical/Declared"
@@ -41235,7 +41312,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 464,
+      "line": 462,
       "signature": "fn bump_pass(s: Summary) => Summary",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41246,7 +41323,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 467,
+      "line": 465,
       "signature": "fn bump_fail(s: Summary) => Summary",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41257,7 +41334,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 470,
+      "line": 468,
       "signature": "fn bump_skipped(s: Summary) => Summary",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41268,7 +41345,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 473,
+      "line": 471,
       "signature": "fn bump_undetermined(s: Summary) => Summary",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41279,7 +41356,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 479,
+      "line": 477,
       "signature": "fn summarize[V](vs: Vec[Verdict[V]]) => Summary",
       "summary": "summarize: aggregate verdicts keeping Skipped/Undetermined counts DISTINCT from Pass — \"green\" can never silently include \"did not actually check\" (C1/G2). Exact (a total function over verdicts).",
       "tag": "Empirical/Declared"
@@ -41290,7 +41367,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 493,
+      "line": 491,
       "signature": "fn is_green(s: Summary) => Bool",
       "summary": "is_green: True iff there are no failures. Skipped/undetermined counts are SURFACED in the Summary (the caller can inspect them), not hidden and not treated as failures — treating \"could not run\" as \"failed\" would itself violate C1 (the Rust doc's exact reasoning). Exact.",
       "tag": "Empirical/Declared"
@@ -41301,7 +41378,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 497,
+      "line": 495,
       "signature": "fn summary_passed(s: Summary) => Binary{8}",
       "summary": "summary field accessors (the .myc idiom for Rust's named struct fields). Exact.",
       "tag": "Empirical/Declared"
@@ -41312,7 +41389,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 500,
+      "line": 498,
       "signature": "fn summary_failed(s: Summary) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41323,7 +41400,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 503,
+      "line": 501,
       "signature": "fn summary_skipped(s: Summary) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41334,7 +41411,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 506,
+      "line": 504,
       "signature": "fn summary_undetermined(s: Summary) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41345,7 +41422,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 512,
+      "line": 510,
       "signature": "fn summary_total(s: Summary) => Binary{8}",
       "summary": "summary_total: the total verdict count. Substitution note: Rust saturates (saturating_add); add_u instead REFUSES past 255 on all paths — a louder, never-silent overflow discipline (G2), documented rather than hidden.",
       "tag": "Empirical/Declared"
@@ -41356,7 +41433,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 518,
+      "line": 516,
       "signature": "fn mode_code(m: CertMode) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41367,7 +41444,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 522,
+      "line": 520,
       "signature": "fn mode_eq(a: CertMode, b: CertMode) => Bool",
       "summary": "mode_eq: ADT equality via the injective code map. Exact.",
       "tag": "Empirical/Declared"
@@ -41378,7 +41455,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 526,
+      "line": 524,
       "signature": "fn modes_all() => Vec[CertMode]",
       "summary": "modes_all: CertMode::ALL — every tier, weakest first. Exact.",
       "tag": "Empirical/Declared"
@@ -41389,7 +41466,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 530,
+      "line": 528,
       "signature": "fn scope_specificity(sc: CertScope) => Binary{8}",
       "summary": "scope_specificity: mirrors CertScope::specificity (Global 0 < Phylum 1 < Nodule 2). Exact.",
       "tag": "Empirical/Declared"
@@ -41400,7 +41477,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 537,
+      "line": 535,
       "signature": "fn scope_all_modes() => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41411,7 +41488,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 540,
+      "line": 538,
       "signature": "fn scope_fast_only() => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41422,7 +41499,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 543,
+      "line": 541,
       "signature": "fn scope_non_fast() => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41433,7 +41510,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 546,
+      "line": 544,
       "signature": "fn scope_certified_only() => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41444,7 +41521,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 550,
+      "line": 548,
       "signature": "fn scope_emit_modes() => ModeScope",
       "summary": "scope_emit_modes: alias for scope_non_fast (the certificate-emitting modes — RFC-0034 §5).",
       "tag": "Empirical/Declared"
@@ -41455,7 +41532,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 553,
+      "line": 551,
       "signature": "fn scope_balanced_only() => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41466,7 +41543,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 557,
+      "line": 555,
       "signature": "fn scope_contains(s: ModeScope, m: CertMode) => Bool",
       "summary": "scope_contains: True iff the mode is in scope. Exact (total, match-defined).",
       "tag": "Empirical/Declared"
@@ -41477,7 +41554,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 561,
+      "line": 559,
       "signature": "fn scope_filter(s: ModeScope, ms: Vec[CertMode], want: Bool) => Vec[CertMode]",
       "summary": "scope_filter: the modes whose membership equals `want`, in CertMode::ALL order. Exact.",
       "tag": "Empirical/Declared"
@@ -41488,7 +41565,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 571,
+      "line": 569,
       "signature": "fn modes_in_scope(s: ModeScope) => Vec[CertMode]",
       "summary": "modes_in_scope / modes_out_of_scope: the membership split (0..=3 elements each). Exact.",
       "tag": "Empirical/Declared"
@@ -41499,7 +41576,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 574,
+      "line": 572,
       "signature": "fn modes_out_of_scope(s: ModeScope) => Vec[CertMode]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41510,7 +41587,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 578,
+      "line": 576,
       "signature": "fn scope_count(s: ModeScope) => Binary{8}",
       "summary": "scope_count: the number of modes in scope (0..=3). Exact.",
       "tag": "Empirical/Declared"
@@ -41521,7 +41598,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 582,
+      "line": 580,
       "signature": "fn scope_is_empty(s: ModeScope) => Bool",
       "summary": "scope_is_empty: an empty scope is surfaced explicitly, not silently ignored (C1/G2). Exact.",
       "tag": "Empirical/Declared"
@@ -41532,7 +41609,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 586,
+      "line": 584,
       "signature": "fn scope_union(a: ModeScope, b: ModeScope) => ModeScope",
       "summary": "scope_union / scope_intersect: composable derived scopes. Exact.",
       "tag": "Empirical/Declared"
@@ -41543,7 +41620,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 594,
+      "line": 592,
       "signature": "fn scope_intersect(a: ModeScope, b: ModeScope) => ModeScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41554,7 +41631,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 604,
+      "line": 602,
       "signature": "fn from_resolved_mode(r: ResolvedMode) => ModeScope",
       "summary": "from_resolved_mode: the resolver→scope bridge — \"the modes at or above the resolved depth\": Fast → ALL_MODES, Balanced → NON_FAST, Certified → CERTIFIED_ONLY. Exact.",
       "tag": "Empirical/Declared"
@@ -41565,7 +41642,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 615,
+      "line": 613,
       "signature": "fn decl_scope(d: CertDecl) => CertScope",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41576,7 +41653,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 618,
+      "line": 616,
       "signature": "fn decl_mode(d: CertDecl) => CertMode",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41587,7 +41664,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 624,
+      "line": 622,
       "signature": "fn decl_beats(new_d: CertDecl, cur: CertDecl) => Bool",
       "summary": "decl_beats: True iff the NEW declaration's specificity is >= the current winner's — the LAST maximal element wins, mirroring Iterator::max_by_key's documented tie behaviour (the resolve_mode fold this port reimplements — FLAG-testing-7). Exact.",
       "tag": "Empirical/Declared"
@@ -41598,7 +41675,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 631,
+      "line": 629,
       "signature": "fn resolve_fold(decls: Vec[CertDecl], acc: Option[CertDecl]) => ResolvedMode",
       "summary": "resolve_fold: the left-to-right max-specificity fold. Exact.",
       "tag": "Empirical/Declared"
@@ -41609,7 +41686,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 650,
+      "line": 648,
       "signature": "fn resolve_decls(decls: Vec[CertDecl]) => ResolvedMode",
       "summary": "resolve_decls: the reimplemented most-specific-wins resolution (mycelium_proj::resolve_mode's observable contract: highest specificity wins; no declaration → the Fast project default with source None). Pinned against the Rust resolver by the live oracle differential (FLAG-testing-7 — the KC-3 shared-resolver property does not carry over). Exact mechanism.",
       "tag": "Empirical/Declared"
@@ -41620,7 +41697,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 654,
+      "line": 652,
       "signature": "fn config_new(decls: Vec[CertDecl]) => ModeTestConfig",
       "summary": "config_new: a config from @certification scope declarations (no granular override). Exact.",
       "tag": "Empirical/Declared"
@@ -41631,7 +41708,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 659,
+      "line": 657,
       "signature": "fn config_default() => ModeTestConfig",
       "summary": "config_default: no declarations → project default Fast → ALL_MODES scope (widening from fast is always safe — the Rust Default impl). Exact.",
       "tag": "Empirical/Declared"
@@ -41642,7 +41719,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 664,
+      "line": 662,
       "signature": "fn config_with_granular(cfg: ModeTestConfig, m: CertMode) => ModeTestConfig",
       "summary": "config_with_granular: add/replace the granular per-test override — wins over all scope tiers. Exact.",
       "tag": "Empirical/Declared"
@@ -41653,7 +41730,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 670,
+      "line": 668,
       "signature": "fn config_provenance(cfg: ModeTestConfig) => ResolvedMode",
       "summary": "config_provenance: the resolved mode + its source scope — the EXPLAIN of the scope decision (never ambient, G2). A granular override reports source None (above the lattice), exactly as in Rust. Exact.",
       "tag": "Empirical/Declared"
@@ -41664,7 +41741,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 675,
+      "line": 673,
       "signature": "fn config_resolve(cfg: ModeTestConfig) => ModeScope",
       "summary": "config_resolve: the effective ModeScope (provenance → from_resolved_mode — the canonical shared mapping). Exact.",
       "tag": "Empirical/Declared"
@@ -41675,7 +41752,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 680,
+      "line": 678,
       "signature": "fn visit_visited(v: ModeVisit) => Vec[CertMode]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41686,7 +41763,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 683,
+      "line": 681,
       "signature": "fn visit_skipped(v: ModeVisit) => Vec[CertMode]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41697,7 +41774,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 687,
+      "line": 685,
       "signature": "fn visited_all(v: ModeVisit) => Bool",
       "summary": "visited_all: True iff all three modes ran. Exact.",
       "tag": "Empirical/Declared"
@@ -41708,7 +41785,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 691,
+      "line": 689,
       "signature": "fn mode_list_eq(xs: Vec[CertMode], ys: Vec[CertMode]) => Bool",
       "summary": "mode_list_eq: element-wise Vec[CertMode] equality. Exact.",
       "tag": "Empirical/Declared"
@@ -41719,7 +41796,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 701,
+      "line": 699,
       "signature": "fn matches_scope(v: ModeVisit, s: ModeScope) => Bool",
       "summary": "matches_scope: True iff exactly the in-scope modes were visited (no more, no fewer). Exact.",
       "tag": "Empirical/Declared"
@@ -41730,7 +41807,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 707,
+      "line": 705,
       "signature": "fn map_modes[B](ms: Vec[CertMode], f: CertMode => B) => Vec[B]",
       "summary": "for_each_mode: visit EVERY mode (weakest → strongest) — the pure-map substitution for Rust's FnMut visitor: the per-mode results are RETURNED in order (the visit evidence; never-silent about what ran). There is no way to skip a mode through this fn (use for_each_mode_in). Exact.",
       "tag": "Empirical/Declared"
@@ -41741,7 +41818,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 710,
+      "line": 708,
       "signature": "fn for_each_mode[B](f: CertMode => B) => Vec[B]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41752,7 +41829,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 716,
+      "line": 714,
       "signature": "fn visit_apply[B](s: ModeScope, ms: Vec[CertMode], f: CertMode => B) => Vec[CertMode]",
       "summary": "visit_apply: apply `f` per in-scope mode (result computed then discarded — the std.error `inspect` technique; `.myc` has no effect surface, so this preserves \"f runs per visited mode\"), collecting the visited modes.",
       "tag": "Empirical/Declared"
@@ -41763,7 +41840,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 729,
+      "line": 727,
       "signature": "fn for_each_mode_in[B](s: ModeScope, f: CertMode => B) => ModeVisit",
       "summary": "for_each_mode_in: run `f` for each mode IN scope, returning the never-silent visited/skipped audit (the caller can assert matches_scope and inspect the skips — C1/G2). Exact.",
       "tag": "Empirical/Declared"
@@ -41774,7 +41851,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 735,
+      "line": 733,
       "signature": "fn scope_check_walk(s: ModeScope, pred: CertMode => Bool, ms: Vec[CertMode], neg_only: Bool) => Option[ModeViolation]",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41785,7 +41862,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 761,
+      "line": 759,
       "signature": "fn mode_scope_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViolation]",
       "summary": "mode_scope_violation: the decision core of assert_mode_scope — the FIRST violation of either direction (the property fires outside scope, or is absent inside it), reified; None = the assertion holds. The panicking wrapper awaits a host refusal primitive (FLAG-testing-6). Exact.",
       "tag": "Empirical/Declared"
@@ -41796,7 +41873,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 766,
+      "line": 764,
       "signature": "fn mode_negative_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViolation]",
       "summary": "mode_negative_violation: the negative-only half — the property must be ABSENT outside scope (the \"invariant fires where it doesn't apply\" check). Exact.",
       "tag": "Empirical/Declared"
@@ -41807,7 +41884,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 771,
+      "line": 769,
       "signature": "fn guarantee_code(g: Guarantee) => Binary{8}",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41818,7 +41895,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 779,
+      "line": 777,
       "signature": "fn guarantee_eq(a: Guarantee, b: Guarantee) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41829,7 +41906,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 783,
+      "line": 781,
       "signature": "fn row_op(r: MatrixRow) => Bytes",
       "summary": "row accessors. Exact.",
       "tag": "Empirical/Declared"
@@ -41840,7 +41917,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 786,
+      "line": 784,
       "signature": "fn row_tag(r: MatrixRow) => Guarantee",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41851,7 +41928,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 789,
+      "line": 787,
       "signature": "fn row_fallibility_class(r: MatrixRow) => FallibilityClass",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41862,7 +41939,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 792,
+      "line": 790,
       "signature": "fn row_fallibility(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41873,7 +41950,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 795,
+      "line": 793,
       "signature": "fn row_effects_class(r: MatrixRow) => EffectsClass",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41884,7 +41961,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 798,
+      "line": 796,
       "signature": "fn row_effects(r: MatrixRow) => Bytes",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41895,7 +41972,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 801,
+      "line": 799,
       "signature": "fn row_explainable(r: MatrixRow) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41906,7 +41983,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 806,
+      "line": 804,
       "signature": "fn is_fal_total(f: FallibilityClass) => Bool",
       "summary": "typed column predicates (the ADT analogs of the Rust tests' substring assertions — FLAG-recover precedent: comparisons over typed vocabulary, never over strings). Exact.",
       "tag": "Empirical/Declared"
@@ -41917,7 +41994,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 809,
+      "line": 807,
       "signature": "fn declares_io(e: EffectsClass) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41928,7 +42005,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 814,
+      "line": 812,
       "signature": "fn row_for_all() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41939,7 +42016,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 825,
+      "line": 823,
       "signature": "fn row_golden() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41950,7 +42027,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 836,
+      "line": 834,
       "signature": "fn row_differential() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41961,7 +42038,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 847,
+      "line": 845,
       "signature": "fn row_summarize() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41972,7 +42049,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 850,
+      "line": 848,
       "signature": "fn row_is_green() => MatrixRow",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -41983,7 +42060,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 854,
+      "line": 852,
       "signature": "fn matrix() => Vec[MatrixRow]",
       "summary": "matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.",
       "tag": "Empirical/Declared"
@@ -41994,7 +42071,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 860,
+      "line": 858,
       "signature": "fn all_rows_exact(xs: Vec[MatrixRow]) => Bool",
       "summary": null,
       "tag": "Empirical/Declared"
@@ -42005,7 +42082,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 867,
+      "line": 865,
       "signature": "fn all_rows_explainable(xs: Vec[MatrixRow]) => Bool",
       "summary": "all_rows_explainable: every op surfaces an EXPLAIN artifact (C3/G11/SC-3 — no black boxes).",
       "tag": "Empirical/Declared"
@@ -42016,7 +42093,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 875,
+      "line": 873,
       "signature": "fn only_golden_and_differential_declare_io() => Bool",
       "summary": "only_golden_and_differential_declare_io: the spec §4 effects discipline, read off the typed column (no substring matching).",
       "tag": "Empirical/Declared"
@@ -42027,7 +42104,7 @@
       "phylum": "std",
       "nodule": "std.testing",
       "file": "lib/std/testing.myc",
-      "line": 883,
+      "line": 881,
       "signature": "fn aggregator_rows_are_total() => Bool",
       "summary": "aggregator_rows_are_total: summarize/is_green are total functions over verdicts (spec §4).",
       "tag": "Empirical/Declared"
@@ -43441,5 +43518,42 @@
       "tag": "Empirical/Declared"
     }
   ],
-  "flagged": []
+  "flagged": [
+    {
+      "item": "std.derive_prelude (line 101)",
+      "reason": "unextracted top-level construct `impl` at line 101 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.derive_prelude (line 26)",
+      "reason": "unextracted top-level construct `impl` at line 26 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.derive_prelude (line 34)",
+      "reason": "unextracted top-level construct `impl` at line 34 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.derive_prelude (line 40)",
+      "reason": "unextracted top-level construct `impl` at line 40 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.derive_prelude (line 56)",
+      "reason": "unextracted top-level construct `impl` at line 56 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.derive_prelude (line 65)",
+      "reason": "unextracted top-level construct `impl` at line 65 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.fmt (line 221)",
+      "reason": "unextracted top-level construct `impl` at line 221 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.fmt (line 227)",
+      "reason": "unextracted top-level construct `impl` at line 227 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    },
+    {
+      "item": "std.fmt (line 234)",
+      "reason": "unextracted top-level construct `impl` at line 234 — only nodule/fn/type are indexed today; not silently dropped, just out of scope (no `lib/` nodule uses this DN-26 `Item` form yet)"
+    }
+  ]
 }

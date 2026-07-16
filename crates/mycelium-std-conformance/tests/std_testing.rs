@@ -197,7 +197,7 @@ fn eval_bytes(driver: &str) -> Vec<u8> {
 /// count derived by exactly one `add_u` bump over the zero base.
 #[test]
 fn summarize_counts_each_class_distinct() {
-    let driver = "fn one_of_each() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(U, zero64(), 0b0000_0000, \"x\")), Cons(Skipped(Ignored), Cons(Undetermined(OracleUnavailable), Nil))));\nfn main() => Summary = summarize(one_of_each());";
+    let driver = "fn one_of_each() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(Unit, zero64(), 0b0000_0000, \"x\")), Cons(Skipped(Ignored), Cons(Undetermined(OracleUnavailable), Nil))));\nfn main() => Summary = summarize(one_of_each());";
     let src = program(driver);
     let expected = format!(
         "{T_SUMMARY}fn main() => Summary = Counts(add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001), add_u(0b0000_0000, 0b0000_0001));"
@@ -218,7 +218,7 @@ fn is_green_true_with_skips_surfaced() {
 /// One failure makes the suite not-green.
 #[test]
 fn is_green_false_on_any_failure() {
-    let driver = "fn suite() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(U, zero64(), 0b0000_0000, \"x\")), Nil));\nfn main() => Bool = is_green(summarize(suite()));";
+    let driver = "fn suite() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(Unit, zero64(), 0b0000_0000, \"x\")), Nil));\nfn main() => Bool = is_green(summarize(suite()));";
     let src = program(driver);
     assert_three_way("is_green with a failure", &src, &expect_bool(false));
 }
@@ -905,7 +905,7 @@ fn oracle_summarize_parity() {
     let rust_summary = summarize(&rust_verdicts);
     assert!(!is_green(&rust_summary));
 
-    let body = "fn suite() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(U, zero64(), 0b0000_0000, \"x\")), Cons(Skipped(Ignored), Cons(Undetermined(OracleUnavailable), Cons(Pass, Nil)))));";
+    let body = "fn suite() => Vec[Verdict[Unit]] = Cons(Pass, Cons(Fail(FRec(Unit, zero64(), 0b0000_0000, \"x\")), Cons(Skipped(Ignored), Cons(Undetermined(OracleUnavailable), Cons(Pass, Nil)))));";
     for (proj, rust_count) in [
         ("summary_passed", rust_summary.passed),
         ("summary_failed", rust_summary.failed),

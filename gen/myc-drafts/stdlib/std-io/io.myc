@@ -1,4 +1,4 @@
-// nodule: std.io
+// nodule: std.io.io
 // Byte-movement surface: abstract `Source`/`Sink` with **affine single-consumption**
 // (LR-8; spec §3 — the io half).
 //
@@ -39,7 +39,9 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.io;
+nodule std.io.io;
+
+use std.io.error.IoError;
 
 // Read all remaining bytes from `src`, consuming it exactly once (LR-8).
 //
@@ -61,4 +63,4 @@ nodule std.io;
 // This operation reads bytes from the substrate — the `io` effect is declared
 // on the signature.  (For the in-memory substrate the "IO" is a buffer copy, but
 // the effect abstraction is preserved for composability with OS-backed substrates.)
-fn read_all(src: Source) => Result[Vec[Binary{8}], IoError] = let src = src in Ok(read_to_end(src));
+pub fn read_all(src: Source) => Result[Vec[Binary{8}], IoError] = let src = src in Ok(read_to_end(src));
