@@ -313,6 +313,13 @@ The corpus is Accepted and the build is underway; the dependency-ordered, priori
   land): Import net-close **M-1084**, conversion identity **M-1037**, missing `lib/std/io.myc`,
   self-host **M-740**, M-1006 re-measure. Supersedes G1-only reading of the DN-136 worklist for
   crate-level residual maps; does not rewrite prior inventories (append-only).
+- **Companion guide (thematic historian, 2026-07-16):** `docs/companion/` — maintained
+  **non-normative** supplement for humans/agents: thematic decision clusters (not DN numeric
+  order), guarantee **airlock** patterns (weakest-wins friction), memory L1–L3 as one lifecycle,
+  three trust axes (lattice · cert depth · DN-126 strictness), Mermaid maps, and archive/refresh
+  policy. Sources: external analysis pack + audio critique transcript under
+  `docs/companion/_sources/`. **Does not** rewrite RFC/ADR/DN bodies; Doc-Index status still
+  wins on conflict (VR-5).
 
 This index remains the map the board points back to.
 

@@ -48,6 +48,9 @@ in-progress piece.
 
 ## Contents
 
+- **[Companion guide](docs/companion/README.md)** — **start here for humans**: thematic maps
+  (not DN numeric order), guarantee **airlocks**, memory as one lifecycle, three trust axes,
+  Mermaid diagrams. Non-normative curator over the corpus.
 - [Why this exists, and the core ideas](docs/guide/why-and-design.md)
 - [Guarantees & verification](docs/guide/guarantees-and-verification.md) — the
   `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice and the split verification regime
@@ -60,15 +63,16 @@ in-progress piece.
   syntax-highlighted local docsite, and how to build/regenerate it
 - [Status & roadmap](docs/guide/status-and-roadmap.md) — what's built, what's in progress
   (including the native AOT state), the technology stack
-- [Decisions & reading order](docs/guide/decisions-and-reading-order.md) — the load-bearing
-  decision table and a suggested path through the corpus
+- [Decisions & reading order](docs/guide/decisions-and-reading-order.md) — load-bearing table +
+  path via companion themes then selective RFCs
 - [Glossary (README scope)](docs/guide/glossary.md) — short local terms; the canonical lexicon is
   [`docs/Glossary.md`](docs/Glossary.md)
 - [Contributing conventions & provenance](docs/guide/contributing-and-provenance.md) — the short
   version; full process in [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 Other key entry points: [`docs/Mycelium_Project_Foundation.md`](docs/Mycelium_Project_Foundation.md)
-(the charter), [`docs/Doc-Index.md`](docs/Doc-Index.md) (the whole-corpus map), and
+(the charter), [`docs/Doc-Index.md`](docs/Doc-Index.md) (the whole-corpus map),
+[`docs/CURRENT-STATE.md`](docs/CURRENT-STATE.md) (fast "what's true now"), and
 [`CLAUDE.md`](CLAUDE.md) (the operating guide / house rules for agents working in this repo).
 
 ---
