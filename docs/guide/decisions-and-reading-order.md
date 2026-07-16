@@ -40,16 +40,23 @@ the corpus for a new reader.
 
 ## Suggested reading order
 
-1. **[`docs/Doc-Index.md`](../Doc-Index.md)** — the map: every document, its status, and how they
-   depend on each other.
-2. **[`docs/Mycelium_Project_Foundation.md`](../Mycelium_Project_Foundation.md)** — the charter:
+**Prefer thematic order over meeting order.** The numbered RFC/ADR/DN tree is the permanent
+append-only record; **[`docs/companion/`](../companion/README.md)** is the maintained *historian*
+that groups decisions by what they complete (mutation loop, trust axes, native L3, …) with
+airlock patterns and diagrams.
+
+1. **[`docs/companion/`](../companion/README.md)** — start at
+   [How to read](../companion/00-how-to-read.md): resolution chain, thematic clusters, airlocks.
+2. **[`docs/Doc-Index.md`](../Doc-Index.md)** — status oracle: every document and its dependencies.
+3. **[`docs/Mycelium_Project_Foundation.md`](../Mycelium_Project_Foundation.md)** — the charter:
    vision, requirements (FR/NFR/VR), success and kill criteria, ADRs 001–009, roadmap, risks.
-3. **`docs/rfcs/RFC-0001…`** — the Core IR and metadata schema (everything else plugs into this).
-4. **RFC-0002 onward**, then the ADRs (`docs/adr/`) and design notes (`docs/notes/`) for the deep
-   dives — `Doc-Index.md` orders them.
-5. **`crates/mycelium-core` and `crates/mycelium-interp`** — the kernel and reference semantics,
-   if you want to read the design as code (see the [workspace map](workspace-map.md)).
-6. **`research/`** — the evidence base, if you want the "why" behind a decision (see
+4. **`docs/rfcs/RFC-0001…`** — Core IR and metadata (everything else plugs into this) — after the
+   companion thesis chapter, not as a cold open.
+5. **Thematic deep dives** via [companion §05](../companion/05-thematic-decision-map.md), then open
+   only the ADRs/DNs that cluster names (avoid reading DN-119…140 as a flat changelog).
+6. **`crates/mycelium-core` and `crates/mycelium-interp`** — design-as-code (see the
+   [workspace map](workspace-map.md)).
+7. **`research/`** — evidence base behind a decision (see
    [Contributing conventions & provenance](contributing-and-provenance.md)).
 
 ---
