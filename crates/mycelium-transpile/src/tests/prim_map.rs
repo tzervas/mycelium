@@ -289,22 +289,120 @@ fn clone_on_unresolved_receiver_type_still_gaps_never_fabricates() {
     );
 }
 
-/// NEVER-SILENT (G2/VR-5) regression guard: `to_string`/`into` stay DELIBERATELY WITHHELD from
-/// `TABLE` (verify-first findings in the module doc). M-1037 added accessor identity rows instead.
+/// M-1037 residual table shape: `to_string` is Bytes-gated identity; `into`/`to_vec` stay
+/// deliberately withheld (expected-type / Seq-copy undecidable — honest gap, never fabricate).
 #[test]
-fn to_string_and_into_are_not_in_the_table_deliberately_withheld() {
-    for method in ["to_string", "into"] {
-        assert!(
-            crate::prim_map::lookup(method).is_none(),
-            "`{method}` must NOT be in prim_map::TABLE (deliberately withheld — see module doc)"
-        );
-    }
+fn m1037_residual_table_shape_to_string_in_into_withheld() {
+    assert!(
+        crate::prim_map::lookup("into").is_none(),
+        "`into` must NOT be in prim_map::TABLE (expected-type undecidable — see module doc)"
+    );
+    assert!(
+        crate::prim_map::lookup("to_vec").is_none(),
+        "`to_vec` must NOT be in prim_map::TABLE (not identity — Seq copy)"
+    );
+    let ts = crate::prim_map::lookup("to_string")
+        .expect("`to_string` must be in TABLE (Bytes identity)");
+    assert!(ts.wired, "`to_string` must be wired: true");
+    assert_eq!(ts.myc_prim, "", "identity sentinel");
+    assert_eq!(
+        ts.receiver_gate,
+        crate::prim_map::ReceiverGate::Exact("Bytes"),
+        "`to_string` must be Exact(Bytes) only — Binary/Bool need Show/render"
+    );
     for method in [
-        "clone", "to_owned", "as_ref", "borrow", "as_str", "as_slice", "deref",
+        "clone",
+        "to_owned",
+        "as_ref",
+        "borrow",
+        "as_str",
+        "as_slice",
+        "deref",
+        "to_string",
     ] {
         assert!(
             crate::prim_map::lookup(method).is_some(),
             "`{method}` must be in prim_map::TABLE (identity-conversion row)"
+        );
+    }
+}
+
+/// M-1037 residual — `.to_string()` on a `Bytes` receiver (str/String / string literal) is
+/// identity; on Binary/Bool it must gap with the Show/render EXPLAIN, never fabricate.
+#[test]
+fn m1037_to_string_bytes_identity_and_non_bytes_gaps() {
+    let identity_cases = [
+        ("fn f(s: &str) -> String { s.to_string() }", "(s)"),
+        ("fn f(s: String) -> String { s.to_string() }", "(s)"),
+        ("fn f() -> String { \"hi\".to_string() }", "\"hi\""),
+    ];
+    for (rust, needle) in identity_cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == "f"),
+            "`{rust}` should emit identity, got emitted={:?} gaps={:?}",
+            report.emitted_items,
+            report.gaps
+        );
+        assert!(
+            myc.contains(needle) && !myc.contains("to_string("),
+            "`{rust}` expected identity containing `{needle}`, no fabricated to_string(, got:\n{myc}"
+        );
+    }
+    // Non-Bytes: Display formatting — must gap, never `to_string(` or bare `render(`.
+    for rust in [
+        "fn f(x: u64) -> String { x.to_string() }",
+        "fn f(x: bool) -> String { x.to_string() }",
+    ] {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.iter().any(|n| n == "f"),
+            "`{rust}` must gap (non-Bytes to_string), got emitted={:?}",
+            report.emitted_items
+        );
+        assert!(
+            !myc.contains("to_string(") && !myc.contains("render("),
+            "`{rust}` must not fabricate to_string/render, got:\n{myc}"
+        );
+        assert!(
+            report
+                .gaps
+                .iter()
+                .any(|g| g.reason.contains("Show/render") || g.reason.contains("to_string")),
+            "`{rust}` expected Show/render or to_string EXPLAIN gap, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// M-1037 residual — `into`/`to_vec` always gap with method-specific EXPLAIN; never fabricate.
+#[test]
+fn m1037_into_and_to_vec_never_fabricate() {
+    for (rust, needle, forbidden) in [
+        (
+            "fn f(s: &str) -> String { s.into() }",
+            "expected-type",
+            "into(",
+        ),
+        ("fn f(x: u64) -> u64 { x.into() }", "expected-type", "into("),
+        (
+            "fn f(x: &[u8]) -> Vec<u8> { x.to_vec() }",
+            "to_vec",
+            "to_vec(",
+        ),
+    ] {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
+        assert!(
+            !myc.contains(forbidden),
+            "`{rust}` leaked fabricated `{forbidden}`, got:\n{myc}"
+        );
+        assert!(
+            report.gaps.iter().any(|g| g.reason.contains(needle)),
+            "`{rust}` expected gap reason containing `{needle}`, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
         );
     }
 }
@@ -347,6 +445,9 @@ fn to_owned_on_known_builtin_receiver_emits_identity_passthrough() {
         ("fn f(x: bool) -> bool { x.to_owned() }", "(x)"),
         ("fn f(x: String) -> String { x.to_owned() }", "(x)"),
         ("fn f(s: &str) -> String { s.to_owned() }", "(s)"),
+        // M-1037 residual: string/bool literals are typed in expr_env_type.
+        ("fn f() -> String { \"hi\".to_owned() }", "\"hi\""),
+        ("fn f() -> bool { true.to_owned() }", "True"),
     ];
     for (rust, needle) in cases {
         let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")

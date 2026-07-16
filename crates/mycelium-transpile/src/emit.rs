@@ -82,9 +82,17 @@ pub(crate) type TypeEnv = HashMap<String, String>;
 /// operand for the gate below.
 pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
     // Routed through `crate::visit::ExprVisitor` (M-1041 Scope-A): a narrow visitor overriding
-    // only the 3 shapes this probe cares about (`visit_path`/`visit_paren`/`visit_reference`),
-    // inheriting `fallback -> None` for every other `Expr` shape -- behaviorally identical to the
-    // pre-refactor hand-written 3-arm `match` + `_ => None` this replaced.
+    // only the shapes this probe cares about (`visit_path`/`visit_paren`/`visit_reference`/
+    // `visit_lit`), inheriting `fallback -> None` for every other `Expr` shape.
+    //
+    // **M-1037 residual — typed literals:** string / bool / char *literals* have a fixed Rust
+    // type independent of context (`&'static str` / `bool` / `char`), so their mapped Mycelium
+    // types (`Bytes` / `Bool` / `Binary{32}`) are decidable without TypeEnv. That unlocks
+    // identity conversion rows (`to_owned`/`clone`/`to_string`/accessors) on literal receivers
+    // that previously fell through to the unmappable-conversion gap (the #72 `"MAP-I".to_owned()`
+    // arm-body residual). Integer/float literals are deliberately NOT typed here — their Rust
+    // type is unconstrained until inference (defaults to `i32`/`f64` but can be any width), so
+    // a guessed Binary{N}/Float would be VR-5-unsafe.
     struct EnvTypeVisitor<'a> {
         env: &'a TypeEnv,
     }
@@ -109,6 +117,17 @@ pub(crate) fn expr_env_type(e: &Expr, env: &TypeEnv) -> Option<String> {
 
         fn visit_reference(&mut self, _expr: &Expr, r: &syn::ExprReference) -> Self::Output {
             expr_env_type(&r.expr, self.env)
+        }
+
+        fn visit_lit(&mut self, _expr: &Expr, l: &syn::ExprLit) -> Self::Output {
+            match &l.lit {
+                Lit::Str(_) => Some("Bytes".to_string()),
+                Lit::Bool(_) => Some("Bool".to_string()),
+                Lit::Char(_) => Some("Binary{32}".to_string()),
+                // Lit::Int / Lit::Float / Lit::Byte / Lit::ByteStr: unconstrained or non-scalar
+                // mapped types — leave unresolved (never guess a width).
+                _ => None,
+            }
         }
     }
     crate::visit::walk_expr(e, &mut EnvTypeVisitor { env })
@@ -1279,9 +1298,10 @@ fn zero_bin_literal(width: u32) -> String {
 /// the canonical `ToOwned`/`Clone`/`ToString`/`Into`/`AsRef`/`Borrow`/`Deref` accessors whose sole
 /// effect is ownership/representation identity, never an operation that computes a value.
 fn is_unmappable_conversion_method(method: &str) -> bool {
-    // Methods with a `prim_map` identity row (`clone`/`to_owned`/M-1037 accessors) are handled
-    // there first when `AnyBuiltinScalar` matches; this catch-all covers gate misses (user types,
-    // unresolved receivers) and deliberately withheld conversions (`into`/`to_string`/`to_vec`/…).
+    // Methods with a `prim_map` identity row (`clone`/`to_owned`/`to_string`(Bytes)/M-1037
+    // accessors) are handled there first when their gate matches; this catch-all covers gate
+    // misses (user types, unresolved receivers, non-Bytes `to_string`) and deliberately withheld
+    // conversions (`into`/`to_vec`/mutable accessors).
     matches!(
         method,
         "to_owned"
@@ -1298,6 +1318,43 @@ fn is_unmappable_conversion_method(method: &str) -> bool {
             | "deref"
             | "deref_mut"
     )
+}
+
+/// Method-specific EXPLAIN for residual conversion gaps (M-1037 residual). Prefer a precise
+/// never-silent reason over the shared generic ownership-no-op text when the method has its own
+/// verify-first finding (into target undetermined; to_vec not identity; to_string non-Bytes needs
+/// Show/render).
+fn conversion_gap_reason(method: &str) -> String {
+    match method {
+        "into" => {
+            "Rust `.into()` (Into::into) target type is determined by call-site expected-type \
+             inference; this per-expression emitter has no expected-type context, so identity \
+             when source/target coincide is undecidable without guessing the target — gapped \
+             rather than fabricating bare `into(recv)` (M-1037 residual, G2/VR-5; ADR-003)"
+                .to_string()
+        }
+        "to_vec" => {
+            "Rust `.to_vec()` allocates a new owned Seq (not a value-semantic identity); no \
+             verified bare-call Seq-copy prim is wired in this pipeline — gapped rather than \
+             fabricating bare `to_vec(recv)` (M-1037 residual, G2/VR-5)"
+                .to_string()
+        }
+        "to_string" => {
+            "Rust `.to_string()` on a non-`Bytes` receiver needs Show/render (DN-127), but \
+             single-file myc-check does not guarantee a Show impl is in scope — and `render(recv)` \
+             checks as `unknown function/constructor/prim render` without one. Bytes receivers \
+             use the prim_map identity row; every other receiver is gapped rather than fabricating \
+             bare `to_string(recv)` (M-1037 residual, G2/VR-5)"
+                .to_string()
+        }
+        other => format!(
+            "Rust ownership/identity-conversion no-op method `.{other}()` has no \
+             Mycelium free-function/prim referent (value semantics — ADR-003); \
+             desugaring it to a bare `{other}(recv)` would fabricate an unknown \
+             prim (`unknown function/constructor/prim `{other}`` — verified \
+             against the oracle), so it is gapped, never fake-emitted (G2/VR-5)"
+        ),
+    }
 }
 
 /// If `trait_name`/`method` identify a `Widen::widen` method whose `Self`/target both map to
@@ -3099,20 +3156,14 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // to a bare `to_owned(recv)` FABRICATES a call to a non-existent prim (`myc check`:
         // `unknown function/constructor/prim to_owned`), which is exactly the never-silent
         // violation the house rules forbid (G2/VR-5). Gap it explicitly instead of emitting a
-        // check-failing surface. (This is the #72 co-poison fix: the string-literal-`match`
-        // enabler (M-1035) let `checkty::vsa_kernel_model_id`'s match emit, but its arm bodies
-        // are `"MAP-I".to_owned()` — without this gap, the fabricated `to_owned` poisons the
-        // whole file under the vet loop's file-gated all-or-nothing `checked_fraction`.)
+        // check-failing surface. Methods with a `prim_map` identity row fire above when their
+        // receiver gate matches; this arm is the never-silent residual (gate miss, user type,
+        // or deliberately withheld conversion — `into`/`to_vec`/non-Bytes `to_string`).
+        // M-1037 residual: per-method EXPLAIN via [`conversion_gap_reason`].
         if is_unmappable_conversion_method(&method_name) {
             return Err(GapReason::new(
                 Category::Other,
-                format!(
-                    "Rust ownership/identity-conversion no-op method `.{method_name}()` has no \
-                     Mycelium free-function/prim referent (value semantics — ADR-003); \
-                     desugaring it to a bare `{method_name}(recv)` would fabricate an unknown \
-                     prim (`unknown function/constructor/prim `{method_name}`` — verified \
-                     against the oracle), so it is gapped, never fake-emitted (G2/VR-5)"
-                ),
+                conversion_gap_reason(&method_name),
             ));
         }
         // rotate_left/right: no kernel prim (FLAG-math-3); compose from bin.shl/bin.shr when
