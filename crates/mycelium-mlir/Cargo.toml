@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-mlir"
-version = "0.0.0"
+version.workspace = true
 description = "AOT path — textual ternary-dialect skeleton + env-machine model + a direct-LLVM-IR backend that compiles the bit subset to native code via llc/clang (RFC-0004 §2 direct-LLVM fallback; ADR-007; T1.5). M-150/M-301. The MLIR dialect lowering is deferred until libMLIR is present."
 edition.workspace = true
 rust-version.workspace = true

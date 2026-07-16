@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-spore"
-version = "0.0.0"
+version.workspace = true
 description = "std.spore — the content-addressed deployable + reconstruction-manifest library surface over the mycelium-spore packager (M-522)."
 edition.workspace = true
 rust-version.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-doc"
-version = "0.0.0"
+version.workspace = true
 description = "myc-doc — the M-363 documentation BUILD pipeline: a content-addressed doc-IR (a PROJECTION of the corpus + code + M-359 metadata, never a parallel truth — ADR-003/G11) with many renderers (HTML · Typst→PDF · machine JSON) and the §4.1 doc quality-bar lint (M-363 §6, 8 checks) run over that IR. Undocumented is FLAGGED, never invented (the prose analogue of G2). KC-3 — above the kernel; no kernel change; no new workspace dependency."
 edition.workspace = true
 rust-version.workspace = true

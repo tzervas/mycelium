@@ -12,6 +12,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+## [0.463.1] - 2026-07-16
+
+### Added — first SemVer cut from Conventional-Commit history
+
+First **history-derived** monorepo version (was placeholder `0.0.0` for the whole life of the tree).
+
+- **Version:** `0.463.1` — `Empirical` over `origin/dev` subjects (chronological stack: each `feat` →
+  +0.1.0 minor under `major_version_zero`, each `fix`/`perf` → +patch; merge/wip skipped). Main's
+  squash-only `release:` subjects alone would only justify `0.19.0`; dev/int granularity is the
+  chosen basis until component-repo decomposition.
+- **Wiring:** `[workspace.package] version = "0.463.1"`; all workspace members use
+  `version.workspace = true`. `.cz.toml` tracks the same version for future `cz bump` (still
+  `publish = false` / no crates.io — ADR-018).
+- **Intent:** a fully featured transpile-to-Mycelium-ready Rust base versioned honestly before the
+  tree is split into component repos (per-crate independent bumps can resume then).
+
 ### feat(transpile): DN-140 valid_ident + length-prefix mangler (M-1106) (2026-07-16)
 
 Composer leaf `claude/leaf/L-EMIT-m1106-valid-ident` (`fd7a984b`).

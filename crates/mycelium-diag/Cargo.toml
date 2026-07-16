@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-diag"
-version = "0.0.0"
+version.workspace = true
 description = "Canonical RFC-0013 structured-diagnostic record types — the failure-legibility substrate (Diag/Severity/Locus/Trace/Code); the small audited kernel std.diag/std.recover/std.testing consume (M-510)."
 edition.workspace = true
 rust-version.workspace = true
