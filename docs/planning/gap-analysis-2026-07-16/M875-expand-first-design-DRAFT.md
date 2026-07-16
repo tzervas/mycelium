@@ -141,7 +141,7 @@ read .rs / crate root
 | **Where** | **Before** `syn::parse_file` in `transpile_source_with_ctx` (or a thin wrapper used by `transpile_file` / `transpile_batch`). Post-syn expand is wrong: `syn` already lost unexpanded macro tokens as opaque `Item::Macro` / `Expr::Macro`. |
 | **CLI** | Opt-in flag (e.g. `--expand`), default off; composable with `--vet` / `--files` / dir mode. No `clap` required (hand-rolled args, same as `--vet`). |
 | **Batch mode** | Prefer **crate-scoped** expand once per package, then map expanded modules back to output paths; file-at-a-time expand is a degraded mode when crate metadata is unavailable. |
-| **Provenance** | Gap report / summary must record `expanded: true|false` and `expand_backend: cargo-expand|rustc-unpretty|shim|none|skipped` — never silent about whether a run was expanded or raw (M-875 DoD). |
+| **Provenance** | Gap report / summary must record `expanded` (true/false) and `expand_backend` (`cargo-expand`, `rustc-unpretty`, `shim`, `none`, or `skipped`) — never silent about whether a run was expanded or raw (M-875 DoD). |
 | **Guarantee tag** | Expanded emissions stay **`Declared`** until a differential upgrades them (M-991). Expansion changes *what is attempted*, not the tag. |
 | **Collision surface** | Lands only in `crates/mycelium-transpile/**` (M-1032: outside semcore lane). |
 
