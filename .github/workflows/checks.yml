@@ -24,6 +24,10 @@ on:
         description: "Fail the run if checks fail (default: advisory / non-blocking)"
         type: boolean
         default: false
+      with_proofs:
+        description: "Install GHC/cabal/z3 for LiquidHaskell proofs (default off — desktop-held; cold install hangs self-hosted)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -60,9 +64,12 @@ jobs:
         with:
           components: rustfmt, clippy
 
+      # Proof toolchain is desktop-held (CLAUDE.md / DN-20): `just ci` skip-graceful without GHC/z3.
+      # Default OFF on push/PR — observed 2026-07-16: haskell-actions/setup hung the self-hosted
+      # Podman job for 10+ min after Rust was fixed, blocking the actual checks. Opt in via
+      # workflow_dispatch `with_proofs=true` when deliberately exercising LH proofs remotely.
       - name: Set up Haskell (GHC + cabal) for proofs — M-001
-        # Proofs are skip-graceful in `just ci` when GHC is absent; do not fail the advisory
-        # suite on a self-hosted image that lacks cabal bootstrap.
+        if: ${{ inputs.with_proofs == true }}
         continue-on-error: true
         uses: haskell-actions/setup@v2
         with:
@@ -70,8 +77,8 @@ jobs:
           cabal-version: "3.16.1.0"
 
       - name: Install z3 (LiquidHaskell proofs need it on PATH)
+        if: ${{ inputs.with_proofs == true }}
         # B1-03: z3 is intentionally unpinned. Distro-signed apt package (Ubuntu archive).
-        # Skip-graceful: proofs already skip without z3; self-hosted may lack sudo or apt.
         continue-on-error: true
         run: |
           set -euo pipefail
@@ -91,6 +98,7 @@ jobs:
           fi
 
       - name: Cache cabal store + LH build (proofs are a cold-build pole)
+        if: ${{ inputs.with_proofs == true }}
         uses: actions/cache@v4
         with:
           path: |
