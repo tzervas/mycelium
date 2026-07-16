@@ -38,7 +38,7 @@ jobs:
       contents: write # the wiki is part of the repository
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Mirror docs/wiki/ to the wiki repository
         env:
           # Prefer the repo-managed DOCS_PUBLISH_TOKEN secret (a PAT with Contents:write that can
@@ -83,7 +83,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - name: Build the docsite (themed corpus + agent index + rustdoc)
         run: |
           set -euo pipefail
@@ -95,7 +95,7 @@ jobs:
           # Guard: fail loudly if nothing was assembled, rather than deploying an empty site.
           test -f target/docsite/index.html
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: target/docsite
       - name: Deploy to GitHub Pages
