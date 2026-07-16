@@ -16975,7 +16975,9 @@ issues:
   - id: M-1085
     title: "M-1085 -- dev-trunk just check-canary drift from PR #1521: mycelium-transpile public-api baseline + manifest_gen.py format"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:done]
+    landed_date: 2026-07-15
+    landed_basis: "Wave-0 maint: sugar-index re-cite + ruff format + api baseline green (f5670796 / verify-first residual 0)"
     epic: E28-1
     doc_refs:
       - src:crates/mycelium-transpile/src/vet.rs
@@ -17872,3 +17874,252 @@ issues:
 
       `Declared` until built; `Empirical`/`Proven` only as each property test and the differential
       witness it (VR-5 -- no upgrade past a checked basis). Not yet started. `status: todo`.
+
+  # ---------------- Wave-0 maint (2026-07-15): Commitizen + epic release-gates ----------------
+
+  - id: M-1107
+    title: "M-1107 -- Commitizen Conventional Commits + 0.x.x SemVer enforcement"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:done]
+    depends_on: []
+    epic: null
+    landed_date: 2026-07-15
+    landed_basis: "Wave-0 Haiku leaf L-CZ-commitizen-0x (e75d5397) + L-DOCS PR Tracking (e1a69ac0)"
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:tools/github/conventions.json, src:.cz.toml, src:scripts/checks/cz-check.sh]
+    body: |
+      Filed 2026-07-15 at Wave-0 maintenance close-out (mitigation #1 — verified M-1107 free; M-1106 was highest).
+      Installs Commitizen (`.cz.toml`, commit-msg hook, `just cz-check` / `just cz-bump-dry`) to enforce
+      Conventional Commits aligned with `tools/github/conventions.json`, with `major_version_zero = true`
+      so BREAKING under 0.x bumps to 0.(y+1).0 and never auto-1.0.0 (ADR-018 / ADR-038). Auto-bump/tags stay
+      dry-run until the publish window. CONTRIBUTING documents the PR Tracking footer + GitHub auto-close
+      + epic release-gate pattern.
+
+      User stories:
+      - As a contributor/agent, I want commit-msg to reject non-Conventional subjects, so PR labeling stays consistent.
+      - As a maintainer, I want SemVer tooling constrained to 0.x.x, so no accidental 1.0.0 before release gates.
+
+      Definition of Done:
+      - `.cz.toml` with major_version_zero + allowed_prefixes (incl. wip)
+      - pre-commit commit-msg hook; `just cz-check` skip-graceful
+      - CONTRIBUTING documents cz + PR Tracking footer + auto-close + epic release-gate
+      - Dry-run bump only; no crates.io / auto-tag
+
+  - id: M-1108
+    title: "M-1108 -- E9-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:todo]
+    depends_on: [E9-1]
+    epic: E9-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E9-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E9-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E9-1 — E9-1 (epic) — Editor syntax highlighting & grammar distribution (DN-24)
+
+  - id: M-1109
+    title: "M-1109 -- E10-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
+    depends_on: [E10-1]
+    epic: E10-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E10-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E10-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E10-1 — E10-1 (epic) — Core/kernel 1.0.0 sub-gate (honesty-integrity durability)
+
+  - id: M-1110
+    title: "M-1110 -- E18-1 release-gate: promote to main + cut release"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    depends_on: [E18-1]
+    epic: E18-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E18-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E18-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E18-1 — E18-1 (epic) — Self-hosting capstone (toolchain + libs in Mycelium)
+
+  - id: M-1111
+    title: "M-1111 -- E17-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
+    depends_on: [E17-1]
+    epic: E17-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E17-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E17-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E17-1 — E17-1 (epic) — Documentation, stability guarantees & 1.0.0 release
+
+  - id: M-1112
+    title: "M-1112 -- E20-1 release-gate: promote to main + cut release"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:todo]
+    depends_on: [E20-1]
+    epic: E20-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E20-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E20-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E20-1 — E20-1 (epic) -- Value-Model Collections & Precision (RFC-0033)
+
+  - id: M-1113
+    title: "M-1113 -- E22-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:toolchain, priority:P2, status:todo]
+    depends_on: [E22-1]
+    epic: E22-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E22-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E22-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E22-1 — E22-1 (epic) -- Security Scanning Toolkit
+
+  - id: M-1114
+    title: "M-1114 -- E23-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:project, priority:P3, status:todo]
+    depends_on: [E23-1]
+    epic: E23-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E23-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E23-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E23-1 — E23-1 (epic) -- Post-1.0 future-workstream capture
+
+  - id: M-1115
+    title: "M-1115 -- E28-1 release-gate: promote to main + cut release"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P1, status:todo]
+    depends_on: [E28-1]
+    epic: E28-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E28-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E28-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E28-1 — E28-1 (epic) — Phase-I H1: below-grammar enabler-gap closure
+
+  - id: M-1116
+    title: "M-1116 -- E33-1 release-gate: promote to main + cut release"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P2, status:todo]
+    depends_on: [E33-1]
+    epic: E33-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E33-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E33-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E33-1 — E33-1 (epic) — trx2 E-B: mass .myc boilerplate drafts
+
+  - id: M-1117
+    title: "M-1117 -- E39-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:tooling, priority:P2, status:todo]
+    depends_on: [E39-1]
+    epic: E39-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E39-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E39-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E39-1 — E39-1 (epic) — transparent memory substrate & agent knowledge API (DN-87)
+
+  - id: M-1118
+    title: "M-1118 -- E40-1 release-gate: promote to main + cut release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:tooling, priority:P2, status:todo]
+    depends_on: [E40-1]
+    epic: E40-1
+    doc_refs: [corpus:ADR-018, corpus:ADR-038, src:CONTRIBUTING.md]
+    body: |
+      Filed 2026-07-15 (Wave-0 maint) — terminal child of **E40-1** per the epic release-gate pattern
+      (CONTRIBUTING §Epic release-gate). The epic stays open until this gate lands on **main** and is
+      closed via GitHub auto-close (`Closes #N` on the main-bound PR).
+
+      Definition of Done:
+      1. All other non-gate children of E40-1 are status:done (or explicitly deferred with a follow-up id).
+      2. Work promoted dev → integration → main (PR-gated; no direct push).
+      3. Release notes / version act per ADR-018 / ADR-038 (0.x.x; no accidental 1.0.0).
+      4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
+
+      Parent epic: E40-1 — E40-1 (epic) — validated documentation generation
