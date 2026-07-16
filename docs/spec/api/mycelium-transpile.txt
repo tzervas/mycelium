@@ -475,11 +475,73 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSo
 pub fn mycelium_transpile::remap::build_remap_manifest(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> mycelium_transpile::remap::RemapManifest
 pub fn mycelium_transpile::remap::render_remap_md(&mycelium_transpile::remap::RemapManifest) -> alloc::string::String
 pub mod mycelium_transpile::reserved
+pub enum mycelium_transpile::reserved::RewriteKind
+pub mycelium_transpile::reserved::RewriteKind::Both
+pub mycelium_transpile::reserved::RewriteKind::IllegalChars
+pub mycelium_transpile::reserved::RewriteKind::Reserved
+impl core::clone::Clone for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::clone(&self) -> mycelium_transpile::reserved::RewriteKind
+impl core::cmp::Eq for mycelium_transpile::reserved::RewriteKind
+impl core::cmp::PartialEq for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::eq(&self, &mycelium_transpile::reserved::RewriteKind) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::reserved::RewriteKind
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Freeze for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Send for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Sync for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Unpin for mycelium_transpile::reserved::RewriteKind
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::RewriteKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::RewriteKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::RewriteKind
+pub struct mycelium_transpile::reserved::Rewrite
+pub mycelium_transpile::reserved::Rewrite::kind: mycelium_transpile::reserved::RewriteKind
+pub mycelium_transpile::reserved::Rewrite::original: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::clone(&self) -> mycelium_transpile::reserved::Rewrite
+impl core::cmp::Eq for mycelium_transpile::reserved::Rewrite
+impl core::cmp::PartialEq for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::eq(&self, &mycelium_transpile::reserved::Rewrite) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::Rewrite
+impl core::marker::Freeze for mycelium_transpile::reserved::Rewrite
+impl core::marker::Send for mycelium_transpile::reserved::Rewrite
+impl core::marker::Sync for mycelium_transpile::reserved::Rewrite
+impl core::marker::Unpin for mycelium_transpile::reserved::Rewrite
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::Rewrite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::Rewrite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::Rewrite
+pub struct mycelium_transpile::reserved::ValidIdent
+pub mycelium_transpile::reserved::ValidIdent::rewrite: core::option::Option<mycelium_transpile::reserved::Rewrite>
+pub mycelium_transpile::reserved::ValidIdent::text: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::clone(&self) -> mycelium_transpile::reserved::ValidIdent
+impl core::cmp::Eq for mycelium_transpile::reserved::ValidIdent
+impl core::cmp::PartialEq for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::eq(&self, &mycelium_transpile::reserved::ValidIdent) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Freeze for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Send for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Sync for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Unpin for mycelium_transpile::reserved::ValidIdent
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::ValidIdent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::ValidIdent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::ValidIdent
 pub const mycelium_transpile::reserved::RESERVED: &[&str]
 pub const mycelium_transpile::reserved::RESERVED_SEGMENT_SUFFIX: &str
+pub fn mycelium_transpile::reserved::declared_rewrite_comment(&mycelium_transpile::reserved::ValidIdent) -> core::option::Option<alloc::string::String>
 pub fn mycelium_transpile::reserved::guard_ident(&str, &str) -> core::result::Result<(), mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::reserved::has_valid_ident_shape(&str) -> bool
+pub fn mycelium_transpile::reserved::is_legal_non_reserved_ident(&str) -> bool
 pub fn mycelium_transpile::reserved::is_reserved(&str) -> bool
+pub fn mycelium_transpile::reserved::length_prefix_mangle(&str, &str) -> alloc::string::String
+pub fn mycelium_transpile::reserved::mangled_inherent_fn_name(&str, &str) -> alloc::string::String
 pub fn mycelium_transpile::reserved::sanitize_nodule_path(&str) -> (alloc::string::String, core::option::Option<mycelium_transpile::gap::GapReason>)
+pub fn mycelium_transpile::reserved::valid_ident(&str) -> mycelium_transpile::reserved::ValidIdent
 pub mod mycelium_transpile::transpile
 pub fn mycelium_transpile::transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
 pub fn mycelium_transpile::transpile::transpile_source(&str, &str, &str) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
