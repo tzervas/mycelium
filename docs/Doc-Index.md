@@ -309,10 +309,13 @@ The corpus is Accepted and the build is underway; the dependency-ordered, priori
 
 - **Fractal gap analysis (planning, 2026-07-16):** `docs/planning/gap-analysis-2026-07-16/` —
   PARTITION (56 crates) + per-crate `leaves/*.md` + `SYNTHESIS.md` (G1) + `SYNTHESIS-G2.md` (G2) +
-  wave plans. G1 PR #1629 / G2 PR #1631 on `dev`. **Current ranked residual** (post M-1090 WU-3
-  land): Import net-close **M-1084**, conversion identity **M-1037**, missing `lib/std/io.myc`,
-  self-host **M-740**, M-1006 re-measure. Supersedes G1-only reading of the DN-136 worklist for
-  crate-level residual maps; does not rewrite prior inventories (append-only).
+  wave plans. G1 PR #1629 / G2 PR #1631 on `dev`. **Live PM packet:** `PROGRAM-HANDOFF.md` +
+  `WAVE-L0-ORCHESTRATION-2026-07-16.md` (ORACLE-R1 A1–A5 on working + staging tiers; Epic R held).
+  Standing OS: repo-root **`maint-guide.md`**. **Current ranked residual** (post ORACLE-R1 +
+  M-1090 WU-3): Import net-close **M-1084**, conversion identity **M-1037**, missing
+  `lib/std/io.myc`, self-host **M-740**, M-1006 fuller ladder re-measure. Supersedes G1-only
+  reading of the DN-136 worklist for crate-level residual maps; does not rewrite prior
+  inventories (append-only).
 - **Companion guide (thematic historian, 2026-07-16):** `docs/companion/` — maintained
   **non-normative** supplement for humans/agents: thematic decision clusters (not DN numeric
   order), guarantee **airlock** patterns (weakest-wins friction), memory L1–L3 as one lifecycle,

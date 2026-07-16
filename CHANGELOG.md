@@ -12,6 +12,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): maint-guide OS + ORACLE-R1 A1–A5 program handoff (2026-07-16)
+
+PM / docs close-out for the residual oracle wave (code already on the working tier via
+PRs **#1647–#1651**, promote **#1652**). Does **not** claim one-shot transpile readiness or
+full M-1006 ladder completion (VR-5).
+
+- **`maint-guide.md`** (repo root) — standing maintenance OS: Phase 0–3, L0→L1→L2 role lattice,
+  handoff packet template, trunk policy, acceptance criteria.
+- **`docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF.md`** — live L0↔L1 packet (tips,
+  Empirical pilot table, open queue, release gate **HOLD** on Epic R / SemVer).
+- **`WAVE-L0-ORCHESTRATION-2026-07-16.md`** + gap-analysis **README** — Epic A complete map;
+  Epic B (M-1084 → M-1037 → M-1086) next serial transpile path.
+- **ORACLE-R1 residuals (product already landed; recorded here for tracker honesty):**
+  - **A1** #1647 — lit-zero / signed field compare (`is_negative` / bare-`0` poison).
+  - **A2** #1648 — Strength lattice co-emit (`unknown type Strength`).
+  - **A3** #1649 — M-1006 default 5-target pilot remeasure post A1+A2
+    (`M1006-remeasure-post-A1A2-2026-07-16.md`, `experiments/results/m1006-remeasure-oracler1-a3/`).
+  - **A4** #1650 — `DEFAULT_FUEL`/`DEFAULT_DEPTH` co-emit → eval myc-check Clean; expr ~21.4%.
+  - **A5** #1651 — wide Show + call-arg BinLit → **std-time checked 0% → 45.9% Clean**.
+  - **#1652** — promote working tier → staging tier (lineage merge; same tree as tip).
+- **Empirical pilot numbers (default M-1001 five-target set, not full ladder):** post-A1/A2
+  union checked **8.5%** / expressible **18.6%**; post-A5 std-time **45.9%** Clean; eval Clean.
+  Wide Show remains **Declared** opaque `"<Binary{N}>"` (not Exact Debug).
+- Tracker: M-1006 stays **in-progress** with new doc_refs; M-1090 stays **todo** until the
+  DoD re-measure on the 30-body bucket (WU-3 emit already landed #1630).
+
 ### docs(companion): thematic historian + airlocks + decision clusters (2026-07-16)
 
 Maintained **non-normative** supplement under `docs/companion/` driven by external analysis
