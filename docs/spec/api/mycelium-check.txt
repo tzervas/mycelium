@@ -18,6 +18,32 @@ impl core::marker::Unpin for mycelium_check::FindingKind
 impl core::marker::UnsafeUnpin for mycelium_check::FindingKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::FindingKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::FindingKind
+pub enum mycelium_check::NoduleClass
+pub mycelium_check::NoduleClass::Blocked
+pub mycelium_check::NoduleClass::Blocked::message: alloc::string::String
+pub mycelium_check::NoduleClass::Blocked::on: alloc::string::String
+pub mycelium_check::NoduleClass::CheckError
+pub mycelium_check::NoduleClass::CheckError::message: alloc::string::String
+pub mycelium_check::NoduleClass::CheckError::site: alloc::string::String
+pub mycelium_check::NoduleClass::Clean
+impl mycelium_check::NoduleClass
+pub fn mycelium_check::NoduleClass::is_clean(&self) -> bool
+pub fn mycelium_check::NoduleClass::label(&self) -> &'static str
+impl core::clone::Clone for mycelium_check::NoduleClass
+pub fn mycelium_check::NoduleClass::clone(&self) -> mycelium_check::NoduleClass
+impl core::cmp::Eq for mycelium_check::NoduleClass
+impl core::cmp::PartialEq for mycelium_check::NoduleClass
+pub fn mycelium_check::NoduleClass::eq(&self, &mycelium_check::NoduleClass) -> bool
+impl core::fmt::Debug for mycelium_check::NoduleClass
+pub fn mycelium_check::NoduleClass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_check::NoduleClass
+impl core::marker::Freeze for mycelium_check::NoduleClass
+impl core::marker::Send for mycelium_check::NoduleClass
+impl core::marker::Sync for mycelium_check::NoduleClass
+impl core::marker::Unpin for mycelium_check::NoduleClass
+impl core::marker::UnsafeUnpin for mycelium_check::NoduleClass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::NoduleClass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_check::NoduleClass
 pub enum mycelium_check::PhylumErrorKind
 pub mycelium_check::PhylumErrorKind::Check
 pub mycelium_check::PhylumErrorKind::Duplicate
@@ -65,7 +91,8 @@ impl core::marker::UnsafeUnpin for mycelium_check::Finding
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::Finding
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::Finding
 pub struct mycelium_check::NoduleVerdict
-pub mycelium_check::NoduleVerdict::class: &'static str
+pub mycelium_check::NoduleVerdict::class: mycelium_check::NoduleClass
+pub mycelium_check::NoduleVerdict::file: alloc::string::String
 pub mycelium_check::NoduleVerdict::nodule: alloc::string::String
 impl core::clone::Clone for mycelium_check::NoduleVerdict
 pub fn mycelium_check::NoduleVerdict::clone(&self) -> mycelium_check::NoduleVerdict

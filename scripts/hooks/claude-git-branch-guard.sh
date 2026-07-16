@@ -42,8 +42,9 @@
 #    pushes the CURRENT branch, judged from cwd HEAD). BLOCK iff any destination is protected, or a
 #    force flag is present anywhere in that push's own flags/refspecs.
 # 4. `commit` / `merge` / `cherry-pick` / `rebase` / `revert`: judged by the CURRENT branch, resolved
-#    from the payload's `cwd` HEAD (unchanged from the prior worktree-aware fix — see mitigation #12
-#    "second variant" note in CLAUDE.md) — NEVER from words inside a `-m`/`-F` message or heredoc.
+#    from the payload's `cwd` HEAD by default, but re-resolved against a leading `cd <path>` and/or
+#    that invocation's own `-C <path>` if present (variant 4, see below) — NEVER from words inside a
+#    `-m`/`-F` message or heredoc.
 # 5. Everything else (`status`, `fetch`, `worktree …`, `branch`, `log`, non-git commands, …): ignored.
 #
 # --- Fail-safe boundary (non-negotiable: zero false-negatives) ------------------------------------
@@ -63,17 +64,68 @@
 #   - A `git push` carries a flag that takes a separate value we do not special-case (-o / --repo /
 #     --receive-pack / --push-option) — we cannot safely tell whether the NEXT token is that flag's
 #     value or a positional remote/refspec, so we do not guess.
-#   - A git invocation carries `-C <dir>` / `--git-dir=` / `--work-tree=` (redirects git at a
-#     DIFFERENT repo/worktree than the payload cwd) AND the operation's verdict would depend on the
-#     CURRENT branch (a bare `git push` with no refspec, or a mutating subcommand's HEAD check) — the
-#     guard judges branch state from the payload cwd only and does not shell out to inspect an
-#     arbitrary redirected `-C` path, so this combination is unresolvable and BLOCKS.
+#   - A git invocation carries `--git-dir=` / `--work-tree=` / `--namespace=` (redirects git at a repo
+#     this guard does not attempt to reconstruct) AND the operation's verdict would depend on the
+#     CURRENT branch (a bare `git push` with no refspec, or a mutating subcommand's HEAD check) — this
+#     combination is unresolvable and BLOCKS. (`-C <dir>` is now RESOLVED, not fail-closed
+#     unconditionally — see the variant-4 note below.)
 # Anything else that is not one of the recognized git subcommands, or not git at all, is inert and
 # ALLOWED — the fail-safe is scoped to exactly the operations this guard exists to gate.
+#
+# --- mitigation #12, variant 4 (2026-07-13): resolve the EFFECTIVE target worktree ---------------
+# Variant 3 above judged commit/merge/cherry-pick/rebase/revert and a bare push PURELY from the
+# payload's `.cwd` HEAD, resolved once (line ~104 below) before any command-string analysis. That
+# was itself already a fix for the worktree-aware "second variant" (an agent's ACTUAL git target is
+# the worktree it runs in, not `CLAUDE_PROJECT_DIR`'s main checkout) — but it was still wrong for a
+# command that ITSELF changes which worktree it operates in: `cd <path> && git commit …` (an agent
+# that `git worktree add`-ed its own isolation, or lost its worktree binding across a context
+# compaction, so the payload `.cwd` stayed pinned at the shared main checkout on a protected branch)
+# was FALSE-BLOCKED even though the commit's real target was a fine, non-protected leaf branch.
+#
+# The fix (in branch_guard_parse.py — the bash layer here is unchanged except passing `run_dir` as a
+# 4th argument): the parser now tracks an EFFECTIVE cwd/branch as it walks segments left to right. A
+# plain `cd <path>` segment (a real shell cd) updates that state for every later segment in the same
+# command; a git invocation's own `-C <path>` resolves ONLY that invocation (matching git's own `-C`
+# semantics, which never changes the shell's cwd) without touching the persistent state a later `cd`
+# builds on. Either way the actual branch at the resolved path is looked up via
+# `git -C <path> rev-parse --abbrev-ref HEAD` — a real check, not a guess — and if that path can't be
+# resolved (missing, not a worktree, a dynamic `$(...)` target, `cd -`, or the git call itself fails)
+# the branch is marked UNRESOLVED, which still fails safe (UNSAFE/BLOCK) for any segment whose
+# verdict actually needs to know the current branch. `--git-dir=`/`--work-tree=`/`--namespace=` are
+# NOT resolved (too ambiguous — see the fail-safe boundary above) and remain unconditionally
+# fail-closed exactly as in variant 3. Net effect: the recurring false-positive (a legit isolated
+# worktree commit blocked because the payload cwd disagreed with the real target) is eliminated,
+# while every real protected-branch/force-push violation — including one reached via `cd`/`-C` —
+# still BLOCKs, and any unresolvable target still fails CLOSED. See branch_guard_parse.py's own
+# module docstring for the full design.
 #
 # scripts/checks/branch-guard.sh is the backstop layer (git pre-commit/pre-push hooks + the
 # `/branch-guard` skill); it judges the CURRENT branch directly via `git rev-parse` at hook-invocation
 # time (no command-string parsing at all), so it was already immune to this class of false-positive.
+#
+# --- mitigation #12, variant 5 (2026-07-13, adversarial hardening): newline segmentation + -------
+# --- indirection closure; ALSO widens the fast-path pre-filter below -----------------------------
+# An adversarial security review of variant 4 found two PRE-EXISTING Critical false-negatives (not
+# caused by variant 4, present before it): (1) `split_top_level` never actually split on newlines —
+# `shlex` silently consumed an unquoted newline as whitespace, so a plain multi-line bash block
+# (`git add -A\ngit commit -m wip\ngit push origin main`) flattened into ONE segment, judged only by
+# its first line; (2) literal-`git`-only matching missed an absolute path to the binary, a leading
+# `NAME=value` shell-assignment prefix shifting git off the first token, `eval`/`sh -c`/`bash -c`/
+# `xargs` hiding git in an opaque argument string, and a bare `$VAR`/`${VAR}` in the command-word
+# position. Both are fixed in `branch_guard_parse.py` (see its own module docstring for the full
+# design + the fail-safe boundary each fix respects); this bash layer required exactly ONE change,
+# below: the cheap fast-path pre-filter (previously `\bgit\b` only) is WIDENED to also trigger
+# python3 on `$`/backtick (any variable/substitution — including a fully-obfuscated command word
+# that never contains the literal substring "git" at all, e.g. a base64-decoded variable) and on
+# eval/xargs/sh/bash/zsh/dash/ksh by name — otherwise a sufficiently obfuscated command could skip
+# the python parser ENTIRELY at this pre-filter, before ever reaching its (correct) analysis. This
+# necessarily makes the pre-filter trigger far more often (a bare `$HOME` now triggers it) — that is
+# an accepted, deliberate cost: the pre-filter's own comment already says it exists only to skip the
+# python3 spawn for "obviously-unrelated" commands, and a command containing an unresolved variable
+# is no longer "obviously unrelated" once bare variables must be scrutinized (variant 5, CRITICAL 2).
+# Also see INFORMATIONAL 3 in branch_guard_parse.py: a detached HEAD (or an outright branch-
+# resolution failure — both surface as the literal string "HEAD") now fails closed for any op whose
+# verdict needs the current branch, rather than silently matching no protected pattern and ALLOWing.
 
 set -uo pipefail
 
@@ -95,11 +147,21 @@ cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null
 run_dir="$(printf '%s' "$payload" | jq -r '.cwd // empty' 2>/dev/null || true)"
 [[ -z "$run_dir" || ! -d "$run_dir" ]] && run_dir="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}"
 cd "$run_dir" 2>/dev/null || exit 0
+# Canonicalize to an absolute path — this is also passed to the python parser (variant 4) as the
+# seed for its `cd`/`-C` effective-cwd resolution, which requires an unambiguous absolute base.
+run_dir="$(pwd)"
 
-# Fast path: only inspect commands that actually mention 'git' as a word (cheap pre-filter; the real
-# parse below is authoritative — this is purely to skip the python3 spawn for obviously-unrelated
-# commands like `ls -la`).
-printf '%s' "$cmd" | grep -qE '\bgit\b' || exit 0
+# Fast path: only inspect commands that could plausibly involve git, directly or through
+# indirection (cheap pre-filter; the real parse below is authoritative — this is purely to skip the
+# python3 spawn for obviously-unrelated commands like `ls -la`). Widened in variant 5 beyond a bare
+# `\bgit\b` word match: also triggers on `$`/backtick (ANY variable or substitution — including a
+# command word fully obfuscated to never contain the literal substring "git", e.g. a base64-decoded
+# variable) and on the named indirection wrappers (`eval`/`xargs`/`sh`/`bash`/`zsh`/`dash`/`ksh`) —
+# so a sufficiently obfuscated command cannot skip the python parser at this pre-filter before ever
+# reaching its (correct) analysis. This trades some of the pre-filter's cheapness for correctness —
+# a command containing an unresolved variable is no longer "obviously unrelated" to git once bare
+# variables must be scrutinized (branch_guard_parse.py, CRITICAL 2).
+printf '%s' "$cmd" | grep -qE '\b(git|eval|xargs|sh|bash|zsh|dash|ksh)\b|\$|`' || exit 0
 
 current="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo HEAD)"
 protected="${MYC_PROTECTED_BRANCHES:-main integration dev claude/head/*}"
@@ -115,7 +177,7 @@ command -v python3 >/dev/null 2>&1 || {
   exit 0
 }
 
-verdict="$(python3 "$hook_dir/branch_guard_parse.py" "$cmd" "$current" "$protected" 2>&1)"
+verdict="$(python3 "$hook_dir/branch_guard_parse.py" "$cmd" "$current" "$protected" "$run_dir" 2>&1)"
 rc=$?
 
 if [[ $rc -ne 0 ]]; then

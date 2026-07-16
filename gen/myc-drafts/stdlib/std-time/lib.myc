@@ -88,11 +88,22 @@
 // Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 // [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 // A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
 // It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
 nodule std.time;
+
+// Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).
+//
+// No sentinel value, no silent zero, no wrap: every failure route surfaces here.
+type TimeErr = Overflow | ClockUnavailable(Bytes) | NonMonotonic(Binary{128}, Binary{128});
 
 // Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).
 //
@@ -110,6 +121,37 @@ type DeclaredTime[T] = DeclaredTime(T);
 // `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).
 type DeclaredTimeEntropy[T] = DeclaredTimeEntropy(T);
 
+// A signed nanosecond span (C4 / RFC-0001 value-semantic).
+//
+// Represented as a signed 128-bit nanosecond count — large enough to span many millennia and
+// small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):
+// an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.
+//
+// **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer
+// arithmetic; fallibility is the never-silent overflow guard, not approximation.
+//
+// # FLAG — representation (§7-Q4)
+//
+// The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed
+// (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation
+// uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow
+// is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has
+// passed). Disposition: defer final representation choice to spec ratification; overflow is
+// `Err(Overflow)` regardless (C1 holds either way).
+type Duration = Duration(Binary{128});
+
+impl Duration {
+  // Construct from a nanosecond count (value-semantic constructor — always exact).
+  // Declared: renamed `from_nanos` -> `Duration__from_nanos` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn Duration__from_nanos(nanos: Binary{128}) => Duration = Duration(nanos);
+  // The raw nanosecond count (exact, total — the canonical representation).
+  fn as_nanos(self: Duration) => Binary{128} = (match self { Duration(p0) => p0 });
+  // Whether this span is negative.
+  fn is_negative(self: Duration) => Bool = (match self { Duration(p0) => p0 }) < 0;
+  // Whether this span is zero.
+  fn is_zero(self: Duration) => Bool = (match self { Duration(p0) => p0 }) == 0;
+};
+
 // A point on the MONOTONIC clock (never-backward, no civil meaning).
 //
 // Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.
@@ -126,9 +168,30 @@ type MonoInstant = MonoInstant(Binary{64});
 
 impl MonoInstant {
   // Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).
-  fn from_nanos(nanos: Binary{64}) => MonoInstant = MonoInstant(nanos);
+  // Declared: renamed `from_nanos` -> `MonoInstant__from_nanos` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn MonoInstant__from_nanos(nanos: Binary{64}) => MonoInstant = MonoInstant(nanos);
   // The raw nanosecond tick (canonical representation — exact, total).
   fn as_nanos(self: MonoInstant) => Binary{64} = (match self { MonoInstant(p0) => p0 });
+};
+
+// A point on the WALL-CLOCK (civil/UTC time, an entropy source).
+//
+// Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time
+// value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so
+// `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.
+//
+// **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy
+// source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it
+// seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return
+// type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.
+type WallInstant = WallInstant(Binary{128});
+
+impl WallInstant {
+  // Construct from a signed nanosecond count since the Unix epoch (used by [`ClockSource`]).
+  // Declared: renamed `from_nanos_since_epoch` -> `WallInstant__from_nanos_since_epoch` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn WallInstant__from_nanos_since_epoch(nanos: Binary{128}) => WallInstant = WallInstant(nanos);
+  // The raw signed nanosecond count since the Unix epoch (exact, total).
+  fn as_nanos_since_epoch(self: WallInstant) => Binary{128} = (match self { WallInstant(p0) => p0 });
 };
 
 // A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).
@@ -151,7 +214,8 @@ type LogicalInstant = LogicalInstant(Binary{64});
 
 impl LogicalInstant {
   // Construct from a logical tick (used by [`ClockSource`] implementations).
-  fn from_tick(tick: Binary{64}) => LogicalInstant = LogicalInstant(tick);
+  // Declared: renamed `from_tick` -> `LogicalInstant__from_tick` (DN-34 §8.13/8.14 "D4") — Mycelium's inherent-impl desugar (M-664, crates/mycelium-l1/src/checkty.rs) lifts every method to a flat top-level fn, so a bare name here could collide with another type's same-named associated fn in this nodule.
+  fn LogicalInstant__from_tick(tick: Binary{64}) => LogicalInstant = LogicalInstant(tick);
   // The raw tick value (exact, total).
   fn as_tick(self: LogicalInstant) => Binary{64} = (match self { LogicalInstant(p0) => p0 });
 };
@@ -168,3 +232,38 @@ impl LogicalInstant {
 // nanoseconds as a **placeholder** only. The real logical tick is M-356's deterministic counter,
 // owned by `std.runtime`. When that API lands, `SystemClock::logical_now` will delegate to it.
 type SystemClock = SystemClock;
+
+// A [`ClockSource`] with manually-settable time values — for deterministic tests.
+//
+// All three reads return the values set by the last `set_*` call (default: zero for each).
+// The WALL-CLOCK read still returns `DeclaredTimeEntropy` — the effect marker is structural,
+// not conditional on nondeterminism — but the value is deterministic, enabling pure test logic.
+//
+// # Example
+//
+// ```rust
+// # use mycelium_std_time::{ManualClock, ClockSource, MonoInstant, WallInstant, LogicalInstant};
+// let mut clock = ManualClock::default();
+// clock.set_mono(MonoInstant::from_nanos(1_000_000_000));
+// clock.set_wall(WallInstant::from_nanos_since_epoch(1_717_000_000_000_000_000));
+// clock.set_logical(LogicalInstant::from_tick(42));
+//
+// let mono = clock.mono_now().into_inner().unwrap();
+// assert_eq!(mono.as_nanos(), 1_000_000_000);
+//
+// let wall = clock.wall_now().into_inner().unwrap();
+// assert_eq!(wall.as_nanos_since_epoch(), 1_717_000_000_000_000_000);
+//
+// let logical = clock.logical_now().into_inner();
+// assert_eq!(logical.as_tick(), 42);
+// ```
+type ManualClock = ManualClock(MonoInstant, WallInstant, LogicalInstant);
+
+impl ManualClock {
+  // Set the MONOTONIC clock value returned by `mono_now`.
+  fn set_mono(self: ManualClock, instant: MonoInstant) => ManualClock = let self = ManualClock(instant, (match self { ManualClock(_, p1, _) => p1 }), (match self { ManualClock(_, _, p2) => p2 })) in self;
+  // Set the WALL-CLOCK value returned by `wall_now`.
+  fn set_wall(self: ManualClock, instant: WallInstant) => ManualClock = let self = ManualClock((match self { ManualClock(p0, _, _) => p0 }), instant, (match self { ManualClock(_, _, p2) => p2 })) in self;
+  // Set the LOGICAL tick returned by `logical_now`.
+  fn set_logical(self: ManualClock, instant: LogicalInstant) => ManualClock = let self = ManualClock((match self { ManualClock(p0, _, _) => p0 }), (match self { ManualClock(_, p1, _) => p1 }), instant) in self;
+};

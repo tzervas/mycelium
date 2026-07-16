@@ -326,12 +326,109 @@ fn cases() -> Vec<Case> {
                 category: Category::Other,
             },
         },
-        // A bounded generic type parameter has no bare-identifier `type_params` mapping.
+        // A bounded generic type parameter has no bare-identifier `type_params` mapping (`fn`
+        // generics are unaffected by DN-131 — that note lifts the refusal on the impl slot
+        // only, `plain_type_params` still refuses any bound here).
         Case {
             name: "generic_bound_gap",
             rust: "fn foo<T: Clone>(x: T) -> T { x }",
             expect: Expect::Gapped {
                 category: Category::GenericBound,
+            },
+        },
+        // DN-131 (Accepted; M-1088/M-1101) — a plain non-generic inherent impl is the
+        // overwhelmingly common case; the regression guard that this leaf's restructuring of
+        // `emit_impl` leaves its output byte-identical when there are no impl-level generic
+        // parameters at all (`impl_type_params` is empty, so `impl{}` + `" "` == the pre-leaf
+        // `"impl "` text exactly).
+        Case {
+            name: "impl_no_generics_unchanged",
+            rust: "impl Bx { fn dup(self) -> Bx { self } }",
+            expect: Expect::Emitted {
+                item: "impl Bx",
+                contains: "impl Bx {\n",
+            },
+        },
+        // DN-131 — an UNBOUNDED impl-level type parameter (`impl<T> Bx<T>`, DN-103's own slot)
+        // now emits: `bounded_impl_type_params` returns the bare identifier `"T"` when a
+        // parameter carries no inline bound, exactly the DN-103 backward-compatible identity
+        // case DN-131 §3 names ("an unbounded `impl[T] Foo[T]` yields `bounds: []`").
+        Case {
+            name: "impl_unbounded_generic_emits",
+            rust: "impl<T> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T] Bx[T]",
+                contains: "impl[T] Bx[T] {",
+            },
+        },
+        // DN-131 — a BOUNDED impl-level type parameter now emits the bound verbatim into the
+        // impl slot's own `[T: Bound]` text (the leaf's headline capability).
+        Case {
+            name: "impl_bounded_generic_emits",
+            rust: "impl<T: Clone> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T: Clone] Bx[T]",
+                contains: "impl[T: Clone] Bx[T] {",
+            },
+        },
+        // DN-131 §3's multi-bound surface (`bound ::= Ident type_args? ('+' Ident
+        // type_args?)*`, reusing the landed `parse_bound` grammar) — two plain trait-name
+        // bounds joined by `+`.
+        Case {
+            name: "impl_multi_bound_generic_emits",
+            rust: "impl<T: Clone + Copy> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Emitted {
+                item: "impl[T: Clone + Copy] Bx[T]",
+                contains: "impl[T: Clone + Copy] Bx[T] {",
+            },
+        },
+        // Scope boundary (never-silent, G2): a TRAIT-INSTANCE impl with a non-empty generics
+        // list is DN-130's territory (parametric trait-instance heads + coherence), not
+        // authorized by DN-131 — still an explicit gap, unchanged from before this leaf.
+        Case {
+            name: "impl_generic_trait_instance_still_gapped",
+            rust: "impl<T: Clone> Foo<T> for Bx<T> { fn f(a: T) -> T { a } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a lifetime parameter on the impl slot has no grammar surface — gaps
+        // exactly as `plain_type_params` gaps one on a `fn`/`struct`/`enum`/`trait` decl head.
+        Case {
+            name: "impl_lifetime_param_still_gapped",
+            rust: "impl<'a> Bx<'a> { fn dup(self) -> Bx<'a> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a const-generic impl-level parameter has no confirmed width-const
+        // correspondence — gaps.
+        Case {
+            name: "impl_const_generic_param_still_gapped",
+            rust: "impl<const N: usize> Bx<N> { fn dup(self) -> Bx<N> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: a bound carrying type arguments (`Into<u8>`) is outside the DN-131 v1
+        // plain-trait-name surface this leaf builds — gapped rather than guessed (VR-5).
+        Case {
+            name: "impl_bound_with_type_args_still_gapped",
+            rust: "impl<T: Into<u8>> Bx<T> { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Gapped {
+                category: Category::GenericBound,
+            },
+        },
+        // Scope boundary: an impl `where` clause still has no Mycelium equivalent (DN-131 §3:
+        // inline bounds only, no `where` in v1) — unchanged from before this leaf, now reported
+        // under its own precise `WhereClause` category rather than the blanket `GenericBound`
+        // the old unconditional-refusal gate produced for every generic impl (a strictly more
+        // precise, not a weaker, diagnosis).
+        Case {
+            name: "impl_where_clause_still_gapped",
+            rust: "impl<T> Bx<T> where T: Clone { fn dup(self) -> Bx<T> { self } }",
+            expect: Expect::Gapped {
+                category: Category::WhereClause,
             },
         },
         // M-1006 (E33-1): a named-field enum variant whose fields resolve now emits POSITIONALLY
@@ -379,6 +476,92 @@ fn cases() -> Vec<Case> {
                 sub_gap_category: Category::DeriveAttr,
             },
         },
+        // DN-128 (M-1086) — `derive(Debug)` on a FIELDLESS struct composes a trivial `impl
+        // Show[T] for T` (no field-walk dependency): the primary "make sure this case emits clean"
+        // sub-case the leaf's kickoff names (the std-sys-host `OsEntropy`/`OsClock` canary shape).
+        Case {
+            name: "derive_debug_unit_struct_composes_show_impl",
+            rust: "#[derive(Debug)]\nstruct OsEntropy;",
+            expect: Expect::Emitted {
+                item: "OsEntropy",
+                contains: "impl Show[OsEntropy] for OsEntropy {\n  fn render(x: OsEntropy) => Bytes =\n    \"OsEntropy\";\n};",
+            },
+        },
+        // DN-128 (M-1086) — `derive(Default)` on a FIELDLESS struct composes the bare nullary
+        // `impl Init[T] for T` (the constructor with no field args).
+        Case {
+            name: "derive_default_unit_struct_composes_init_impl",
+            rust: "#[derive(Default)]\nstruct OsEntropy;",
+            expect: Expect::Emitted {
+                item: "OsEntropy",
+                contains: "impl Init[OsEntropy] for OsEntropy {\n  fn init() => OsEntropy =\n    OsEntropy;\n};",
+            },
+        },
+        // DN-128 (M-1086) — `derive(Debug)` on a struct with a PRIMITIVE field with no `Show`
+        // route stays an honest gap. **DN-138 WU-4 update:** a narrow `u8`/`Binary{8}` field is NO
+        // LONGER this fixture (WU-4's `width_cast` unblock composes it — see
+        // `derive_forms_check_clean_against_real_toolchain`'s `Narrow` case); `f64`/`Float` is the
+        // one primitive repr that stays a genuine, disclosed gap for every row (ADR-040 §2.3/§2.4 —
+        // no `Show[Float]` is ever seeded). The struct's own `type` declaration still emits (only
+        // the derive impl is dropped).
+        Case {
+            name: "derive_debug_primitive_field_gaps_never_fabricates",
+            rust: "#[derive(Debug)]\nstruct Pair(f64, bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Pair",
+                contains: "type Pair = Pair(Float, Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 (M-1086) — `derive(Default)` on a struct with a PRIMITIVE field stays an honest
+        // gap for the identical reason. **DN-138 WU-4 update:** see the `Debug` case above — `f64`
+        // replaces the now-unblocked `u8` fixture.
+        Case {
+            name: "derive_default_primitive_field_gaps_never_fabricates",
+            rust: "#[derive(Default)]\nstruct Pair(f64, bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Pair",
+                contains: "type Pair = Pair(Float, Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 §6.1 (M-1086) — `derive(Clone)`/`derive(Copy)` are a SATISFIED no-op under
+        // Mycelium's value semantics (ADR-003): recorded via the dedicated `DeriveSatisfied`
+        // category (never `DeriveAttr` — this is not a gap), and no `impl Clone`/`impl Copy` text
+        // is ever emitted (Mycelium has no such trait to implement).
+        Case {
+            name: "derive_clone_copy_satisfied_no_op",
+            rust: "#[derive(Clone, Copy)]\nstruct Flag(bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Flag",
+                contains: "type Flag = Flag(Bool);",
+                sub_gap_category: Category::DeriveSatisfied,
+            },
+        },
+        // DN-128 (M-1086) — a derive name outside this leaf's standard set (`Serialize`, or
+        // `Eq`/`Ord`/`Hash`/`PartialEq`/`PartialOrd` — DN-128 §2's OTHER rows, a separate unbuilt
+        // increment) stays an honest `DeriveAttr` gap, exactly like any other unrecognized derive.
+        Case {
+            name: "derive_unrecognized_name_gaps",
+            rust: "#[derive(Serialize)]\nstruct Flag(bool);",
+            expect: Expect::EmittedAndGapped {
+                item: "Flag",
+                contains: "type Flag = Flag(Bool);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
+        // DN-128 (M-1086) — a GENERIC struct's `derive(Debug)` gaps (a derived impl for a generic
+        // type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's scope); the
+        // struct's own (generic) `type` declaration still emits unaffected.
+        Case {
+            name: "derive_debug_generic_struct_gaps",
+            rust: "#[derive(Debug)]\nstruct Wrap<T>(T);",
+            expect: Expect::EmittedAndGapped {
+                item: "Wrap",
+                contains: "type Wrap[T] = Wrap(T);",
+                sub_gap_category: Category::DeriveAttr,
+            },
+        },
         // M-1001: a `use` import is FLAGGED, not emitted — the transpiler has no cross-nodule symbol
         // table so it cannot confirm the path resolves (the vet loop confirms such imports fail
         // `myc check` name-resolution), and an emitted `use` poisons the whole draft's check.
@@ -397,22 +580,21 @@ fn cases() -> Vec<Case> {
                 category: Category::Import,
             },
         },
-        // M-1001: a type whose name is a Mycelium reserved word (`Float`) can't be emitted verbatim
-        // (it would lex as a keyword) — gapped ReservedWord, never renamed (VR-5/G2).
+        // DN-140 (M-1106): reserved type/variant names rewrite to `*_kw` (G2 comment + emitted text).
         Case {
             name: "reserved_type_name",
             rust: "enum Float { A, B }",
-            expect: Expect::Gapped {
-                category: Category::ReservedWord,
+            expect: Expect::Emitted {
+                item: "Float_kw",
+                contains: "type Float_kw = A | B",
             },
         },
-        // M-1001: a variant/constructor named a reserved word (`Exact`) — the collision that poisoned
-        // `mycelium-l1/src/eval.rs`'s parse in the §8.7 baseline.
         Case {
             name: "reserved_variant",
             rust: "enum GuaranteeStrength { Exact, Loose }",
-            expect: Expect::Gapped {
-                category: Category::ReservedWord,
+            expect: Expect::Emitted {
+                item: "GuaranteeStrength",
+                contains: "Exact_kw",
             },
         },
         // Shared-reference erasure (this leaf, ADR-003): a fn whose params are `&T` shared references
@@ -427,14 +609,20 @@ fn cases() -> Vec<Case> {
                 contains: "fn digest_eq(a: Ordering, b: Ordering) => Bool = a == b;",
             },
         },
-        // NEVER-SILENT CASCADE: a fn taking `&mut T` stays gapped — a mutable reference has no
-        // value-semantic correspondence (ADR-003), so it is NOT erased. The whole fn gaps (Other),
-        // never a partial emission that silently drops the mutation.
+        // DN-125 (M-1081): a fn taking a top-level `&mut T` parameter now value-threads (Alt A,
+        // Rank 1) instead of hard-gapping — `x` erases to a by-value `Ordering` param, and the
+        // return type widens to carry `x` back out alongside the genuine `bool` return value
+        // (this fixture's body never actually reassigns `x`, so the threaded slot is just `x`
+        // itself, unchanged — a vacuously-correct rebind, not a special case; `map_signature`'s
+        // `FnArg::Typed` `&mut T` arm does not require the body to mutate). Was
+        // `mut_ref_param_gapped` pre-DN-125; kept the same fixture Rust source so the two
+        // behaviors (gap -> emit) are directly comparable in history.
         Case {
-            name: "mut_ref_param_gapped",
+            name: "mut_ref_param_value_threads",
             rust: "fn bump(x: &mut Ordering) -> bool { true }",
-            expect: Expect::Gapped {
-                category: Category::Other,
+            expect: Expect::Emitted {
+                item: "bump",
+                contains: "fn bump(x: Ordering) => (Ordering, Bool) = (x, True);",
             },
         },
         // M-1006 §8.14: a fn taking `&str` now emits — the reference erases to `str`, which maps to
@@ -610,12 +798,46 @@ fn cases() -> Vec<Case> {
                             _ => True } })",
             },
         },
-        // Unsigned `Add`/`Sub`/`Mul` are UNCHANGED by this leaf (pre-existing, out-of-scope glyph
-        // fallback — this leaf only adds signed-specific coverage, never regresses the unsigned
-        // path). Proves the signed gate does not mis-fire on an unsigned `Binary{N}` operand.
+        // D3 arithmetic-operator-emission residual (this leaf): the UNSIGNED counterpart to the
+        // `_s`-suffixed arms above. Prior to this leaf the unsigned `Add`/`Sub`/`Mul` operand-gate
+        // fell through to the plain glyph (pinned by this same case's now-superseded
+        // `unsigned_add_keeps_glyph_unchanged_by_this_leaf` name/comment), which did NOT
+        // `myc check`-clean for a `Binary{N}` operand pair — `add` is the *ternary*-only
+        // `prim_family` member (checkty.rs:9975), so `a + b` on two `Binary{N}` values failed with
+        // `` `add` does not accept argument types [Binary(..), Binary(..)] `` (T-Op; RFC-0007
+        // §4.4). Confirmed the exact repro `fn add2(a: u64, b: u64) -> u64 { a + b }` before this
+        // fix. Now composes to the already-registered `add_u`/`sub_u`/`mul_u` prims (width-
+        // preserving `Binary{N}` arithmetic, RFC-0032 D2/M-748 + RFC-0033 §4.1.2 CU-1) — proven
+        // `myc check`-clean with no import (`binop_operand_gated_forms_check_clean` below).
         Case {
-            name: "unsigned_add_keeps_glyph_unchanged_by_this_leaf",
+            name: "unsigned_add_emits_add_u",
             rust: "fn f(a: u32, b: u32) -> u32 { a + b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "add_u(a, b)",
+            },
+        },
+        Case {
+            name: "unsigned_sub_emits_sub_u",
+            rust: "fn f(a: u32, b: u32) -> u32 { a - b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "sub_u(a, b)",
+            },
+        },
+        Case {
+            name: "unsigned_mul_emits_mul_u",
+            rust: "fn f(a: u32, b: u32) -> u32 { a * b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "mul_u(a, b)",
+            },
+        },
+        // Non-`Binary{N}` operand keeps the plain glyph (the gate is genuinely operand-typed, not
+        // unconditional) — the twin of `bitand_non_binary_operand_keeps_glyph` for `+`.
+        Case {
+            name: "add_non_binary_operand_keeps_glyph",
+            rust: "fn f(a: bool, b: bool) -> bool { a + b }",
             expect: Expect::Emitted {
                 item: "f",
                 contains: "a + b",
@@ -826,6 +1048,47 @@ fn cases() -> Vec<Case> {
                    g(n) }",
             expect: Expect::Gapped {
                 category: Category::MultiStmtBody,
+            },
+        },
+        // T-A1 (DN-122 §13.2 WU-A; positive control): a single-param, param-only-sig foreign-trait
+        // impl of the registered `Ord3` prelude trait (`mvp_prelude_trait_shape`) — receiverless
+        // methods, every value-param `Self`, a primitive return — synthesizes the `[<SelfTy>]`
+        // Mycelium trait-argument the Rust source itself never spells (see `emit_impl`'s MVP block).
+        // `binop_operand_gated_forms_check_clean`-style live-oracle coverage of the SAME shape
+        // (that it actually `myc check`s clean) is below, `mvp_cmp_emit_check_agreement`.
+        Case {
+            name: "mvp_cmp_eligible_synthesizes_trait_arg",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self, b: Self) -> u8 { a } }",
+            expect: Expect::Emitted {
+                item: "impl Ord3[Binary{8}] for Binary{8}",
+                contains: "impl Ord3[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{8} = a;\n};",
+            },
+        },
+        // T-A2 (negative/honest-gap control): `Widen` is two-type/`Self`-receiver-needing (DN-122
+        // §13.1's own adversarial narrowing) — it is emitted EXACTLY as before WU-A (no bracket
+        // synthesis, no fabricated trait/`Self` body), still an honest `myc check`-time residual
+        // (M-876/M-1076), never silently "fixed" by the MVP recognizer. Mirrors the pre-existing
+        // `widen_binary_emits_width_cast_not_fabricated_from` assertion, pinned here specifically
+        // against MVP-bracket leakage.
+        Case {
+            name: "mvp_widen_unaffected_by_mvp_recognizer",
+            rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect: Expect::Emitted {
+                item: "impl Widen[Binary{16}] for Binary{8}",
+                contains: "impl Widen[Binary{16}] for Binary{8} {",
+            },
+        },
+        // T-A3 half 1 (emit<->check agreement, the transpile-time half): a `Ord3`-named impl whose
+        // `cmp` method has a `self` RECEIVER (the exact shape `Widen`/`MycEq`/etc. all use) is
+        // correctly recognized as INELIGIBLE (`has_self_receiver` excludes it) — emitted unchanged,
+        // no `[<SelfTy>]` bracket. The live-oracle half (that the real checker ALSO refuses this
+        // shape, confirming the exclusion was not overcautious) is `mvp_cmp_emit_check_agreement`.
+        Case {
+            name: "mvp_cmp_self_receiver_excluded_no_bracket",
+            rust: "impl Ord3 for u8 { fn cmp(self, other: Self) -> u8 { self } }",
+            expect: Expect::Emitted {
+                item: "impl Ord3 for Binary{8}",
+                contains: "impl Ord3 for Binary{8} {",
             },
         },
     ]
@@ -1049,47 +1312,580 @@ fn string_literal_pattern_emits_with_l1_enabler() {
     );
 }
 
-/// The #72 co-poison fix: a Rust ownership/identity-conversion no-op method (`.to_owned()`,
-/// `.clone()`, `.to_string()`, `.into()`, …) has no Mycelium free-function/prim referent, so
-/// desugaring it to a bare `to_owned(recv)` would FABRICATE an unknown prim (`myc check`:
-/// `unknown function/constructor/prim to_owned`). It must be gapped, never fake-emitted (G2/VR-5).
-/// Verified against the real oracle in the vet loop: without this gap, emitting the string-literal
-/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — poisons
-/// the whole file's file-gated `checked_fraction`; with it, that fn gaps cleanly (no regression) and
-/// gapping the fabricated conversions un-poisons real files (a measured `checked_fraction` rise).
+/// DN-132 P1 (M-1089): a named-field **struct pattern** on an in-file struct desugars to the
+/// grammar's positional `Ctor` surface -- declaration-order placement (OQ-5) regardless of the
+/// *pattern's* field order, a wildcard `_` at every field the pattern does not name (OQ-4,
+/// regardless of whether the pattern spells `..` -- SS5.2 point 4), and the sub-pattern of a
+/// renamed/nested field binding recursively mapped.
+#[test]
+fn struct_pattern_desugars_to_positional_ctor() {
+    let cases = [
+        // All fields named, in declaration order, no rest.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, y } => x, } }",
+            "Foo(x, y)",
+        ),
+        // `..` rest: an unmentioned field is a wildcard.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, .. } => x, } }",
+            "Foo(x, _)",
+        ),
+        // No `..` but still one field unmentioned -- SS5.2 point 4: the transpiler accepts either
+        // spelling and emits the identical positional wildcard (only syntactically-valid Rust,
+        // where `rustc` already enforces `..` for a genuinely partial pattern, ever reaches here).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x } => x, } }",
+            "Foo(x, _)",
+        ),
+        // Field-order canonicalization (OQ-5): pattern spells `y, x`, out of declaration order.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { y, x } => x, } }",
+            "Foo(x, y)",
+        ),
+        // Field rename (`field: binding`) -- the sub-pattern binds a different local name.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: a, y: b } => a, } }",
+            "Foo(a, b)",
+        ),
+        // A nested/literal sub-pattern at a named field recurses through `map_pattern`.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: 0, y } => y, _ => 0 } }",
+            "Foo(0, y)",
+        ),
+        // `Self::Ctor { .. }` inside an `impl` -- the ctor-name resolution takes only the path's
+        // last segment (the identical convention `Pat::Path`/`Pat::TupleStruct` already use), so
+        // the `Self::` qualifier is transparent.
+        (
+            "struct Foo { x: u8, y: u8 } impl Foo { fn f(self) -> u8 { match self { Self { x, .. } => x, } } }",
+            "Foo(x, _)",
+        ),
+        // M-1093/DN-134: an **enum struct-variant** pattern -- the DN-132 SS5.1 component-seam
+        // boundary M-1089's own test used to pin as an honest gap (`struct_layouts` walked
+        // `Item::Struct` only). Now that the shared, collision-safe population also walks
+        // `Item::Enum` `Fields::Named` variants (`transpile.rs::struct_layouts`), this arm
+        // resolves it exactly like a plain struct -- "composes automatically once that
+        // population lands, with no further edit here" (M-1089's own doc, confirmed).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(v: E) -> u8 { match v { E::A { x, .. } => x, _ => 0 } }",
+            "A(x, _)",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            myc.contains(needle),
+            "case `{rust}`: expected .myc to contain `{needle}`, got:\n{myc}\ngaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// DN-132 P1 (M-1089): the never-silent gap paths (VR-5/G2) -- a struct pattern is only ever
+/// desugared when its constructor + every named field is *confirmed* resolvable; anything short of
+/// that refuses rather than emitting a guessed/partial-arity `Ctor`.
+#[test]
+fn struct_pattern_never_silently_gaps() {
+    let cases = [
+        // No confirmed in-file layout at all (an undeclared/foreign constructor name).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Bar { x, .. } => x, _ => 0 } }",
+            "no confirmed in-file layout",
+        ),
+        // A field name absent from the resolved layout -- never a silent wildcard/drop.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { z, .. } => 0, _ => 1 } }",
+            "not a declared field",
+        ),
+        // A duplicate field name within one pattern (defensive: `syn` parses this even though
+        // `rustc` itself would reject it -- DN-132 OQ-4c).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, x, .. } => 0, _ => 1 } }",
+            "more than once",
+        ),
+        // A positional field-index member (`0: a`) on a struct-pattern -- out of DN-132 P1 scope.
+        (
+            "struct Foo(u8, u8); fn f(v: Foo) -> u8 { match v { Foo { 0: a, 1: _b } => a, } }",
+            "positional field-index member",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            !report.emitted_items.iter().any(|n| n == "f"),
+            "case `{rust}`: `f` must stay gapped, got emitted={:?} myc:\n{myc}",
+            report.emitted_items
+        );
+        assert!(
+            report.gaps.iter().any(|g| g.reason.contains(needle)),
+            "case `{rust}`: expected a gap whose reason contains `{needle}`, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-132 P1 (M-1089): every struct-pattern shape
+/// [`struct_pattern_desugars_to_positional_ctor`] proves the *text* of is run through the REAL
+/// `myc-check` oracle here, proving the emitted positional `Ctor` pattern actually **type-checks**
+/// (the property the whole DN-132 P1 deliverable is for -- it reuses the Maranget usefulness pass
+/// unchanged, so a real `myc check` pass is the honest confirmation of that claim, not just a
+/// substring match). Skips gracefully (never fails) when `myc-check` is not built, exactly like
+/// `binop_operand_gated_forms_check_clean` above.
+#[test]
+fn struct_pattern_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-struct-pattern-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // All fields named, declaration order.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, y } => x, } }",
+            "f",
+        ),
+        // `..` rest -- an unmentioned field wildcards.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x, .. } => x, } }",
+            "f",
+        ),
+        // Field-order canonicalization (OQ-5): pattern spells `y, x`.
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { y, x } => x, } }",
+            "f",
+        ),
+        // Field rename (`field: binding`).
+        (
+            "struct Foo { x: u8, y: u8 } fn f(v: Foo) -> u8 { match v { Foo { x: a, y: b } => a, } }",
+            "f",
+        ),
+        // Bare `Self { .. }` inside an `impl` -- the pattern-side `Self` resolution. Impl blocks
+        // are recorded under `impl <Type>`, not the bare method name (see
+        // `inherent_impl_no_self_name_collision_is_mangled_and_checks_clean`'s precedent).
+        (
+            "struct Foo { x: u8, y: u8 } impl Foo { fn f(self) -> u8 { match self { Self { x, .. } => x, } } }",
+            "impl Foo",
+        ),
+        // A three-field struct, only one field bound, `..` for the rest.
+        (
+            "struct P3 { a: u8, b: u8, c: u8 } fn f(v: P3) -> u8 { match v { P3 { b, .. } => b, } }",
+            "f",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// DN-134 SS3 (M-1093): a named-field **struct-variant construction** in expression position
+/// (`E::A { x: .., y: .. }`, `Self::Variant { .. }`) desugars to the grammar's positional `Ctor`
+/// call, arguments placed at their DECLARATION index regardless of the literal's own field-write
+/// order -- the construction twin of `struct_pattern_desugars_to_positional_ctor` (M-1089), now
+/// sharing the same `struct_layouts` population.
+#[test]
+fn struct_variant_construction_desugars_to_positional_ctor() {
+    let cases = [
+        // Declaration-order field-value write.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, y: 2 } }",
+            "A(1, 2)",
+        ),
+        // Field-order canonicalization: written `y, x`, still emitted `A(1, 2)` (x=1, y=2).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { y: 2, x: 1 } }",
+            "A(1, 2)",
+        ),
+        // `Self::Variant { .. }` inside an `impl` -- the identical ctor-name-resolution
+        // convention `Expr::Struct`'s bare-`Self` arm and `Pat::Struct`'s already use; the
+        // `Self::` qualifier's ENUM segment is transparent (only the variant's own last segment
+        // matters), so no special-case is needed for the qualified form either.
+        (
+            "enum E { A { x: u8, y: u8 } } impl E { fn f() -> E { Self::A { x: 3, y: 4 } } }",
+            "A(3, 4)",
+        ),
+        // A single-field variant.
+        (
+            "enum E { A { x: u8 } } fn f() -> E { E::A { x: 7 } }",
+            "A(7)",
+        ),
+        // A three-field variant, matching the `std-sys-host` shape's field count class.
+        (
+            "enum E { A { a: u8, b: u8, c: u8 } } fn f() -> E { E::A { c: 3, a: 1, b: 2 } }",
+            "A(1, 2, 3)",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            myc.contains(needle),
+            "case `{rust}`: expected .myc to contain `{needle}`, got:\n{myc}\ngaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// DN-134 SS3 (M-1093): the never-silent gap/refusal paths (VR-5/G2) for struct-variant
+/// construction -- an unresolved ctor, a missing field, an extra/unknown field, and a duplicate
+/// field-value binding all refuse rather than emitting a guessed/partial-arity `Ctor`.
+#[test]
+fn struct_variant_construction_never_silently_gaps() {
+    let cases = [
+        // No confirmed in-file layout at all -- the enum/variant is undeclared in this file (the
+        // honest DN-113/DN-134-OQ-2 cross-nodule-resolvability shape: `TimeErr` isn't declared
+        // here, exactly like `std-sys-host`'s real `TimeErr::ClockUnavailable { reason }`, which
+        // is imported from `std.time`, not declared in the same file).
+        (
+            "fn f() -> u8 { let x = TimeErr::ClockUnavailable { reason: 1 }; 0 }",
+            "not an in-file single-ctor struct or enum struct-variant",
+        ),
+        // Missing field.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1 } }",
+            "gives no value for the field at position",
+        ),
+        // Extra/unknown field -- previously silently dropped (no check existed at all before
+        // this leaf); now an explicit refusal.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, y: 2, z: 3 } }",
+            "not a declared field",
+        ),
+        // Duplicate field-value binding.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f() -> E { E::A { x: 1, x: 2, y: 3 } }",
+            "more than once",
+        ),
+        // `..rest` struct-update on a variant construction -- the pre-existing "no record-update
+        // surface" gap, exercised on the enum-variant shape too (was previously only reachable
+        // for plain structs since variants never resolved a layout at all).
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(o: E) -> E { E::A { x: 1, ..o } }",
+            "struct-update syntax",
+        ),
+    ];
+    for (rust, needle) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("case `{rust}` failed to parse/transpile: {e}"));
+        assert!(
+            !report.emitted_items.iter().any(|n| n == "f"),
+            "case `{rust}`: `f` must stay gapped, got emitted={:?} myc:\n{myc}",
+            report.emitted_items
+        );
+        assert!(
+            report.gaps.iter().any(|g| g.reason.contains(needle)),
+            "case `{rust}`: expected a gap whose reason contains `{needle}`, got {:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+    }
+}
+
+/// **CRITICAL regression (PR #1548 strict review — empirically reproduced against the compiled
+/// transpiler; the exact #1535/DN-134 build-blocking hazard).** `struct A` and
+/// `enum Foo1 { A { .. }, Baz { odd: Instant } }` share the bare ctor name `A`. `Baz`'s
+/// `odd: Instant` field is unmappable (an undeclared external type), so `Foo1` fails WHOLE-ENUM
+/// resolvability for a reason entirely UNRELATED to the colliding `A` variant. Before the fix,
+/// `struct_layouts`'s collision loop skipped registering `Foo1`'s variants into its `seen`/
+/// `ambiguous` bookkeeping whenever the WHOLE owning enum was unresolvable — so `Foo1::A`'s bare
+/// name was never flagged as colliding with struct `A`'s, and `emit::struct_layout` (which
+/// resolves by bare ctor name only, with no per-enum scoping) would silently bind `Foo1::A {
+/// foo, bar }`'s construction to struct `A`'s real layout: a wrong-index bind (G2) recorded as a
+/// clean success. This test fails against the pre-fix code (both `f` and `g` wrongly emit, `g`
+/// bound to the wrong layout) and passes with the fix (both gap, never a silent wrong bind).
+#[test]
+fn struct_vs_unrelated_enum_variant_collision_registers_despite_sibling_gap() {
+    let rust = "struct A { foo: u8, bar: u8 } \
+                enum Foo1 { A { foo: u8, bar: u8 }, Baz { odd: Instant } } \
+                fn f() -> A { A { foo: 1, bar: 2 } } \
+                fn g() -> Foo1 { Foo1::A { foo: 3, bar: 4 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "`Foo1::A {{ .. }}` must NEVER silently resolve against the unrelated struct `A`'s layout \
+         just because `Foo1` (as a WHOLE) fails resolvability for a reason unrelated to the `A` \
+         variant (`Baz`'s unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "struct `A`'s own construction must also gap once its bare name collides with `Foo1::A` \
+         — never a partial refusal that leaves one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("A(3, 4)") && !myc.contains("A(1, 2)"),
+        "neither construction may silently emit a positional `A(..)` bound to either \
+         interpretation's layout — got:\n{myc}"
+    );
+}
+
+/// **CRITICAL regression, twin of the above** (PR #1548 strict review). `Foo1::Bar` and
+/// `Foo2::Bar` share the bare ctor name `Bar`, declared on two UNRELATED enums. `Foo1`'s sibling
+/// variant `Baz` has an unmappable field (`Instant`, undeclared), excluding `Foo1` as a WHOLE
+/// from resolvability for a reason entirely unrelated to `Bar`. Before the fix, `Foo1`'s `Bar`
+/// variant was skipped from collision registration entirely (the whole-enum-unresolvable guard
+/// covered the whole loop body, not just the `out`-insertion), so `Foo2::Bar`'s real layout
+/// stayed unflagged and `Foo1::Bar`'s construction site would silently resolve against it —
+/// bare-name-only lookup, no per-enum scoping — a wrong-index bind (G2) between two entirely
+/// unrelated enums. Fails against the pre-fix code (both `g1`/`g2` wrongly emit, `g1` cross-bound
+/// to `Foo2`'s layout) and passes with the fix (both gap, refused as ambiguous).
+#[test]
+fn two_enums_same_named_variant_one_excluded_by_unmappable_sibling_never_cross_binds() {
+    let rust = "enum Foo1 { Bar { reason: String }, Baz { odd: Instant } } \
+                enum Foo2 { Bar { reason: String } } \
+                fn g1() -> Foo1 { Foo1::Bar { reason: 1 } } \
+                fn g2() -> Foo2 { Foo2::Bar { reason: 2 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g1"),
+        "`Foo1::Bar {{ .. }}` must NEVER silently resolve against `Foo2::Bar`'s layout merely \
+         because `Foo1` fails whole-enum resolvability for a reason unrelated to `Bar` (`Baz`'s \
+         unmappable `Instant` field) — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g2"),
+        "`Foo2::Bar`'s own construction must also gap once its bare name collides with \
+         `Foo1::Bar` — never a partial refusal leaving one interpretation silently reachable — \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+}
+
+/// **THE key soundness test** (DN-134 SS4 stress-#8, SS3 step 1(b) -- the cross-leaf finding from
+/// the M-1089 pattern-emit review that made the shared `struct_layouts` population's
+/// collision-safety a BUILD-BLOCKING DoD item, not an OQ). A file declaring both a plain `struct
+/// A` and an unrelated `enum E { A { .. } }` sharing the SAME bare name must NEVER let `E::A`'s
+/// construction silently resolve against struct `A`'s layout (a wrong-index bind, G2) -- nor may
+/// struct `A`'s own construction silently keep resolving once the name is ambiguous (this
+/// transpiler's resolution side has no qualifier to tell the two apart -- see
+/// `transpile.rs::struct_layouts`'s collision-safety doc). BOTH must gap, never-silently, never a
+/// wrong emission.
+#[test]
+fn struct_and_variant_same_bare_name_collision_never_silently_binds_wrong() {
+    let rust = "struct A { foo: u8, bar: u8 } \
+                enum E { A { foo: u8 } } \
+                fn f() -> A { A { foo: 1, bar: 2 } } \
+                fn g() -> E { E::A { foo: 3 } }";
+    let (myc, report) =
+        transpile_source(rust, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "the ambiguous struct `A`'s own construction must gap once its bare name collides with \
+         `E::A`, not silently keep resolving — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "g"),
+        "`E::A {{ .. }}` must NEVER silently resolve against the unrelated struct `A`'s layout \
+         — emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("A(3)") && !myc.contains("A(1, 2)"),
+        "neither the wrong-bind shape (`A(3)`, `E::A` bound to struct `A`'s 2-field layout) nor \
+         a coincidentally-matching struct-side emission may appear — got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .filter(|g| g.reason.contains(
+                "not an in-file single-ctor struct or enum \
+                                             struct-variant"
+            ))
+            .count()
+            >= 2,
+        "both `f` and `g` must each carry their own honest \"no confirmed layout\" gap (never a \
+         silent wrong bind) — gaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-134 SS3 (M-1093): every struct-variant
+/// construction shape [`struct_variant_construction_desugars_to_positional_ctor`] proves the
+/// *text* of is run through the REAL `myc-check` oracle here, proving the emitted positional
+/// `Ctor` call actually **type-checks** — the construction-side twin of
+/// `struct_pattern_forms_check_clean_against_real_toolchain` (M-1089). Skips gracefully (never
+/// fails) when `myc-check` is not built.
+#[test]
+fn struct_variant_construction_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-struct-variant-ctor-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    // Field values are typed fn PARAMETERS (shorthand `E::A { x, y }`), not literal integers --
+    // a bare `Int` literal has no representation family under the real checker without a
+    // declared default paradigm (verify-first, mitigation #14: `expr_env_type`'s own doc, and
+    // `struct_pattern_forms_check_clean_against_real_toolchain`'s sibling oracle test uses the
+    // identical bound-variable convention for the same reason). Arity/declaration-order
+    // correctness is asserted TEXTUALLY by the sibling
+    // `struct_variant_construction_desugars_to_positional_ctor` test; this oracle proves each
+    // canonicalized positional `Ctor` shape actually type-checks.
+    let rust_snippets = [
+        // Declaration-order write.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(x: u8, y: u8) -> E { E::A { x, y } }",
+            "f",
+        ),
+        // Field-order canonicalization: written `y, x`.
+        (
+            "enum E { A { x: u8, y: u8 } } fn f(x: u8, y: u8) -> E { E::A { y, x } }",
+            "f",
+        ),
+        // `Self::Variant { .. }` inside an `impl`.
+        (
+            "enum E { A { x: u8, y: u8 } } impl E { fn f(x: u8, y: u8) -> E { Self::A { x, y } } }",
+            "impl E",
+        ),
+        // Single-field variant -- matches `std-sys-host`'s `TimeErr::ClockUnavailable { reason }`
+        // shape's field-count class.
+        ("enum E { A { x: u8 } } fn f(x: u8) -> E { E::A { x } }", "f"),
+        // Three-field variant, a wider arity case for measure.
+        (
+            "enum E { A { a: u8, b: u8, c: u8 } } fn f(a: u8, b: u8, c: u8) -> E { E::A { c, a, b } }",
+            "f",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// The #72 co-poison fix, UPDATED (M-1100 residual, `to_owned` follow-on leaf): a Rust
+/// ownership/identity-conversion no-op method (`.to_owned()`, `.clone()`, `.to_string()`,
+/// `.into()`, …) with no Mycelium free-function/prim referent must never be desugared to a
+/// fabricated bare call (`myc check`: `unknown function/constructor/prim <name>`) — G2/VR-5. That
+/// invariant is unchanged. What changed (this leaf): `crate::prim_map::TABLE` now carries an
+/// `AnyBuiltinScalar`-gated identity row for `to_owned` (mirroring `clone`'s row, PR #1552) — sound
+/// because Rust's orphan rule forecloses any downstream `impl ToOwned` for a foreign
+/// builtin/primitive receiver type (`bool`/`u8..u128`/.../`String`/`str`). So a `.to_owned()` call
+/// on a receiver KNOWN to be such a builtin (a bare identifier whose mapped type resolves, e.g.
+/// `&str`/`String` -> `Bytes`) now emits as identity, not a gap; a `.to_owned()` call on any
+/// receiver that does NOT resolve to a known builtin scalar (a user-named type, or an unresolved
+/// expression like a string literal or a nested call) still gaps exactly as before — the
+/// fabrication-avoidance invariant this test exists to pin is unaffected for those cases. Verified
+/// against the real oracle in the vet loop: without the original gap, emitting the string-literal
+/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — used
+/// to poison the whole file's file-gated `checked_fraction`; that literal-receiver arm still gaps
+/// today (a string literal is not a bare-identifier receiver `crate::emit::expr_env_type` can
+/// resolve), so the whole-fn-gaps invariant for that real corpus shape is unchanged.
 #[test]
 fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
-    // A bare `.to_owned()` on a `&str` must gap, not emit a fabricated `to_owned(...)` call.
+    // A bare `.to_owned()` on a `&str` (maps to the builtin scalar `Bytes`) is now sound identity
+    // (this leaf) — it must emit cleanly as the receiver unchanged, never a fabricated
+    // `to_owned(...)` call, and never gap.
     let rust = "fn f(s: &str) -> String { s.to_owned() }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        !report.emitted_items.iter().any(|n| n == "f"),
-        "a `.to_owned()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
-        report.emitted_items
+        report.emitted_items.iter().any(|n| n == "f"),
+        "a `.to_owned()` on a builtin-scalar (`Bytes`) receiver must emit identity (not gap), \
+         got emitted_items={:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
     );
     assert!(
         !myc.contains("to_owned("),
         "the fabricated `to_owned(...)` bare call must NEVER be emitted, got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("ownership/identity-conversion no-op method")),
-        "the conversion gap must name the no-op-conversion class, got {:?}",
-        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        myc.contains("(s)"),
+        "expected the identity passthrough `(s)`, got:\n{myc}"
     );
 
     // The real `checkty::vsa_kernel_model_id` shape: a string-literal `match` (now emittable per
-    // M-1035) whose arm bodies are `.to_owned()` — the whole fn must gap cleanly (the enabler flip
-    // does NOT drag a fabricated `to_owned` into an emission), so no check-failing surface lands.
+    // M-1035) whose arm bodies are `.to_owned()` — the literal-receiver arm (`"A" =>
+    // "a".to_owned()`) has an unresolved receiver (`crate::emit::expr_env_type` only resolves a
+    // bare identifier or a paren/reference wrapper around one, never a literal), so it still gaps,
+    // and the whole fn therefore still gaps cleanly — unaffected by the bare-identifier identity
+    // fix on the other arm (`s.to_owned()`).
     let real =
         "fn m(s: &str) -> String { match s { \"A\" => \"a\".to_owned(), _ => s.to_owned() } }";
     let (myc2, report2) = transpile_source(real, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
         !report2.emitted_items.iter().any(|n| n == "m"),
-        "the to_owned-bodied string-match fn must gap (no fabricated emission), got {:?}",
+        "the `\"a\".to_owned()` literal-receiver arm is unresolved and must still gap the whole \
+         fn (no fabricated emission), got {:?}",
         report2.emitted_items
     );
     assert!(
@@ -1098,7 +1894,8 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
     );
 
     // An explicit `.deref()` call is the same fabrication class (the docstring claims `Deref`
-    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review fix).
+    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review
+    // fix) — `deref` is not in `prim_map::TABLE`, deliberately withheld, unaffected by this leaf.
     let deref = "fn g(s: &str) -> &str { s.deref() }";
     let (myc3, report3) = transpile_source(deref, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
@@ -1110,6 +1907,34 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
     assert!(
         !myc3.contains("deref("),
         "the fabricated `deref(...)` bare call must NEVER be emitted, got:\n{myc3}"
+    );
+
+    // A `.to_owned()` on a USER-NAMED-TYPE receiver must NEVER fire the builtin-scalar identity
+    // row — the receiver's `ToOwned` impl is not foreclosed by the orphan rule (only a *foreign*
+    // type's is), and its `Owned` associated type need not even equal `Self` (std's own
+    // `str -> String`/`[T] -> Vec<T>` are exactly this shape), so assuming identity would be an
+    // unchecked guess (G2/VR-5). Mirrors `src/tests/prim_map.rs`'s
+    // `clone_on_user_named_type_receiver_never_fires_identity_and_gaps` for the `clone` row.
+    let user_type = "fn snap(t: Ticket) -> Ticket { t.to_owned() }";
+    let (myc4, report4) = transpile_source(user_type, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        !report4.emitted_items.iter().any(|n| n == "snap"),
+        "a `.to_owned()` on a user-named-type receiver (`Ticket`, not a builtin scalar) must \
+         NEVER emit as identity, got emitted_items={:?}, gaps={:?}, myc=\n{myc4}",
+        report4.emitted_items,
+        report4.gaps
+    );
+    assert!(
+        !myc4.contains("fn snap"),
+        "no `fn snap` declaration of any shape may ever be emitted, got:\n{myc4}"
+    );
+    assert!(
+        report4.gaps.iter().any(|g| g
+            .reason
+            .contains("ownership/identity-conversion no-op method")),
+        "expected `snap` to gap via the `is_unmappable_conversion_method` catch-all, got {:?}",
+        report4.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
 
@@ -1199,6 +2024,14 @@ fn binop_operand_gated_forms_check_clean() {
         // must ALSO check clean, proving the extended `expr_env_type` gate composes into a real,
         // myc-check-clean body, not just matching test-fixture text.
         "fn f_and_ref(a: u16, b: u16) -> u16 { &a & b }",
+        // D3 arithmetic-operator-emission residual (this leaf, the Add-glyph unblock): the
+        // `add_u`/`sub_u`/`mul_u`-composed unsigned arithmetic ops must resolve as bare-call
+        // prims with no `use` and type-check the fn's declared return width — the exact repro
+        // this leaf closes (`fn add2(a: u64, b: u64) -> u64 { a + b }` failed `myc check` with
+        // `` `add` does not accept argument types [Binary(..), Binary(..)] `` before this fix).
+        "fn f_add_u(a: u16, b: u16) -> u16 { a + b }",
+        "fn f_sub_u(a: u16, b: u16) -> u16 { a - b }",
+        "fn f_mul_u(a: u16, b: u16) -> u16 { a * b }",
     ];
     for (i, rust) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
@@ -1595,6 +2428,572 @@ fn shadow_and_pattern_bound_fixes_fall_back_to_known_gap_not_wrong_prim_call() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// **DN-34 §8.13/8.14 "D4" — the live-oracle proof for inherent-impl no-`self` associated-fn
+/// mangling.** Two different tuple-struct types each declare a same-named, receiver-less
+/// constructor (`Foo::new`/`Bar::new`) in ONE nodule — exactly the shape that regressed the
+/// gap-close-2 Phase-0 re-measure (`Duration::from_nanos`/`MonoInstant::from_nanos`,
+/// `Task::new`/`TaskCtx::new`/`Deadlock::new`). Before the fix both emit a bare `fn new(...)`,
+/// which `mycelium-l1`'s M-664 inherent-impl desugar lifts to the SAME flat top-level name —
+/// `myc check` real-oracle-verified `duplicate function`. After the fix each is mangled
+/// `{Type}__new`, so the combined nodule is myc-check **Clean**. Skips gracefully (never fails)
+/// when `myc-check` is not built.
+#[test]
+fn inherent_impl_no_self_name_collision_is_mangled_and_checks_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    // A parameterized constructor (never a bare literal — a bare integer literal has no
+    // representation family in v0 with no `default paradigm` in scope, orthogonal to what this
+    // test is proving).
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                pub struct Bar(u32);\n\
+                impl Bar {\n\
+                    pub fn new(x: u32) -> Self { Bar(x) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the two-`new` fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo")
+            && report.emitted_items.iter().any(|n| n == "impl Bar"),
+        "both impl blocks must emit (mangling must not turn either into a gap): {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    let foo_mangled = crate::reserved::mangled_inherent_fn_name("Foo", "new");
+    let bar_mangled = crate::reserved::mangled_inherent_fn_name("Bar", "new");
+    assert!(
+        myc.contains(&foo_mangled),
+        "expected the mangled name `{foo_mangled}` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(&bar_mangled),
+        "expected the mangled name `{bar_mangled}` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("fn new("),
+        "the bare, colliding name `fn new(` must never be emitted once mangling applies, got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-inherent-mangle-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the mangled two-`new` nodule must check CLEAN with the real myc-check oracle (a \
+         `duplicate function` here would mean the mangling regressed) — emitted:\n{myc}\n\
+         diagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A `self`-receiving inherent-impl method is deliberately **not** mangled (see
+/// `emit::mangled_inherent_fn_name`'s doc for the full scope rationale — mangling those would also
+/// require rewriting every `visit_method_call` call site to the identical mangled name, a larger,
+/// separately-scoped change). Pins that boundary: `as_ref`-shaped same-named `self`-methods across
+/// two types stay bare (so a caller's un-qualified `.method()` desugar still resolves) — the
+/// residual flat-namespace collision risk for that case is real and undocumented-away, not silently
+/// "fixed" by this narrower change (VR-5: no overclaiming).
+#[test]
+fn self_receiving_inherent_method_is_left_unmangled() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn get(&self) -> u32 { self.0 }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the self-method fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo"),
+        "impl Foo must emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn get(")
+            && !myc.contains(&crate::reserved::mangled_inherent_fn_name("Foo", "get")),
+        "a `self`-receiving method must keep its bare name (never mangled), got:\n{myc}"
+    );
+}
+
+// --- DN-133 (M-1094) — qualified/associated-function call-site emission ------------------------
+//
+// `visit_call`'s resolution-gated mangled-call arm: `Type::method(...)` emits the mangled
+// `Type__method(args)` call ONLY when that exact declaration is a PROVEN-emitted no-`self`
+// inherent-impl associated fn (same-file, or a resolved M-1084 cross-nodule sibling); otherwise an
+// honest gap, never a fabricated bare-last-segment call (the D4 lesson, G2/VR-5).
+
+/// The core positive case: a receiver-less associated fn (`Foo::new`) is declared EARLIER in the
+/// file, and a LATER free fn calls it qualified (`Foo::new(x)`) — this file's own single
+/// left-to-right pass already recorded the real emission by the time the call is reached, so it
+/// resolves to the mangled `Foo__new(x)` call (never the fabricated bare `new(x)`).
+#[test]
+fn qualified_call_to_same_file_associated_fn_resolves_and_mangles() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                pub fn make(x: u32) -> Foo { Foo::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the same-file fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must emit (the qualified call must resolve, not gap): {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    let foo_mangled = crate::reserved::mangled_inherent_fn_name("Foo", "new");
+    assert!(
+        myc.contains(&format!("{foo_mangled}(x)")),
+        "expected the mangled call `{foo_mangled}(x)` in the emitted text, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("= new(x)") && !myc.contains(" new(x)"),
+        "must never emit the fabricated bare-last-segment call `new(x)`, got:\n{myc}"
+    );
+}
+
+/// `Self::method(...)` resolves via the already-threaded enclosing impl type: a SECOND
+/// receiver-less method in the same impl block calls an EARLIER sibling method (declaration
+/// order within the impl) via `Self::new(...)`.
+#[test]
+fn qualified_call_via_self_resolves_within_own_impl() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                    pub fn default_new() -> Self { Self::new(0u32) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the `Self::` fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "impl Foo"),
+        "impl Foo must emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    let new_m = crate::reserved::mangled_inherent_fn_name("Foo", "new");
+    let default_m = crate::reserved::mangled_inherent_fn_name("Foo", "default_new");
+    assert!(
+        myc.contains(&format!("{new_m}(")) && myc.contains(&format!("{default_m}(")),
+        "expected both mangled decls in the emitted text, got:\n{myc}"
+    );
+    // The `Self::new(0u32)` call site itself must resolve to the mangled name, not gap.
+    assert!(
+        !report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "the `Self::new(...)` call must resolve, not gap: gaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A FORWARD reference — the call site appears BEFORE the impl block in file order — stays gapped:
+/// this file's single left-to-right pass has not yet observed `Foo::new`'s real emission at the
+/// point `make`'s body is emitted, so the same-file tier correctly does NOT resolve it (never a
+/// prediction, only an observed fact — VR-5/G2). A real, honest boundary, not a bug: closing it
+/// would require a second file-local pass (out of this leaf's scope; the M-1084 cross-nodule tier
+/// is exactly this kind of two-pass mechanism, applied across FILES).
+#[test]
+fn qualified_call_forward_reference_still_gaps() {
+    let rust = "pub struct Foo(u32);\n\
+                pub fn make(x: u32) -> Foo { Foo::new(x) }\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the forward-reference fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped (forward reference, never resolved): emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// An unresolved type (never declared/impl'd anywhere in this file) gaps — never a guess.
+#[test]
+fn qualified_call_to_unknown_type_gaps() {
+    let rust = "fn make(x: u32) -> u32 { Bar::create(x) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the unknown-type fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A primitive/std associated fn (no emitted decl — e.g. `i128::try_from`) always gaps: it falls
+/// out naturally from the resolution gate (no impl ever mangles a primitive), not a special case.
+#[test]
+fn primitive_associated_fn_call_always_gaps() {
+    let rust = "fn conv(x: u32) -> u32 { i128::try_from(x) }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the primitive fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "conv"),
+        "`conv` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// A `self`-receiving method's bare name is NEVER mangled (`self_receiving_inherent_method_is_left_unmangled`
+/// above), so a UFCS-style qualified call naming one (`Foo::get(v)`) never resolves either — no
+/// false positive just because the type/method names happen to match a real declaration.
+#[test]
+fn qualified_call_naming_a_self_receiving_method_still_gaps() {
+    let rust = "pub struct Foo(u32);\n\
+                impl Foo {\n\
+                    pub fn get(&self) -> u32 { self.0 }\n\
+                }\n\
+                pub fn call_it(v: Foo) -> u32 { Foo::get(v) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the self-method-UFCS fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "call_it"),
+        "`call_it` must stay gapped (a `self`-receiving method is never mangled, so its \
+         qualified-call form never resolves): emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+}
+
+/// Regression: a cross-*module* free-function path (`a::b::c()`, 3+ segments) is unaffected by
+/// this DN-133 arm — it stays exactly the pre-existing gap (out of this leaf's scope, DN-133 §2
+/// sub-kind 3; routes through the Import/symtab free-fn resolver instead).
+#[test]
+fn cross_module_free_fn_path_gap_is_unchanged() {
+    let rust = "fn f() -> u32 { a::b::c() }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the free-fn-path fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "`f` must stay gapped: emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no established Mycelium surface form")),
+        "expected the pre-existing qualified-call gap reason (unchanged), got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-133/M-1094: the resolved mangled call is run
+/// through the REAL `myc-check` oracle (T-A3 — "emit iff check accepts"), proving the emitted
+/// `Foo__new(x)` call actually type-checks against the mangled decl, exactly like
+/// `inherent_impl_no_self_name_collision_is_mangled_and_checks_clean` proves the DECL side alone.
+/// Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn qualified_call_resolved_mangled_check_clean_against_real_toolchain() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let rust = "pub struct Foo(u32);\n\
+                pub struct Bar(u32);\n\
+                impl Foo {\n\
+                    pub fn new(x: u32) -> Self { Foo(x) }\n\
+                }\n\
+                impl Bar {\n\
+                    pub fn new(x: u32) -> Self { Bar(x) }\n\
+                }\n\
+                pub fn make_foo(x: u32) -> Foo { Foo::new(x) }\n\
+                pub fn make_bar(x: u32) -> Bar { Bar::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the two-type fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "make_foo")
+            && report.emitted_items.iter().any(|n| n == "make_bar"),
+        "both qualified calls must resolve and emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    let foo_call = format!(
+        "{}(x)",
+        crate::reserved::mangled_inherent_fn_name("Foo", "new")
+    );
+    let bar_call = format!(
+        "{}(x)",
+        crate::reserved::mangled_inherent_fn_name("Bar", "new")
+    );
+    assert!(
+        myc.contains(&foo_call) && myc.contains(&bar_call),
+        "expected both mangled calls in the emitted text (never cross-wired to the wrong type), \
+         got:\n{myc}"
+    );
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-qualcall-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the resolved mangled-call nodule must check CLEAN with the real myc-check oracle \
+         (T-A3: emit iff check accepts) — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// --- Regression (this leaf): a generic-argument self type must NEVER reach `{Type}__{method}` --
+//
+// DN-131 (M-1088/M-1101) taught `emit_impl` to accept an impl-level generic parameter instead of
+// gapping the whole block — but the D4 mangler (above) was never updated for it: `self_ty_text` for
+// a generic self type maps to bracketed text (`map.rs`'s `PathArguments::AngleBracketed` arm,
+// `"{name}[{args}]"`), and splicing that into `{Type}__{method}` produced an INVALID Mycelium
+// identifier (`Foo[T]__method` — brackets in an identifier position) — a HARD PARSE FAILURE the
+// moment `myc check` (or any Mycelium parser) reads the emission, poisoning the whole containing
+// file under the vet loop's file-gated `checked_fraction` (G2 violation). Reachable from BOTH an
+// impl-level generic (`impl<T> Foo<T>`) and a concrete monomorphized inherent impl with no
+// impl-level generics of its own (`impl Foo<Concrete>`) — both fixtures below pin the fix for each
+// shape. `self_ty_is_generic_application` gaps the affected method instead (never a fabricated
+// base-name-only mangle either — see that function's doc for the real cross-instantiation collision
+// hazard that would reintroduce).
+
+/// The exact regression shape named by the task: `impl<T> DeclaredTime<T> { pub fn new(..) }`
+/// (mirroring `mycelium-std-time`'s real `DeclaredTime<T>` — DN-131 unblocked this impl-level
+/// generic from its prior blanket gap). Before the fix, `new` (no `self` receiver) would mangle to
+/// the invalid identifier `DeclaredTime[T]__new`; after the fix it is an honest per-method gap —
+/// the struct's own `type_item` still emits (DN-131 didn't regress that), but the impl's sole
+/// method gaps rather than producing unparseable text.
+#[test]
+fn impl_level_generic_self_type_ctor_gaps_never_emits_invalid_identifier() {
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the generic-self-type fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DeclaredTime"),
+        "the struct's own type_item must still emit (DN-131 didn't regress this): {:?} \
+         (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n.contains("impl") && n.contains("DeclaredTime")),
+        "the impl should emit with DN-140 mangling: {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[T]__") && !myc.contains("]__"),
+        "the emitted .myc text must NEVER contain the invalid bracketed-identifier shape \
+         `Foo[T]__method` (a hard parse failure, G2), got:\n{myc}"
+    );
+    assert!(
+        myc.contains("DeclaredTime_u5B_T_u5D_"),
+        "generic self type text must be escaped in the mangled fn name, got:\n{myc}"
+    );
+}
+
+/// The second reachable shape: a CONCRETE monomorphized inherent impl (`impl Foo<Concrete>`) whose
+/// impl block itself declares NO generic parameters — only the self type's own generic argument is
+/// generic-application-shaped. This is a real, legitimate Rust pattern (a type-specific inherent
+/// impl of a generic type, e.g. `impl Approx<f64> { .. }` in `mycelium-std-math`) and was NOT
+/// caught by the pre-existing impl-level-generics gap (that check only looks at `item.generics`,
+/// which is empty here) — it is a distinct trigger from the impl-level-generic case above, so this
+/// fixture pins it separately.
+#[test]
+fn concrete_generic_instantiation_self_type_ctor_gaps_never_emits_invalid_identifier() {
+    let rust = "pub struct Wrapper<T>(T);\n\
+                pub struct Inner(u32);\n\
+                impl Wrapper<Inner> {\n\
+                    pub fn new(inner: Inner) -> Self { Wrapper(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle").unwrap_or_else(|e| {
+        panic!("failed to parse/transpile the concrete-instantiation fixture: {e}")
+    });
+    assert!(
+        report.emitted_items.iter().any(|n| n == "Wrapper")
+            && report.emitted_items.iter().any(|n| n == "Inner"),
+        "both struct type_items must still emit: {:?} (gaps={:?})",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("impl Wrapper")),
+        "the impl should emit with DN-140 mangling: {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[Inner]__") && !myc.contains("]__"),
+        "the emitted .myc text must NEVER contain the invalid bracketed-identifier shape \
+         `Wrapper[Inner]__new` (a hard parse failure, G2), got:\n{myc}"
+    );
+    assert!(
+        myc.contains("Wrapper_u5B_Inner_u5D_"),
+        "concrete generic self type must be escaped in mangled fn name, got:\n{myc}"
+    );
+}
+
+/// **Decl/call consistency** (mitigation #14's "check both sides"): a qualified call
+/// `DeclaredTime::new(x)` naming the now-gapped generic-self-type constructor must ALSO gap —
+/// never resolve to a stale/mismatched mangled name. This is automatic by construction (the decl
+/// side never calls `record_local_mangled_assoc_fn` for the gapped method, so the call side's
+/// `local_mangled_assoc_fn_known` lookup correctly misses) rather than requiring a matching change
+/// on the call side (`emit/calls/qualified_assoc.rs`) — this test pins that the automatic
+/// consistency actually holds, not just that it should in theory.
+#[test]
+fn qualified_call_to_generic_self_type_ctor_gaps_consistently() {
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n\
+                pub fn make(x: u32) -> DeclaredTime<u32> { DeclaredTime::new(x) }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the call-site fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "make"),
+        "`make` must stay gapped (the constructor it calls was never validly mangled/recorded): \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("[T]__") && !myc.contains("]__") && !myc.contains("[u32]"),
+        "the emitted .myc text must never contain an invalid bracketed identifier or a \
+         fabricated mismatched call, got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g
+            .reason
+            .contains("did not resolve to a known-emitted associated fn")),
+        "expected the DN-133 resolution-gap reason on the call site, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) — the live-oracle, real-toolchain regression proof:
+/// before this leaf's fix, the emitted text for `impl<T> DeclaredTime<T> { pub fn new(..) }`
+/// contained the invalid identifier `DeclaredTime[T]__new`, which `myc-check` rejects with a
+/// **`parse-error`** (not a `check-error` — see this leaf's report for the exact repro/diagnostic).
+/// After the fix, the method gaps instead, so the emitted `.myc` (just the struct's `type_item`)
+/// must check CLEAN — proving the hard-parse-failure regression is closed, not just that the Rust
+/// text assertions above look right. Skips gracefully (never fails) when `myc-check` is not built.
+#[test]
+fn generic_self_type_ctor_gap_checks_clean_never_parse_error() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text \
+             assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let rust = "pub struct DeclaredTime<T>(T);\n\
+                impl<T> DeclaredTime<T> {\n\
+                    pub fn new(inner: T) -> Self { DeclaredTime(inner) }\n\
+                }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile the generic-self-type fixture: {e}"));
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-generic-self-mangle-regression-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let path = dir.join("case.myc");
+    std::fs::write(&path, &myc).expect("write case .myc");
+    let checker = crate::vet::MycChecker {
+        command: vec![bin.display().to_string()],
+        cwd: None,
+    };
+    let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+    assert_ne!(
+        rec.class,
+        crate::vet::VetClass::ParseError,
+        "a generic-self-type inherent-impl constructor must NEVER produce a hard parse failure \
+         (the DN-34 §8.13/8.14 D4 regression this leaf fixes) — emitted:\n{myc}\ngaps={:?}\n\
+         diagnostic={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>(),
+        rec.diagnostic
+    );
+    assert_eq!(
+        rec.class,
+        crate::vet::VetClass::Clean,
+        "the gapped-method nodule (just the struct's own type_item) must check CLEAN with the \
+         real myc-check oracle — emitted:\n{myc}\ndiagnostic={:?}",
+        rec.diagnostic
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 // --- trx2 A1: `Expr::Cast` fidelity matrix (DN-34 §8.18) ---------------------------------------
 //
 // Rust `as` is lossy/wrapping/saturating/rounding by design; Mycelium's conversion prims are
@@ -1707,4 +3106,1153 @@ fn expr_cast_fidelity() {
             ),
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl live-oracle proof (T-A1/T-A2/T-A3).
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// **T-A1 (positive control) + T-A3 (emit<->check agreement), against the REAL toolchain.** The
+/// fixture-corpus cases above (`mvp_cmp_eligible_synthesizes_trait_arg`,
+/// `mvp_widen_unaffected_by_mvp_recognizer`, `mvp_cmp_self_receiver_excluded_no_bracket`) prove the
+/// emitted *text*; this proves the emitter's eligibility judgment agrees with what `myc check`
+/// actually accepts — never a `[<SelfTy>]` bracket for a shape the checker would refuse, and never
+/// a missed bracket for a shape that would otherwise check clean. Skips gracefully (never fails)
+/// when `myc-check` is not built, exactly like `src/tests/vet.rs`'s live-oracle tests.
+#[test]
+fn mvp_cmp_emit_check_agreement() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: DN-122/M-1080 MVP live oracle test skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`). The \
+             fixture-corpus text assertions above still cover the emitted shape."
+        );
+        return;
+    };
+
+    struct AgreementCase {
+        name: &'static str,
+        rust: &'static str,
+        /// Whether the emitted `.myc` carries the MVP-synthesized `[<SelfTy>]` bracket for `Ord3`.
+        expect_bracket: bool,
+        /// Whether the real `myc-check` oracle accepts the emitted file clean.
+        expect_clean: bool,
+    }
+    let cases = [
+        // T-A1: single-param, param-only-sig, receiverless — MVP-eligible, checks clean.
+        AgreementCase {
+            name: "eligible_cmp",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self, b: Self) -> u8 { a } }",
+            expect_bracket: true,
+            expect_clean: true,
+        },
+        // T-A2: `Widen` (two-type/`Self`-receiver-needing) — unaffected by the MVP recognizer,
+        // stays an honest `myc check`-time residual (M-876/M-1076), exactly as before WU-A.
+        AgreementCase {
+            name: "widen_stays_a_residual",
+            rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+        // T-A3: `self`-receiver `Ord3` impl — correctly excluded (no bracket); the checker refuses
+        // it too (`cmp_used` still seeds the prelude trait since the impl NAMES `Ord3`, so the
+        // checker's own arity/shape enforcement — not an "unknown trait" gap — is what fires here;
+        // either way, never a silent accept).
+        AgreementCase {
+            name: "self_receiver_excluded_and_checker_agrees",
+            rust: "impl Ord3 for u8 { fn cmp(self, other: Self) -> u8 { self } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+        // T-A3: wrong arity (`Ord3::cmp` takes exactly 2 params in the prelude) — excluded, and the
+        // checker's `register_instances` arity guard refuses it too.
+        AgreementCase {
+            name: "wrong_arity_excluded_and_checker_agrees",
+            rust: "impl Ord3 for u8 { fn cmp(a: Self) -> u8 { a } }",
+            expect_bracket: false,
+            expect_clean: false,
+        },
+    ];
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-mvp-cmp-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    for (i, case) in cases.iter().enumerate() {
+        let (myc, report) = transpile_source(case.rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("case `{}` failed to parse/transpile: {e}", case.name));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case `{}` failed to emit at all: gaps={:?}",
+            case.name,
+            report.gaps
+        );
+        let has_bracket = myc.contains("Ord3[Binary{8}] for Binary{8}");
+        assert_eq!(
+            has_bracket, case.expect_bracket,
+            "case `{}`: MVP-bracket presence mismatch; emitted:\n{myc}",
+            case.name
+        );
+
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        let is_clean = rec.class == crate::vet::VetClass::Clean;
+        assert_eq!(
+            is_clean, case.expect_clean,
+            "case `{}`: emit<->check agreement violated — emitter's bracket judgment ({}) must \
+             agree with the real checker's verdict; diagnostic={:?}\nemitted:\n{myc}",
+            case.name, case.expect_bracket, rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-128 (M-1086) — std-derive lowering library, struct scope. Regression + negative-assertion
+// tests beyond the data-driven `cases()` fixtures above (a nested-composition case and the
+// "never fabricates" negative checks need multi-item sources / substring-absence assertions the
+// `Case`/`Expect` shape does not carry).
+// ---------------------------------------------------------------------------------------------
+
+/// A gapped `derive(Debug)`/`derive(Default)` (the primitive-field case) must NEVER leak a
+/// fabricated `impl Show[...]`/`impl Init[...]` fragment into the `.myc` text (G2 — mirrors
+/// `widen_bool_from_call_produces_no_fabricated_myc_text`'s pattern). **DN-138 WU-4 note:** a
+/// narrow `u8`/`Binary{8}` field is NO LONGER a gapping fixture (WU-4's `width_cast`/literal-zero
+/// unblock composes it — see `derive_forms_check_clean_against_real_toolchain`'s `Narrow` case);
+/// `f64`/`Float` is the fixture that stays a genuine, disclosed gap for EVERY row (ADR-040).
+#[test]
+fn derive_gap_never_leaks_partial_impl_text() {
+    let (myc_debug, _) = transpile_source("#[derive(Debug)]\nstruct Pair(f64, bool);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc_debug.contains("impl Show"),
+        "a gapped derive(Debug) must never emit a partial `impl Show`, got:\n{myc_debug}"
+    );
+    let (myc_default, _) =
+        transpile_source("#[derive(Default)]\nstruct Pair(f64, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !myc_default.contains("impl Init"),
+        "a gapped derive(Default) must never emit a partial `impl Init`, got:\n{myc_default}"
+    );
+}
+
+/// `derive(Clone)`/`derive(Copy)` (DN-128 §6.1's satisfied no-op) must never emit ANY impl text —
+/// there is no Mycelium `Clone`/`Copy` trait to implement, so the honest answer is "nothing to
+/// generate", not a stand-in impl.
+#[test]
+fn derive_clone_copy_never_emits_an_impl() {
+    let (myc, _) = transpile_source("#[derive(Clone, Copy)]\nstruct Flag(bool);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl "),
+        "derive(Clone)/derive(Copy) must never emit any impl block, got:\n{myc}"
+    );
+}
+
+/// The DN-128 §2 "structural fold over fields" shape composes end-to-end for a struct whose
+/// fields are themselves ANOTHER derived (fieldless) struct in the SAME file — the one
+/// field-eligible case [`crate::emit::derives::field_derive_kind`]'s docs describe as mechanically sound and not
+/// merely `Declared`-hopeful. Both `Debug` and `Default` are exercised; the live-oracle half
+/// (that this text is real `myc check`-clean, not just textually plausible) is
+/// `derive_forms_check_clean_against_real_toolchain` below.
+#[test]
+fn derive_composes_end_to_end_over_a_same_file_nested_derived_field() {
+    let rust = "#[derive(Debug, Default)]\nstruct Inner;\n\
+                #[derive(Debug, Default)]\nstruct Outer(Inner, Inner);";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    for name in ["Inner", "Outer"] {
+        assert!(
+            report.emitted_items.iter().any(|n| n == name),
+            "expected `{name}` in emitted_items, got {:?}",
+            report.emitted_items
+        );
+    }
+    assert!(
+        myc.contains("impl Show[Inner] for Inner"),
+        "expected Inner's derived Show impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Init[Inner] for Inner"),
+        "expected Inner's derived Init impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Show[Outer] for Outer {\n  fn render(x: Outer) => Bytes =\n    \
+             match x { Outer(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(\"Outer(\", \
+             render(p0)), \", \"), render(p1)), \")\") };\n};"
+        ),
+        "expected Outer's field-walked Show impl body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Init[Outer] for Outer {\n  fn init() => Outer =\n    Outer(init(), init());\n};"
+        ),
+        "expected Outer's field-walked Init impl body, got:\n{myc}"
+    );
+    // Neither struct's `derive` sub-gaps land as a real `DeriveAttr` gap for THIS composition
+    // (only the pre-existing sub_gap machinery for OTHER, unrelated constructs would) — a
+    // successful compose adds no sub-gap at all (see `lower_struct_derives` docs).
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible nested derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// **DN-136 §8 invariant witness #3 (mixed derive, per-derive-independence across the set).** A
+/// derive list mixing a COMPOSABLE rule (`Debug`) with an UNRECOGNIZED one (`Serialize`) must
+/// compose the eligible derive AND sub-gap the rest — the item still emits BOTH the struct's own
+/// `type` declaration and the composed `impl Show`, never gapping the whole item just because a
+/// sibling derive in the same list didn't compose. Pins the `lower_struct_derives`
+/// (`crate::emit`, the DN-136/P1-a driver) orchestration this axis's migration must not move into
+/// a row (DN-136 §3 item 2 / §7 / §8 point 2(e)).
+#[test]
+fn derive_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits() {
+    let rust = "#[derive(Debug, Serialize)]\nstruct OsEntropy;";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "the item must still emit despite a sibling derive being unrecognized, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type OsEntropy = OsEntropy;"),
+        "the struct's own type decl must still emit, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Show[OsEntropy] for OsEntropy"),
+        "the composable Debug->Show impl must still compose despite the sibling Serialize \
+         derive being unrecognized, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Serialize")),
+        "the unrecognized Serialize derive must still be recorded as a sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// **The verify-first proof** (mitigation #14) for DN-128 (M-1086): every derive shape the fixture
+/// corpus above proves the *text* of is run through the REAL `myc-check` oracle here — the fieldless
+/// `Debug`/`Default` cases, and the same-file nested-composition case
+/// ([`derive_composes_end_to_end_over_a_same_file_nested_derived_field`]'s text). Skips gracefully
+/// (never fails) when `myc-check` is not built, exactly like `struct_pattern_forms_check_clean_
+/// against_real_toolchain` above.
+#[test]
+fn derive_forms_check_clean_against_real_toolchain() {
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The fixture-corpus text assertions \
+             above still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-derive-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // Fieldless `Debug` -- the primary "make sure this case emits clean" deliverable.
+        ("#[derive(Debug)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `Default`.
+        ("#[derive(Default)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless struct deriving BOTH in one attribute list.
+        ("#[derive(Debug, Default)]\nstruct OsEntropy;", "OsEntropy"),
+        // The same-file nested-composition case (both items, both derives).
+        (
+            "#[derive(Debug, Default)]\nstruct Inner;\n\
+             #[derive(Debug, Default)]\nstruct Outer(Inner, Inner);",
+            "Outer",
+        ),
+        // DN-136 Phase-2 (DERIVE-COMPLETION) -- fieldless `PartialEq`, alone.
+        ("#[derive(PartialEq)]\nstruct OsEntropy;", "OsEntropy"),
+        // `PartialEq` + `Eq` together (the common real-Rust pair; must compose exactly once --
+        // `derive_eq_recognizes_only_partialeq_avoids_duplicate_fn` below pins the "exactly once"
+        // half directly).
+        ("#[derive(PartialEq, Eq)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `PartialOrd`, alone.
+        ("#[derive(PartialOrd)]\nstruct OsEntropy;", "OsEntropy"),
+        // `PartialOrd` + `Ord` together (the common real-Rust pair).
+        ("#[derive(PartialOrd, Ord)]\nstruct OsEntropy;", "OsEntropy"),
+        // Fieldless `Hash`.
+        ("#[derive(Hash)]\nstruct OsEntropy;", "OsEntropy"),
+        // The realistic full derive stack real Rust code commonly writes on one struct.
+        (
+            "#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]\n\
+             struct OsEntropy;",
+            "OsEntropy",
+        ),
+        // The same-file nested-composition case for the Phase-2 derives (mirrors the Debug/
+        // Default case above).
+        (
+            "#[derive(PartialEq, PartialOrd, Hash)]\nstruct Inner;\n\
+             #[derive(PartialEq, PartialOrd, Hash)]\nstruct Outer(Inner, Inner);",
+            "Outer",
+        ),
+        // DN-138 (increment 1, the DeriveAttr-class scalar/Bytes/Bool unblock) -- the exact corpus
+        // shape (`u64`/`String`/`bool` fields, the real `CheckError`/`CtorInfo`/`EvaluatorOpts`
+        // non-`Vec` field mix) now composes all four field-gating rows over ONE struct with zero
+        // DeriveAttr gaps.
+        (
+            "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Rec(u64, String, bool);",
+            "Rec",
+        ),
+        // DN-138 WU-4 (increment 2): a NARROW scalar (`u8`, not the seeded `Binary{64}`) now
+        // composes for the trait-dispatched rows too, via a `width_cast` up to `Binary{64}`
+        // (`Show`/`Ord3`) or a literal-zero-at-width (`Init`) -- no longer just `PartialEq`.
+        (
+            "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Narrow(u8);",
+            "Narrow",
+        ),
+        // DN-138 WU-4 (increment 2): `Hash` now composes over a `ScalarBinary` field too, via the
+        // new `bin_to_bytes` raw-byte prim (`hash_blake3(bin_to_bytes(p))`).
+        (
+            "#[derive(Hash)]\nstruct HashableRec(String, bool, u64);",
+            "HashableRec",
+        ),
+        // DN-138 WU-4 (increment 2) -- THE headline corpus-payoff shape: a `Vec<T>` field, the one
+        // increment-1 explicitly left gapped in every named corpus struct (`CheckError`/`CtorInfo`/
+        // `EvaluatorOpts`). All five field-gating derives compose over a `Vec<u64>` + `String`
+        // struct with zero DeriveAttr gaps -- `Show`/`PartialOrd` route the `Vec` field through a
+        // per-element auxiliary fn (`show_vec_Binary_64`/`ord_vec_Binary_64`), `Default` seeds
+        // `Nil`, `PartialEq`/`Hash` route through `eq_vec_Binary_64`/`hash_vec_Binary_64`.
+        (
+            "#[derive(Debug, Default, PartialEq, PartialOrd, Hash)]\nstruct WithVec(Vec<u64>, String);",
+            "WithVec",
+        ),
+        // DN-138 WU-4 -- a `Vec` of a `UserNamed` element type (mirrors the real corpus's
+        // `CtorInfo.fields: Vec<Ty>` shape once `Ty` itself is derivable) composes too, chaining
+        // through the ELEMENT's own same-file derived instance/fns.
+        (
+            "#[derive(Debug, Default, PartialEq)]\nstruct Elem(u64);\n\
+             #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
+            "WithVecOfUser",
+        ),
+        // DN-138 WU-4 (post-landing review fix) -- a `u128` field is WIDER than the seeded
+        // `Binary{64}` instance: `PartialEq` (width-generic `eq` prim) and `Default` (a literal
+        // zero at the field's own width, no width_cast at all) still compose cleanly; `Debug`/
+        // `PartialOrd` honestly GAP it instead of composing a `width_cast` that would `myc-check`
+        // clean but overflow at runtime for a real value >= 2^64 (see `derive_debug_and_partialord_
+        // gap_a_wide_scalar_never_a_runtime_throwing_width_cast` below for the negative half).
+        (
+            "#[derive(Default, PartialEq)]\nstruct Wide(u128);",
+            "Wide",
+        ),
+    ];
+    for (i, (rust, item)) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == item),
+            "case {i} (`{rust}`) failed to emit `{item}`: gaps={:?}",
+            report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-136 Phase-2 (DERIVE-COMPLETION, M-1097/M-1098/M-1099) — the `PartialEq`/`PartialOrd`/`Hash`
+// additive rows (`emit/derives/{eq,ord,hash}.rs`). Mirrors the DN-128 (M-1086) test shape above
+// (fixture-corpus text assertions here; the live-oracle half rides the `rust_snippets` cases
+// added to `derive_forms_check_clean_against_real_toolchain` above).
+// ---------------------------------------------------------------------------------------------
+
+/// Fieldless `derive(PartialEq)` composes the trivially-true `fn eq_T` — mirrors the fieldless
+/// `Debug`/`Default` fixture-corpus cases' shape (`cases()` above), pinned directly here since
+/// this axis has no dedicated fixture-corpus entry point of its own.
+#[test]
+fn derive_eq_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn eq_OsEntropy(a: OsEntropy, b: OsEntropy) => Binary{1} =\n    0b1;"),
+        "expected the fieldless eq fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(PartialEq)` (the primitive-field case) must NEVER leak a fabricated `fn eq_*`
+/// fragment into the `.myc` text — mirrors `derive_gap_never_leaks_partial_impl_text` (DN-128)
+/// exactly, for the new axis (G2).
+#[test]
+fn derive_eq_gap_never_leaks_partial_fn_text() {
+    // DN-138 note: `u8`/`bool` fields alone are NO LONGER a gapping fixture for `PartialEq` — the
+    // seeded `Show`/`Init`/`Ord3` unblock (DN-138) also routes `PartialEq` to the width-generic
+    // `eq` prim (any `Binary{N}`) and an inline `Bool` match, so BOTH now compose (see
+    // `derive_eq_composes_over_scalar_bytes_bool_fields_dn138` below). **DN-138 WU-4 update:** a
+    // `Vec<u8>` field is ALSO no longer a gapping fixture (`ScalarBinary` is `PartialEq`-eligible
+    // at any width, so `VecOf(ScalarBinary)` composes too — see `WithVec` in
+    // `derive_forms_check_clean_against_real_toolchain`). `Vec<f64>` (`VecOf(Float)` — the ONE
+    // element kind with no equality route at all, ADR-040) is the fixture that stays a genuine,
+    // disclosed gap.
+    let (myc, report) = transpile_source(
+        "#[derive(PartialEq)]\nstruct Pair(Vec<f64>, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn eq_"),
+        "a gapped derive(PartialEq) must never emit a partial `fn eq_*`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialEq")),
+        "expected a DeriveAttr gap citing PartialEq, got {:?}",
+        report.gaps
+    );
+}
+
+/// **ADR-040 §2.4 (NaN semantics).** A `Float` field REFUSES the whole `derive(PartialEq)` with a
+/// gap reason that names the real cause (NaN/ADR-040), not the generic no-ambient-instance one —
+/// the DN-136 Phase-2 worklist's explicit "not just ineligible-repr fields" requirement.
+#[test]
+fn derive_eq_float_field_refused_with_adr040_citation() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct Sample(f64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn eq_Sample"),
+        "a Float-field derive(PartialEq) must never fabricate an equality fn, got:\n{myc}"
+    );
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::DeriveAttr && g.reason.contains("Sample"))
+        .unwrap_or_else(|| {
+            panic!(
+                "expected a DeriveAttr gap for Sample, got {:?}",
+                report.gaps
+            )
+        });
+    assert!(
+        gap.reason.contains("NaN") && gap.reason.contains("ADR-040"),
+        "expected the Float-field gap to cite NaN/ADR-040 specifically, got: {}",
+        gap.reason
+    );
+}
+
+/// **The verified duplicate-fn-avoidance property.** `#[derive(PartialEq, Eq)]` on one struct
+/// composes the `fn eq_*` body EXACTLY ONCE (never twice — the empirically-verified
+/// `myc-check "duplicate function"` collision `eq.rs`'s module doc documents) and records the
+/// bare `Eq` name as an unrecognized sub-gap, exactly like any other never-built derive name
+/// falling through the driver's catch-all — never silently absorbed (G2).
+#[test]
+fn derive_eq_recognizes_only_partialeq_avoids_duplicate_fn() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialEq, Eq)]\nstruct OsEntropy;", "f.rs", "f")
+            .expect("parses/transpiles");
+    let occurrences = myc.matches("fn eq_OsEntropy").count();
+    assert_eq!(
+        occurrences, 1,
+        "expected exactly one `fn eq_OsEntropy` (never a duplicate), got {occurrences} in:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Eq")),
+        "expected the bare `Eq` name to fall through as an unrecognized sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// Fieldless `derive(PartialOrd)` composes the trivially-equal `impl Ord3[T] for T`.
+#[test]
+fn derive_ord_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(PartialOrd)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains(
+            "impl Ord3[OsEntropy] for OsEntropy {\n  fn cmp(a: OsEntropy, b: OsEntropy) => \
+             Binary{8} =\n    0b00000001;\n};"
+        ),
+        "expected the fieldless Ord3 impl body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(PartialOrd)` (the primitive-field case) must NEVER leak a fabricated
+/// `impl Ord3[...]` fragment into the `.myc` text. **DN-138 WU-4 update:** a narrow `u8` field is
+/// NO LONGER a gapping fixture (WU-4's `width_cast` unblock composes it — see the `Narrow` case in
+/// `derive_forms_check_clean_against_real_toolchain`); `Vec<f64>` (`VecOf(Float)`, still ineligible
+/// for every row) is the fixture that stays a genuine, disclosed gap.
+#[test]
+fn derive_ord_gap_never_leaks_partial_impl_text() {
+    let (myc, report) = transpile_source(
+        "#[derive(PartialOrd)]\nstruct Pair(Vec<f64>, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl Ord3"),
+        "a gapped derive(PartialOrd) must never emit a partial `impl Ord3`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialOrd")),
+        "expected a DeriveAttr gap citing PartialOrd, got {:?}",
+        report.gaps
+    );
+}
+
+/// **ADR-040 §2.4 (NaN semantics).** A `Float` field REFUSES the whole `derive(PartialOrd)`,
+/// citing the real cause (no order position under IEEE-754's partial order).
+#[test]
+fn derive_ord_float_field_refused_with_adr040_citation() {
+    let (myc, report) = transpile_source("#[derive(PartialOrd)]\nstruct Sample(f64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !myc.contains("impl Ord3[Sample]"),
+        "a Float-field derive(PartialOrd) must never fabricate an Ord3 impl, got:\n{myc}"
+    );
+    let gap = report
+        .gaps
+        .iter()
+        .find(|g| g.category == Category::DeriveAttr && g.reason.contains("Sample"))
+        .unwrap_or_else(|| {
+            panic!(
+                "expected a DeriveAttr gap for Sample, got {:?}",
+                report.gaps
+            )
+        });
+    assert!(
+        gap.reason.contains("NaN") && gap.reason.contains("ADR-040"),
+        "expected the Float-field gap to cite NaN/ADR-040 specifically, got: {}",
+        gap.reason
+    );
+}
+
+/// **The verified duplicate-instance-avoidance property** — the `Ord3` analogue of
+/// `derive_eq_recognizes_only_partialeq_avoids_duplicate_fn`. `#[derive(PartialOrd, Ord)]`
+/// composes `impl Ord3[T] for T` EXACTLY ONCE (never the RFC-0019 §4.5 "overlapping instance"
+/// collision `ord.rs`'s module doc documents).
+#[test]
+fn derive_ord_recognizes_only_partialord_avoids_duplicate_impl() {
+    let (myc, report) =
+        transpile_source("#[derive(PartialOrd, Ord)]\nstruct OsEntropy;", "f.rs", "f")
+            .expect("parses/transpiles");
+    let occurrences = myc.matches("impl Ord3[OsEntropy]").count();
+    assert_eq!(
+        occurrences, 1,
+        "expected exactly one `impl Ord3[OsEntropy]` (never a duplicate), got {occurrences} \
+         in:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Ord")),
+        "expected the bare `Ord` name to fall through as an unrecognized sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// Fieldless `derive(Hash)` composes the type-name-discriminated `fn hash_T`.
+#[test]
+fn derive_hash_fieldless_composes() {
+    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct OsEntropy;", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "expected OsEntropy in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn hash_OsEntropy(a: OsEntropy) => Bytes =\n    hash_blake3(\"OsEntropy\");"),
+        "expected the fieldless hash fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible (fieldless) derive must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// A gapped `derive(Hash)` (the primitive-field case) must NEVER leak a fabricated `fn hash_*`
+/// fragment into the `.myc` text. **DN-138 WU-4 update:** a `u8`/`ScalarBinary` field is NO LONGER
+/// a gapping fixture (the new `bin_to_bytes` prim unblocks it, any width — see `HashableRec` in
+/// `derive_forms_check_clean_against_real_toolchain`); `Vec<f64>` (`VecOf(Float)`, still
+/// ineligible) is the fixture that stays a genuine, disclosed gap.
+#[test]
+fn derive_hash_gap_never_leaks_partial_fn_text() {
+    let (myc, report) =
+        transpile_source("#[derive(Hash)]\nstruct Pair(Vec<f64>, bool);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !myc.contains("fn hash_"),
+        "a gapped derive(Hash) must never emit a partial `fn hash_*`, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Hash")),
+        "expected a DeriveAttr gap citing Hash, got {:?}",
+        report.gaps
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-138 (increment 1) — the DeriveAttr-class scalar/`Bytes`/`Bool` field unblock. The seeded
+// `Show`/`Init`/`Ord3` primitive instances (`crates/mycelium-l1/src/checkty.rs`'s
+// `PRELUDE_INSTANCE_SEEDS`) plus the `field_derive_kind` classifier (this file's `mod.rs`) let the
+// five field-gating rows compose over real scalar/`Bytes`/`Bool` fields for the first time — a
+// struct composed ONLY of such fields is now FULLY unblocked, not just structurally emitted with
+// every derive gapped. `Vec[T]` fields (in every named corpus struct) still gap — increment 2.
+// ---------------------------------------------------------------------------------------------
+
+/// **The DeriveAttr-class unblock, end to end.** A struct with a `u64`/`String`/`bool` field set —
+/// the exact non-`Vec` field mix the real corpus structs (`CheckError`/`CtorInfo`/`EvaluatorOpts`)
+/// carry — composes `Debug`/`Default`/`PartialEq`/`PartialOrd` with ZERO `DeriveAttr` gaps.
+/// Before DN-138, `field_derive_eligible`'s boolean gate refused EVERY field here (`Binary{64}`,
+/// `Bytes`, `Bool` were all in the disallowed/bracketed set), so all four derives gapped entirely.
+#[test]
+fn derive_composes_over_scalar_bytes_bool_fields_dn138() {
+    let (myc, report) = transpile_source(
+        "#[derive(Debug, Default, PartialEq, PartialOrd)]\nstruct Rec(u64, String, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "Rec"),
+        "expected `Rec` in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a scalar/Bytes/Bool-only struct must compose ALL FOUR derives with zero DeriveAttr gaps \
+         (DN-138 increment 1), got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("impl Show[Rec] for Rec"),
+        "expected a composed Show impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Init[Rec] for Rec"),
+        "expected a composed Init impl, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn eq_Rec("),
+        "expected a composed eq_Rec fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Ord3[Rec] for Rec"),
+        "expected a composed Ord3 impl, got:\n{myc}"
+    );
+}
+
+/// **DN-138 §3's heterogeneity finding — the WIDTH half is CLOSED by WU-4.** `PartialEq` was
+/// always width-generic (the bare `eq` prim, RFC-0032 D1). Before WU-4, `Debug` (trait-dispatched
+/// through the ONE seeded `Binary{64}` instance) gapped an identical NARROW `Binary{8}` field;
+/// WU-4 closes that via a `width_cast` wrapper (`show.rs`/`ord.rs`) — so BOTH now compose over the
+/// same narrow scalar, over the SAME struct, with zero DeriveAttr gaps.
+#[test]
+fn derive_eq_and_debug_both_compose_over_a_narrow_scalar_dn138_wu4() {
+    let (myc, report) = transpile_source("#[derive(PartialEq)]\nstruct Narrow(u8);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "PartialEq must compose over a narrow Binary{{8}} scalar (no width restriction for the \
+         prim-routed eq call), got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("eq(p0, q0)"),
+        "expected the bare eq prim call, got:\n{myc}"
+    );
+
+    // The SAME field, `Debug` — WU-4's `width_cast` wrapper now ALSO composes (no longer a gap).
+    let (debug_myc, debug_report) =
+        transpile_source("#[derive(Debug)]\nstruct Narrow(u8);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !debug_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "Debug must now compose over a narrow Binary{{8}} scalar too (WU-4's width_cast unblock), \
+         got {:?}",
+        debug_report.gaps
+    );
+    assert!(
+        debug_myc.contains("width_cast(p0,"),
+        "expected the width_cast-wrapped render call, got:\n{debug_myc}"
+    );
+}
+
+/// **HIGH (post-landing review finding, fixed here): a WIDE `ScalarBinary` (`u128`/`i128` ->
+/// `Binary{128}`) must NEVER compose `Debug`/`PartialOrd` via a NARROWING `width_cast` down to the
+/// seeded `Binary{64}` instance** -- `width_cast`'s own checked-narrow contract overflows at
+/// runtime for any value `>= 2^64` (`prims.rs::prim_width_cast`), so composing it unconditionally
+/// would `myc-check` clean but THROW at eval time for a real wide value -- silently overstating
+/// DN-138 section 6's stated `u8`/`u16`/`u32` scope. Both rows must leave it an honest,
+/// non-fabricated gap instead (never a partial/wrong-but-plausible-looking impl, G2).
+#[test]
+fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast() {
+    let (debug_myc, debug_report) =
+        transpile_source("#[derive(Debug)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !debug_myc.contains("width_cast"),
+        "Debug must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{debug_myc}"
+    );
+    assert!(
+        debug_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Debug")),
+        "expected a DeriveAttr gap citing Debug for the wide scalar field, got {:?}",
+        debug_report.gaps
+    );
+
+    let (ord_myc, ord_report) =
+        transpile_source("#[derive(PartialOrd)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !ord_myc.contains("width_cast"),
+        "PartialOrd must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{ord_myc}"
+    );
+    assert!(
+        ord_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("PartialOrd")),
+        "expected a DeriveAttr gap citing PartialOrd for the wide scalar field, got {:?}",
+        ord_report.gaps
+    );
+
+    // The companion positive control: PartialEq (width-generic prim, no cast at all) and Default
+    // (a literal zero at the field's own width, no cast either) both still compose CLEAN for the
+    // identical wide field -- this asymmetry is real and intentional, not a regression (pinned
+    // directly here, and via the live oracle in `derive_forms_check_clean_against_real_toolchain`'s
+    // `Wide` case).
+    let (_, eq_report) = transpile_source("#[derive(PartialEq)]\nstruct Wide(u128);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !eq_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "PartialEq must still compose over a wide (u128) scalar (width-generic eq prim, no \
+         width_cast at all), got {:?}",
+        eq_report.gaps
+    );
+    let (_, default_report) =
+        transpile_source("#[derive(Default)]\nstruct Wide(u128);", "f.rs", "f")
+            .expect("parses/transpiles");
+    assert!(
+        !default_report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "Default must still compose over a wide (u128) scalar (a literal zero at its own width, \
+         no width_cast at all), got {:?}",
+        default_report.gaps
+    );
+}
+
+/// `Hash` composes over `Bytes`/`Bool` fields (no scalar field present).
+#[test]
+fn derive_hash_composes_over_bytes_and_bool_fields() {
+    let (myc, report) = transpile_source(
+        "#[derive(Hash)]\nstruct HashableRec(String, bool);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a Bytes/Bool-only struct must compose Hash with zero DeriveAttr gaps, got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("fn hash_HashableRec("),
+        "expected a composed hash_HashableRec fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("hash_blake3(p0)"),
+        "expected the direct hash_blake3 route for the Bytes field, got:\n{myc}"
+    );
+}
+
+/// **DN-138 WU-4 unblock:** `Hash` now composes over a scalar field too, via the new
+/// `bin_to_bytes` raw-byte prim (`hash_blake3(bin_to_bytes(p))`) — previously an honest,
+/// disclosed gap (no such prim existed).
+#[test]
+fn derive_hash_composes_over_a_scalar_field_dn138_wu4() {
+    let (myc, report) = transpile_source("#[derive(Hash)]\nstruct Rec(u64);", "f.rs", "f")
+        .expect("parses/transpiles");
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "Hash must now compose over a scalar field (the new bin_to_bytes prim), got {:?}",
+        report.gaps
+    );
+    assert!(
+        myc.contains("hash_blake3(bin_to_bytes(p0))"),
+        "expected the bin_to_bytes-routed hash call, got:\n{myc}"
+    );
+}
+
+/// **The same-file nested-composition case, for all three Phase-2 rows at once** — mirrors
+/// `derive_composes_end_to_end_over_a_same_file_nested_derived_field` (DN-128) exactly, pinning
+/// the field-walked body text for `Eq`/`Ord3`/`Hash` together.
+#[test]
+fn derive_eq_ord_hash_compose_end_to_end_over_a_same_file_nested_derived_field() {
+    let rust = "#[derive(PartialEq, PartialOrd, Hash)]\nstruct Inner;\n\
+                #[derive(PartialEq, PartialOrd, Hash)]\nstruct Outer(Inner, Inner);";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    for name in ["Inner", "Outer"] {
+        assert!(
+            report.emitted_items.iter().any(|n| n == name),
+            "expected `{name}` in emitted_items, got {:?}",
+            report.emitted_items
+        );
+    }
+    assert!(
+        myc.contains("fn eq_Inner(a: Inner, b: Inner) => Binary{1} =\n    0b1;"),
+        "expected Inner's derived eq fn, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn eq_Outer(a: Outer, b: Outer) => Binary{1} =\n    match a { Outer(p0, p1) => \
+             match b { Outer(q0, q1) => and(eq_Inner(p0, q0), eq_Inner(p1, q1)) } };"
+        ),
+        "expected Outer's field-walked eq fn body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "impl Ord3[Outer] for Outer {\n  fn cmp(a: Outer, b: Outer) => Binary{8} =\n    \
+             match a { Outer(p0, p1) => match b { Outer(q0, q1) => match cmp(p0, q0) { \
+             0b00000001 => cmp(p1, q1), other => other } } };\n};"
+        ),
+        "expected Outer's field-walked Ord3 impl body, got:\n{myc}"
+    );
+    assert!(
+        myc.contains(
+            "fn hash_Outer(a: Outer) => Bytes =\n    match a { Outer(p0, p1) => \
+             hash_blake3(bytes_concat(bytes_concat(\"Outer\", hash_Inner(p0)), hash_Inner(p1))) \
+             };"
+        ),
+        "expected Outer's field-walked hash fn body, got:\n{myc}"
+    );
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr),
+        "a fully-eligible nested derive set must not record any DeriveAttr gap, got {:?}",
+        report.gaps
+    );
+}
+
+/// **Mixed derive set (DN-136 §8 invariant witness, Phase-2 twin of
+/// `derive_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits`).** `PartialEq`
+/// composes AND the unrecognized `Serialize` sub-gaps -- the item still emits both.
+#[test]
+fn derive_eq_mixed_set_composes_eligible_and_sub_gaps_the_rest_item_still_emits() {
+    let rust = "#[derive(PartialEq, Serialize)]\nstruct OsEntropy;";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture").expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "OsEntropy"),
+        "the item must still emit despite a sibling derive being unrecognized, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type OsEntropy = OsEntropy;"),
+        "the struct's own type decl must still emit, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn eq_OsEntropy"),
+        "the composable PartialEq->eq fn must still compose despite the sibling Serialize \
+         derive being unrecognized, got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Serialize")),
+        "the unrecognized Serialize derive must still be recorded as a sub-gap, got {:?}",
+        report.gaps
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// DN-136/P1-a (M-1096) — the emit hook-dispatch interfaces-first refactor's byte-identical
+// differential (the DoD gate, DN-136 §8 / §3 "the migration is mechanical and behavior-
+// preserving ... the cases() corpus and the differential harness emit byte-identical text
+// before/after"). This is the one place the whole `cases()` corpus is asserted BYTE-IDENTICAL
+// (not the substring `contains` checks the fixtures above use) against a golden snapshot
+// captured from the PRE-refactor emitter (`origin/dev@642851ac`, before the P1-a handler-table
+// migration touched `map_pattern_inner`/`lower_struct_derives`/`visit_call`).
+// ---------------------------------------------------------------------------------------------
+
+/// One case's captured emission outcome — deliberately independent of [`crate::gap::Gap`]'s own
+/// `Serialize`-only derive (that type has no `Deserialize`), so this snapshot struct is the
+/// stable, round-trippable golden format on its own terms.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+struct CaseSnapshot {
+    /// The exact `.myc` text `transpile_source` produced for the whole fixture (every emitted
+    /// item, joined) — the primary byte-identical signal.
+    myc: String,
+    emitted_items: Vec<String>,
+    /// `(category.as_str(), reason, item_name)` per gap, in report order — catches an accidental
+    /// message-text drift during the handler-table move, not just an emitted-text drift.
+    gaps: Vec<(String, String, Option<String>)>,
+}
+
+fn snapshot_case(case: &Case) -> CaseSnapshot {
+    let (myc, report) = transpile_source(case.rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("case `{}` failed to parse/transpile: {e}", case.name));
+    CaseSnapshot {
+        myc,
+        emitted_items: report.emitted_items,
+        gaps: report
+            .gaps
+            .iter()
+            .map(|g| {
+                (
+                    g.category.as_str().to_string(),
+                    g.reason.clone(),
+                    g.item_name.clone(),
+                )
+            })
+            .collect(),
+    }
+}
+
+const EMIT_HOOK_GOLDEN_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/src/tests/fixtures/emit_hook_golden.json"
+);
+
+/// **One-off golden-snapshot generator — NOT part of the regression gate (`#[ignore]`).**
+///
+/// Run manually (`cargo test -p mycelium-transpile --lib generate_emit_hook_golden_snapshot -- \
+/// --ignored --exact`) to (re)write `src/tests/fixtures/emit_hook_golden.json`. This was run
+/// exactly ONCE, against the PRE-refactor emitter (`origin/dev@642851ac`, before the P1-a
+/// handler-table migration), to capture the golden reference
+/// [`emit_hook_refactor_byte_identical_differential`] below checks the post-refactor emitter
+/// against. **Never re-run this to "fix" a failing differential** — a red differential means the
+/// migration changed behavior (a regression to find and fix in the migration, not the snapshot);
+/// only re-run it when a *separately reviewed, intentional* emitter behavior change lands (VR-5 —
+/// regenerating the oracle to match a regression would silently launder it).
+#[test]
+#[ignore = "one-off golden-snapshot generator for the DN-136/P1-a byte-identical differential; \
+            run manually with --ignored, never as part of the regression gate"]
+fn generate_emit_hook_golden_snapshot() {
+    use std::collections::BTreeMap;
+    let snapshot: BTreeMap<&'static str, CaseSnapshot> = cases()
+        .iter()
+        .map(|case| (case.name, snapshot_case(case)))
+        .collect();
+    let json = serde_json::to_string_pretty(&snapshot).expect("serialize golden snapshot");
+    std::fs::write(EMIT_HOOK_GOLDEN_PATH, json).expect("write golden snapshot fixture");
+}
+
+/// **The DN-136/P1-a Definition-of-Done gate.** Re-derives every `cases()` fixture's emission
+/// through the (post-refactor) emitter and asserts it is BYTE-IDENTICAL to the golden snapshot
+/// captured from the pre-refactor emitter (see [`generate_emit_hook_golden_snapshot`]'s doc). A
+/// case present in `cases()` but absent from the golden snapshot (or vice versa) is itself a
+/// failure — the corpus must not silently grow/shrink without a deliberate re-snapshot (G2).
+#[test]
+fn emit_hook_refactor_byte_identical_differential() {
+    use std::collections::BTreeMap;
+    let golden: BTreeMap<String, CaseSnapshot> =
+        serde_json::from_str(include_str!("fixtures/emit_hook_golden.json"))
+            .expect("golden snapshot fixture parses as JSON");
+    let live = cases();
+    assert_eq!(
+        golden.len(),
+        live.len(),
+        "cases() corpus size ({}) drifted from the golden snapshot ({}) — regenerate the \
+         snapshot deliberately (see generate_emit_hook_golden_snapshot's doc), never silently",
+        live.len(),
+        golden.len()
+    );
+    for case in &live {
+        let expected = golden.get(case.name).unwrap_or_else(|| {
+            panic!(
+                "case `{}` is not in the golden snapshot — a case was added/renamed without a \
+                 deliberate re-snapshot",
+                case.name
+            )
+        });
+        let actual = snapshot_case(case);
+        assert_eq!(
+            &actual, expected,
+            "case `{}`: emit-hook-refactored output differs from the pre-refactor (DN-136 \
+             P1-a) golden snapshot — the handler-table migration must be byte-identical \
+             (mechanical move only, never a behavior change)",
+            case.name
+        );
+    }
+}
+
+/// **The verify-first live-oracle proof** (mitigation #14) for DN-131/M-1101 (bounded
+/// inherent-impl type-parameter emission): every impl-level generic-parameter shape this leaf
+/// newly emits — unbounded, single-bound, multi-bound — runs through the REAL `myc-check`
+/// oracle, mirroring `signed_numeric_idiom_check_clean`'s pattern. Each snippet is a full
+/// one-nodule program (trait + type + bounded impl + a concrete-instantiating `fn`), matching
+/// the shape `crates/mycelium-l1/tests/check.rs::impl_slot_bound_is_accepted` already pins at
+/// the kernel/L1 level — this test is the transpiler-emission twin: it proves the .myc TEXT
+/// this leaf's `emit_impl` produces from REAL Rust source also checks clean, not just that the
+/// kernel accepts hand-written .myc of the same shape. **Non-vacuity:** every one of these Rust
+/// snippets was a hard GAP before this leaf (the impl carried a non-empty `generics.params`, so
+/// the whole impl always refused) — `report.emitted_items` confirms the impl is a REAL
+/// emission, not a coincidental no-op. Skips gracefully (never fails) when `myc-check` is not
+/// built.
+#[test]
+fn bounded_impl_generic_emission_check_clean() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: DN-131/M-1101 live oracle test skipped — no runnable myc-check (set \
+             MYC_CHECK_CMD or build `cargo build -p mycelium-check --bin myc-check`). The \
+             fixture-corpus text assertions in `cases()` still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-dn131-impl-generics-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // Unbounded impl-level generic (DN-103's own slot; DN-131 §3's backward-compatible
+        // identity case — `bounds: []`).
+        "struct Bx<A>(A);\nimpl<T> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+        // A single bounded impl-level type parameter — the leaf's headline capability. `Cmp` is
+        // declared in-nodule and never called from `dup`, pinning the DN-131 §7 "dead bound"
+        // case (registry-validated by `check_bounds`, costs nothing at monomorphization).
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> bool; }\nstruct Bx<A>(A);\n\
+         impl<T: Cmp> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+        // A multi-bound impl-level type parameter (`T: A + B`, DN-131 §3's `parse_bound` reuse).
+        "trait Cmp<A> { fn cmp(a: A, b: A) -> bool; }\ntrait Ord2<A> { fn lt(a: A, b: A) -> bool; }\n\
+         struct Bx<A>(A);\nimpl<T: Cmp + Ord2> Bx<T> { fn dup(self) -> Bx<T> { self } }\n\
+         fn mk(x: u8) -> Bx<u8> { Bx(x) }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("case {i} (`{rust}`) failed to parse/transpile: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n.starts_with("impl")),
+            "case {i} (`{rust}`) failed to emit the bounded/unbounded impl at all: \
+             emitted_items={:?} gaps={:?}",
+            report.emitted_items,
+            report.gaps
+        );
+        let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
 }

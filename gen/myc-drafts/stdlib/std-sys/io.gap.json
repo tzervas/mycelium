@@ -9,7 +9,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: fmt ;",
-      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std::fmt` — `std` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -19,7 +19,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: io :: { self , Read , Write } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std.io::{self, ..}` — `self` binds the module ITSELF as a local name; there is no \"import a nodule as a name\" construct in this grammar, so this leaf cannot resolve (distinct from an ordinary lookup miss); `use std.io::Read` — `std.io` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use std.io::Write` — `std.io` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -49,7 +49,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadCappedError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadCappedError :: Io (e) => write ! (f , \"stdin read error: {e}\") , ReadCappedError :: TooLarge { cap } => { write ! (f , \"stdin input exceeds the {cap}-byte cap (refused, not truncated)\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ReadCappedError"
     },
     {
@@ -79,7 +79,7 @@
       "category": "Other",
       "rust_construct": "Other",
       "snippet": "# [doc = \" \\\\[Declared\\\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external\"] # [doc = \" edge). The safe form for **untrusted** input: a hostile/runaway pipe cannot drive an unbounded\"] # [doc = \" allocation.\"] # [doc = \"\"] # [doc = \" Never-silent (G2): if the input would **exceed** `max` bytes, this returns\"] # [doc = \" `Err(ReadCappedError::TooLarge { cap: max })` — it never silently truncates the stream. An input\"] # [doc = \" of **exactly** `max` bytes (or fewer) succeeds and returns those bytes. OS read errors surface as\"] # [doc = \" `Err(ReadCappedError::Io(_))`.\"] # [doc = \"\"] # [doc = \" # Guarantee\"] # [doc = \"\"] # [doc = \" `Declared` — a thin bounded wrapper over `std::io`; no theorem and no measured bound backs the\"] # [doc = \" underlying stream semantics. The cap itself is exact by construction (the returned buffer length\"] # [doc = \" is always `<= max`), but the floor's overall guarantee stays `Declared` (VR-5).\"] pub fn read_to_end_capped (max : usize) -> Result < Vec < u8 > , ReadCappedError > { read_capped (io :: stdin () . lock () , max) }",
-      "reason": "`usize` has a platform-dependent width; no fixed Binary{N} mapping",
+      "reason": "qualified/associated-function call `io :: stdin` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
       "item_name": "read_to_end_capped"
     },
     {

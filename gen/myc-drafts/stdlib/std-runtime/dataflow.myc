@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.dataflow
 // `run_dataflow` — deadlock-freedom for communicating tasks (M-711 / RFC-0008 §4.3 / E12-1).
 //
 // Communicating tasks (producers/consumers over the [`crate::network`] channels) cannot be run to
@@ -29,7 +29,9 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.dataflow;
+
+use std.runtime.task.Deadlock;
 
 // One non-blocking step of a communicating task.
 type Step = Done | Pending;
@@ -43,3 +45,7 @@ type SweepDir = Ascending | Descending;
 // real task is always swapped back before the next sweep), but must type-check as a valid
 // [`PollTask`] to occupy the slot.
 type AlreadyDone = AlreadyDone;
+
+impl PollTask for AlreadyDone {
+  fn poll(self: AlreadyDone) => (AlreadyDone, Step) = (self, Done);
+};

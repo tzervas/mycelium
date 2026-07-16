@@ -92,3 +92,50 @@ fn nested_mod_rs_siblings_do_not_collide() {
         "two distinct mod.rs files in the same crate derived the same nodule path: {a:?}"
     );
 }
+
+/// **PR #1517 review HIGH — cross-file *reserved-word* nodule-path collision.** Mirrors
+/// `nested_mod_rs_siblings_do_not_collide` but for the reserved-word collision class: two
+/// distinct source files whose sole intra-crate segment is itself a Mycelium reserved word
+/// (mirroring the real `crates/mycelium-l1/src/{fuse,nodule}.rs` shape — both `fuse` and `nodule`
+/// are in `crate::reserved::RESERVED`). `derive_nodule_path` alone still derives the same
+/// `l1.fuse` / `l1.nodule` shapes it always did (it doesn't know about reserved words — that's
+/// `reserved::sanitize_nodule_path`'s job, run downstream in `transpile_source`); the collision
+/// this test pins is that the *sanitized* paths must stay distinct. The prior fix (drop the
+/// colliding segment) collapsed both onto the bare `l1` nodule path — a silent, cross-file
+/// collision the per-file myc-check vet loop cannot detect (each file "Clean"s independently).
+/// The escape fix (`RESERVED_SEGMENT_SUFFIX`) closes it: distinct reserved words escape to
+/// distinct strings, so the two siblings sanitize to distinct nodule paths.
+#[test]
+fn reserved_word_siblings_do_not_collide_after_sanitize() {
+    let a = derive_nodule_path(&PathBuf::from("crates/mycelium-l1/src/fuse.rs"));
+    let b = derive_nodule_path(&PathBuf::from("crates/mycelium-l1/src/nodule.rs"));
+    assert_eq!(
+        a, "l1.fuse",
+        "precondition: derive_nodule_path is unchanged by this fix"
+    );
+    assert_eq!(
+        b, "l1.nodule",
+        "precondition: derive_nodule_path is unchanged by this fix"
+    );
+
+    let (sanitized_a, gap_a) = crate::reserved::sanitize_nodule_path(&a);
+    let (sanitized_b, gap_b) = crate::reserved::sanitize_nodule_path(&b);
+    assert!(
+        gap_a.is_some(),
+        "`fuse` is reserved — sanitizing `l1.fuse` must gap"
+    );
+    assert!(
+        gap_b.is_some(),
+        "`nodule` is reserved — sanitizing `l1.nodule` must gap"
+    );
+    assert_ne!(
+        sanitized_a, sanitized_b,
+        "two distinct reserved-word-colliding siblings sanitized to the same nodule path: \
+         {sanitized_a:?} (this is the exact regression the drop-based fix reintroduced — \
+         reverting the escape in crate::reserved::sanitize_nodule_path back to a drop will fail \
+         this assertion)"
+    );
+    // Pin the exact escaped shapes so a silent change to the escape marker is caught here too.
+    assert_eq!(sanitized_a, "l1.fuse_kw");
+    assert_eq!(sanitized_b, "l1.nodule_kw");
+}

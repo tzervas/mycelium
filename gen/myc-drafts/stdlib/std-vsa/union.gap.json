@@ -7,7 +7,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_vsa :: { VsaError , VsaModel } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_vsa::VsaError` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaModel` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -42,7 +42,7 @@
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 54,
+      "line": 60,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -52,7 +52,7 @@
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 55,
+      "line": 61,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -62,7 +62,7 @@
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 56,
+      "line": 62,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -72,7 +72,7 @@
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 57,
+      "line": 63,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -82,42 +82,12 @@
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 61,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 62,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use mycelium_vsa :: { CleanupMemory , Factorization , Match , ResonatorTrace , VsaError , VsaModel , VsaOp , } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 66,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use encoding :: { encode_seq , encode_set } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-vsa/src/lib.rs",
       "line": 67,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
-      "snippet": "pub use matrix :: { OpGuarantee , GUARANTEE_MATRIX } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "snippet": "pub use mycelium_core :: GuaranteeStrength ;",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -126,18 +96,48 @@
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
-      "snippet": "pub use ops :: { bind , bind_role , bundle , cleanup , permute , similarity , unbind , unpermute } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "snippet": "pub use mycelium_vsa :: { CleanupMemory , Factorization , Match , ResonatorTrace , VsaError , VsaModel , VsaOp , } ;",
+      "reason": "`use mycelium_vsa::CleanupMemory` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::Factorization` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::Match` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::ResonatorTrace` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaError` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaModel` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaOp` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 69,
+      "line": 72,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use encoding :: { encode_seq , encode_set } ;",
+      "reason": "`use encoding::encode_seq` — `encode_seq` is not among sibling `encoding`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use encoding::encode_set` — `encode_set` is not among sibling `encoding`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 73,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use matrix :: { OpGuarantee , GUARANTEE_MATRIX } ;",
+      "reason": "`use matrix::OpGuarantee` — `OpGuarantee` is not among sibling `matrix`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use matrix::GUARANTEE_MATRIX` — `GUARANTEE_MATRIX` is not among sibling `matrix`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 74,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use ops :: { bind , bind_role , bundle , cleanup , permute , similarity , unbind , unpermute } ;",
+      "reason": "`use ops::bind` — `bind` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::bind_role` — `bind_role` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::bundle` — `bundle` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::cleanup` — `cleanup` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::permute` — `permute` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::similarity` — `similarity` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::unbind` — `unbind` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use ops::unpermute` — `unpermute` is not among sibling `ops`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-vsa/src/lib.rs",
+      "line": 75,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use recon :: { reconstruct_factors , reconstruct_role } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use recon::reconstruct_factors` — `reconstruct_factors` is not among sibling `recon`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2); `use recon::reconstruct_role` — `reconstruct_role` is not among sibling `recon`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -147,7 +147,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: GuaranteeStrength ;",
-      "reason": "`use` import (single path ending `GuaranteeStrength`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::GuaranteeStrength` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -157,7 +157,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_vsa :: VsaOp ;",
-      "reason": "`use` import (single path ending `VsaOp`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_vsa::VsaOp` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -184,10 +184,10 @@
       "file": "crates/mycelium-std-vsa/src/matrix.rs",
       "line": 222,
       "col": 1,
-      "category": "Other",
-      "rust_construct": "Other",
+      "category": "Closure",
+      "rust_construct": "Closure",
       "snippet": "# [doc = \" Look up a row in [`GUARANTEE_MATRIX`] by model id and op.  Returns `None` for an unregistered\"] # [doc = \" model — an unregistered model has no honest tag to offer (the same convention as\"] # [doc = \" `mycelium_vsa::matrix_tag`).\"] # [must_use] pub fn std_matrix_tag (model_id : & str , op : VsaOp) -> Option < GuaranteeStrength > { GUARANTEE_MATRIX . iter () . find (| r | r . model_id == model_id && r . op == op) . map (| r | r . tag) }",
-      "reason": "unsupported expression form `| r | r . model_id == model_id && r . op == op`",
+      "reason": "closure parameter `r` has no explicit type annotation — Mycelium's `lambda` parameters are always `name: Type` (grammar `lambda_expr` / `param`) and this transpiler has no type-inference pass to recover an omitted Rust closure-param type",
       "item_name": "std_matrix_tag"
     },
     {
@@ -197,7 +197,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_vsa :: { CleanupMemory , Match , VsaError , VsaModel } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_vsa::CleanupMemory` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::Match` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaError` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaModel` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -287,7 +287,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: { ReconInfo , Value } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ReconInfo` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::Value` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -297,7 +297,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_vsa :: { CleanupMemory , Factorization , Match , VsaError , VsaModel } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_vsa::CleanupMemory` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::Factorization` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::Match` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaError` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_vsa::VsaModel` — `mycelium_vsa` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -322,11 +322,12 @@
     }
   ],
   "category_counts": {
+    "Closure": 1,
     "GenericBound": 12,
     "Import": 12,
     "InnerAttr": 1,
     "ModuleDecl": 4,
-    "Other": 2,
+    "Other": 1,
     "Struct": 1
   }
 }

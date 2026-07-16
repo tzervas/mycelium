@@ -1,4 +1,4 @@
-// nodule: std.runtime
+// nodule: std.runtime.reclamation
 // Re-export of the reclamation EXPLAIN/audit record (RFC-0027 §9 / MEM-1), relocated to
 // `mycelium-rt-abi` (M-883/M-884 runtime-ABI seam extraction).
 //
@@ -20,6 +20,6 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.runtime;
+nodule std.runtime.reclamation;
 
 

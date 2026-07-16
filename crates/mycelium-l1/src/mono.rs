@@ -233,7 +233,15 @@ fn is_already_monomorphic(env: &Env) -> bool {
         && env
             .traits
             .keys()
-            .all(|name| name == crate::fuse::TRAIT_NAME)
+            // DN-129 §5 (M-1091): every built-in prelude trait (`Fuse`/`Ord3`/`Show`/`Init`/`Fault`
+            // — [`crate::checkty::PRELUDE_TRAIT_SEEDS`]) is always-excludable the same way `Ord3`
+            // was added alongside `Fuse` (DN-122 §13 / M-1080 WU-B, see this fn's doc comment above)
+            // — a trait key present with zero instances/impls contributes nothing to specialize.
+            .all(|name| {
+                crate::checkty::PRELUDE_TRAIT_SEEDS
+                    .iter()
+                    .any(|s| s.name == name)
+            })
         && env.instances.is_empty()
         && env.impls.is_empty()
 }

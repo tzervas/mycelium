@@ -48,6 +48,7 @@ use std::collections::BTreeMap;
 use crate::ast::{BaseType, FnDecl, FnSig, Param, TypeRef, Vis};
 use crate::checkty::{CheckError, DataInfo, Env, InstanceInfo, TraitInfo, Ty};
 use crate::eval::Evaluator;
+use crate::preseed::PreludeTraitSeed;
 
 /// The synthetic top-level-fn name a `Fuse` instance's `join` method is probed under while the law
 /// checker evaluates it. `#` cannot appear in a surface identifier (the lexer never produces it),
@@ -87,6 +88,16 @@ pub(crate) fn prelude() -> TraitInfo {
 /// This trait's name — the one string every registration/lookup site must agree on (Law of
 /// Demeter — a single named constant beats a scattered literal `"Fuse"`).
 pub(crate) const TRAIT_NAME: &str = "Fuse";
+
+/// This trait's [`PreludeTraitSeed`] (DN-129 §5) — the shared spine [`crate::checkty`]'s
+/// registration/link/`OwnDecls`-exclusion sites drive off, one call each instead of a hand-copied
+/// conditional. Behavior-identical to the pre-refactor hand-written `Fuse` conditional (pinned by
+/// `tests/fuse.rs`, which asserts only `message.contains("Fuse") && message.contains("built-in")`).
+pub(crate) const SEED: PreludeTraitSeed = PreludeTraitSeed {
+    name: TRAIT_NAME,
+    impl_hint: "impl Fuse[T] for T { fn join(a: T, b: T) => T = … }",
+    prelude,
+};
 
 /// If `ty` is a **finite, enumerable** domain in v0's sense (a registered `Data` type every one of
 /// whose constructors takes zero fields — the `Bool`-shape), return every value of that domain;

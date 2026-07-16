@@ -100,6 +100,14 @@ pub enum Category {
     /// FnMut/&mut safety boundary in particular) is countable on its own, never conflated with an
     /// ordinary unmapped-construct gap.
     Closure,
+    /// DN-128 (M-1086): a `#[derive(Clone)]`/`#[derive(Copy)]` that Mycelium's value semantics
+    /// (ADR-003) already **satisfy as a no-op** — every value already copies structurally, so there
+    /// is no impl to generate. This is deliberately **not** [`Category::DeriveAttr`] (a genuine,
+    /// unhandled drop): the derive IS recognized and handled, just with "you already have it" as the
+    /// answer rather than a generated impl. Keeping it a distinct, counted category means the
+    /// gap-category breakdown never conflates an honestly-covered derive with a real coverage gap
+    /// (VR-5) — see `docs/notes/DN-128-Standard-Derive-Lowering-Library.md` §6.1.
+    DeriveSatisfied,
     Other,
 }
 
@@ -126,6 +134,7 @@ impl Category {
             Category::ModuleDecl => "ModuleDecl",
             Category::InnerAttr => "InnerAttr",
             Category::Closure => "Closure",
+            Category::DeriveSatisfied => "DeriveSatisfied",
             Category::Other => "Other",
         }
     }
@@ -142,6 +151,27 @@ impl Category {
     /// what is genuinely not translatable surface; never shrink the denominator to flatter a number).
     pub fn excluded_from_denominator(self) -> bool {
         matches!(self, Category::TestItem | Category::ModuleDecl)
+    }
+
+    /// Whether a [`Gap`] of this category is a **non-gap advisory** — recorded (never silently
+    /// dropped, G2) alongside a *successfully emitted* item as a fidelity/status note, but naming
+    /// no actual coverage loss, so a headline **"N gap(s)"** total should not count it (a review
+    /// LOW on M-1086/#1544: the CLI's one-line summary was inflating its "N gap(s)" by counting
+    /// these). Exactly one category currently qualifies:
+    /// - [`Category::DeriveSatisfied`] — a `#[derive(Clone)]`/`#[derive(Copy)]` Mycelium's value
+    ///   semantics already satisfy as a no-op. Nothing was dropped; there is no "gap" to close (its
+    ///   own doc comment states this outright: "it is not a gap" — `emit.rs`'s `derive_gaps` site).
+    ///
+    /// **[`Category::NamedFieldDrop`] is deliberately NOT included, despite the surface similarity**
+    /// (both ride an *emitted* item's `sub_gaps` as a fidelity note, not a hard refusal): a
+    /// `NamedFieldDrop` records a REAL, non-recoverable loss — the struct/variant's field *names*
+    /// are dropped (Mycelium's `constructor` grammar is positional-only), which is genuine
+    /// information the source had and the emitted `.myc` does not. `DeriveSatisfied` records the
+    /// opposite: nothing was lost, the semantics were already covered before this transpiler ever
+    /// ran. Conflating the two would misclassify a real fidelity gap as a non-gap advisory — this
+    /// distinction is itself VR-5: only exclude what genuinely names no loss.
+    pub fn is_non_gap_advisory(self) -> bool {
+        matches!(self, Category::DeriveSatisfied)
     }
 }
 
@@ -243,13 +273,28 @@ impl GapReport {
         self.emitted_items.len() as f64 / denom as f64
     }
 
-    /// Per-category gap counts, for reporting.
+    /// Per-category gap counts, for reporting. **Unchanged by [`Category::is_non_gap_advisory`]** —
+    /// the per-category breakdown stays the raw, complete tally (a `DeriveSatisfied` row is still
+    /// honestly shown); only a *headline total* like [`Self::real_gap_count`] should exclude it.
     pub fn category_counts(&self) -> std::collections::BTreeMap<&'static str, usize> {
         let mut m = std::collections::BTreeMap::new();
         for g in &self.gaps {
             *m.entry(g.category.as_str()).or_insert(0) += 1;
         }
         m
+    }
+
+    /// The **headline** gap count — `self.gaps.len()` minus every entry whose category is a
+    /// [`Category::is_non_gap_advisory`] (currently just `DeriveSatisfied`). This is the number a
+    /// one-line CLI summary ("N gap(s)") should report; [`Self::category_counts`] (the detailed
+    /// per-category breakdown) is intentionally left untouched by this exclusion so a
+    /// `DeriveSatisfied` row is still visible there — only the blunt total was ever inflated
+    /// (review LOW on M-1086/#1544).
+    pub fn real_gap_count(&self) -> usize {
+        self.gaps
+            .iter()
+            .filter(|g| !g.category.is_non_gap_advisory())
+            .count()
     }
 }
 

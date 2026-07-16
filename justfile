@@ -407,3 +407,16 @@ hooks:
 # Run all pre-commit hooks across the repo now.
 pre-commit:
     @pre-commit run --all-files
+
+# --- commitizen (M-1107 / Wave 0-CZ): Conventional Commits + 0.x SemVer policy ---
+# Validate a commit message file path, or HEAD when called with no args.
+# Skip-graceful if `cz` is not installed (exit 0). Config: .cz.toml.
+# For an inline message use the script directly: scripts/checks/cz-check.sh -m 'feat: …'
+# (just *args cannot safely re-quote parentheses in type(scope): subjects).
+cz-check *args:
+    @bash scripts/checks/cz-check.sh {{args}}
+# Dry-run version bump only — never creates a tag or rewrites files in this recipe.
+# --yes auto-confirms the initial-tag prompt so non-interactive CI/agents don't hang.
+# major_version_zero=true in .cz.toml keeps 0.x.x (BREAKING → 0.(y+1).0, never auto-1.0.0).
+cz-bump-dry:
+    @cz bump --dry-run --yes

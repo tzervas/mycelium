@@ -7,15 +7,15 @@
 //! its body trusted/opaque (not recursively checked — audited, not verified, VR-5/ADR-014), and its
 //! execution staged ([`crate::elab`] lowers it to a `Residual`).
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::affine::{Tracker, UseOutcome};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity,
-    Strength, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
+    TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -348,6 +348,34 @@ pub fn type_head(ty: &Ty) -> Option<String> {
 /// registration pass happened to seed it (`Bool` is re-seeded per nodule via [`prelude`]; `Tuple$N`
 /// is synthesized on demand per nodule via [`synthetic_tuple_data`]).
 pub(crate) const PRELUDE_HOME: &str = "<prelude>";
+
+/// Every **unconditionally**-seeded prelude data type name (`Bool` — [`prelude`]; `Unit` — DN-137
+/// Alt D / M-1102, [`unit_prelude`]): both are registered into every nodule regardless of use, so
+/// both must be excluded, the same way, wherever a phylum-wide pass needs "this nodule's OWN
+/// declared names" (the [`OwnDecls`] runtime-link exclusion filter, and the pub-blind coherence
+/// view's orphan-rule exclusion) — never a per-nodule collision, and never a false orphan-rule
+/// satisfaction for either builtin. One array, not a hand-duplicated `name != "Bool" && name !=
+/// "Unit"` at each call site (DRY — mirrors [`PRELUDE_TRAIT_SEEDS`]'s factoring for the conditional
+/// prelude traits).
+pub(crate) const PRELUDE_UNCONDITIONAL_TYPE_NAMES: [&str; 2] = ["Bool", "Unit"];
+
+/// DN-138 WU-4 — prelude type names seeded **conditionally** (iff the nodule's own items mention
+/// them in a type position — [`nodule_mentions_named_type`]), unlike
+/// [`PRELUDE_UNCONDITIONAL_TYPE_NAMES`]'s always-present `Bool`/`Unit`. Currently just `Vec`
+/// (`Vec[A] = Nil | Cons(A, Vec[A])`, [`vec_prelude`]) — the cons-list DN-138 §6/DN-99 row 35
+/// already names as the corpus's `Vec<T>` mapping target. **Why conditional, unlike `Bool`/`Unit`:**
+/// `Vec` genuinely has a non-empty `params` (`["A"]`), so an *unconditional* seed would trip
+/// `mono::is_already_monomorphic`'s `env.types.values().all(|d| d.params.is_empty())` test for
+/// EVERY program in the phylum — the exact regression [`PRELUDE_TRAIT_SEEDS`]/
+/// [`PRELUDE_INSTANCE_SEEDS`]'s own conditional-on-need discipline exists to avoid (DN-138 §2 fact
+/// 2), now extended from trait/instance seeding to a prelude TYPE seed. Once present (in any
+/// nodule that needs it), the DataInfo is identical everywhere `Vec` is used, so it is excluded
+/// from [`OwnDecls::types`]'s per-nodule collision set exactly like `PRELUDE_UNCONDITIONAL_TYPE_NAMES`
+/// (two nodules independently seeding `Vec` never falsely collide), and merged **once** by
+/// [`PhylumEnv::link`] iff *some* nodule's checked env actually declares it (mirroring
+/// [`crate::preseed::PreludeTraitSeed::seed_for_link`]'s "present iff used somewhere" rule, not
+/// the `Bool`/`Unit` "always present" rule).
+pub(crate) const CONDITIONAL_PRELUDE_TYPE_NAMES: [&str; 1] = ["Vec"];
 
 /// A nodule's **home** string for type-identity qualification (DN-112 Rank 1): its dot-joined path
 /// (`"a"`, `"a.b"`), or `""` for a path-less (anonymous, header-less) nodule. An empty home is
@@ -841,6 +869,93 @@ pub(crate) fn prelude() -> DataInfo {
     }
 }
 
+/// The builtin prelude's second entry (DN-137 Alt D, M-1102): `type Unit = Unit;` — a payload-free,
+/// single-constructor data type, the arity-0 member of the M-826 tuple/product family. **No new
+/// kernel node, no grammar change** — this reuses exactly the same hand-built-`DataInfo` seeding
+/// mechanism as [`prelude`]'s `Bool` (never parsed from source, so every nodule sees the identical
+/// `Unit` type without declaring it), and the same-name type/constructor spelling is already
+/// exercised as an ordinary **user-declared** type elsewhere in this crate's test corpus
+/// (`tests/substrate.rs`, `tests/preseed.rs`'s `show_and_init_check_cleanly_for_a_fieldless_nullary_ctor_type`)
+/// — confirming the type and constructor namespaces don't collide ([`Env::type_info`] keys by type
+/// name, [`Env::ctor`] scans each type's `ctors` list, so `Unit`/`Unit` resolve independently).
+///
+/// **Guarantee: `Exact`** (VR-5) — a type with exactly one inhabitant and no fields has nothing to
+/// approximate, swap, or measure; the tag is by construction, not by trial.
+pub(crate) fn unit_prelude() -> DataInfo {
+    DataInfo {
+        name: "Unit".to_owned(),
+        // Same single reserved home as `Bool` (DN-112 §9 invariant i) — `Unit` resolves
+        // identically, unqualified, under every nodule of a phylum.
+        home: PRELUDE_HOME.to_owned(),
+        params: vec![],
+        ctors: vec![CtorInfo {
+            name: "Unit".to_owned(),
+            fields: vec![],
+        }],
+    }
+}
+
+/// DN-138 WU-4 (§6 increment 2) — the conditionally-seeded `Vec[A]` cons-list: `type Vec[A] = Nil |
+/// Cons(A, Vec[A])`, byte-for-byte the same shape `lib/std/collections.myc` hand-declares (DN-99
+/// row 35). Seeded (never parsed) into a nodule's own type registry **iff** [`nodule_mentions_named_type`]
+/// finds `Vec` used somewhere in that nodule (see [`seed_vec_type_if_used`]) — the same
+/// hand-built-`DataInfo` mechanism [`prelude`]/[`unit_prelude`] use for `Bool`/`Unit`, but
+/// CONDITIONAL rather than unconditional ([`CONDITIONAL_PRELUDE_TYPE_NAMES`]'s doc explains why).
+///
+/// **Guarantee: `Exact`** (VR-5) — `Nil`/`Cons` are total constructors; this is a bare structural
+/// shape with no approximation, identical to the hand-written `lib/std/collections.myc` declaration
+/// it mirrors (this seed and that hand-written source are two independent, disclosed copies of the
+/// SAME shape — never unified/imported, per DN-138 Alt A's decision against auto-`use std.*`).
+///
+/// **Honest correction (post-landing review): the residual this seed and the hand-written
+/// `lib/std/collections.myc` copy can clash is NOT about `use`/import at all — it is about bare
+/// PHYLUM CO-MEMBERSHIP.** A transpiled file never importing `std.collections` only means the
+/// SAME-NODULE identity never clashes; it says nothing about a MULTI-NODULE phylum where nodule
+/// `a` hand-declares its own `type Vec[A] = …` (any shape) and a SEPARATE nodule `b` in the SAME
+/// phylum triggers this seed — both end up with a top-level name `"Vec"` in their own registries,
+/// with no `use` in sight. [`PhylumEnv::link`] is where this is actually resolved: a genuine
+/// hand-written `Vec` differing from this seed's shape, co-present with a nodule that needs the
+/// seed, is a real cross-nodule name conflict the v0 flat namespace cannot represent — `link`
+/// refuses it via the same never-silent `collide` path an ordinary duplicate type name uses,
+/// rather than picking either shape silently (see `link`'s own doc at its `Vec`-seeding step).
+pub(crate) fn vec_prelude() -> DataInfo {
+    DataInfo {
+        name: "Vec".to_owned(),
+        home: PRELUDE_HOME.to_owned(),
+        params: vec!["A".to_owned()],
+        ctors: vec![
+            CtorInfo {
+                name: "Nil".to_owned(),
+                fields: vec![],
+            },
+            CtorInfo {
+                name: "Cons".to_owned(),
+                fields: vec![
+                    Ty::Var("A".to_owned()),
+                    Ty::Data("Vec".to_owned(), vec![Ty::Var("A".to_owned())]),
+                ],
+            },
+        ],
+    }
+}
+
+/// Is `(name, info)` EXACTLY this crate's own `Vec` seed fact (both the name AND the registered
+/// `DataInfo` value match [`vec_prelude`])? The value check is load-bearing (mirrors
+/// [`crate::preseed::PreludeInstanceSeed::is_this_seeds_fact`]'s identical "key AND value" shape,
+/// applied to a prelude TYPE seed instead of a trait-instance seed): a nodule's OWN, genuinely
+/// hand-written `type Vec[A] = …` that happens to share the bare name `"Vec"` but differs in
+/// shape must NEVER be silently mistaken for the seed's own (ambient, identical-everywhere) fact —
+/// it is a real per-nodule declaration and must flow through the ordinary
+/// [`OwnDecls`]/[`PhylumEnv::link`] collision machinery like any other type name (post-landing
+/// review finding: a name-only check here previously let `link` silently REPLACE a genuine
+/// hand-written `Vec` with this seed's `Nil | Cons` shape whenever ANY other nodule of the same
+/// phylum happened to trigger the seed — never-silent per house rule #2/G2 demands this be either
+/// a loud `collide()` refusal or an unambiguous, checked win, never a silent overwrite).
+#[must_use]
+fn is_vec_prelude_fact(name: &str, info: &DataInfo) -> bool {
+    CONDITIONAL_PRELUDE_TYPE_NAMES.contains(&name) && *info == vec_prelude()
+}
+
 /// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
 /// (RFC-0007 §11.2): a `Named(name, [])` whose `name` is a type parameter resolves to [`Ty::Var`];
 /// any other `Named` is a data type whose **arity is checked** against its declaration (`List<A>`
@@ -1176,6 +1291,102 @@ fn collect_tuple_arities_sig(sig: &crate::ast::FnSig, out: &mut std::collections
     collect_tuple_arities_typeref(&sig.ret, out);
 }
 
+/// DN-138 WU-4 — does `nodule`'s own items mention the type name `target` anywhere in a TYPE
+/// position (a data-type ctor field, a fn/trait-method signature, or an impl head/trait-args)?
+/// Used to conditionally seed [`CONDITIONAL_PRELUDE_TYPE_NAMES`] entries (currently just `Vec` —
+/// [`vec_prelude`]) exactly the way [`PRELUDE_TRAIT_SEEDS`]/[`PRELUDE_INSTANCE_SEEDS`] already
+/// condition their own seeding on a textual "is this actually declared/used here" scan — never
+/// unconditional (DN-138 §2 fact 2, extended to a prelude TYPE). Structurally mirrors
+/// [`collect_tuple_arities`]'s recursive `TypeRef` walk (same item/type-position coverage,
+/// specialized to a name search instead of tuple-arity collection) — deliberately does **not**
+/// walk expression bodies (an `Item::Fn` body can't introduce a bare TYPE mention that a signature
+/// or field list didn't already carry; only a type POSITION triggers this seed, not a value-level
+/// use of a same-named ctor, which cannot occur here since `Vec`'s own ctors are named `Nil`/`Cons`,
+/// never `Vec`). A residual, disclosed conservative miss: `Item::Object`/`Item::InherentImpl`/
+/// `Item::Lower`/`Item::Derive` are not walked (the transpiler's derive emissions — this walker's
+/// only real caller — only ever produce `Item::Type`/`Item::Fn`/`Item::Impl`, so this is not a live
+/// gap for that caller; a hand-written `.myc` file using one of those forms to introduce its ONLY
+/// `Vec` mention would see an honest "unknown type `Vec`" check error rather than a silent miss —
+/// G2 — never a wrong/fabricated answer, just a narrower trigger than exhaustive).
+pub(crate) fn nodule_mentions_named_type(nodule: &Nodule, target: &str) -> bool {
+    nodule
+        .items
+        .iter()
+        .any(|item| item_mentions_named_type(item, target))
+}
+
+fn item_mentions_named_type(item: &Item, target: &str) -> bool {
+    match item {
+        Item::Type(td) => td.ctors.iter().any(|c| {
+            c.fields
+                .iter()
+                .any(|f| typeref_mentions_named_type(f, target))
+        }),
+        Item::Fn(fd) => sig_mentions_named_type(&fd.sig, target),
+        Item::Trait(tr) => tr.sigs.iter().any(|s| sig_mentions_named_type(s, target)),
+        Item::Impl(id) => {
+            id.trait_args
+                .iter()
+                .any(|t| typeref_mentions_named_type(t, target))
+                || typeref_mentions_named_type(&id.for_ty, target)
+                || id
+                    .methods
+                    .iter()
+                    .any(|m| sig_mentions_named_type(&m.sig, target))
+        }
+        Item::Use(_)
+        | Item::Default(_)
+        | Item::Object(_)
+        | Item::Lower(_)
+        | Item::Derive(_)
+        | Item::InherentImpl(_) => false,
+    }
+}
+
+fn typeref_mentions_named_type(tr: &TypeRef, target: &str) -> bool {
+    match &tr.base {
+        BaseType::Tuple(elems) => elems.iter().any(|e| typeref_mentions_named_type(e, target)),
+        BaseType::Seq { elem, .. } => typeref_mentions_named_type(elem, target),
+        BaseType::Named(name, args) => {
+            name == target || args.iter().any(|a| typeref_mentions_named_type(a, target))
+        }
+        BaseType::Fn(a, b) => {
+            typeref_mentions_named_type(a, target) || typeref_mentions_named_type(b, target)
+        }
+        _ => false,
+    }
+}
+
+fn sig_mentions_named_type(sig: &FnSig, target: &str) -> bool {
+    sig.value_params
+        .iter()
+        .any(|p| typeref_mentions_named_type(&p.ty, target))
+        || typeref_mentions_named_type(&sig.ret, target)
+}
+
+/// DN-138 WU-4 — conditionally seed [`vec_prelude`] into `types` iff (a) this nodule does not
+/// already declare its own `Vec` (a hand-written/imported `Vec` simply wins — never silently
+/// shadowed, mirroring why [`register_types`]'s own duplicate-type-declaration check already
+/// refuses a nodule that BOTH triggers an unconditional prelude seed AND redeclares it, e.g.
+/// `Bool`), and (b) [`nodule_mentions_named_type`] finds `Vec` mentioned somewhere in a type
+/// position. Must run BEFORE [`register_types`] (which resolves ctor field types against `types`
+/// immediately — a struct's own `Vec[Binary{64}]` field needs `Vec` already present to resolve).
+fn seed_vec_type_if_used(types: &mut BTreeMap<String, DataInfo>, nodule: &Nodule) {
+    if types.contains_key("Vec") {
+        return;
+    }
+    let already_own_vec = nodule
+        .items
+        .iter()
+        .any(|item| matches!(item, Item::Type(td) if td.name == "Vec"));
+    if already_own_vec {
+        return;
+    }
+    if nodule_mentions_named_type(nodule, "Vec") {
+        types.insert("Vec".to_owned(), vec_prelude());
+    }
+}
+
 /// Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic
 /// `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is
 /// constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.
@@ -1355,18 +1566,19 @@ impl PhylumEnv {
     /// instance/impl/`lower` rule, which the check pass's phylum-wide coherence should already have
     /// refused).
     pub fn link(&self) -> Result<Env, CheckError> {
-        // Seed the shared prelude once (identical in every nodule): the `Bool` type, and the built-in
-        // `Fuse` trait iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding).
+        // Seed the shared prelude once (identical in every nodule): the `Bool` and `Unit`
+        // (DN-137 Alt D) types, and every built-in prelude trait (`Fuse`/`Ord3`/`Show`/`Init`/
+        // `Fault`) iff any nodule uses it (mirrors `register_nodule_decls`' conditional seeding;
+        // DN-129 §5 DRY factoring — one loop over [`PRELUDE_TRAIT_SEEDS`] instead of a
+        // hand-copied `if` per trait).
         let mut types: BTreeMap<String, DataInfo> = BTreeMap::new();
         let p = prelude();
         types.insert(p.name.clone(), p);
+        let u = unit_prelude();
+        types.insert(u.name.clone(), u);
         let mut traits: BTreeMap<String, TraitInfo> = BTreeMap::new();
-        if self
-            .nodules
-            .iter()
-            .any(|(_, e)| e.traits.contains_key(crate::fuse::TRAIT_NAME))
-        {
-            traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
+        for seed in PRELUDE_TRAIT_SEEDS {
+            seed.seed_for_link(&mut traits, &self.nodules);
         }
         let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
         let mut totality: BTreeMap<String, crate::totality::Totality> = BTreeMap::new();
@@ -1427,10 +1639,35 @@ impl PhylumEnv {
             // uniformly and never-silently (G2): if the upstream coherence invariant is ever violated,
             // `link` refuses explicitly rather than silently keeping one side (no first-wins winner).
             for (k, v) in &env.instances {
+                // DN-138 §8 WU-2: a seeded PRIMITIVE-INSTANCE fact is skipped here and merged
+                // ONCE below (`seed_instance_for_link`) — so two (or more) nodules that each
+                // independently trigger the SAME seeded `(trait, head)` fact never falsely
+                // collide at link time (mirrors why a prelude TRAIT is excluded from
+                // `OwnDecls.traits`'s per-nodule collision set, this struct's own doc above).
+                if PRELUDE_INSTANCE_SEEDS
+                    .iter()
+                    .any(|s| s.is_this_seeds_fact(k, v))
+                {
+                    continue;
+                }
                 if instances.insert(k.clone(), v.clone()).is_some() {
                     return Err(collide("instance", &format!("{}:{}", k.0, k.1)));
                 }
             }
+            // WARNING (DN-138 §8 WU-2 review finding — never remove this note without re-reading
+            // it): this loop must NEVER gain the same seed-skip pattern the `instances` loop above
+            // has (`PRELUDE_INSTANCE_SEEDS.iter().any(|s| s.is_this_seeds_fact(k, v)) { continue }`).
+            // Two DIFFERENT nodules of one phylum each hand-declaring the same seeded primitive
+            // instance (e.g. `impl Show[Binary{64}] for Binary{64}`) with DIFFERENT bodies MUST
+            // still collide here — that is the whole point of a per-nodule `impls` collision check
+            // (a seeded *instance* has no seeded *body*, so there is nothing analogous to skip: an
+            // `impls` entry is ALWAYS a real, hand-written method-body list, never a seed's own
+            // fabrication). A future DRY refactor that tried to unify this loop with the
+            // `instances` loop above would silently reintroduce a two-nodule coherence-masking bug
+            // (two conflicting hand-written bodies at the same seeded head, both discarded/first-wins
+            // instead of refused) — pinned as a regression by
+            // `two_nodules_hand_declaring_the_same_seeded_instance_with_different_bodies_still_collide`
+            // in `crates/mycelium-l1/tests/phylum_exec.rs`.
             for (k, v) in &env.impls {
                 if impls.insert(k.clone(), v.clone()).is_some() {
                     return Err(collide("impl", &format!("{}:{}", k.0, k.1)));
@@ -1450,6 +1687,47 @@ impl PhylumEnv {
                 if via_provenance.insert(k.clone(), v.clone()).is_some() {
                     return Err(collide("via impl", &format!("{}:{}", k.0, k.1)));
                 }
+            }
+        }
+
+        // DN-138 §8 WU-2: merge each seeded PRIMITIVE-INSTANCE fact in ONCE, iff *some* nodule
+        // needed it (the instance analogue of `seed_for_link`'s trait loop above) — paired with
+        // the per-nodule skip in the loop above, so this never collides regardless of how many
+        // nodules independently triggered the same seed.
+        for seed in PRELUDE_INSTANCE_SEEDS {
+            seed.seed_instance_for_link(&mut instances, &self.nodules);
+        }
+
+        // DN-138 WU-4 (post-landing review fix): `Vec`, a CONDITIONAL prelude type (unlike the
+        // unconditional `Bool`/`Unit` above), is inserted here — AFTER the per-nodule `own.types`
+        // merge loop above has already merged any GENUINE hand-written `Vec` (now correctly
+        // included there via `is_vec_prelude_fact`'s value check, not excluded by bare name) —
+        // and NEVER by blindly overwriting whatever the merge loop already produced.
+        //
+        // Mirrors `PreludeTraitSeed::seed_for_link`'s "present iff used somewhere" trigger, but the
+        // INSERTION itself goes through the same collision discipline every other name in this
+        // function uses: if `types` already holds something at `"Vec"` (a genuine per-nodule
+        // declaration the merge loop above inserted) that is NOT identical to this seed's own
+        // fact, that is a real, irreconcilable phylum-wide conflict — a nodule's checked functions
+        // that rely on the seeded `Nil | Cons` shape (their OWN per-nodule check already resolved
+        // against it) cannot be soundly linked against a DIFFERENT hand-written `Vec` from another
+        // nodule (its constructors likely don't even exist), and the reverse (silently keeping the
+        // hand-written shape and dropping the seed) is equally unsound for whichever nodule
+        // actually needed the seed. Refusing loudly via the existing `collide` path — never a
+        // silent pick either way — is the only never-silent resolution the v0 flat namespace
+        // affords (G2). If the two shapes happen to be IDENTICAL (a user who hand-wrote the exact
+        // same `Nil | Cons(A, Vec[A])` shape), there is no real conflict and this is a no-op.
+        if self
+            .nodules
+            .iter()
+            .any(|(_, e)| e.types.get("Vec") == Some(&vec_prelude()))
+        {
+            match types.get("Vec") {
+                None => {
+                    types.insert("Vec".to_owned(), vec_prelude());
+                }
+                Some(existing) if *existing == vec_prelude() => {}
+                Some(_) => return Err(collide("type", "Vec")),
             }
         }
 
@@ -1961,14 +2239,26 @@ pub(crate) fn check_phylum_matured_with_deps_and_exports(
     deps: &Phyla,
     matured_scope: bool,
 ) -> Result<(PhylumEnv, Exports), CheckError> {
-    mycelium_stack::with_deep_stack(|| check_phylum_inner(phylum, deps, matured_scope))
+    // DN-126 (M-1077): the phylum-wide public surface stays `Strict`-only (byte-identical to
+    // pre-M-1077 behavior) — `Loose` mode is exposed only through the single-nodule
+    // `check_nodule_with_strictness`/`check_and_resolve_with_strictness` entry points below.
+    mycelium_stack::with_deep_stack(|| {
+        check_phylum_inner(
+            phylum,
+            deps,
+            matured_scope,
+            crate::type_strictness::TypeStrictness::Strict,
+        )
+        .map(|(penv, exports, _flags)| (penv, exports))
+    })
 }
 
 fn check_phylum_inner(
     phylum: &Phylum,
     deps: &Phyla,
     matured_scope: bool,
-) -> Result<(PhylumEnv, Exports), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(PhylumEnv, Exports, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // 1. Ambient-resolve every nodule once (RFC-0012): the checker only ever sees longhand forms.
     let resolved: Vec<Nodule> = phylum
         .nodules
@@ -2029,8 +2319,11 @@ fn check_phylum_inner(
                     // (`impl[T, T] Foo[T] { … }`) is refused independent of method count — the
                     // per-lifted-method check below rides each method's combined param list, so a
                     // zero-method block would miss it. Mirror the standalone `TypeDecl`/`LowerDecl`
-                    // slot-duplicate refusal here (never silent — G2).
-                    if let Some(dup) = first_duplicate(&id.params) {
+                    // slot-duplicate refusal here (never silent — G2). Checked on *names* only (a
+                    // duplicate name with different bounds is still a duplicate binding).
+                    let impl_param_names: Vec<String> =
+                        id.params.iter().map(|p| p.name.clone()).collect();
+                    if let Some(dup) = first_duplicate(&impl_param_names) {
                         return Err(CheckError::new(
                             "impl",
                             format!(
@@ -2039,23 +2332,21 @@ fn check_phylum_inner(
                             ),
                         ));
                     }
-                    // DN-103 / M-1026 / ENB-3: an impl-level generic slot (`impl[T] Foo[T] { … }`)
-                    // prepends its params to each lifted method's own `fn` type-parameters, so the
-                    // method becomes an ordinary generic free function — monomorphization then reuses
-                    // the existing fn-generics path with zero new mono code (KC-3/DRY). A duplicate
-                    // between an impl param and a method's own param is caught by the existing
-                    // duplicate-type-parameter check on the lifted sig (never silent — G2). For the
-                    // plain M-664 block (`id.params` empty) this is the identity — methods lift
-                    // verbatim exactly as before.
-                    let impl_tps: Vec<TypeParam> = id
-                        .params
-                        .iter()
-                        .map(|name| TypeParam {
-                            name: name.clone(),
-                            kind: ParamKind::Type,
-                            bounds: Vec::new(),
-                        })
-                        .collect();
+                    // DN-103 / M-1026 / ENB-3, **bounded** as of DN-131 / M-1088: an impl-level
+                    // generic slot (`impl[T: Bound] Foo[T] { … }`) prepends its params — bounds
+                    // carried, not forced to `[]` — to each lifted method's own `fn` type-parameters,
+                    // so the method becomes an ordinary **bounded** generic free function. The
+                    // already-landed `check_bounds` (fn-body checking, below) then validates the
+                    // (now non-empty) prepended bounds, and dictionary-free monomorphization (M-673)
+                    // discharges them — the exact path a hand-written `fn f[T: Bound]​(…)` already
+                    // takes (DN-131 §4: zero new discharge code). A duplicate between an impl param
+                    // and a method's own param is caught by the existing duplicate-type-parameter
+                    // check on the lifted sig (never silent — G2); the DN-131 §4 point-2 conservative
+                    // choice is a **refusal**, not a bound union, so `impl[T: A] … fn m[T: B]` is that
+                    // same duplicate-parameter refusal, not a silent `T: A + B` merge. For the plain
+                    // M-664 block (`id.params` empty) this is the identity — methods lift verbatim
+                    // exactly as before.
+                    let impl_tps: Vec<TypeParam> = id.params.clone();
                     for mut m in id.methods {
                         if !impl_tps.is_empty() {
                             let mut params = impl_tps.clone();
@@ -2141,11 +2432,19 @@ fn check_phylum_inner(
         for name in regs.traits.keys() {
             coherence.traits.insert(name.clone());
         }
-        for name in regs.types.keys() {
-            // The prelude `Bool` is registered into every nodule; skip it as a phylum "local" so it
-            // does not falsely satisfy the orphan rule for an unrelated impl (it is a primitive-ish
-            // builtin, handled by the primitive-repr arm anyway).
-            if name != "Bool" {
+        for (name, info) in &regs.types {
+            // The unconditionally-seeded prelude types (`Bool`, `Unit` — DN-137) are registered
+            // into every nodule; skip them as a phylum "local" so neither falsely satisfies the
+            // orphan rule for an unrelated impl (both are primitive-ish builtins, handled by the
+            // primitive-repr arm anyway). DN-138 WU-4: a nodule's `"Vec"` entry gets the SAME
+            // exclusion ONLY when it is EXACTLY this crate's own seeded fact ([`is_vec_prelude_fact`]
+            // — a value check, not a bare name check, post-landing review fix): a genuinely
+            // hand-written `Vec` (differing shape) is a real per-nodule local type and must
+            // participate in the orphan rule normally, never be silently treated as the ambient
+            // seed just because it shares the name.
+            if !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&name.as_str())
+                && !is_vec_prelude_fact(name, info)
+            {
                 coherence.types.insert(name.clone());
             }
         }
@@ -2163,23 +2462,38 @@ fn check_phylum_inner(
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
     let mut own = Vec::with_capacity(resolved.len());
+    // DN-126 (M-1077): the flat, phylum-wide soft-flag set — every nodule's demotions, in nodule
+    // order. Always empty when `strictness` is `Strict` (nothing ever pushes on that path).
+    let mut flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
         // M-1024: capture this nodule's OWN declared names (the runtime-link owner record) before
-        // `regs` is consumed below. Exclude the injected prelude `Bool` and the conditionally-seeded
-        // built-in `Fuse` trait — they are identical everywhere and are seeded once by `link`, never a
-        // per-nodule collision.
+        // `regs` is consumed below. Exclude the injected prelude `Bool`/`Unit` (DN-137) and every
+        // conditionally-seeded built-in prelude trait (DN-129 §5: `PRELUDE_TRAIT_SEEDS` —
+        // `Fuse`/`Ord3`/`Show`/`Init`/`Fault`) — they are identical everywhere and are seeded once
+        // by `link`, never a per-nodule collision. **DN-138 WU-4 (post-landing review fix): a
+        // `"Vec"` entry is excluded ONLY when it is EXACTLY this crate's own seed fact
+        // ([`is_vec_prelude_fact`] — a value check).** A genuinely hand-written `Vec` in this
+        // nodule (any shape, including one that happens to equal the seed's shape by coincidence)
+        // is a REAL own declaration and must flow through `link`'s ordinary collision-checked
+        // merge — silently excluding it by bare name (the pre-fix behavior) let `link` overwrite a
+        // hand-written `Vec` with the seed's `Nil | Cons` shape whenever some OTHER nodule of the
+        // same phylum happened to trigger the seed, with no error at all (never-silent violation,
+        // G2 — see `link`'s own `Vec`-seeding step for the paired fix).
         own.push(OwnDecls {
             types: regs
                 .types
-                .keys()
-                .filter(|n| n.as_str() != "Bool")
-                .cloned()
+                .iter()
+                .filter(|(n, info)| {
+                    !PRELUDE_UNCONDITIONAL_TYPE_NAMES.contains(&n.as_str())
+                        && !is_vec_prelude_fact(n, info)
+                })
+                .map(|(n, _)| n.clone())
                 .collect(),
             fns: regs.fns.keys().cloned().collect(),
             traits: regs
                 .traits
                 .keys()
-                .filter(|n| n.as_str() != crate::fuse::TRAIT_NAME)
+                .filter(|n| !PRELUDE_TRAIT_SEEDS.iter().any(|s| s.name == n.as_str()))
                 .cloned()
                 .collect(),
         });
@@ -2187,17 +2501,19 @@ fn check_phylum_inner(
         // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
         // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
         let via_objects = &via_objects_per_nodule[i];
-        let env = check_nodule_with(
+        let (env, nodule_flags) = check_nodule_with(
             nodule,
             regs,
             &imports,
             &coherence,
             matured_scope,
             via_objects,
+            strictness,
         )?;
+        flags.extend(nodule_flags);
         out.push((nodule.path.clone(), env));
     }
-    Ok((PhylumEnv { nodules: out, own }, exports))
+    Ok((PhylumEnv { nodules: out, own }, exports, flags))
 }
 
 /// `nodule.path` + `.` + `name` — a top-level item's **qualified name** (the import-registry key;
@@ -2257,66 +2573,213 @@ pub(crate) struct NoduleRegs {
     pub(crate) traits: BTreeMap<String, TraitInfo>,
 }
 
+/// DN-129 §5 — every built-in, conditionally-seeded prelude trait, in one place: `Fuse` (M-965
+/// F-A1), `Ord3` (DN-122 §13 / M-1080 WU-B), `Show` (DN-127 WU-2), `Init`/`Fault` (DN-129). The
+/// three call sites that used to hand-copy a `Fuse`/`Ord3` conditional — [`register_nodule_decls`],
+/// [`PhylumEnv::link`], and the [`OwnDecls`] exclusion filter — all iterate this one array instead
+/// (DRY; adding a sixth prelude trait is one array entry, not three new copy-pasted blocks).
+pub(crate) const PRELUDE_TRAIT_SEEDS: [crate::preseed::PreludeTraitSeed; 5] = [
+    crate::fuse::SEED,
+    crate::ord3::SEED,
+    crate::show::SEED,
+    crate::init::SEED,
+    crate::fault::SEED,
+];
+
+// ---- DN-138 §4.1 Alt A / §8 WU-2 — the primitive-instance-seed spine -------------------------
+
+/// One hand-built [`InstanceInfo`] per seeded `(trait, head)` fact below — a plain `fn` item (not a
+/// closure) per [`crate::preseed::PreludeInstanceSeed::instance`]'s doc, mirroring the
+/// `fuse`/`ord3`/`show`/`init`/`fault` modules' own `fn() -> TraitInfo` builder style.
+fn seed_show_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_show_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_show_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Show".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["render".to_owned()],
+    }
+}
+
+fn seed_init_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_init_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_init_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Init".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["init".to_owned()],
+    }
+}
+
+fn seed_ord3_binary64() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Binary(Width::Lit(64))],
+        for_ty: Ty::Binary(Width::Lit(64)),
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+fn seed_ord3_bytes() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Bytes],
+        for_ty: Ty::Bytes,
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+fn seed_ord3_bool() -> InstanceInfo {
+    InstanceInfo {
+        trait_name: "Ord3".to_owned(),
+        trait_args: vec![Ty::Data("Bool".to_owned(), vec![])],
+        for_ty: Ty::Data("Bool".to_owned(), vec![]),
+        methods: vec!["cmp".to_owned()],
+    }
+}
+
+/// DN-138 §4.1 Alt A / §8 WU-2 — every seeded PRIMITIVE-INSTANCE resolution fact: `Show`/`Init`/
+/// `Ord3` at exactly the three primitive-repr heads DN-138 increment 1 covers (`Binary{64}` /
+/// `Bytes` / `Bool`). Parallel to [`PRELUDE_TRAIT_SEEDS`] — conditional (see
+/// [`crate::preseed::PreludeInstanceSeed::seed_instance_for_nodule`]), no body: the real body lives
+/// in `lib/std/fmt.myc` (`Show`, already landed — DN-127) or `lib/std/derive_prelude.myc`
+/// (`Init`/`Ord3`, DN-138 WU-1), pinned equal to each entry below by the sig-pin differential
+/// (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`, DN-138 §5 obligation 1 — the
+/// soundness gate this whole mechanism rests on). `Float` is never seeded (DN-138 §5 obligation
+/// 3 / ADR-040) and `Vec`/tuple instances are increment 2 (WU-4) — neither appears here.
+pub(crate) const PRELUDE_INSTANCE_SEEDS: [crate::preseed::PreludeInstanceSeed; 9] = [
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Binary{64}] for Binary{64} { fn render(x: Binary{64}) => Bytes = … }",
+        instance: seed_show_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Bytes] for Bytes { fn render(x: Bytes) => Bytes = … }",
+        instance: seed_show_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Show",
+        impl_hint: "impl Show[Bool] for Bool { fn render(x: Bool) => Bytes = … }",
+        instance: seed_show_bool,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Binary{64}] for Binary{64} { fn init() => Binary{64} = … }",
+        instance: seed_init_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Bytes] for Bytes { fn init() => Bytes = … }",
+        instance: seed_init_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Init",
+        impl_hint: "impl Init[Bool] for Bool { fn init() => Bool = … }",
+        instance: seed_init_bool,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Binary{64}] for Binary{64} { fn cmp(a: Binary{64}, b: Binary{64}) => Binary{8} = … }",
+        instance: seed_ord3_binary64,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Bytes] for Bytes { fn cmp(a: Bytes, b: Bytes) => Binary{8} = … }",
+        instance: seed_ord3_bytes,
+    },
+    crate::preseed::PreludeInstanceSeed {
+        trait_name: "Ord3",
+        impl_hint: "impl Ord3[Bool] for Bool { fn cmp(a: Bool, b: Bool) => Binary{8} = … }",
+        instance: seed_ord3_bool,
+    },
+];
+
 /// Register one (resolved) nodule's **declarations** — data types (Pass 1), traits (Pass 1b), and
 /// function signatures (Pass 2) — into its registries, with the same duplicate/arity refusals as the
 /// single-nodule checker (M-662 factors these out of `check_resolved_matured` so the phylum can build
 /// its cross-nodule views before checking any body). Bodies and instances are **not** handled here
-/// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` is included
-/// so intra-nodule resolution is unchanged.
+/// (instances need the phylum-wide orphan view; bodies need imports). The prelude `Bool` and
+/// `Unit` (DN-137 Alt D) are included so intra-nodule resolution is unchanged.
 ///
 /// Widened to `pub(crate)` for the M-1013 STEP 5 differential harness (see [`NoduleRegs`]).
 pub(crate) fn register_nodule_decls(nodule: &Nodule) -> Result<NoduleRegs, CheckError> {
     let mut types = BTreeMap::new();
     let p = prelude();
     types.insert(p.name.clone(), p);
+    let u = unit_prelude();
+    types.insert(u.name.clone(), u);
+    // DN-138 WU-4: the conditional prelude-type seed spine (currently just `Vec` —
+    // `CONDITIONAL_PRELUDE_TYPE_NAMES`), run BEFORE `register_types` since a struct's own
+    // `Vec[...]` field is resolved against `types` immediately below.
+    seed_vec_type_if_used(&mut types, nodule);
     register_types(&mut types, nodule)?;
     let mut traits = register_traits(&types, nodule)?;
-    // M-965 (DN-58 §A F-A1): seed the built-in `Fuse` trait — the trait analogue of the `Bool`
-    // prelude type above — but only when this nodule actually declares an `impl Fuse[...] for
-    // ...` (never unconditionally). A nodule that tries to redeclare it gets an explicit refusal
-    // (never a silent shadow of the built-in — G2), exactly as redeclaring `Bool` would collide in
-    // `types`.
+    // DN-129 §5 (M-1091): every built-in prelude trait — `Fuse` (M-965 F-A1), `Ord3` (DN-122 §13 /
+    // M-1080 WU-B), `Show` (DN-127 WU-2), `Init`/`Fault` (DN-129) — is seeded into this nodule's
+    // trait registry **iff** this nodule's own items declare an `impl <Trait>[...] for ...` (never
+    // unconditionally). A nodule that tries to redeclare one gets an explicit refusal (never a
+    // silent shadow of the built-in — G2), exactly as redeclaring `Bool` would collide in `types`.
     //
     // **Why conditional (unlike `Bool`, which is always seeded):** `mono::is_already_monomorphic`
     // (the "is this program already closed — no generics/traits/instances?" fast-path test) and a
     // wide swath of the existing test corpus assert `env.traits.is_empty()` / `mono.traits.is_empty()`
     // for any program that never mentions traits at all. Bool is harmless there (it has empty
     // `params`, so it never trips the *type*-genericity half of that test); an unconditionally
-    // seeded `Fuse` trait would trip the *trait*-emptiness half for **every** program, including
-    // ones with no `fuse`/`Fuse` in sight — a real regression, not just a test artifact (it would
-    // force every trait-free program through mono's slow specializing pass). So `Fuse` is seeded
-    // **iff** this nodule's own items need it (an `impl Fuse[...] for ...`) — never based on
-    // whether `fuse(a, b)` is *called* (the repr-type fast path in `check_fuse` never touches the
-    // trait registry at all, and a Data-type `fuse` call always requires a prior `impl`, which is
-    // exactly what this scan detects).
+    // seeded prelude trait would trip the *trait*-emptiness half for **every** program, including
+    // ones with no use of it in sight — a real regression, not just a test artifact (it would force
+    // every trait-free program through mono's slow specializing pass). So each prelude trait is
+    // seeded **iff** this nodule's own items need it (a textual `impl <Trait>[...] for ...`) — never
+    // based on whether the trait's operation is merely *called*.
     //
-    // FLAG (M-965, narrow, honest residual): a nodule that delegates `Fuse` **only** via `via idx :
-    // Fuse` sugar (DN-53) — with no textual `impl Fuse[...] for ...` — is not detected here, because
-    // `via`-generated impls are expanded later (`check_nodule_with` Phase 0b, after imports/coherence
-    // are available) and are not yet in `nodule.items` at this registration pass. Such a program
-    // would see "impl for unknown trait `Fuse`" at via-expansion time — a never-silent refusal, not a
-    // silent misbehavior, but a real gap the scan below doesn't yet close (deferred, not hidden).
-    let fuse_used = nodule
-        .items
-        .iter()
-        .any(|item| matches!(item, Item::Impl(id) if id.trait_name == crate::fuse::TRAIT_NAME));
-    if fuse_used {
-        if traits.contains_key(crate::fuse::TRAIT_NAME) {
-            return Err(CheckError::new(
-                crate::fuse::TRAIT_NAME,
-                "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
-                 lawful-merge `join` contract is already provided by the prelude; remove this \
-                 declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
-            ));
-        }
-        traits.insert(crate::fuse::TRAIT_NAME.to_owned(), crate::fuse::prelude());
-    } else if traits.contains_key(crate::fuse::TRAIT_NAME) {
-        return Err(CheckError::new(
-            crate::fuse::TRAIT_NAME,
-            "cannot redeclare the built-in prelude trait `Fuse` (DN-58 §A / M-965 F-A1) — its \
-             lawful-merge `join` contract is already provided by the prelude; remove this \
-             declaration and `impl Fuse[T] for T { fn join(a: T, b: T) => T = … }` directly",
-        ));
+    // FLAG (M-965, narrow, honest residual, unchanged by this DRY refactor): a nodule that delegates
+    // a prelude trait **only** via `via idx : Trait` sugar (DN-53) — with no textual
+    // `impl Trait[...] for ...` — is not detected here, because `via`-generated impls are expanded
+    // later (`check_nodule_with` Phase 0b, after imports/coherence are available) and are not yet in
+    // `nodule.items` at this registration pass. Such a program would see "impl for unknown trait
+    // `<Trait>`" at via-expansion time — a never-silent refusal, not a silent misbehavior, but a
+    // real gap this scan doesn't yet close (deferred, not hidden).
+    //
+    // This loop is the DN-129 §5 DRY factoring of the `Fuse`/`Ord3` copy-pasted conditionals that
+    // used to be hand-duplicated here — one call per trait through
+    // [`crate::preseed::PreludeTraitSeed::seed_for_nodule`], behavior byte-identical for `Fuse`/
+    // `Ord3` (pinned by `tests/fuse.rs`/`tests/ord3.rs`, unchanged by this refactor).
+    for seed in PRELUDE_TRAIT_SEEDS {
+        seed.seed_for_nodule(&mut traits, nodule)?;
     }
     let mut fns: BTreeMap<String, FnDecl> = BTreeMap::new();
     for item in &nodule.items {
@@ -2670,24 +3133,33 @@ fn remove_import(imp: &mut NoduleImports, simple: &str) {
 /// marked `thaw` are exempt from the gate (RFC-0017 §4.3). When `matured_scope` is `false` this
 /// is identical to [`check_nodule`].
 pub fn check_nodule_matured(nodule: &Nodule, matured_scope: bool) -> Result<Env, CheckError> {
-    check_and_resolve_matured(nodule, matured_scope).map(|(env, _)| env)
+    check_and_resolve_matured(
+        nodule,
+        matured_scope,
+        crate::type_strictness::TypeStrictness::Strict,
+    )
+    .map(|(env, _, _flags)| env)
 }
 
 fn check_and_resolve_matured(
     nodule: &Nodule,
     matured_scope: bool,
-) -> Result<(Env, Nodule), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // Run the recursive pass on a deep worker stack so deep-but-valid input never overflows the
     // *caller's* thread stack — the explicit [`MAX_CHECK_DEPTH`] budget, not the host stack, bounds a
     // pathological input (banked guard 4; the worker stack is the transitional Rust-only adapter —
     // see [`mycelium_stack`]). Borrows are fine: the worker is a scoped thread.
-    mycelium_stack::with_deep_stack(|| check_and_resolve_matured_inner(nodule, matured_scope))
+    mycelium_stack::with_deep_stack(|| {
+        check_and_resolve_matured_inner(nodule, matured_scope, strictness)
+    })
 }
 
 fn check_and_resolve_matured_inner(
     nodule: &Nodule,
     matured_scope: bool,
-) -> Result<(Env, Nodule), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // A bare nodule is a **phylum-of-one** (M-662): route it through the same phylum orchestration so
     // its orphan rule's locality set is exactly this one nodule and its imports are empty — behavior
     // identical to the pre-M-662 single-nodule path, by construction. The `with_deep_stack` is already
@@ -2697,7 +3169,8 @@ fn check_and_resolve_matured_inner(
     let phylum = Phylum::of_one(resolved.clone());
     // `check_nodule`/`check_nodule_matured` have no `[dependencies]` surface (M-1060 is a
     // phylum-level concept) — always the empty `Phyla` (byte-identical to pre-M-1060 behavior).
-    let (penv, _exports) = check_phylum_inner(&phylum, &Phyla::default(), matured_scope)?;
+    let (penv, _exports, flags) =
+        check_phylum_inner(&phylum, &Phyla::default(), matured_scope, strictness)?;
     let env = penv
         .single()
         .expect("a phylum-of-one yields exactly one Env")
@@ -2723,7 +3196,7 @@ fn check_and_resolve_matured_inner(
         std_sys: resolved.std_sys,
         items,
     };
-    Ok((env, twin))
+    Ok((env, twin, flags))
 }
 
 /// Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program
@@ -2731,7 +3204,41 @@ fn check_and_resolve_matured_inner(
 /// "expand ambient" projection renders (RFC-0012 §5). The returned [`Nodule`] elaborates to the
 /// identical L0 (and content hash) as the original (I2; RFC-0012 §4.3).
 pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
-    check_and_resolve_matured(nodule, false)
+    check_and_resolve_matured(
+        nodule,
+        false,
+        crate::type_strictness::TypeStrictness::Strict,
+    )
+    .map(|(env, twin, _flags)| (env, twin))
+}
+
+/// DN-126 (M-1077) — like [`check_and_resolve`], but under an explicit
+/// [`TypeStrictness`](crate::type_strictness::TypeStrictness). `Strict` is byte-identical to
+/// [`check_and_resolve`] (always zero flags — see `crate::type_strictness`'s module doc). `Loose`
+/// demotes the narrow, verified-safe set of type-level refusals that doc documents, returning
+/// whatever [`TypeFlag`](crate::type_strictness::TypeFlag)s fired alongside the checked [`Env`] and
+/// its resolved longhand twin.
+///
+/// # Errors
+/// The **runnable floor** (DN-126 §3.3) — unresolved name/ctor/type, arity, parse, `wild`/FFI-gate,
+/// and every `CheckError` site this landing does not (yet) classify as demotable — refuses
+/// identically in both modes (`Loose` never silently accepts an un-runnable program).
+pub fn check_and_resolve_with_strictness(
+    nodule: &Nodule,
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Nodule, Vec<crate::type_strictness::TypeFlag>), CheckError> {
+    check_and_resolve_matured(nodule, false, strictness)
+}
+
+/// Like [`check_and_resolve_with_strictness`], returning just the checked [`Env`] + flags (drops the
+/// resolved longhand twin) — the [`check_nodule`] analogue for an explicit
+/// [`TypeStrictness`](crate::type_strictness::TypeStrictness). See `crate::type_strictness`'s module
+/// doc for the exact, narrow set of demotable sites `Loose` covers in this landing.
+pub fn check_nodule_with_strictness(
+    nodule: &Nodule,
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Vec<crate::type_strictness::TypeFlag>), CheckError> {
+    check_and_resolve_with_strictness(nodule, strictness).map(|(env, _twin, flags)| (env, flags))
 }
 
 /// Register a (resolved) nodule's **data declarations** into `types` (Pass 1; RFC-0007 §11): a shell
@@ -3007,7 +3514,8 @@ fn check_nodule_with(
     coherence: &CoherenceView,
     matured_scope: bool,
     via_objects: &[ObjectDecl],
-) -> Result<Env, CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Env, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     // Build the nodule's checking registries: imports first (lower precedence), own decls override
     // (the documented "own decl shadows `use`" precedence — RFC-0006 §4.3). `regs` already holds the
     // prelude + this nodule's own declarations; layering imports *under* them is just inserting any
@@ -3179,7 +3687,21 @@ fn check_nodule_with(
     // declared by a *later* `impl`. This pass resolves heads + checks coherence; it does not yet check
     // bodies. The orphan rule consults the pub-blind phylum-wide `coherence` view (M-662).
     // Uses `effective_nodule` so via-generated impls are included in the instance registry.
-    let instances = register_instances(&types, &traits, coherence, effective_nodule)?;
+    let mut instances = register_instances(&types, &traits, coherence, effective_nodule)?;
+
+    // DN-138 §4.1 Alt A / §8 WU-2: seed each PRIMITIVE-INSTANCE resolution fact
+    // (`Show`/`Init`/`Ord3` at `Binary{64}`/`Bytes`/`Bool`) into `instances` — conditionally, iff
+    // this nodule's own items already need that trait (the identical textual trigger the trait
+    // itself is conditionally seeded on, above; see `PreludeInstanceSeed::seed_instance_for_nodule`'s
+    // doc for why this adds no `mono` fast-path regression). No body is seeded — only the coherence
+    // key + concrete `for_ty`/`methods`; the real body lives in `lib/std` and is pinned equal by the
+    // sig-pin differential (`crates/mycelium-l1/src/tests/prelude_instance_seed.rs`, which builds
+    // its oracle via direct registration — `register_nodule_decls`/`register_instances` — rather
+    // than through this function, so it never observes this seeding step at all; see that file's
+    // module doc for why).
+    for seed in PRELUDE_INSTANCE_SEEDS {
+        seed.seed_instance_for_nodule(&mut instances, effective_nodule);
+    }
 
     // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
     // §4.3), with imports available, and resolve any ambient bare-decimal widths from context —
@@ -3188,8 +3710,11 @@ fn check_nodule_with(
     // nodule — RFC-0007 §11; a `use`d fn is checked in its home nodule's context, never re-checked
     // here under this nodule's ambient).
     let mut resolved_fns: BTreeMap<String, FnDecl> = fns.clone();
+    // DN-126 (M-1077): this nodule's soft-flag set — every demotion `check_fn_body`/
+    // `check_impl_methods` recorded below (always empty when `strictness` is `Strict`).
+    let mut nodule_flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     for fd in regs.fns.values() {
-        let (body, _ret) = check_fn_body(
+        let (body, _ret, fd_flags) = check_fn_body(
             &types,
             &fns,
             &traits,
@@ -3198,7 +3723,9 @@ fn check_nodule_with(
             &lower_rules,
             nodule.std_sys,
             fd,
+            strictness,
         )?;
+        nodule_flags.extend(fd_flags);
         resolved_fns.insert(
             fd.sig.name.clone(),
             FnDecl {
@@ -3227,7 +3754,7 @@ fn check_nodule_with(
     let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
     for item in &effective_nodule.items {
         if let Item::Impl(id) = item {
-            let methods = check_impl_methods(
+            let (methods, impl_flags) = check_impl_methods(
                 &types,
                 &fns,
                 &traits,
@@ -3236,7 +3763,9 @@ fn check_nodule_with(
                 &lower_rules,
                 effective_nodule.std_sys,
                 id,
+                strictness,
             )?;
+            nodule_flags.extend(impl_flags);
             // The instance head: resolve `for_ty` exactly as `register_instances` did (concretely, no
             // type-vars in scope). Registration already accepted this impl, so resolution + a concrete
             // head are guaranteed here (a `Ty::Var` head was refused at registration); the `expect`
@@ -3325,17 +3854,20 @@ fn check_nodule_with(
         }
     }
 
-    Ok(Env {
-        types,
-        fns,
-        totality,
-        traits,
-        instances,
-        impls,
-        lower_rules,
-        derived_provenance,
-        via_provenance,
-    })
+    Ok((
+        Env {
+            types,
+            fns,
+            totality,
+            traits,
+            instances,
+            impls,
+            lower_rules,
+            derived_provenance,
+            via_provenance,
+        },
+        nodule_flags,
+    ))
 }
 
 // ---- lower / derive validation (DN-54 §4/§6 / M-812-cont) ----
@@ -3557,6 +4089,11 @@ fn infer_expr_rule_rhs_type(
         std_sys: false,
         depth: Cell::new(0),
         affine: Tracker::seeded(&scope),
+        // DN-126: a `lower` rule's RHS is language-extension machinery (the generative-lowering
+        // surface, DN-54), not developer application logic — always `Strict` (never demotable),
+        // independent of the enclosing nodule's/caller's own strictness mode.
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
@@ -4626,7 +5163,8 @@ fn check_impl_methods(
     lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     id: &ImplDecl,
-) -> Result<Vec<FnDecl>, CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Vec<FnDecl>, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     let tr = traits
         .get(&id.trait_name)
         .expect("instance registration checked the trait exists");
@@ -4635,6 +5173,8 @@ fn check_impl_methods(
     // AST as a top-level fn rather than the raw registered body (M-663 / Copilot review — grading must
     // not re-derive the ctor/binder ambiguity from a global scan).
     let mut resolved: Vec<FnDecl> = Vec::with_capacity(id.methods.len());
+    // DN-126 (M-1077): this impl's soft-flag set (always empty when `strictness` is `Strict`).
+    let mut impl_flags: Vec<crate::type_strictness::TypeFlag> = Vec::new();
     // The trait-arg substitution `trait.params ↦ impl.trait_args` (resolved concretely).
     let (for_ty, _) = resolve_ty(&id.trait_name, types, &[], &id.for_ty)?;
     let mut trait_args = Vec::with_capacity(id.trait_args.len());
@@ -4721,7 +5261,7 @@ fn check_impl_methods(
         // trait/instance context is available so the body may itself call trait methods. The
         // `@std-sys` context (M-661) flows in so a `wild` block inside an impl method is gated
         // exactly as in a top-level fn (an impl in a non-`@std-sys` nodule may not contain `wild`).
-        let (body, _ret) = check_fn_body(
+        let (body, _ret, method_flags) = check_fn_body(
             types,
             fns,
             traits,
@@ -4730,7 +5270,9 @@ fn check_impl_methods(
             lower_rules,
             std_sys,
             method,
+            strictness,
         )?;
+        impl_flags.extend(method_flags);
         resolved.push(FnDecl {
             vis: method.vis,
             thaw: method.thaw,
@@ -4740,14 +5282,23 @@ fn check_impl_methods(
         });
     }
     let _ = for_ty; // resolved above for the arg substitution; head reuse is at registration.
-    Ok(resolved)
+    Ok((resolved, impl_flags))
 }
 
 /// Check a function (or impl method) body against its declared signature (RFC-0007 §11; RFC-0019
 /// §4.1). Validates the type-parameter bounds, builds the `tyvars`/`bounds` scopes, resolves the
 /// value-param + return types, and runs the bidirectional [`Cx::check`]. Returns the **resolved**
-/// body (ambient bare-decimals filled) and the resolved return type. Shared by Pass 3 (top-level
-/// fns) and [`check_impl_methods`] (impl methods) — DRY.
+/// body (ambient bare-decimals filled), the resolved return type, and — DN-126 (M-1077) — the
+/// [`TypeFlag`](crate::type_strictness::TypeFlag)s this body's checking demoted (always empty when
+/// `strictness` is `Strict`). Shared by Pass 3 (top-level fns) and [`check_impl_methods`] (impl
+/// methods) — DRY.
+///
+/// **DN-126 §3.1 "body vs. declared return type" demotion.** In `Loose` mode a body whose checked
+/// type disagrees with `fd.sig.ret` is **not** refused: [`Cx::mismatch_or_flag`] records a
+/// [`TypeFlagKind::ReturnType`](crate::type_strictness::TypeFlagKind::ReturnType) flag and this
+/// function returns the body's *actual* checked type — never `fd.sig.ret` (VR-5). Both of this
+/// function's callers already discard the returned `Ty` (`let (body, _ret) = …`), so a demoted
+/// return type changes nothing observable *here*; it only means the function no longer refuses.
 #[allow(clippy::too_many_arguments)] // M-1054 Stage 0 added `lower_rules`, threaded straight through
 fn check_fn_body(
     types: &BTreeMap<String, DataInfo>,
@@ -4758,7 +5309,8 @@ fn check_fn_body(
     lower_rules: &BTreeMap<String, LowerDecl>,
     std_sys: bool,
     fd: &FnDecl,
-) -> Result<(Expr, Ty), CheckError> {
+    strictness: crate::type_strictness::TypeStrictness,
+) -> Result<(Expr, Ty, Vec<crate::type_strictness::TypeFlag>), CheckError> {
     let site = &fd.sig.name;
     let tyvars = fd.sig.param_names();
     // Validate every bound names a real trait with the right argument arity (RFC-0019 §4.1). The
@@ -4787,14 +5339,24 @@ fn check_fn_body(
         // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
         // DN-71 §4.2: a parameter pass counts as the caller's move-in).
         affine: Tracker::seeded(&scope),
+        strictness,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
-    if got != ret {
-        return Err(CheckError::new(site, edge_mismatch("body", &ret, &got)));
-    }
-    Ok((body, ret))
+    let effective_ret = if got != ret {
+        let msg = edge_mismatch("body", &ret, &got);
+        cx.mismatch_or_flag(
+            crate::type_strictness::TypeFlagKind::ReturnType,
+            &ret,
+            &got,
+            msg,
+        )?
+    } else {
+        ret
+    };
+    Ok((body, effective_ret, cx.flags.into_inner()))
 }
 
 /// Validate a function/method's type-parameter **bounds** (RFC-0019 §4.1): each bound must name a
@@ -4931,6 +5493,18 @@ struct Cx<'a> {
     /// `crate::affine`'s module docs for why. (FLAG-6 fix, M-973: this doc previously read that the
     /// tracker was inert in `check_lower_rule_rhs_type`, stale since M-919 made it active there.)
     affine: Tracker,
+    /// **DN-126 (M-1077) — the type-strictness mode** this body is checked under (§3). `Strict`
+    /// (the default, every non-[`check_fn_body`] `Cx` site below) makes [`Self::mismatch_or_flag`]
+    /// behave identically to a bare [`Self::err`] — byte-identical to pre-M-1077 behavior. Only
+    /// [`check_fn_body`]'s `Cx` (the one whole-function-body walk over a top-level `fn`/impl method)
+    /// takes this from its caller; every re-inference/rule-RHS `Cx` site hardcodes `Strict` (see each
+    /// site's own comment for why demotion does not apply there).
+    strictness: crate::type_strictness::TypeStrictness,
+    /// **DN-126 §3/§4 — the soft-flag set** [`Self::mismatch_or_flag`] records when `strictness`
+    /// is `Loose` (interior mutability, `RefCell` — matching `depth`'s `Cell` pattern in spirit, so
+    /// [`Self::check`] stays `&self`; a growable `Vec` needs `RefCell`, not `Cell`). Always empty
+    /// when `strictness` is `Strict` (nothing ever pushes to it on that path).
+    flags: RefCell<Vec<crate::type_strictness::TypeFlag>>,
     /// **Test-only non-vacuity sabotage toggle (M-1054 Stage 3, DN-117 §5 item 2).** When `true`,
     /// [`Self::check_sugar_call`]'s Stage-3 walk feeds the walk the **unsubstituted** `rhs` instead
     /// of the real, spliced [`Self::stage3_substitute_expr`] output — simulating "the substitution
@@ -4994,6 +5568,39 @@ pub(crate) fn cons_list_ctors(
 impl Cx<'_> {
     fn err<T>(&self, msg: impl Into<String>) -> Result<T, CheckError> {
         Err(CheckError::new(self.site, msg))
+    }
+
+    /// DN-126 §3/§4 — the **demotion switch**: at a verified-safe, value-level type-mismatch site
+    /// (see `crate::type_strictness`'s module doc for the exact, narrow set of callers), `Strict`
+    /// mode refuses exactly as before; `Loose` mode records a
+    /// [`TypeFlag`](crate::type_strictness::TypeFlag) and returns `actual` so checking continues
+    /// with the value's real (inferred) type — **never** `declared` (VR-5: a violated annotation is
+    /// never silently satisfied). Every caller passes `actual` as a fully-elaborated, already-checked
+    /// concrete [`Ty`] (never a hole), so the recorded resolution is always
+    /// [`Resolution::Principal`](crate::type_strictness::Resolution::Principal) — DN-126 §4.1's
+    /// principality invariant holds trivially for this landing's demotable sites by construction
+    /// (see the module doc for the sites this deliberately does NOT cover).
+    fn mismatch_or_flag(
+        &self,
+        kind: crate::type_strictness::TypeFlagKind,
+        declared: &Ty,
+        actual: &Ty,
+        message: String,
+    ) -> Result<Ty, CheckError> {
+        if self.strictness.is_loose() {
+            self.flags
+                .borrow_mut()
+                .push(crate::type_strictness::TypeFlag {
+                    site: self.site.to_owned(),
+                    kind,
+                    declared: declared.clone(),
+                    resolution: crate::type_strictness::Resolution::Principal(actual.clone()),
+                    message,
+                });
+            Ok(actual.clone())
+        } else {
+            Err(CheckError::new(self.site, message))
+        }
     }
 
     /// Map a match-analysis over-budget refusal (usefulness / decision-tree, RFC-0041 §4.7) into the
@@ -6190,13 +6797,24 @@ impl Cx<'_> {
     ) -> Result<(Ty, Expr), CheckError> {
         let (want, _) = resolve_ty(self.site, self.types, self.tyvars, t)?;
         let (ity, inner2) = self.check(scope, inner, Some(&want))?;
-        if ity != want {
-            return self.err(format!(
-                "ascription: {}",
-                edge_mismatch("expression", &want, &ity)
-            ));
-        }
-        Ok((want, Expr::Ascribe(Box::new(inner2), t.clone())))
+        // DN-126 §3.1 — the textbook "Hinted" demotion site: an explicit `e : T` ascription is a
+        // *hint*, not a *gate*, in `Loose` mode. `mismatch_or_flag` refuses exactly as before in
+        // `Strict` mode; in `Loose` mode it records the flag and returns `ity` (the ascribed
+        // expression's real checked type) — never `want` (the violated annotation is never silently
+        // satisfied, VR-5). The evaluator never reads the ascribed type at all (`Expr::Ascribe` just
+        // evaluates `inner`), so this is inert at runtime by construction.
+        let effective = if ity != want {
+            let msg = format!("ascription: {}", edge_mismatch("expression", &want, &ity));
+            self.mismatch_or_flag(
+                crate::type_strictness::TypeFlagKind::Ascription,
+                &want,
+                &ity,
+                msg,
+            )?
+        } else {
+            want
+        };
+        Ok((effective, Expr::Ascribe(Box::new(inner2), t.clone())))
     }
 
     fn check_app(
@@ -8758,6 +9376,24 @@ impl Cx<'_> {
                 }
                 Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
             }
+            // DN-138 WU-4 (increment 2, §6): `bin_to_bytes(x: Binary{N}) -> Bytes` — the missing
+            // raw byte conversion `derive(Hash)`'s `ScalarBinary` route needs. The operand must be
+            // a concrete `Binary{N}` (a non-`Binary` operand is an explicit static refusal — G2);
+            // total and deterministic over every width (`bit.to_bytes` zero-pads on the MSB side up
+            // to a whole byte, mirroring `width_cast`'s own zero-extend convention, DN-41).
+            "bin_to_bytes" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Binary(_)) {
+                    return self.err(format!(
+                        "`bin_to_bytes` expects a concrete `Binary{{N}}` operand, got {recv} \
+                         (DN-138 WU-4; never a default width)"
+                    ));
+                }
+                Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
+            }
             _ => Ok(None),
         }
     }
@@ -9694,6 +10330,10 @@ pub(crate) fn infer_type(
         // would risk a false positive on a fragment that isn't the original walk, and the term
         // already passed the real check).
         affine: Tracker::inert(),
+        // DN-126: post-check re-inference over an already-CHECKED term — there is nothing left to
+        // demote (the program already strict-checked to get here), so always `Strict`.
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         #[cfg(test)]
         stage3_sabotage_skip_substitution: false,
     };
@@ -9757,6 +10397,10 @@ fn infer_type_with_active_affine_inner(
         std_sys: true,
         depth: Cell::new(0),
         affine: Tracker::seeded(scope),
+        // DN-126: this test-only harness re-infers over an already-checked term, exactly like
+        // `infer_type` — always `Strict` (see that site's comment).
+        strictness: crate::type_strictness::TypeStrictness::Strict,
+        flags: RefCell::new(Vec::new()),
         stage3_sabotage_skip_substitution: sabotage,
     };
     cx.infer(scope, e)
@@ -10237,6 +10881,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103;
         // `mycelium-core::content::Canon`/`id::ContentHash`) surfaced as a prim.
         "hash_blake3" => "hash.blake3",
+        // DN-138 WU-4 (increment 2, §6): the missing raw `Binary{N} -> Bytes` conversion
+        // `derive(Hash)`'s `ScalarBinary` route needs.
+        "bin_to_bytes" => "bit.to_bytes",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
         // DN-51 §2 D3/§6 (maintainer-authorized DN-39 post-freeze promotion; extends DN-41): the

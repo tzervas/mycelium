@@ -2,22 +2,12 @@
   "gaps": [
     {
       "file": "crates/mycelium-std-content/src/content_ref.rs",
-      "line": 19,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: MalformedDigest ;",
-      "reason": "`use` import (single path ending `MalformedDigest`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-content/src/content_ref.rs",
       "line": 20,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -57,7 +47,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl RefKind { # [doc = \" The inverse of the kind-prefix used in [`ContentRef::as_str_repr`]; `None` for an\"] # [doc = \" unrecognised prefix (kept in lock-step with `ContentRef::kind_prefix`).\"] fn from_prefix (prefix : & str) -> Option < RefKind > { Some (match prefix { \"value\" => RefKind :: Value , \"def\" => RefKind :: Def , \"op\" => RefKind :: Operation , \"policy\" => RefKind :: Policy , \"spore\" => RefKind :: Spore , \"other\" => RefKind :: Other , _ => return None , }) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported literal pattern kind (only bool/int literal patterns map)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_prefix` body: unsupported expression form `return None`",
       "item_name": "RefKind"
     },
     {
@@ -87,7 +77,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: fmt ;",
-      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std::fmt` — `std` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -127,7 +117,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for MalformedDigest { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"malformed content address {:?}: {}\" , self . input , self . description) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "MalformedDigest"
     },
     {
@@ -222,7 +212,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 85,
+      "line": 91,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -232,7 +222,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 86,
+      "line": 92,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -242,7 +232,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 87,
+      "line": 93,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -252,7 +242,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 88,
+      "line": 94,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -262,57 +252,47 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 90,
+      "line": 96,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use content_ref :: { ContentRef , RefKind } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use content_ref::ContentRef` — `ContentRef` is not among sibling `content_ref`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:RefKind"
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 91,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: MalformedDigest ;",
-      "reason": "`use` import (single path ending `MalformedDigest`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 92,
+      "line": 98,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use mycelium_core :: ContentHash ;",
-      "reason": "`use` import (single path ending `ContentHash`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 93,
+      "line": 99,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use name_registry :: NameRegistry ;",
-      "reason": "`use` import (single path ending `NameRegistry`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use name_registry::NameRegistry` — `NameRegistry` is not among sibling `name_registry`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 97,
+      "line": 103,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use mycelium_core :: content :: Names ;",
-      "reason": "`use` import (single path ending `Names`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core.content::Names` — `mycelium_core.content` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 101,
+      "line": 107,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -322,7 +302,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 124,
+      "line": 130,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -332,7 +312,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 146,
+      "line": 152,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -342,7 +322,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 166,
+      "line": 172,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -352,7 +332,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 184,
+      "line": 190,
       "col": 1,
       "category": "Other",
       "rust_construct": "Other",
@@ -362,7 +342,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 223,
+      "line": 229,
       "col": 1,
       "category": "GenericBound",
       "rust_construct": "GenericBound",
@@ -372,7 +352,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 242,
+      "line": 248,
       "col": 1,
       "category": "DeriveAttr",
       "rust_construct": "DeriveAttr",
@@ -382,7 +362,7 @@
     },
     {
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 264,
+      "line": 270,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -397,7 +377,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: { content :: Names , ContentHash } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core.content::Names` — `mycelium_core.content` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2); `use mycelium_core::ContentHash` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -417,7 +397,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl NameRegistry { # [doc = \" Create an empty registry.\"] # [must_use] pub fn new () -> Self { NameRegistry { inner : Names :: new () , } } # [doc = \" Bind a human name to a content hash. Re-binding a different name is allowed and does not\"] # [doc = \" change identity (that is the whole point — ADR-003).\"] # [doc = \"\"] # [doc = \" Returns the previous name for that hash, if any.\"] pub fn bind (& mut self , hash : ContentHash , name : impl Into < String >) -> Option < String > { self . inner . bind (hash , name) } # [doc = \" Look up the name bound to `hash`, returning `None` when the name is unbound.\"] # [doc = \"\"] # [doc = \" # C1 compliance\"] # [doc = \" Returns `None` (an honest absence) — never a sentinel hash (RFC-0016 §4.1 C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The result is a deterministic, pure read of the name table (RFC-0001 §4.6).\"] # [must_use] pub fn resolve_name (& self , hash : & ContentHash) -> Option < & str > { self . inner . name_of (hash) } # [doc = \" All names bound to `hash`, as a list (0 or 1 entries with the current kernel; see module\"] # [doc = \" FLAG on the one-name limitation).\"] # [doc = \"\"] # [doc = \" Returns an empty `Vec` when no name is bound — never a sentinel (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" Deterministic pure read (RFC-0001 §4.6).\"] # [must_use] pub fn names_of (& self , hash : & ContentHash) -> Vec < String > { match self . inner . name_of (hash) { Some (n) => vec ! [n . to_owned ()] , None => vec ! [] , } } # [doc = \" Number of names currently bound in the registry.\"] # [must_use] pub fn len (& self) -> usize { self . inner . len () } # [doc = \" Whether the registry is empty.\"] # [must_use] pub fn is_empty (& self) -> bool { self . inner . is_empty () } }",
-      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: struct literal `NameRegistry { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `bind` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `resolve_name` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `names_of` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `len` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `is_empty` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "reason": "no member of this impl block could be transpiled (6 sub-issue(s)): impl method `new` body: struct literal `NameRegistry { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `bind` signature: unsupported Rust type form `impl Into < String >`; impl method `resolve_name` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `names_of` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `len` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `is_empty` body: field projection `self.inner` on `NameRegistry` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
       "item_name": "NameRegistry"
     },
     {
@@ -435,7 +415,7 @@
     "DeriveAttr": 7,
     "GenericBound": 1,
     "Impl": 7,
-    "Import": 9,
+    "Import": 7,
     "InnerAttr": 1,
     "ModuleDecl": 4,
     "NamedFieldDrop": 2,

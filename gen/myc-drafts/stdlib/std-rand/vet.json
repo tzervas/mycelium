@@ -15,5 +15,21 @@
   "total_checked_clean_items": 0,
   "class_counts": {
     "CheckError": 1
-  }
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.rand",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "rotl64",
+        "on": null,
+        "message": "unknown function/constructor/prim `rotate_left`"
+      }
+    ],
+    "diagnostic": "unknown function/constructor/prim `rotate_left`"
+  },
+  "total_checked_clean_items_phylum": 0
 }

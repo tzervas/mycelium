@@ -67,13 +67,18 @@ nodule std.error;
 //   (M-662) to resolve against. This mirrors std.fmt.myc's own self-containment note (there:
 //   worktree isolation; here: the single-nodule harness) — same resolution, same shape as the
 //   landed std.result/std.option (KC-3: not a new type, a mirror of an existing one).
-// - `Unit` (below) stands in for `.myc`'s missing native nullary-function-type surface form:
-//   `BaseType::Fn` (crates/mycelium-l1/src/ast.rs) always requires a non-empty domain type — HOF
-//   stage 1 (RFC-0024 §3) has no `() => T` closure type. `ok_or_else`/`unwrap_or_else_option`'s
+// - `Unit` stands in for `.myc`'s missing native nullary-function-type surface form: `BaseType::Fn`
+//   (crates/mycelium-l1/src/ast.rs) always requires a non-empty domain type — HOF stage 1
+//   (RFC-0024 §3) has no `() => T` closure type. `ok_or_else`/`unwrap_or_else_option`'s
 //   lazily-computed error/default take `Unit => …` instead of a true nullary closure; laziness is
 //   preserved (only the taken match arm's expression is evaluated), only the call-site ergonomics
-//   change (the caller passes an explicit `U` token). Same technique as std.fmt.myc's `HexPair`
-//   (a local product type standing in for a missing base-type form).
+//   change (the caller passes an explicit `Unit` token). **Since DN-137/M-1102, `Unit` is the
+//   built-in PRELUDE type** (a hand-seeded `type Unit = Unit;`, `checkty::unit_prelude` — the
+//   arity-0 M-826 product-family member) — the local nullary-marker redeclaration this file used
+//   to carry (`type Unit = U;`) is gone; it would now collide with the prelude ("duplicate type
+//   declaration"). The HOF-domain substitution itself is unchanged (still not a true nullary
+//   closure type — that residual is untouched by DN-137), only its type is now native rather than
+//   a local stand-in.
 //
 // Never-silent floor (C1/I1) carried over intact: every ported op either transforms the sum (the
 // error/absence survives in the result), re-propagates it, or explicitly recovers it with an
@@ -82,10 +87,6 @@ nodule std.error;
 type Result[A, E] = Ok(A) | Err(E);
 
 type Option[A] = Some(A) | None;
-
-// Unit — a local nullary-marker substitute for the missing `() => T` closure-domain form (see the
-// substitution note above). A single-constructor, no-field type — not a new *kind* of type (KC-3).
-type Unit = U;
 
 // ── transform (keep the sum shape; never collapse an error away) ───────────────────────────────
 //
@@ -142,10 +143,10 @@ fn inspect_err[A, E, B](r: Result[A, E], f: E => B) => Result[A, E] =
 fn ok_or[A, E](o: Option[A], err: E) => Result[A, E] =
   match o { Some(x) => Ok(x), None => Err(err) };
 
-// ok_or_else: None becomes Err(f(U)) — a lazily-computed error (see the Unit substitution note
+// ok_or_else: None becomes Err(f(Unit)) — a lazily-computed error (see the Unit substitution note
 // above; f is only invoked on the None arm, so laziness is preserved).
 fn ok_or_else[A, E](o: Option[A], f: Unit => E) => Result[A, E] =
-  match o { Some(x) => Ok(x), None => Err(f(U)) };
+  match o { Some(x) => Ok(x), None => Err(f(Unit)) };
 
 // ok: Result -> Option. FLAGGED LOSSY CONVERSION (spec §7-Q2/C3): the one op in this surface that
 // discards `E` (Err -> None). C1-honest only because it is an explicitly-named, EXPLAIN-able lossy
@@ -183,4 +184,4 @@ fn unwrap_or_option[A](o: Option[A], fallback: A) => A =
 // unwrap_or_else_option: the held value, else a computed fallback (see the Unit substitution note
 // above; f is only invoked on the None arm).
 fn unwrap_or_else_option[A](o: Option[A], f: Unit => A) => A =
-  match o { Some(x) => x, None => f(U) };
+  match o { Some(x) => x, None => f(Unit) };

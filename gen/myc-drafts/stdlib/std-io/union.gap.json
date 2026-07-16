@@ -7,7 +7,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use std :: fmt ;",
-      "reason": "`use` import (single path ending `fmt`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use std::fmt` — `std` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -27,7 +27,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteOffset { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"byte {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ByteOffset"
     },
     {
@@ -44,11 +44,11 @@
       "file": "crates/mycelium-std-io/src/error.rs",
       "line": 44,
       "col": 1,
-      "category": "DeriveAttr",
-      "rust_construct": "DeriveAttr",
+      "category": "Impl",
+      "rust_construct": "Impl",
       "snippet": "impl FieldPath { # [doc = \" Construct from a static description.\"] # [must_use] pub fn from_static (s : & 'static str) -> Self { FieldPath (s . to_owned ()) } }",
-      "reason": "dropped non-doc attribute(s) on method `from_static`: # [must_use]",
-      "item_name": "impl FieldPath"
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `from_static` body: Rust ownership/identity-conversion no-op method `.to_owned()` has no Mycelium free-function/prim referent (value semantics — ADR-003); desugaring it to a bare `to_owned(recv)` would fabricate an unknown prim (`unknown function/constructor/prim `to_owned`` — verified against the oracle), so it is gapped, never fake-emitted (G2/VR-5)",
+      "item_name": "FieldPath"
     },
     {
       "file": "crates/mycelium-std-io/src/error.rs",
@@ -57,7 +57,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for FieldPath { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"field path {}\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "FieldPath"
     },
     {
@@ -127,7 +127,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for SerError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { SerError :: Truncated { at } => write ! (f , \"truncated input at {at}\") , SerError :: Malformed { at , why } => write ! (f , \"malformed input at {at}: {why}\") , SerError :: UnknownTag { path , tag } => { write ! (f , \"unknown tag {tag:?} at {path}\") } SerError :: OutOfDomain { path , why } => { write ! (f , \"value out of domain at {path}: {why}\") } SerError :: BudgetExceeded { kind } => { write ! (f , \"decode budget exceeded ({kind})\") } } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "SerError"
     },
     {
@@ -157,7 +157,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ByteCount { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { write ! (f , \"{} bytes\" , self . 0) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ByteCount"
     },
     {
@@ -207,7 +207,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for IoError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { IoError :: UnexpectedEof { read } => write ! (f , \"unexpected EOF after {read}\") , IoError :: Refused { why } => write ! (f , \"substrate refused: {why}\") , IoError :: EffectBudget { kind } => write ! (f , \"effect budget exceeded ({kind})\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "IoError"
     },
     {
@@ -237,7 +237,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl fmt :: Display for ReadValueError { fn fmt (& self , f : & mut fmt :: Formatter < '_ >) -> fmt :: Result { match self { ReadValueError :: Io (e) => write ! (f , \"io error: {e}\") , ReadValueError :: Ser (e) => write ! (f , \"serialize error: {e}\") , } } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: `& mut fmt :: Formatter < '_ >` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5)",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `fmt` signature: qualified type path `fmt :: Formatter < '_ >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "ReadValueError"
     },
     {
@@ -362,16 +362,6 @@
     },
     {
       "file": "crates/mycelium-std-io/src/io.rs",
-      "line": 39,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: IoError ;",
-      "reason": "`use` import (single path ending `IoError`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/io.rs",
       "line": 43,
       "col": 1,
       "category": "ReservedWord",
@@ -417,7 +407,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
-      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `new` signature: type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` signature: `usize` has a platform-dependent width; no fixed Binary{N} mapping; impl method `read_n` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `read_to_end` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (5 sub-issue(s)): impl method `new` signature: type name `Substrate` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` body: field projection `self.substrate` on `Source` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `read_n` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`); impl method `read_to_end` body: Rust ownership/identity-conversion no-op method `.to_vec()` has no Mycelium free-function/prim referent (value semantics — ADR-003); desugaring it to a bare `to_vec(recv)` would fabricate an unknown prim (`unknown function/constructor/prim `to_vec`` — verified against the oracle), so it is gapped, never fake-emitted (G2/VR-5)",
       "item_name": "Source"
     },
     {
@@ -437,7 +427,7 @@
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
-      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: struct literal `Sink { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `into_bytes` body: field projection `self.buffer` on `Sink` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `append` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (3 sub-issue(s)): impl method `new` body: struct literal `Sink { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `into_bytes` body: field projection `self.buffer` on `Sink` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `append` signature: unsupported Rust type form `[u8]`",
       "item_name": "Sink"
     },
     {
@@ -502,7 +492,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 109,
+      "line": 115,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -512,7 +502,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 110,
+      "line": 116,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -522,7 +512,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 111,
+      "line": 117,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -532,7 +522,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 112,
+      "line": 118,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -542,7 +532,7 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 116,
+      "line": 122,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -552,33 +542,13 @@
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 123,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: { ByteCount , ByteOffset , FieldPath , IoError , ReadValueError , SerError } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 126,
+      "line": 132,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 129,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use serialize::deserialize` — `deserialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
@@ -586,13 +556,113 @@
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::from_json` — `from_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::serialize` — `serialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::to_json` — `to_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read` — `read` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read_value` — `read_value` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::write` — `write` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Budget` — `Budget` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Sink` — `Sink` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Source` — `Source` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Substrate` — `Substrate` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:read_all"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 138,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
       "snippet": "pub use guarantee_matrix :: MATRIX as GUARANTEE_MATRIX ;",
-      "reason": "`use` import (rename `MATRIX as GUARANTEE_MATRIX`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use guarantee_matrix::MATRIX as GUARANTEE_MATRIX` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `GUARANTEE_MATRIX` in this file's body); flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 136,
+      "line": 142,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",
@@ -607,7 +677,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: value :: Payload ;",
-      "reason": "`use` import (single path ending `Payload`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core.value::Payload` — `mycelium_core.value` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -617,17 +687,7 @@
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use mycelium_core :: Value ;",
-      "reason": "`use` import (single path ending `Value`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-io/src/serialize.rs",
-      "line": 41,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "use crate :: error :: { ByteOffset , FieldPath , SerError } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
+      "reason": "`use mycelium_core::Value` — `mycelium_core` is not a sibling module transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
       "item_name": null
     },
     {
@@ -752,9 +812,9 @@
     }
   ],
   "category_counts": {
-    "DeriveAttr": 11,
-    "Impl": 13,
-    "Import": 9,
+    "DeriveAttr": 10,
+    "Impl": 14,
+    "Import": 15,
     "InnerAttr": 1,
     "MacroInvocation": 3,
     "ModuleDecl": 4,

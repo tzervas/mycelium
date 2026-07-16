@@ -452,20 +452,23 @@ fn the_no_shadow_control_pattern_still_checks_correctly() {
 
 #[test]
 fn same_named_different_home_types_each_get_their_own_coherent_instance() {
-    // `a::Dup` and `b::Dup` are unrelated same-named types; each `impl`s the SAME trait `Show`.
+    // `a::Dup` and `b::Dup` are unrelated same-named types; each `impl`s the SAME trait `Probe`
+    // (an arbitrary fixture trait name — renamed from the original `Show` when DN-127/M-1090
+    // seeded a built-in prelude trait of that name; mitigation #14: this per-file ad-hoc fixture
+    // name has no bearing on the test's actual subject, so it moves rather than the built-in).
     // Pre-fix, `type_head` was bare-name-keyed (`Data:Dup` for both) — a false overlap. Post-fix,
     // `type_head` embeds the qualified name (`Data:a::Dup` vs `Data:b::Dup`) — both instances
     // register, no coherence violation.
     check_phy(
         "phylum p\n\
          nodule a;\n\
-         pub trait Show[A] { fn show(x: A) => Binary{1}; };\n\
+         pub trait Probe[A] { fn probe(x: A) => Binary{1}; };\n\
          type Dup = DA(Binary{8});\n\
-         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b1; };\n\
+         impl Probe[Dup] for Dup { fn probe(x: Dup) => Binary{1} = 0b1; };\n\
          nodule b;\n\
-         use a.Show;\n\
+         use a.Probe;\n\
          type Dup = DB(Binary{4});\n\
-         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b0; };",
+         impl Probe[Dup] for Dup { fn probe(x: Dup) => Binary{1} = 0b0; };",
     )
     .expect(
         "two same-named-different-home types each impl the same trait without a false-overlap \
@@ -479,10 +482,10 @@ fn a_genuine_same_home_overlap_still_refuses() {
     // stay refused exactly as before this fix (the qualification must not loosen genuine overlap).
     let err = phy_err(
         "nodule a;\n\
-         trait Show[A] { fn show(x: A) => Binary{1}; };\n\
+         trait Probe[A] { fn probe(x: A) => Binary{1}; };\n\
          type Dup = DA(Binary{8});\n\
-         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b1; };\n\
-         impl Show[Dup] for Dup { fn show(x: Dup) => Binary{1} = 0b0; };",
+         impl Probe[Dup] for Dup { fn probe(x: Dup) => Binary{1} = 0b1; };\n\
+         impl Probe[Dup] for Dup { fn probe(x: Dup) => Binary{1} = 0b0; };",
     );
     assert!(
         !err.is_empty(),

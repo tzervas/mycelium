@@ -588,7 +588,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::ImplDecl
 pub struct mycelium_l1::ast::InherentImplDecl
 pub mycelium_l1::ast::InherentImplDecl::for_ty: mycelium_l1::ast::TypeRef
 pub mycelium_l1::ast::InherentImplDecl::methods: alloc::vec::Vec<mycelium_l1::ast::FnDecl>
-pub mycelium_l1::ast::InherentImplDecl::params: alloc::vec::Vec<alloc::string::String>
+pub mycelium_l1::ast::InherentImplDecl::params: alloc::vec::Vec<mycelium_l1::ast::TypeParam>
 impl core::clone::Clone for mycelium_l1::ast::InherentImplDecl
 pub fn mycelium_l1::ast::InherentImplDecl::clone(&self) -> mycelium_l1::ast::InherentImplDecl
 impl core::cmp::PartialEq for mycelium_l1::ast::InherentImplDecl
@@ -813,6 +813,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::TypeRef
 pub struct mycelium_l1::ast::UsePath
 pub mycelium_l1::ast::UsePath::glob: bool
 pub mycelium_l1::ast::UsePath::path: mycelium_l1::ast::Path
+pub mycelium_l1::ast::UsePath::phylum: core::option::Option<alloc::string::String>
 impl core::clone::Clone for mycelium_l1::ast::UsePath
 pub fn mycelium_l1::ast::UsePath::clone(&self) -> mycelium_l1::ast::UsePath
 impl core::cmp::Eq for mycelium_l1::ast::UsePath
@@ -1009,6 +1010,24 @@ impl core::marker::Unpin for mycelium_l1::checkty::InstanceInfo
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::InstanceInfo
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::InstanceInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::InstanceInfo
+pub struct mycelium_l1::checkty::Phyla
+impl mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::deps(&self) -> &alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::ResolvedPhylum>
+pub fn mycelium_l1::checkty::Phyla::empty() -> Self
+pub fn mycelium_l1::checkty::Phyla::from_deps(alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::ResolvedPhylum>) -> Self
+impl core::clone::Clone for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::clone(&self) -> mycelium_l1::checkty::Phyla
+impl core::default::Default for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::default() -> mycelium_l1::checkty::Phyla
+impl core::fmt::Debug for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::Phyla
+impl core::marker::Send for mycelium_l1::checkty::Phyla
+impl core::marker::Sync for mycelium_l1::checkty::Phyla
+impl core::marker::Unpin for mycelium_l1::checkty::Phyla
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Phyla
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Phyla
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Phyla
 pub struct mycelium_l1::checkty::PhylumEnv
 pub mycelium_l1::checkty::PhylumEnv::nodules: alloc::vec::Vec<(mycelium_l1::ast::Path, mycelium_l1::checkty::Env)>
 impl mycelium_l1::checkty::PhylumEnv
@@ -1026,6 +1045,22 @@ impl core::marker::Unpin for mycelium_l1::checkty::PhylumEnv
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::PhylumEnv
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::PhylumEnv
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::PhylumEnv
+pub struct mycelium_l1::checkty::ResolvedPhylum
+pub mycelium_l1::checkty::ResolvedPhylum::env: mycelium_l1::checkty::Env
+pub mycelium_l1::checkty::ResolvedPhylum::phylum_hash: mycelium_core::id::ContentHash
+impl mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::resolve(mycelium_core::id::ContentHash, &mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla) -> core::result::Result<Self, mycelium_l1::checkty::CheckError>
+impl core::clone::Clone for mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::clone(&self) -> mycelium_l1::checkty::ResolvedPhylum
+impl core::fmt::Debug for mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Send for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Sync for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Unpin for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::ResolvedPhylum
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::ResolvedPhylum
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::ResolvedPhylum
 pub struct mycelium_l1::checkty::TraitInfo
 pub mycelium_l1::checkty::TraitInfo::name: alloc::string::String
 pub mycelium_l1::checkty::TraitInfo::params: alloc::vec::Vec<alloc::string::String>
@@ -1046,10 +1081,14 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::TraitInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::TraitInfo
 pub const mycelium_l1::checkty::MAX_CHECK_DEPTH: u32
 pub fn mycelium_l1::checkty::check_and_resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<(mycelium_l1::checkty::Env, mycelium_l1::ast::Nodule), mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_and_resolve_with_strictness(&mycelium_l1::ast::Nodule, mycelium_l1::type_strictness::TypeStrictness) -> core::result::Result<(mycelium_l1::checkty::Env, mycelium_l1::ast::Nodule, alloc::vec::Vec<mycelium_l1::type_strictness::TypeFlag>), mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::check_nodule(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::check_nodule_matured(&mycelium_l1::ast::Nodule, bool) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_nodule_with_strictness(&mycelium_l1::ast::Nodule, mycelium_l1::type_strictness::TypeStrictness) -> core::result::Result<(mycelium_l1::checkty::Env, alloc::vec::Vec<mycelium_l1::type_strictness::TypeFlag>), mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::check_phylum(&mycelium_l1::ast::Phylum) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::check_phylum_matured(&mycelium_l1::ast::Phylum, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_phylum_matured_with_deps(&mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::checkty::check_phylum_with_deps(&mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::checkty::prim_kernel_name(&str) -> core::option::Option<&'static str>
 pub fn mycelium_l1::checkty::prim_sig(&str, &[mycelium_l1::checkty::Ty]) -> core::option::Option<mycelium_l1::checkty::Ty>
 pub fn mycelium_l1::checkty::type_head(&mycelium_l1::checkty::Ty) -> core::option::Option<alloc::string::String>
@@ -1466,6 +1505,23 @@ pub fn mycelium_l1::nodule::parse_nodule_header(&str) -> core::result::Result<co
 pub mod mycelium_l1::parse
 pub fn mycelium_l1::parse::parse(&str) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::parse::parse_phylum(&str) -> core::result::Result<mycelium_l1::ast::Phylum, mycelium_l1::error::ParseError>
+pub mod mycelium_l1::phyla
+pub struct mycelium_l1::phyla::PhylumNode
+pub mycelium_l1::phyla::PhylumNode::deps: alloc::collections::btree::map::BTreeMap<alloc::string::String, alloc::string::String>
+pub mycelium_l1::phyla::PhylumNode::phylum: mycelium_l1::ast::Phylum
+pub mycelium_l1::phyla::PhylumNode::phylum_hash: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_l1::phyla::PhylumNode
+pub fn mycelium_l1::phyla::PhylumNode::clone(&self) -> mycelium_l1::phyla::PhylumNode
+impl core::fmt::Debug for mycelium_l1::phyla::PhylumNode
+pub fn mycelium_l1::phyla::PhylumNode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::phyla::PhylumNode
+impl core::marker::Send for mycelium_l1::phyla::PhylumNode
+impl core::marker::Sync for mycelium_l1::phyla::PhylumNode
+impl core::marker::Unpin for mycelium_l1::phyla::PhylumNode
+impl core::marker::UnsafeUnpin for mycelium_l1::phyla::PhylumNode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::phyla::PhylumNode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::phyla::PhylumNode
+pub fn mycelium_l1::phyla::build_phyla_graph(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::phyla::PhylumNode>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, (mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::Phyla)>, mycelium_l1::checkty::CheckError>
 pub mod mycelium_l1::reveal
 pub enum mycelium_l1::reveal::L0Witness
 pub mycelium_l1::reveal::L0Witness::Closed
@@ -1747,6 +1803,7 @@ pub mycelium_l1::token::Tok::Bytes
 pub mycelium_l1::token::Tok::BytesLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Caret
 pub mycelium_l1::token::Tok::Colon
+pub mycelium_l1::token::Tok::ColonColon
 pub mycelium_l1::token::Tok::Colony
 pub mycelium_l1::token::Tok::Comma
 pub mycelium_l1::token::Tok::Consume
@@ -1929,6 +1986,118 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::WalkDept
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::WalkDepthExceeded
 pub const mycelium_l1::totality::MAX_WALK_DEPTH: u32
 pub fn mycelium_l1::totality::classify_all(&alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>) -> core::result::Result<alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::totality::Totality>, mycelium_l1::totality::WalkDepthExceeded>
+pub mod mycelium_l1::type_strictness
+pub enum mycelium_l1::type_strictness::Resolution
+pub mycelium_l1::type_strictness::Resolution::NonPrincipal
+pub mycelium_l1::type_strictness::Resolution::NonPrincipal::candidates: alloc::vec::Vec<mycelium_l1::checkty::Ty>
+pub mycelium_l1::type_strictness::Resolution::Principal(mycelium_l1::checkty::Ty)
+impl mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::principal(&self) -> core::option::Option<&mycelium_l1::checkty::Ty>
+impl core::clone::Clone for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::clone(&self) -> mycelium_l1::type_strictness::Resolution
+impl core::cmp::Eq for mycelium_l1::type_strictness::Resolution
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::eq(&self, &mycelium_l1::type_strictness::Resolution) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::Resolution
+impl core::marker::Freeze for mycelium_l1::type_strictness::Resolution
+impl core::marker::Send for mycelium_l1::type_strictness::Resolution
+impl core::marker::Sync for mycelium_l1::type_strictness::Resolution
+impl core::marker::Unpin for mycelium_l1::type_strictness::Resolution
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::Resolution
+pub enum mycelium_l1::type_strictness::TypeFlagKind
+pub mycelium_l1::type_strictness::TypeFlagKind::Ascription
+pub mycelium_l1::type_strictness::TypeFlagKind::ReturnType
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::clone(&self) -> mycelium_l1::type_strictness::TypeFlagKind
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeFlagKind
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::eq(&self, &mycelium_l1::type_strictness::TypeFlagKind) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Send for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeFlagKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeFlagKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeFlagKind
+pub enum mycelium_l1::type_strictness::TypeStrictness
+pub mycelium_l1::type_strictness::TypeStrictness::Loose
+pub mycelium_l1::type_strictness::TypeStrictness::Strict
+impl mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::is_loose(self) -> bool
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::clone(&self) -> mycelium_l1::type_strictness::TypeStrictness
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeStrictness
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::eq(&self, &mycelium_l1::type_strictness::TypeStrictness) -> bool
+impl core::default::Default for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::default() -> mycelium_l1::type_strictness::TypeStrictness
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Send for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeStrictness
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeStrictness
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeStrictness
+pub struct mycelium_l1::type_strictness::StrictifyOutcome
+pub mycelium_l1::type_strictness::StrictifyOutcome::materialized: alloc::vec::Vec<(alloc::string::String, mycelium_l1::checkty::Ty)>
+pub mycelium_l1::type_strictness::StrictifyOutcome::residual: alloc::vec::Vec<mycelium_l1::type_strictness::TypeFlag>
+impl core::clone::Clone for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::clone(&self) -> mycelium_l1::type_strictness::StrictifyOutcome
+impl core::cmp::Eq for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::eq(&self, &mycelium_l1::type_strictness::StrictifyOutcome) -> bool
+impl core::default::Default for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::default() -> mycelium_l1::type_strictness::StrictifyOutcome
+impl core::fmt::Debug for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Freeze for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Send for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Sync for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Unpin for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::StrictifyOutcome
+pub struct mycelium_l1::type_strictness::TypeFlag
+pub mycelium_l1::type_strictness::TypeFlag::declared: mycelium_l1::checkty::Ty
+pub mycelium_l1::type_strictness::TypeFlag::kind: mycelium_l1::type_strictness::TypeFlagKind
+pub mycelium_l1::type_strictness::TypeFlag::message: alloc::string::String
+pub mycelium_l1::type_strictness::TypeFlag::resolution: mycelium_l1::type_strictness::Resolution
+pub mycelium_l1::type_strictness::TypeFlag::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::clone(&self) -> mycelium_l1::type_strictness::TypeFlag
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeFlag
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::eq(&self, &mycelium_l1::type_strictness::TypeFlag) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Send for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeFlag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeFlag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::strictify(&[mycelium_l1::type_strictness::TypeFlag]) -> mycelium_l1::type_strictness::StrictifyOutcome
 pub enum mycelium_l1::AmbientError
 pub mycelium_l1::AmbientError::BareDecimalNoEncoding
 pub mycelium_l1::AmbientError::BareDecimalNoEncoding::paradigm: mycelium_l1::ast::Paradigm
@@ -2104,6 +2273,27 @@ impl core::marker::Unpin for mycelium_l1::reveal::RenderError
 impl core::marker::UnsafeUnpin for mycelium_l1::reveal::RenderError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::reveal::RenderError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::reveal::RenderError
+pub enum mycelium_l1::Resolution
+pub mycelium_l1::Resolution::NonPrincipal
+pub mycelium_l1::Resolution::NonPrincipal::candidates: alloc::vec::Vec<mycelium_l1::checkty::Ty>
+pub mycelium_l1::Resolution::Principal(mycelium_l1::checkty::Ty)
+impl mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::principal(&self) -> core::option::Option<&mycelium_l1::checkty::Ty>
+impl core::clone::Clone for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::clone(&self) -> mycelium_l1::type_strictness::Resolution
+impl core::cmp::Eq for mycelium_l1::type_strictness::Resolution
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::eq(&self, &mycelium_l1::type_strictness::Resolution) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::Resolution
+pub fn mycelium_l1::type_strictness::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::Resolution
+impl core::marker::Freeze for mycelium_l1::type_strictness::Resolution
+impl core::marker::Send for mycelium_l1::type_strictness::Resolution
+impl core::marker::Sync for mycelium_l1::type_strictness::Resolution
+impl core::marker::Unpin for mycelium_l1::type_strictness::Resolution
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::Resolution
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::Resolution
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::Resolution
 pub enum mycelium_l1::RevealError
 pub mycelium_l1::RevealError::DepthExceeded(mycelium_l1::totality::WalkDepthExceeded)
 pub mycelium_l1::RevealError::Elab(mycelium_l1::elab::ElabError)
@@ -2199,6 +2389,52 @@ impl core::marker::Unpin for mycelium_l1::checkty::Ty
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Ty
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Ty
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Ty
+pub enum mycelium_l1::TypeFlagKind
+pub mycelium_l1::TypeFlagKind::Ascription
+pub mycelium_l1::TypeFlagKind::ReturnType
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::clone(&self) -> mycelium_l1::type_strictness::TypeFlagKind
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeFlagKind
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::eq(&self, &mycelium_l1::type_strictness::TypeFlagKind) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeFlagKind
+pub fn mycelium_l1::type_strictness::TypeFlagKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Send for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeFlagKind
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeFlagKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeFlagKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeFlagKind
+pub enum mycelium_l1::TypeStrictness
+pub mycelium_l1::TypeStrictness::Loose
+pub mycelium_l1::TypeStrictness::Strict
+impl mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::is_loose(self) -> bool
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::clone(&self) -> mycelium_l1::type_strictness::TypeStrictness
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeStrictness
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::eq(&self, &mycelium_l1::type_strictness::TypeStrictness) -> bool
+impl core::default::Default for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::default() -> mycelium_l1::type_strictness::TypeStrictness
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeStrictness
+pub fn mycelium_l1::type_strictness::TypeStrictness::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Send for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeStrictness
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeStrictness
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeStrictness
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeStrictness
 pub enum mycelium_l1::Vis
 pub mycelium_l1::Vis::Private
 pub mycelium_l1::Vis::Pub
@@ -2457,6 +2693,24 @@ impl core::marker::Unpin for mycelium_l1::error::ParseError
 impl core::marker::UnsafeUnpin for mycelium_l1::error::ParseError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::error::ParseError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::error::ParseError
+pub struct mycelium_l1::Phyla
+impl mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::deps(&self) -> &alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::ResolvedPhylum>
+pub fn mycelium_l1::checkty::Phyla::empty() -> Self
+pub fn mycelium_l1::checkty::Phyla::from_deps(alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::checkty::ResolvedPhylum>) -> Self
+impl core::clone::Clone for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::clone(&self) -> mycelium_l1::checkty::Phyla
+impl core::default::Default for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::default() -> mycelium_l1::checkty::Phyla
+impl core::fmt::Debug for mycelium_l1::checkty::Phyla
+pub fn mycelium_l1::checkty::Phyla::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::Phyla
+impl core::marker::Send for mycelium_l1::checkty::Phyla
+impl core::marker::Sync for mycelium_l1::checkty::Phyla
+impl core::marker::Unpin for mycelium_l1::checkty::Phyla
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Phyla
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Phyla
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Phyla
 pub struct mycelium_l1::Phylum
 pub mycelium_l1::Phylum::nodules: alloc::vec::Vec<mycelium_l1::ast::Nodule>
 pub mycelium_l1::Phylum::path: core::option::Option<mycelium_l1::ast::Path>
@@ -2549,6 +2803,42 @@ impl core::marker::Unpin for mycelium_l1::ambient::Resolved
 impl core::marker::UnsafeUnpin for mycelium_l1::ambient::Resolved
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ambient::Resolved
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ambient::Resolved
+pub struct mycelium_l1::ResolvedPhylum
+pub mycelium_l1::ResolvedPhylum::env: mycelium_l1::checkty::Env
+pub mycelium_l1::ResolvedPhylum::phylum_hash: mycelium_core::id::ContentHash
+impl mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::resolve(mycelium_core::id::ContentHash, &mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla) -> core::result::Result<Self, mycelium_l1::checkty::CheckError>
+impl core::clone::Clone for mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::clone(&self) -> mycelium_l1::checkty::ResolvedPhylum
+impl core::fmt::Debug for mycelium_l1::checkty::ResolvedPhylum
+pub fn mycelium_l1::checkty::ResolvedPhylum::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Send for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Sync for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::Unpin for mycelium_l1::checkty::ResolvedPhylum
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::ResolvedPhylum
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::ResolvedPhylum
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::ResolvedPhylum
+pub struct mycelium_l1::StrictifyOutcome
+pub mycelium_l1::StrictifyOutcome::materialized: alloc::vec::Vec<(alloc::string::String, mycelium_l1::checkty::Ty)>
+pub mycelium_l1::StrictifyOutcome::residual: alloc::vec::Vec<mycelium_l1::type_strictness::TypeFlag>
+impl core::clone::Clone for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::clone(&self) -> mycelium_l1::type_strictness::StrictifyOutcome
+impl core::cmp::Eq for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::eq(&self, &mycelium_l1::type_strictness::StrictifyOutcome) -> bool
+impl core::default::Default for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::default() -> mycelium_l1::type_strictness::StrictifyOutcome
+impl core::fmt::Debug for mycelium_l1::type_strictness::StrictifyOutcome
+pub fn mycelium_l1::type_strictness::StrictifyOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Freeze for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Send for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Sync for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::Unpin for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::StrictifyOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::StrictifyOutcome
 pub struct mycelium_l1::SubstrateHandle
 impl mycelium_l1::substrate::SubstrateHandle
 pub fn mycelium_l1::substrate::SubstrateHandle::acquire(impl core::convert::Into<alloc::string::String>, mycelium_l1::substrate::SubstrateProvenance) -> Self
@@ -2593,9 +2883,33 @@ impl core::marker::Unpin for mycelium_l1::substrate::SubstrateProvenance
 impl core::marker::UnsafeUnpin for mycelium_l1::substrate::SubstrateProvenance
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::substrate::SubstrateProvenance
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::substrate::SubstrateProvenance
+pub struct mycelium_l1::TypeFlag
+pub mycelium_l1::TypeFlag::declared: mycelium_l1::checkty::Ty
+pub mycelium_l1::TypeFlag::kind: mycelium_l1::type_strictness::TypeFlagKind
+pub mycelium_l1::TypeFlag::message: alloc::string::String
+pub mycelium_l1::TypeFlag::resolution: mycelium_l1::type_strictness::Resolution
+pub mycelium_l1::TypeFlag::site: alloc::string::String
+impl core::clone::Clone for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::clone(&self) -> mycelium_l1::type_strictness::TypeFlag
+impl core::cmp::Eq for mycelium_l1::type_strictness::TypeFlag
+impl core::cmp::PartialEq for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::eq(&self, &mycelium_l1::type_strictness::TypeFlag) -> bool
+impl core::fmt::Debug for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::type_strictness::TypeFlag
+pub fn mycelium_l1::type_strictness::TypeFlag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Freeze for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Send for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Sync for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::Unpin for mycelium_l1::type_strictness::TypeFlag
+impl core::marker::UnsafeUnpin for mycelium_l1::type_strictness::TypeFlag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::type_strictness::TypeFlag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::type_strictness::TypeFlag
 pub struct mycelium_l1::UsePath
 pub mycelium_l1::UsePath::glob: bool
 pub mycelium_l1::UsePath::path: mycelium_l1::ast::Path
+pub mycelium_l1::UsePath::phylum: core::option::Option<alloc::string::String>
 impl core::clone::Clone for mycelium_l1::ast::UsePath
 pub fn mycelium_l1::ast::UsePath::clone(&self) -> mycelium_l1::ast::UsePath
 impl core::cmp::Eq for mycelium_l1::ast::UsePath
@@ -2617,6 +2931,8 @@ pub fn mycelium_l1::check_nodule(&mycelium_l1::ast::Nodule) -> core::result::Res
 pub fn mycelium_l1::check_nodule_matured(&mycelium_l1::ast::Nodule, bool) -> core::result::Result<mycelium_l1::checkty::Env, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::check_phylum(&mycelium_l1::ast::Phylum) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::check_phylum_matured(&mycelium_l1::ast::Phylum, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::check_phylum_matured_with_deps(&mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
+pub fn mycelium_l1::check_phylum_with_deps(&mycelium_l1::ast::Phylum, &mycelium_l1::checkty::Phyla) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_direct(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
@@ -2635,3 +2951,4 @@ pub fn mycelium_l1::render_surface(&mycelium_core::node::Node) -> core::result::
 pub fn mycelium_l1::resolve(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ast::Nodule, mycelium_l1::ambient::AmbientError>
 pub fn mycelium_l1::resolve_report(&mycelium_l1::ast::Nodule) -> core::result::Result<mycelium_l1::ambient::Resolved, mycelium_l1::ambient::AmbientError>
 pub fn mycelium_l1::reveal_l0(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::reveal::RevealError>
+pub fn mycelium_l1::strictify(&[mycelium_l1::type_strictness::TypeFlag]) -> mycelium_l1::type_strictness::StrictifyOutcome

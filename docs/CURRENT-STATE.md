@@ -3,8 +3,8 @@
 **Start here.** This is a dense, link-heavy pointer index — not a narrative — so an agent or
 maintainer can see "what's true now" in one short read instead of digging through the corpus.
 **Tag:** `Empirical/Declared` (a maintained cross-check of `CHANGELOG.md`/`issues.yaml`/`Doc-Index.md`,
-not itself a normative source). **Refreshed at integration-tier close-out** (see CLAUDE.md
-§Concurrent-PR development); if it looks stale, `CHANGELOG.md` (top) wins.
+not itself a normative source). **Refreshed 2026-07-16 at promote-to-staging close-out** (dev tip includes Wave-0 Commitizen/PR-Tracking,
+M-1106/DN-140 `valid_ident`, gap-close Phase-2/DN-138 batch). If it looks stale, `CHANGELOG.md` (top) wins.
 
 ## Project state, in one paragraph
 
@@ -86,6 +86,8 @@ digest is a snapshot, that table is live.
   `lib/`, drift-gated, M-1004/M-1005), and the `/transpile-vet` + `/myc-drafts` skills.)*
 
 ## Active / next work
+
+- **Staging promote batch (2026-07-16).** `dev` tip includes: Wave-0 maint (M-1085/M-1107 Commitizen + PR Tracking footer + epic release-gates M-1108…M-1118), DN-140/`valid_ident` build (**M-1106 done**), DN-137/138 unit + derive-instance landings, branch-guard mitigation #12 hardening, gap-close-2 / Phase-2 emit-hook batch. Next build levers: M-1090 WU-3 (`write!`/`format!`), M-1084 Import net-close, M-1037 residual conversions. Epics stay open until their release-gate children land on `main`.
 
 - **`enb` gap-closure wave in flight (E28-1, ADR-045 unfreeze) — 2026-07-10.** Under the ADR-045
   whole-project unfreeze (Accepted 2026-07-10), the DN-99 §8 `enb` backlog (M-1024…M-1034) is closing the

@@ -3,11 +3,11 @@
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/content_ref.myc",
       "source_file": "crates/mycelium-std-content/src/content_ref.rs",
-      "class": "Clean",
-      "exit_code": 0,
-      "diagnostic": "",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.content.content_ref.<use>`: `use std.content.error.MalformedDigest`: no such name `std.content.error.MalformedDigest` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 7,
-      "emitted_items": 1
+      "emitted_items": 2
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/error.myc",
@@ -32,9 +32,9 @@
       "source_file": "crates/mycelium-std-content/src/lib.rs",
       "class": "CheckError",
       "exit_code": 3,
-      "diagnostic": "check-error: check error in `digest_eq`: unknown type `ContentHash`",
+      "diagnostic": "check-error: check error in `std.content.<use>`: `use std.content.content_ref.RefKind`: no such name `std.content.content_ref.RefKind` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
       "non_test_items": 12,
-      "emitted_items": 2
+      "emitted_items": 4
     },
     {
       "myc_file": "gen/myc-drafts/stdlib/std-content/name_registry.myc",
@@ -47,10 +47,58 @@
     }
   ],
   "total_non_test_items": 31,
-  "total_emitted_items": 7,
-  "total_checked_clean_items": 5,
+  "total_emitted_items": 10,
+  "total_checked_clean_items": 4,
   "class_counts": {
-    "CheckError": 1,
-    "Clean": 4
-  }
+    "CheckError": 2,
+    "Clean": 3
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.content.content_ref",
+        "file": "content_ref.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.content.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.content.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.content",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "digest_eq",
+        "on": null,
+        "message": "unknown type `ContentHash`"
+      },
+      {
+        "nodule": "std.content.name_registry",
+        "file": "name_registry.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": "unknown type `ContentHash`"
+  },
+  "total_checked_clean_items_phylum": 6
 }

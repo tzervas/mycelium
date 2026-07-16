@@ -15,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use mycelium_check::{
-    check_phylum_dir, check_project, check_sources, FindingKind, PhylumReport, Report,
+    check_phylum_dir, check_project, check_sources, FindingKind, NoduleClass, PhylumReport, Report,
 };
 use mycelium_cli_common::{read_source, Args};
 use mycelium_l1::ast::{Item, TypeRef};
@@ -137,8 +137,15 @@ fn run_phylum(dir: &Path, json: bool) -> ExitCode {
 }
 
 /// The stable `--phylum --json` contract: ONE line, one JSON object. `error` is `null` on success or
-/// `{"kind":"parse|duplicate|check","site":..,"message":..}`; `nodules` holds one
-/// `{"nodule":..,"class":"Clean"}` per nodule (only when clean — never a fabricated verdict, VR-5).
+/// `{"kind":"parse|duplicate|check","site":..,"message":..}` — the **whole-phylum** verdict,
+/// unchanged by P-A. `nodules` holds one row per nodule **whenever the phylum was successfully
+/// assembled** (P-A, DN-124 §2.3 — empty on a `parse`/`duplicate` refusal, where nodule identity
+/// itself is ambiguous/unknown; never a fabricated verdict, VR-5). Every row carries `file` (the
+/// originating source's file label — the join key a consumer like the transpiler vet loop, Unit 2,
+/// needs to credit a specific emitted file's items off a nodule-keyed verdict):
+/// `{"nodule":..,"file":..,"class":"Clean"}` ·
+/// `{"nodule":..,"file":..,"class":"CheckError","site":..,"message":..}` ·
+/// `{"nodule":..,"file":..,"class":"Blocked","on":..,"message":..}`.
 fn phylum_report_json(report: &PhylumReport) -> String {
     let error = match &report.error {
         None => "null".to_owned(),
@@ -153,10 +160,24 @@ fn phylum_report_json(report: &PhylumReport) -> String {
         .nodules
         .iter()
         .map(|n| {
+            let extra = match &n.class {
+                NoduleClass::Clean => String::new(),
+                NoduleClass::CheckError { site, message } => format!(
+                    ",\"site\":\"{}\",\"message\":\"{}\"",
+                    json_escape(site),
+                    json_escape(message),
+                ),
+                NoduleClass::Blocked { on, message } => format!(
+                    ",\"on\":\"{}\",\"message\":\"{}\"",
+                    json_escape(on),
+                    json_escape(message),
+                ),
+            };
             format!(
-                "{{\"nodule\":\"{}\",\"class\":\"{}\"}}",
+                "{{\"nodule\":\"{}\",\"file\":\"{}\",\"class\":\"{}\"{extra}}}",
                 json_escape(&n.nodule),
-                json_escape(n.class),
+                json_escape(&n.file),
+                n.class.label(),
             )
         })
         .collect();
@@ -187,8 +208,11 @@ fn json_escape(s: &str) -> String {
     out
 }
 
-/// The human summary for `--phylum` (non-`--json`): the single refusal line if any, else the clean
-/// line. Never a silent empty pass (G2).
+/// The human summary for `--phylum` (non-`--json`): the single whole-phylum refusal line if any,
+/// else the clean line — **plus** (P-A, DN-124 §2.3), on a refusal, the per-nodule partial verdicts
+/// so a human reader sees the same "k nodules Clean, phylum ok: false" dual signal the `--json`
+/// contract carries. Never a silent empty pass (G2); never conflates "k nodules Clean" with "the
+/// phylum builds".
 fn print_phylum_report(report: &PhylumReport) {
     match &report.error {
         Some(e) => {
@@ -198,6 +222,25 @@ fn print_phylum_report(report: &PhylumReport) {
                 format!(" at `{}`", e.site)
             };
             eprintln!("myc-check: {}-error{at}: {}", e.kind.as_str(), e.message);
+            if !report.nodules.is_empty() {
+                let clean = report.nodules.iter().filter(|n| n.class.is_clean()).count();
+                eprintln!(
+                    "myc-check: partial verdicts — {clean}/{} nodule(s) independently Clean \
+                     (phylum ok: false; never conflate the two):",
+                    report.nodules.len()
+                );
+                for n in &report.nodules {
+                    match &n.class {
+                        NoduleClass::Clean => eprintln!("  {}: Clean", n.nodule),
+                        NoduleClass::CheckError { site, message } => {
+                            eprintln!("  {}: CheckError at `{site}`: {message}", n.nodule);
+                        }
+                        NoduleClass::Blocked { on, message } => {
+                            eprintln!("  {}: Blocked on `{on}`: {message}", n.nodule);
+                        }
+                    }
+                }
+            }
         }
         None => println!(
             "ok: {} nodule(s) checked as one phylum, no findings",

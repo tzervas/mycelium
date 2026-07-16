@@ -1,4 +1,4 @@
-// nodule: std.sys
+// nodule: std.sys.sys
 // \[Declared\] Process / environment floor (RFC-0028 §4.5; M-722). Thin, never-silent wrappers over
 // Rust `std::process` and `std::env`.
 //
@@ -29,6 +29,10 @@
 // @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
 // unvalidated — no Mycelium parser/typechecker confirms this output; see the
 // accompanying .gap.json for every construct this pass could not express.
-nodule std.sys;
+nodule std.sys.sys;
 
-
+// \[Declared\] A command-line argument that was not valid UTF-8, reported by its **position**
+// (`index` — arg 0 is the program name) so the offending input is named, never silently dropped
+// (G2). Carries the lossy [`String::from_utf8_lossy`] rendering (`lossy`) so an `EXPLAIN`/diagnostic
+// can *show* the bad arg without fabricating a faithful round-trip it cannot deliver.
+type NonUtf8Arg = NonUtf8Arg(Binary{64}, Bytes);

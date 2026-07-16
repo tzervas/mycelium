@@ -12,6 +12,404 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): DN-140 valid_ident + length-prefix mangler (M-1106) (2026-07-16)
+
+Composer leaf `claude/leaf/L-EMIT-m1106-valid-ident` (`fd7a984b`).
+
+- **`valid_ident`** in `reserved.rs` — total, idempotent map: identity on legal non-reserved
+  idents, `_kw` reserved escape, `_u{HEX}_` illegal-char escape; `sanitize_nodule_path` /
+  `guard_ident` call-throughs (DN-140 §4/§7).
+- **D4 mangler** — parts run through `valid_ident` + length-prefix boundary (injective by
+  construction); generic `Foo[T]` ctor emission no longer hard-parse-fails as the M-1103 gap class.
+- Non-identity rewrites emit `// Declared: renamed … (DN-140)` (G2). Mechanism stays **`Declared`**
+  until a fuller differential upgrades it (VR-5).
+- Tests: `src/tests/valid_ident.rs` + corpus/golden updates; `cargo test -p mycelium-transpile`
+  231 passed / 1 ignored.
+
+### chore(maint): Wave-0 hygiene — M-1085 gates + Commitizen 0.x + PR Tracking / epic release-gates (2026-07-15)
+
+Haiku-swarm Wave-0 under the maint-guide framework (orch plans; leaves execute).
+
+- **fix(gates) M-1085** — re-cite `tools/grammar/sugar.yaml` `token.rs:LINE` citations; make
+  sugar_index drift-guard demo line-number agnostic; regenerate `docs/sugar-index/`; ruff-format
+  `gen/myc-drafts/manifest_gen.py`. Public-api baseline for `mycelium-transpile` already green
+  (verify-first residual 0). Flipped `status:todo` → `done`.
+- **feat(gates) M-1107** — Commitizen Conventional Commits + `major_version_zero` 0.x.x SemVer
+  policy (`.cz.toml`, commit-msg hook, `just cz-check` / `just cz-bump-dry`, `scripts/checks/cz-check.sh`).
+  Aligns with ADR-018 / ADR-038 (no auto-1.0.0; dry-run bumps only until publish).
+- **docs(contributing)** — required PR **Tracking** footer; GitHub auto-close only on merge to
+  `main` (`Closes` vs `Refs`); **epic release-gate** pattern (terminal promote-to-main + release child).
+- **tracking** — minted M-1108…M-1118 release-gate todos for all open epics (E9-1, E10-1, E17-1,
+  E18-1, E20-1, E22-1, E23-1, E28-1, E33-1, E39-1, E40-1).
+
+### chore(tracking): integration-tier close-out — D4-regression fix + DN-138 increment-1/2 + DN-140 ratified, mint 4 M-ids, flip M-1102 (2026-07-13)
+
+Reconciles `tools/github/issues.yaml`/`docs/Doc-Index.md` against the batch that landed on `dev`
+since the last reconciliation (PRs #1589/#1590/#1591/#1592; `dev@2d469efc`), plus one stale status
+this pass found while verifying (mitigation #14 — every flip/filing below is checked against the
+actual landed code + its PR/commit, never a blind trust of the tracker).
+
+- **fix(transpile): D4 generic self-type mangling hard-parse-fail regression** (PR #1590, merge
+  `8f9cddaf`, fix `6c31887a`) — a **regression-and-recovery of M-1101**/DN-131 (PR #1553): once
+  DN-131 taught `emit_impl` to accept an impl-level generic parameter, a receiver-less associated
+  fn on a generic self type (`impl<T> Foo<T> { fn new(..) }`) mangled to the INVALID identifier
+  `Foo[T]__method` — a hard `myc check` parse failure, poisoning the whole containing file under
+  the vet loop's file-gated all-or-nothing `checked_fraction` (the dip DN-140's own header cites:
+  std-time 6.34%→5.35%). Fixed by gapping the receiver-less-assoc-fn-on-generic-self-type case
+  per method (`self_ty_is_generic_application`), never by base-name-stripping (which would
+  reintroduce the exact `impl Foo<A>`/`impl Foo<B>` collision D4 exists to prevent). Confirmed live
+  on `mycelium-std-time`: parse-error → check-error (an unrelated, already-documented residual).
+  Filed **M-1103** (`status: done`, `depends_on: [M-1101]`); DN-34 §8 gains an append-only
+  regression-and-recovery changelog line ("§8.23 added").
+- **DN-138 (Accepted) — primitive/std derive-instance availability, increment 1 (WU-1/WU-2/WU-3)**
+  — landed with no prior `issues.yaml` row (PR #1589, merge `2cd9b773`, DeriveAttr gaps 67→50). A
+  conditional `PRELUDE_INSTANCE_SEEDS` spine (parallel to the landed `PRELUDE_TRAIT_SEEDS`) plus
+  `field_derive_kind` (replacing a boolean `field_derive_eligible`) routes the five field-gating
+  derive rows over primitive/std-type fields. The sig-pin soundness differential needed **two**
+  hardening rounds before it genuinely caught a seed naming a non-existent instance — a
+  `thread_local` suppression flag proved a no-op across `mycelium_stack::with_deep_stack`'s spawned
+  OS-thread boundary; the fix builds the oracle via direct `register_nodule_decls`+
+  `register_instances` calls instead (no thread spawn to cross). Filed **M-1104** (`status: done`).
+- **DN-138 WU-4 — Vec-recursive derive instances + narrow-width unblock, increment 2** — landed
+  (PR #1591, merge `2d469efc`, DeriveAttr gaps 50→48). A conditional `Vec[T]` prelude-type seed
+  (`Vec[A] = Nil | Cons(A, Vec[A])`), a new `bin_to_bytes` kernel prim (`bit.to_bytes`) for
+  `derive(Hash)`'s scalar route, and `FieldDeriveKind::VecOf` routing (depth-1 `Vec[T]` fields via
+  per-element-type auxiliary plain fns, since `Vec`'s coherence head admits only one instance per
+  file). Two review findings fixed pre-land: CRITICAL — `PhylumEnv::link()` no longer silently
+  replaces a nodule's own hand-declared `Vec` (collision-checked merge, never a silent replace);
+  HIGH — narrow `ScalarBinary` widths >64 now honestly gap instead of a runtime-`Overflow`-risking
+  `width_cast` narrowing. Filed **M-1105** (`status: done`, `depends_on: [M-1104]`), closing the
+  DN-138 §8 worklist.
+- **DN-140 (Accepted) — unified valid-identifier emission contract** — docs-only (PR #1592, merge
+  `24bd9820`), passed a 3-round strict DN-review gate (a maintainer-input length-prefix redesign of
+  the D4 type↔method boundary encoding in round 2). Subsumes DN-139 (its `word→word_kw` rule
+  becomes the reserved-word branch); adds a delimited variable-width `_u{HEX}_` per-illegal-character
+  Unicode-scalar escape for the class M-1103 above fixed by gapping. Filed **M-1106**
+  (`status: todo`, `depends_on: [M-1103]`) for the build (the note itself builds nothing). **Note:**
+  DN-139 lives only on an unmerged branch (`claude/leaf/phase2-next-waves-scoping@ee33e4dc`, not
+  reachable from `dev`) — its Superseded-by-DN-140 flip is left for whoever lands that branch
+  (append-only; not applied here since this pass cannot edit a doc that isn't on `dev`).
+
+**Flipped 1 stale `status:todo` row to `done`** (mitigation #14 — verified against the code before
+flipping): **M-1102** (DN-137 native unit-type build) — the previous reconciliation pass filed this
+as `todo` (2026-07-13 02:21) but the build landed *after* filing, at 2026-07-13 07:56 (PR #1588,
+`fb0bb22f`, unit-type gap 30→0) — a same-day filing/landing race this pass closes.
+
+**`docs/Doc-Index.md`**: registered DN-138 and DN-140 rows (DN-139 has no row — it is not reachable
+from `dev`); updated the DN-137 row's landed-basis parenthetical (`todo`→`done`, PR #1588 cited).
+`python3 tools/github/doc_refs_check.py` passes clean.
+
+**`docs/api-index/` + `docs/tero-index/` regenerated** (`just docs-index`, `just tero-index-gen` →
+`just tero-index` verified current) — both had drifted (line-number staleness) from the code landed
+in PRs #1588, #1589, and #1591 since the last regen; a pre-existing gap this pass closes, not
+caused by this pass's own (docs/tracking-only) edits.
+
+### chore(tracking): DN-136 Phase-2 wave-1 close-out — file 11 unfiled M-ids, flip 4 stale statuses, DN-135/DN-136 append-only corrections (2026-07-13)
+
+Reconciles `tools/github/issues.yaml` against the DN-136 Phase-1 interfaces build + Phase-2
+first-wave leaves that landed on `dev` since the last reconciliation (PRs #1544/#1546–#1555;
+`dev@646607d1`) — the recurring drift this project tracks under mitigation #14, and the pattern
+this batch's own tracking already found once mid-session (an earlier `tracking-truth-reconcile`
+PR #1543 covered up through M-1089's mid-flight state). Every flip/filing below is verified against
+the actual landed code + its PR/commit before being recorded (never a blind trust of the tracker).
+
+**Filed 11 M-ids with no prior `issues.yaml` row**, per `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`
+§6 FLAG-3's reserved-id mapping (verified each slot free before minting — mitigation #1; M-1091 was
+the highest filed id at session start):
+
+- **M-1092** (DN-135 Result/Option-combinator match-inline lowering, PR #1547) — `done`.
+- **M-1093** (DN-134 struct-variant construction + collision-safe `struct_layouts`, PR #1548) —
+  `done`; this landing's `struct_layouts` population also closed M-1089's own residual as a side
+  effect.
+- **M-1094** (DN-133 qualified-associated-fn call emission, PR #1546) — `done`.
+- **M-1095** (DN-136 P1-a emit-hook table-dispatch seam, PR #1551) — `done`,
+  `depends_on: [M-1092, M-1093, M-1094]`.
+- **M-1096** (DN-136 P1-c `map.rs` type-map `TABLE`, PR #1550) — `done`.
+- **M-1097/M-1098/M-1099** (DN-136 Phase-2 L1/L2/L3 — `derive(PartialEq/Eq)`, `derive(PartialOrd/Ord)`,
+  `derive(Hash)` rows, all PR #1555) — `done`.
+- **M-1100** (DN-136 Phase-2 L4 — conversion-method `.clone()`/`.to_owned()` → identity, routed into
+  `prim_map::TABLE`, PR #1552 + the same-PR critical fix `1f4e7aa3` narrowing the receiver gate to
+  builtins only) — `done`. Note: the leaf's working branch was misnamed
+  `claude/leaf/m1101-conversion-prim-map` (off-by-one against this reserved id); the landed commit
+  content is unambiguously M-1100/L4, not a duplicate of M-1101.
+- **M-1101** (DN-136 Phase-2 L5 / M-1088's own residual — bounded inherent-impl type-param
+  transpiler emission, PR #1553) — `done`, `depends_on: [M-1088]`.
+- **M-1102** (DN-137 native unit-type build: prelude `type Unit = Unit;` + one `type_map::TABLE`
+  row) — `todo` (DN-137 Accepted 2026-07-13; not yet built).
+
+**Flipped 4 stale `status:todo` rows to `done`** (mitigation #14 — each verified against the code,
+not the tracker):
+
+- **M-1086** (DN-128 std-derive lowering library) — the Debug/Default/Clone/Copy rows landed via
+  PR #1544 (after this issue's own partial-landing note was written, a same-day ordering gap) and
+  the PartialEq/PartialOrd/Hash rows via M-1097/M-1098/M-1099 (PR #1555); all live-oracle-witnessed
+  (205/205 `mycelium-transpile` tests green). The DoD's own re-measure item has not been re-run
+  post-wave — flagged as an open measurement follow-up, not a build gap.
+- **M-1088** (DN-131 bounded-generics transpiler residual) — closed by M-1101/PR #1553
+  (`bounded_impl_type_params`, verified at `emit.rs:508`).
+- **M-1089** (DN-132 P1 struct-variant patterns) — its producer-side residual (`struct_layouts` not
+  walking `Item::Enum` variants) closed as a side effect of M-1093/PR #1548 (verified at
+  `transpile.rs:394`/`:426`).
+- **M-1091** (DN-129 Init/Fault prelude traits) — its `derive Default` → `Init` cross-note gate
+  closed by the same M-1086/PR #1544 landing.
+
+**`docs/Doc-Index.md`**: registered DN-133/DN-134/DN-135/DN-136/DN-137 rows (all previously
+unregistered despite DN-133–135 being cited by already-filed issues — a pre-existing gap this pass
+also closed) and a Planning-docs row for `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`.
+`python3 tools/github/doc_refs_check.py` now passes clean (was failing with 12 dangling refs before
+the Doc-Index rows + two `doc_refs` grammar corrections — `corpus:M-1037` is not a doc ref type,
+issue ids aren't citable that way; the worklist doc's `#l1`–`#l5` anchors don't resolve to real
+headings, so those became a plain `corpus:DN-136-phase2-bulk-gap-close-worklist` ref instead).
+
+**`docs/notes/DN-135-...md`** — append-only scope-correction addendum (house rule #3/#4): DN-135
+§Decides/§3's original "chains nest" claim is DISCONFIRMED by M-1092's landed build (a nested
+inlined `match` scrutinee fails `myc check`'s constructor type-parameter inference); each combinator
+in a chain is judged independently on its own receiver instead. Original prose left untouched.
+
+**`docs/notes/DN-136-...md`** — append-only numeric-grounding correction: the ratification commit's
+own claim ("the live count at `c044452d` is 89 `Case` literals, three independent counts agree") was
+itself a miscount — re-counted directly against `git show c044452d:.../tests/emit.rs` (both
+`grep -c` and an independent Python regex count over the exact `cases()` span): the correct figure
+is **88**, not 89.
+
+**`crates/mycelium-transpile/src/emit.rs`**: fixed the unrecognized-derive fallback message
+(`lower_struct_derives`), stale since PR #1555 landed Eq/Ord/Hash without updating it — it still
+claimed "Eq/Ord/Hash/PartialEq/PartialOrd are a separate, unbuilt increment", though
+PartialEq/PartialOrd/Hash have been recognized since that same PR (only bare `Eq`/`Ord` are
+deliberately unrecognized, by design — see `emit/derives/mod.rs::TABLE`'s doc). Updated the golden
+differential fixture (`tests/fixtures/emit_hook_golden.json`) to match; the byte-identical
+differential (`emit_hook_refactor_byte_identical_differential`) stays green.
+
+**`crates/mycelium-transpile/src/emit/derives/ord.rs`** (cosmetic, low-risk): folded the two
+separate field-scan loops (Float-check-all-fields-first, then eligibility-check-all-fields) into
+one combined per-field loop, mirroring `eq.rs`'s single-pass shape — consistent
+first-offending-field reporting when a struct has both a Float field and a separately-ineligible
+field. No test pinned the prior two-loop ordering; confirmed the byte-identical differential and
+all 205 `mycelium-transpile` tests stay green.
+
+### chore(tracking): tracking-truth reconciliation — M-1077/1079/1080/1081/1088/1089/1090/1091 verified against `dev` (2026-07-12)
+
+`issues.yaml` had drifted from `dev`'s actual code (mitigation #14, recurring this session): the
+DN-126–DN-132 build issues below all landed on `dev` between the batch ratification above and this
+reconciliation, but stayed `status:todo`. Every candidate re-verified against `dev`'s code + its
+landing PR before any flip (never a blind trust of the tracker — VR-5). **M-1089 landed mid-session**
+(PR #1535, `f109b0d5`, pulled down via `git merge --no-ff origin/dev` partway through this pass) — its
+consumer-side `Pat::Struct` arm is done, but the producer-side enum-struct-variant `StructLayout`
+population is not, so it stays `todo` scoped to that residual (see below).
+
+- **M-1079** (DN-124 vet-harness phylum visibility) — **done**. All three units landed (PR #1521,
+  `eb6bc0e2`): `mycelium-check`'s per-nodule `PhylumReport` verdicts, `mycelium-transpile`'s
+  phylum-mode dual-report (`checked_fraction_phylum`/`delta_basis`), and
+  `gen/myc-drafts/regenerate.sh`'s semcore-as-one-phylum batching. `cargo test -p mycelium-check`
+  (13/13) + `-p mycelium-transpile --lib` (98/98, re-verified in an isolated worktree at
+  `eb6bc0e2` itself — a first pass of this note misquoted 113/113, the count read later in the
+  session after M-1080/M-1081/M-1089's tests had also landed on top; corrected per a PR review
+  finding, VR-5) green.
+- **M-1080** (DN-122 external-trait-impls MVP) — **done** (mechanism landed, honest 0-corpus-delta).
+  WU-A/WU-B landed (PR #1522, `b97b008e`) with T-A1–T-A3/T-B1–T-B2 green. The Phase-0 re-measure
+  (under M-1079's landed phylum-mode basis, `06b4d7a7`) measures OQ-7's single-param-vs-two-type
+  split at **0% on the witnessed wave-1 corpus** — a measured, not fabricated, leverage figure
+  (VR-5).
+- **M-1081** (DN-125 `&mut self`/`&mut T` value-threading) — **done**. The lowering landed
+  (PR #1527, `6cae69eb`); a re-review found and closed a silent-corruption aliasing hole — `let y =
+  other;` where `other` is itself a threaded `&mut` binding moved the live reference under
+  name-based matching, so a later `*y = ..;` silently mutated the wrong binding while still
+  `myc check`-clean — fixed in PR #1530 (`ae4007bf`) by refusing that shape never-silently
+  (`Category::Other`). `cargo test -p mycelium-transpile --lib -- tests::mut_thread` 14/14 green.
+- **M-1077** (DN-126 two-mode typing) — **partial, stays `todo`**. The demotion switch +
+  mechanical-strictification classifier landed (PR #1531, `cd84768a`, 11/11 tests green) — DoD items
+  1–2 of 3. The py2rust end-to-end fixture (item 3) is genuinely unbuilt and not near-term (py2rust
+  integration is explicitly deferred pending Rust-native maturity).
+- **M-1088** (DN-131 impl-slot bounds) — **partial, stays `todo`**. The L1/kernel side (parse,
+  desugar, check+mono, witnesses) landed (PR #1529, `6822a78c`, 34/34 + 3/3 tests green); the
+  transpiler emission item is not built — `emit.rs` still refuses any bounded type parameter.
+- **M-1089** (DN-132 P1 struct-variant patterns) — **partial, stays `todo`**. The consumer-side
+  `Pat::Struct` arm in `map_pattern_inner` landed (PR #1535, `f109b0d5`, 22/22 tests green); the
+  producer-side `transpile.rs::struct_layouts` still only walks `Item::Struct`, not `Item::Enum`
+  struct-variants, so the issue's own headline target — `Self::NotFound { path, .. }` — still gaps.
+- **M-1090** (DN-127 native formatting) — **partial, stays `todo`**. WU-1 (`lib/std/fmt.myc`'s
+  `to_dec`/`digit_byte`, `myc-check`-clean, 19/19 differential tests) and WU-2 (`Show` prelude seed)
+  landed (PR #1526); WU-3 (the transpiler `write!`/`format!` lowering rule) is not built.
+- **M-1091** (DN-129 Init/Fault prelude traits) — **partial, stays `todo`**. The seeds, the shared
+  `seed_prelude_trait` helper, visibility tests, and OQ-2 (resolved as a bare `Fault[T] {}` marker)
+  landed (PR #1526, 18/18 tests green); the `derive Default` → `Init` cross-note gate is blocked on
+  **M-1086** (DN-128 std-derive lowering), which remains unbuilt.
+
+`docs/Doc-Index.md`'s DN-122/124/125/126/127/129/131 rows corrected (their "unbuilt, tracked as
+M-xxxx" parentheticals were stale); `tools/github/idmap.tsv` gained the two rows the pending
+`claude/leaf/pm-sync-m1079-m1080` idmap branch (`f3e02474`) had queued (M-1079→#1519,
+M-1080→#1520) — folded into this reconciliation rather than landed separately. M-1084 (Import
+net-close) and M-1089 (DN-132 struct-variant patterns) are genuinely in-flight under other leaves
+and untouched here; M-1086 (DN-128 std-derive) is genuinely unbuilt and untouched. All DN statuses
+(DN-123, DN-125–DN-132) confirmed **Accepted** in both `docs/Doc-Index.md` and their own doc
+headers; DN-133 confirmed still **Draft** (untouched, in-flight citation-patch elsewhere).
+
+### docs(dn): ratify DN-126–DN-132 — language-completeness planning batch (Accepted, 2026-07-12)
+
+Batch-ratifies **seven Draft DNs** to **Accepted** under explicit maintainer delegation ("ratify based
+on objective reasoning and the project's needs/intents, keep to core principles, report results";
+mirrors the DN-115/117/118/122/123/124/125 precedent). Every mechanism/guarantee tag stays `Declared`
+(unbuilt) — **Accepted, not Enacted** (house rule #3) for all seven.
+
+- **DN-126** (two-mode typing, M-1077) — loose mode = the existing bidirectional checker in a
+  non-refusing posture over the unchanged repr-dynamic evaluator; strict mode = the same checker with
+  demotion off (compilation gate unconditional, as today). Ratifies the **three-axis verdict**
+  (type-strictness is a genuinely new axis, distinct from ADR-032/RFC-0034 cert-depth and RFC-0018
+  guarantee-grade), the **runnable-floor boundary** (name/arity/parse/FFI stay hard in loose mode),
+  and mechanical strictification's **principality invariant** (writes down only a *principal* inferred
+  type — sound-by-conservatism, VR-5). Zero kernel growth. `doc_refs: corpus:DN-126` added to the
+  already-filed **M-1077**.
+- **DN-127** (native formatting) — `Display`/`write!`/`format!` → a pure `render: T → Bytes`; a
+  `Show` prelude trait for dispatch. Int→decimal is derivable **in std from landed prims**
+  (`div_u`/`rem_u`/`bytes_concat`/`width_cast`) — **no new kernel primitive** (KC-3). Float render
+  stays an honest residual (OQ-1). Note the merge-order dependency on DN-125 (`&mut Formatter` param) —
+  DN-125 is already Accepted and landed on this same base. Minted **M-1090** (`depends_on: [M-1081]`);
+  the prior design issue **M-1082** gets an append-only close-out note, `status: superseded-by-dn`.
+- **DN-128** (std-derive lowering library) — per-derive `lower` rules as structural folds (DN-54).
+  `Clone` = a value-semantics identity no-op (drop as satisfied, don't generate); a derived total
+  `Eq` over a `Float` field is **refused** (NaN/ADR-040). OQ-1 (field reflection in a `lower` RHS)
+  stays honestly open; Alt C (compiler-internal field-walk) recommended because it survives either
+  answer. Minted **M-1086**.
+- **DN-129** (Default/Error) — `Init` prelude trait (method **not** `default` — a taken keyword);
+  `Error` = errors-as-values + a `Fault: Show` marker; `source()`/`dyn Error` boxing deliberately not
+  ported (ADR-033's escape, not the default). Zero kernel growth (DN-55). Minted **M-1091**
+  (`depends_on: []`); the prior design issue **M-1083** gets an append-only close-out note,
+  `status: superseded-by-dn`.
+- **DN-130** (generic trait-instance impls, `impl[T] Trait for Foo[T]`) — a parametric instance head
+  monomorphized as a family (M-673 α-substitution); coherence keyed on the constructor head, reusing
+  DN-122's home-qualified `CoherenceView`. Scoped to single-parameter, structurally-covering,
+  non-overlapping heads; out-of-scope shapes refused never-silently. **Real landing-order dependency
+  on M-1080** (honestly stated — not a landed reuse, VR-5). Minted **M-1087**
+  (`depends_on: [M-1080]`); M-1080's own body gets an append-only note recording the second dependency.
+- **DN-131** (bounds on non-fn sites, impl-slot bounds) — the impl-slot bound rides DN-103's
+  desugar-prepend plus the already-landed `check_bounds` + dictionary-free mono — **zero new
+  discharge code**. Declines `type`/`trait` decl-head bounds and `where`-clauses per RFC-0019 §4.2's
+  own design intent (YAGNI, not convenience). Minted **M-1088**.
+- **DN-132** (L3 pattern-surface cluster) — **ratifies P1 (struct-variant patterns)** as the
+  buildable mechanism (variant-aware `StructLayout` + a `Pat::Struct` arm, reusing Maranget usefulness
+  unchanged, KC-3). **P2/P3 (range/`@`-binding via the `when`-guard idiom) are explicitly
+  PREREQUISITE-GATED on M-833/DN-79 landing** — recorded as a documented conditional, **not**
+  "already served" (the note's own load-bearing self-correction: `Arm` has no guard field today and
+  the transpiler refuses every guard). The B2/C2 dedicated-grammar decline is Accepted regardless of
+  that timeline. Status recorded as **Accepted — P1 only** (taking FLAG-6's split as offered). Minted
+  **M-1089** for exactly the P1 transpiler build (`depends_on: []`); the self-hosted P1 half and the
+  P2/P3 idiom emission stay FLAGged follow-ups, not minted here (avoid filing a blocked issue that
+  implies near-term actionability it does not have).
+
+Reconciled `docs/Doc-Index.md` (seven new rows, all Accepted 2026-07-12) and `tools/github/issues.yaml`
+(six fresh M-ids **M-1086..M-1091**, plus `doc_refs`/append-only notes on **M-1077**, **M-1080**,
+**M-1082**, **M-1083**). Regenerated `docs/api-index/` and `docs/tero-index/` where doc_refs changed.
+`doc_refs_check.py`, markdownlint, `structured.sh`, `links.sh`, `secrets.sh` green.
+
+### chore(gates): flag pre-existing `just check-canary` drift on `dev` from PR #1521 (2026-07-12)
+
+Running `just check-canary` (leaf→`dev` gate) during the gap-close-2 integration close-out surfaced
+three pre-existing failures on `dev`'s own tip, unrelated to this close-out's docs/`issues.yaml`-only
+diff (verified: `git diff` of the affected files against this PR's branch is empty) — left by the
+earlier landing of PR #1521 (the DN-124 phylum-mode harness + wave-2 symtab): a stale
+`mycelium-transpile` public-API baseline (`api` gate), an unformatted
+`gen/myc-drafts/manifest_gen.py` (`format` gate), and the pre-existing `sugar-index` self-test
+citation drift. Flagged plainly (never-silent, G2) rather than silently bundled into this
+docs-scoped PR; tracked as **M-1085**.
+
+### docs(planning): language-completeness gap inventory — the drive-hard worklist (Draft, 2026-07-12)
+
+`docs/planning/language-completeness-gap-inventory.md` (Draft, living register) synthesizes and
+re-derives the current, prioritized **language**-completeness gap inventory for full native
+expressibility of Rust (Python carry-forward flagged), grounded against `origin/dev` `fa53dc46` plus
+the committed draft corpus and the DN-124 phylum-mode baseline. It re-derives the gap-class
+distribution against the current tree (mitigation #14) and corrects nine stale figures/rankings in
+the prior analyses — the "Other/type-coverage" class shrank from a claimed 40% to ~23–24%,
+external-trait impls moved from "needs-design" to **DN-122-Accepted**, `?`/transcendentals are
+landed/superseded, and **`&mut self`/`&mut T` is un-owned** (not DN-118, which scopes only
+closure-capture mutation) — the single largest unsolved language residual. It surfaces four
+new/under-weighted gaps (DeriveAttr now ~11–12% of gap mass; the missing Display/int→string kernel
+prim blocking 26/30 `&mut Formatter` bodies; `ModuleDecl` as its own class; no native `Default`/
+`Error` prelude trait), classifies every gap by the ratified DN-111 native-translation taxonomy, and
+splits the 17-row residual into build-now (a ratified design exists) vs design-first (needs a Draft
+DN) sets. Recommends, does not ratify (house rule #3); every figure `Empirical`/`Declared` at its
+basis (VR-5).
+
+### docs(dn-125): ratify native `&mut self`/`&mut T` in-place-mutation note — value-threading (Accepted, 2026-07-12)
+
+**DN-125** (`docs/notes/DN-125-Native-In-Place-Mutation-Through-A-Reference-Value-Threading.md`)
+moves **Draft to Accepted** under explicit maintainer delegation to the orchestrator ("ratify based
+on objective reasoning and the project's needs/intents, keep to core principles, report results").
+Scopes Mycelium's native answer to the problem Rust `&mut self`/`&mut T` solves — the dominant
+DN-34 §8.22 `Impl`-class gap — separating a settled question from an open one (mitigation #14): the
+runtime **mechanism** is **ANSWERED-BY-DESIGN** (value-threading — take the receiver/argument by
+value, return the mutated value, rebind at the call site — zero-copy via the already-ratified DN-33
+static uniqueness analysis, DN-35 §5 `rc==1` in-place reuse, and DN-120 identity coherence), while
+the transpiler **application** (mechanically lowering a `&mut self` method plus rewriting its call
+sites) is genuinely open and un-owned before this note (`&mut self` hard-gaps at `emit.rs:559`,
+`&mut T` at `map.rs:344`). Ratifies **Rank 1 — Alt A (value-threading)** over a kernel `&mut`/place
+type (Alt B, rejected — reintroduces the aliased-mutation borrow-checking Mycelium deliberately
+excludes) and an interior-mutability cell (Alt C, retained only as a narrow Interop-Bridge fallback).
+Adversarial stress-test **HELD** for the non-aliased, value-returning shape (re-entrancy is *more*
+robust than `&mut`; identity coherence closed by DN-120), **NARROWED** to two never-silent FLAG
+boundaries: unprovable-unique/aliased receivers (routed to a borrowck precondition or a DN-33
+Mycelium-side proof) and interior-`&mut`-returning methods (`get_mut`/`iter_mut`/`IndexMut`, routed
+to Approximation/Interop-Bridge). **Accepted, not Enacted** (house rule #3) — the lowering stays
+`Declared`/unbuilt, correct-with-a-copy when built, zero-copy only as DN-33/DN-35 §5 land. Minted
+**M-1081** (transpiler value-threading lowering build; `depends_on: [M-1079]`).
+
+### docs(dn-123): ratify records/named-fields surface-lever note — sugar-over-positional (Accepted, 2026-07-12)
+
+**DN-123** (`docs/notes/DN-123-Records-Named-Fields-Surface-Lever.md`) moves **Draft to Accepted**
+under the same maintainer delegation. Ratifies **Option A** — a mechanically-lowering sugar over the
+existing positional `Ctor`/`Data` machinery plus the transpiler's field-name↔index map
+(`StructLayout`), per DN-106's ratified General Principle 2 (gap-closure default = sugar, not a
+kernel primitive) and General Principle 1 (surface-sugar transparency) — with **Option C** (an inert
+`field_names` type-registry metadata field) as a YAGNI-gated faithfulness upgrade and **Option B**
+(a first-class named-field kernel variant) recorded rejected (DN-106 fork B, KC-3). Accepts the
+verify-first correction: records already emit positionally and check-clean whenever field *types*
+map — the genuine residual is **faithfulness** (the `NamedFieldDrop` sub-gap) plus the **self-hosted
+`.myc` surface** (DN-119 L3-G1), not a new expressibility gap. §7's OQ-1 (canonicalize literal field
+order to declaration order; names off the content-address hash) and OQ-3 (functional-update spread
+affine treatment) are accepted as build preconditions; OQ-2 (cross-phylum name metadata) as a
+coordination dependency on DN-113/M-1060. **Accepted, not Enacted** (house rule #3) — the sugar
+stays `Declared`/unbuilt. **M-1078** (already minted 2026-07-11) tracks the residual build; this
+ratification clears its DoD precondition (DN-123 ratified).
+
+### docs(dn-124): ratify vet-harness phylum-visibility and measurement-basis note (Accepted, 2026-07-12)
+
+**DN-124** (`docs/notes/DN-124-Vet-Harness-Phylum-Visibility-And-Measurement-Basis.md`) moves
+**Draft to Accepted** under explicit maintainer delegation to the orchestrator ("ratify based on
+objective reasoning and the project's needs/intents, keep to core principles, report results").
+Ratifies **P-A** — sound partial per-nodule verdicts on `PhylumReport` via a driver-level
+import-closure sub-phylum re-check that reuses the kernel `check_phylum` unchanged (zero kernel
+growth, KC-3), then switches the vet path to `myc check --phylum <dir>` — and **M-A** — phylum-mode
+is the demonstrably-correct measurement basis (a real build's semantics; proven in-tree by
+`phylum_cross_nodule_reference_resolves`), with the one-time `checked_fraction` jump on the switch
+dual-reported and labeled a **basis correction, not lever progress**, then re-baselined with
+`Δ_basis` attributed (the historical oracle §8 series is annotated, never rewritten per house
+rule #3). The **import-closure invariant** is the load-bearing false-clean guard, adversarially
+verified against four attack scenarios (§6). **Accepted, not Enacted** — every mechanism/verdict tag stays
+`Declared` until Units 1–3 (§5.3) land and are differential-witnessed. Minted **M-1079** (harness
+build: `PhylumReport` partial verdicts, `--phylum` vet wiring, `regenerate.sh` semcore batching;
+`depends_on: [M-1060]`).
+
+### docs(dn-122): ratify external-trait-impls MVP note (Accepted, 2026-07-12)
+
+**DN-122** (`docs/notes/DN-122-External-Trait-Impls-Across-The-Home-Boundary.md`) moves **Draft to
+Accepted** under the same maintainer delegation. Ratifies the **§13 build-ready MVP**: the
+single-parameter, param-only-signature foreign-trait-impl class (prelude-scoped first) via a
+**transpiler rule-swap (WU-A) plus target-trait availability (WU-B)**, riding the now-landed
+M-1060/M-1036 checker substrate with zero new kernel or checker work. Soundness argument: the MVP
+admits exactly the complement of the landed M-1060 cross-phylum bare-name-collapse guard, so it
+cannot reopen that collapse by construction (the verified `{carrier}×{position}` surface). Resolves
+**OQ-6 (target-trait availability) as prelude-seed** over std-phylum-declare — KISS/YAGNI plus
+least-soundness-surface grounds, since the prelude-scoped closure is a single uniform home with no
+cross-phylum import, diamond, or separate-compilation tension for v1; std-phylum-declare is
+deferred to the M-1076/WU-C cross-phylum follow-up. **OQ-7 (single-param vs two-type split of the
+114-gap/12.4% class) stays an open, honest residual** — unmeasured until the WU-A Phase-0
+re-measure runs under DN-124's phylum-mode vet basis; the leverage tag stays `Declared`. Unsupported
+shapes (two-type/`Self`-needing traits, incl. the canonical `Widen` witness; concrete-type-in-sig)
+are refused never-silently, tracked as M-1076/M-876 (WU-C, out of v1 scope). **Accepted, not
+Enacted** (house rule #3). Minted **M-1080** (MVP build: WU-A emit `use <trait-home>.<Trait>` for
+single-param param-only traits, plus WU-B prelude-seed target-trait availability;
+`depends_on: [M-1060, M-1079]`).
+
 ### fix(l1): M-1060 cross-phylum type-identity soundness closure — 4 fix cycles (2026-07-11)
 
 Adversarial-verification follow-through on the M-1060/DN-113 v1 cross-phylum landing (PR #1503):

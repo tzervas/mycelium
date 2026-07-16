@@ -1,6 +1,13 @@
 {
   "source": "crates/mycelium-std-fs/src/lib.rs",
-  "emitted_items": [],
+  "emitted_items": [
+    "use:ErrnoClass,FsErr",
+    "use:Effects,Explainable,Fallibility,MatrixRow,Wild",
+    "use:FileKind,Metadata,Permissions",
+    "use:OpenOptions",
+    "use:Path",
+    "use:InMemHandle"
+  ],
   "gaps": [
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
@@ -14,7 +21,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 65,
+      "line": 71,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -24,7 +31,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 66,
+      "line": 72,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -34,7 +41,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 67,
+      "line": 73,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -44,7 +51,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 68,
+      "line": 74,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -54,7 +61,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 69,
+      "line": 75,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -64,7 +71,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 70,
+      "line": 76,
       "col": 1,
       "category": "ModuleDecl",
       "rust_construct": "ModuleDecl",
@@ -74,67 +81,27 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 74,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use error :: { ErrnoClass , FsErr } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 75,
+      "line": 81,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "pub use guarantee_matrix :: { Effects , Explainable , Fallibility , MatrixRow , Wild , MATRIX } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use guarantee_matrix::MATRIX` — `MATRIX` is not among sibling `guarantee_matrix`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Effects,Explainable,Fallibility,MatrixRow,Wild"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 76,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use metadata :: { FileKind , Metadata , Permissions } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 77,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use options :: OpenOptions ;",
-      "reason": "`use` import (single path ending `OpenOptions`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 78,
-      "col": 1,
-      "category": "Import",
-      "rust_construct": "Import",
-      "snippet": "pub use path :: Path ;",
-      "reason": "`use` import (single path ending `Path`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
-    },
-    {
-      "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 82,
+      "line": 88,
       "col": 1,
       "category": "Import",
       "rust_construct": "Import",
       "snippet": "use substrate :: { InMemHandle , InMemoryFs } ;",
-      "reason": "`use` import (grouped `{{a, b}}`) — the transpiler has no cross-nodule symbol table, so it cannot confirm the imported path resolves to a declared Mycelium nodule; the M-1000 vet loop confirms such imports fail `myc check` name-resolution (a Rust `use extern_crate::Sym` names a crate, not a nodule). Flagged, not emitted — the same flag-don't-guess stance `map_type`/`emit_expr` take on qualified paths/calls (DN-34 §4/§8.2; VR-5/G2)",
-      "item_name": null
+      "reason": "`use substrate::InMemoryFs` — `InMemoryFs` is not among sibling `substrate`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:InMemHandle"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 84,
+      "line": 90,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -144,7 +111,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 99,
+      "line": 105,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
@@ -154,7 +121,7 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 113,
+      "line": 119,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -164,17 +131,17 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 122,
+      "line": 128,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Iterator for DirIter { type Item = String ; fn next (& mut self) -> Option < Self :: Item > { self . entries . next () } }",
-      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated type `Item`; impl method `next` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl associated type `Item`; impl method `next` signature: qualified type path `Self :: Item` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
       "item_name": "DirIter"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 131,
+      "line": 137,
       "col": 1,
       "category": "Struct",
       "rust_construct": "Struct",
@@ -184,17 +151,17 @@
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 143,
+      "line": 149,
       "col": 1,
       "category": "Impl",
       "rust_construct": "Impl",
       "snippet": "impl Fs { # [doc = \" Create a new `Fs` over a fresh in-memory substrate.\"] # [doc = \"\"] # [doc = \" # Effects: none (pure construction)\"] # [doc = \" The in-memory substrate is fully testable without OS interaction.\"] # [must_use] pub fn in_memory () -> Self { Self { backend : InMemoryFs :: new () , } } # [doc = \" Create a new `Fs` with a simulated disk limit (for testing `DiskFull` paths).\"] # [must_use] pub fn in_memory_with_limit (bytes : u64) -> Self { Self { backend : InMemoryFs :: new () . with_disk_limit (bytes) , } } # [doc = \" Construct a `Path` from a UTF-8 string.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, total, effects: none\"] # [must_use] pub fn path (& self , s : impl Into < String >) -> Path { Path :: new (s) } # [doc = \" Check whether a path exists.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<bool, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `stat`/`access` syscall; in-memory: map lookup)\"] # [doc = \"\"] # [doc = \" Returns `Err(PermDenied)` when the OS denies access to the path. **Never** returns `Ok(false)`\"] # [doc = \" as a substitute for a permission failure (C1: no silent clamp).\"] # [doc = \"\"] # [doc = \" # FLAG (Q5): the `io` effect is currently ambient on this `&mut Fs`; the capability-scoped\"] # [doc = \" design (WASI-style) is deferred (spec §7-Q5).\"] pub fn exists (& self , path : & Path) -> Result < bool , FsErr > { self . backend . exists (path . as_str ()) } # [doc = \" Get filesystem metadata for a path.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<Metadata, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `stat`/`fstat` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied`\"] pub fn stat (& self , path : & Path) -> Result < Metadata , FsErr > { self . backend . stat (path . as_str ()) } # [doc = \" Open a path to an affine `File` handle under an explicit `OpenOptions`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<File, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `open`/`openat` syscall)\"] # [doc = \" # Errors\"] # [doc = \" - `NotFound` — path absent and `create`/`create_new` not set (**no silent create**, C1)\"] # [doc = \" - `AlreadyExists` — `create_new` set and path exists (**no silent overwrite**, C1)\"] # [doc = \" - `PermDenied` — OS access denied\"] # [doc = \" - `IsADirectory` — path is a directory; open a file with `read_dir` for directories\"] # [doc = \" - `NotFound` — parent directory does not exist (create/create_new path)\"] pub fn open (& mut self , path : & Path , opts : & OpenOptions) -> Result < File , FsErr > { let handle = self . backend . open (path . as_str () , opts) ? ; Ok (File { handle }) } # [doc = \" Read bytes from an open `File` handle into `buf`. Returns the bytes read.\"] # [doc = \"\"] # [doc = \" A short read (fewer than `buf.len()` bytes) is returned explicitly — not swallowed (C1).\"] # [doc = \" `0` means EOF.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<usize, FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `read` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `PermDenied` | `NotFound` | `IsADirectory`\"] pub fn read (& self , file : & mut File , buf : & mut [u8]) -> Result < usize , FsErr > { self . backend . read (& mut file . handle , buf) } # [doc = \" Write bytes to an open `File` handle. Returns the bytes written.\"] # [doc = \"\"] # [doc = \" A short write (fewer than `buf.len()` bytes) is returned explicitly — never swallowed (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<usize, FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `write` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `PermDenied` | `DiskFull` | `NotFound`\"] pub fn write (& mut self , file : & mut File , buf : & [u8]) -> Result < usize , FsErr > { self . backend . write (& mut file . handle , buf) } # [doc = \" Flush deferred write state for a `File` handle.\"] # [doc = \"\"] # [doc = \" In the real-OS path this calls `fsync`. In the in-memory substrate it is a consistency\"] # [doc = \" check (still surfaces `UseAfterConsume` if the handle is consumed).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `fsync`/`write` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `Io` | `DiskFull`\"] pub fn flush (& self , file : & File) -> Result < () , FsErr > { self . backend . flush (& file . handle) } # [doc = \" Close (consume) a `File` handle. **This consumes the handle (LR-8).**\"] # [doc = \"\"] # [doc = \" After `close`, any subsequent use of `file` returns `Err(UseAfterConsume)`. A close error\"] # [doc = \" is surfaced, not dropped (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `close` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `Io` | `DiskFull`\"] pub fn close (& self , file : & mut File) -> Result < () , FsErr > { self . backend . close (& mut file . handle) } # [doc = \" List the entries in a directory.\"] # [doc = \"\"] # [doc = \" Returns a `DirIter` that yields child path strings. The iterator is a snapshot — it is not\"] # [doc = \" backed by a live `readdir` stream (in the in-memory substrate; the real-OS seam will differ\"] # [doc = \" once M-541 lands).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<DirIter, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `opendir`/`readdir` syscall)\"] # [doc = \" # Errors: `NotFound` | `NotADirectory` | `PermDenied`\"] pub fn read_dir (& self , path : & Path) -> Result < DirIter , FsErr > { let entries = self . backend . read_dir (path . as_str ()) ? ; Ok (DirIter { entries : entries . into_iter () , }) } # [doc = \" Create a directory at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `mkdir` syscall)\"] # [doc = \" # Errors: `AlreadyExists` | `PermDenied` | `NotFound` (parent absent)\"] pub fn create_dir (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . create_dir (path . as_str ()) } # [doc = \" Remove a regular file at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `unlink` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `IsADirectory` (use `remove_dir` for directories)\"] pub fn remove_file (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . remove_file (path . as_str ()) } # [doc = \" Remove an **empty** directory at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `rmdir` syscall)\"] # [doc = \" # Errors: `NotEmpty` | `NotFound` | `PermDenied`\"] pub fn remove_dir (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . remove_dir (path . as_str ()) } # [doc = \" Rename / move `from` to `to`.\"] # [doc = \"\"] # [doc = \" **No silent overwrite**: if `to` already exists, returns `Err(AlreadyExists)` (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `rename`/`renameat` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `CrossDevice` | `AlreadyExists`\"] # [doc = \" # FLAG (Q4): cross-device rename atomicity is unsettled; in-memory ignores it.\"] pub fn rename (& mut self , from : & Path , to : & Path) -> Result < () , FsErr > { self . backend . rename (from . as_str () , to . as_str ()) } # [doc = \" Copy `from` to `to`. Returns the number of bytes copied.\"] # [doc = \"\"] # [doc = \" **No silent overwrite**: if `to` already exists, returns `Err(AlreadyExists)` (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<u64, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `open`+`read`+`write` syscalls)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `DiskFull` | `AlreadyExists`\"] pub fn copy (& mut self , from : & Path , to : & Path) -> Result < u64 , FsErr > { self . backend . copy (from . as_str () , to . as_str ()) } }",
-      "reason": "no member of this impl block could be transpiled (16 sub-issue(s)): impl method `in_memory` body: struct literal `Fs { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `in_memory_with_limit` body: struct literal `Fs { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `path` signature: unsupported Rust type form `impl Into < String >`; impl method `exists` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `stat` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `open` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `read` signature: `& mut File` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5); impl method `write` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `flush` signature: unit type `()` has no representable value in this grammar fragment; impl method `close` signature: `& mut File` is a mutable reference `&mut T` — in-place mutation through a borrow has no value-semantic correspondence (ADR-003; cf. the `&mut self` receiver gap), so it is left an explicit gap rather than silently erased to a value type (VR-5); impl method `read_dir` body: unsupported expression form `self . backend . read_dir (path . as_str ()) ?`; impl method `create_dir` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `remove_file` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `remove_dir` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `rename` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence; impl method `copy` signature: `&mut self` conflicts with Mycelium's value semantics (ADR-003) — no correspondence",
+      "reason": "no member of this impl block could be transpiled (16 sub-issue(s)): impl method `in_memory` body: struct literal `Fs { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `in_memory_with_limit` body: struct literal `Fs { .. }` — not an in-file single-ctor struct that emits (no constructor to build); impl method `path` signature: unsupported Rust type form `impl Into < String >`; impl method `exists` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `stat` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `open` body: unsupported expression form `self . backend . open (path . as_str () , opts) ?`; impl method `read` signature: unsupported Rust type form `[u8]`; impl method `write` signature: unsupported Rust type form `[u8]`; impl method `flush` signature: unit type `()` has no representable value in this grammar fragment; impl method `close` signature: unit type `()` has no representable value in this grammar fragment; impl method `read_dir` body: unsupported expression form `self . backend . read_dir (path . as_str ()) ?`; impl method `create_dir` signature: unit type `()` has no representable value in this grammar fragment; impl method `remove_file` signature: unit type `()` has no representable value in this grammar fragment; impl method `remove_dir` signature: unit type `()` has no representable value in this grammar fragment; impl method `rename` signature: fn parameter `to` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5); impl method `copy` signature: fn parameter `to` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
       "item_name": "Fs"
     },
     {
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 342,
+      "line": 348,
       "col": 1,
       "category": "TestItem",
       "rust_construct": "TestItem",

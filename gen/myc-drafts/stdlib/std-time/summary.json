@@ -4,21 +4,22 @@
       "file": "crates/mycelium-std-time/src/lib.rs",
       "total_items": 38,
       "non_test_items": 37,
-      "emitted": 7,
-      "gaps": 43,
-      "expressible_pct": 18.91891891891892,
+      "emitted": 14,
+      "gaps": 62,
+      "expressible_pct": 37.83783783783784,
       "category_counts": {
-        "DeriveAttr": 9,
+        "AssocConst": 3,
+        "Closure": 2,
+        "DeriveAttr": 19,
         "GenericBound": 2,
-        "Impl": 7,
+        "Impl": 4,
         "Import": 1,
         "InnerAttr": 1,
         "MacroInvocation": 1,
-        "MultiStmtBody": 1,
-        "NamedFieldDrop": 2,
-        "Other": 12,
-        "PayloadVariant": 1,
-        "Struct": 4,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 7,
+        "Other": 16,
+        "Struct": 1,
         "TestItem": 1,
         "Trait": 1
       }
@@ -27,23 +28,49 @@
   "totals": {
     "total_items": 38,
     "non_test_items": 37,
-    "emitted": 7,
-    "gaps": 43,
-    "expressible_pct": 18.91891891891892,
+    "emitted": 14,
+    "gaps": 62,
+    "expressible_pct": 37.83783783783784,
     "category_counts": {
-      "DeriveAttr": 9,
+      "AssocConst": 3,
+      "Closure": 2,
+      "DeriveAttr": 19,
       "GenericBound": 2,
-      "Impl": 7,
+      "Impl": 4,
       "Import": 1,
       "InnerAttr": 1,
       "MacroInvocation": 1,
-      "MultiStmtBody": 1,
-      "NamedFieldDrop": 2,
-      "Other": 12,
-      "PayloadVariant": 1,
-      "Struct": 4,
+      "MultiStmtBody": 3,
+      "NamedFieldDrop": 7,
+      "Other": 16,
+      "Struct": 1,
       "TestItem": 1,
       "Trait": 1
     }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-time",
+      "target_phylum": "std.time"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.time",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-time/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
   }
 }

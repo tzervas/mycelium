@@ -200,6 +200,13 @@ flagged too; closing that residual gap for real needs actual ownership facts (ru
 `mir_borrowck`, per DN-34 §3's own division of labor for the general Rust→affine mapping) — deferred
 to **P3**, a future, distinct unit of work.
 
+**Append-only forward pointer (applied 2026-07-12, per DN-125 §10's FLAG).** The method-receiver
+(`&mut self`) and by-ref-parameter (`&mut T`) value-threading this note's own scope explicitly
+excludes is now scoped by **DN-125** (Accepted 2026-07-12) — sibling lanes: this note (DN-118) covers
+**closure captures** (the `FnMut`/environment-mutation boundary above); DN-125 covers **method/param
+receivers** (`fn f(&mut self)`/`fn f(x: &mut T)` and their call-site rewrite). No normative text of
+this note's own §1–§9 changes.
+
 ## §6 Guarantee tags — never upgraded past a checked basis (VR-5)
 
 - **The emitted `.myc` text**: `Empirical`. Verified, not asserted: the move/`Copy`-capture fixture

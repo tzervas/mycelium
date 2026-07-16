@@ -323,25 +323,46 @@ def self_test() -> int:
         print(f"drift-guard demo (missing row) fired as expected: {demo_missing}")
 
     # --- Synthetic drift-guard demo (2): a stale token.rs:LINE citation must fail loudly.
+    # Rewrite whatever `token.rs:N` the object row currently cites (not a hardcoded line number —
+    # those drift whenever token.rs::keyword() is edited and sugar.yaml is re-cited; the demo must
+    # stay valid after a re-cite pass, not pin a historical line).
     import copy
+    import re as _re
 
     tampered = copy.deepcopy(registry)
+    object_row = None
     for row in tampered["sugars"]:
         if row["keyword"] == "object":
-            row["grammar_rule"] = row["grammar_rule"].replace(
-                "token.rs:458", "token.rs:1"
-            )
+            object_row = row
             break
-    demo_stale = cross_check(tampered, token_rs_text)
-    if not any(
-        "object" in f and ("stale" in f or "does not map" in f) for f in demo_stale
-    ):
+    if object_row is None:
         failures.append(
-            "drift-guard demo (stale citation) did NOT fire — a stale token.rs:LINE citation "
-            "must fail loudly"
+            "drift-guard demo (stale citation) setup failed — no `object` sugar.yaml row"
         )
     else:
-        print(f"drift-guard demo (stale citation) fired as expected: {demo_stale}")
+        new_rule, n_sub = _re.subn(
+            r"token\.rs:\d+", "token.rs:1", object_row["grammar_rule"], count=1
+        )
+        if n_sub != 1:
+            failures.append(
+                "drift-guard demo (stale citation) setup failed — object grammar_rule has no "
+                f"`token.rs:LINE` citation to tamper (got: {object_row['grammar_rule']!r})"
+            )
+        else:
+            object_row["grammar_rule"] = new_rule
+            demo_stale = cross_check(tampered, token_rs_text)
+            if not any(
+                "object" in f and ("stale" in f or "does not map" in f)
+                for f in demo_stale
+            ):
+                failures.append(
+                    "drift-guard demo (stale citation) did NOT fire — a stale token.rs:LINE "
+                    "citation must fail loudly"
+                )
+            else:
+                print(
+                    f"drift-guard demo (stale citation) fired as expected: {demo_stale}"
+                )
 
     if failures:
         for f in failures:
