@@ -39,8 +39,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Same root cause as checks.yml: self-hosted Podman fleet has no rustup on PATH.
+      # Pin matches rust-toolchain.toml / ADR-041 MSRV.
       - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
-        run: rustup show
+        uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: rustfmt, clippy
 
       # The official release-plz action, invoked in DRY-RUN. `release-pr` computes the per-crate bumps
       # + changelog and, with `--dry-run`, prints them WITHOUT opening a PR, tagging, or publishing.
