@@ -27749,7 +27749,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 416,
+      "line": 417,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27760,7 +27760,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 435,
+      "line": 436,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27771,7 +27771,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1175,
+      "line": 1176,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27782,7 +27782,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 3906,
+      "line": 3927,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27793,7 +27793,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1941,
+      "line": 1942,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27804,7 +27804,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4174,
+      "line": 4195,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27815,7 +27815,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4548,
+      "line": 4569,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27826,7 +27826,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4043,
+      "line": 4064,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27837,7 +27837,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4222,
+      "line": 4243,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27848,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 479,
+      "line": 480,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27859,7 +27859,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 3685,
+      "line": 3706,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27870,7 +27870,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 455,
+      "line": 456,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []

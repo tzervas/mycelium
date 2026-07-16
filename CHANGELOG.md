@@ -12,6 +12,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): M-1090 WU-3 `write!`/`format!` → Show/`bytes_concat` (DN-127) (2026-07-16)
+
+PR #1630 → `dev` (`74171eca`). Composer leaf `claude/leaf/M1090-wu3-write-format-lowering`.
+
+- **`emit/macros/write_format.rs`** — format-string parse + `bytes_concat` fold of literal
+  `Bytes` fragments and `render(arg)` (`Show` dispatch); `write!` drops the sink (pure value).
+- Alt C first (pure literals / `{{`/`}}`); then Show-gated interpolations; float / `:?` / missing
+  Show → honest `MacroInvocation` gap (G2; OQ-1 float residual held).
+- Property tests T-1/T-2/T-3 in `src/tests/write_format.rs`; `cargo test -p mycelium-transpile`
+  241 green. Lowering **`Declared`** until M-1006/DN-124 re-measure + live-oracle corpus witness.
+- **Tracker residual:** M-1090 stays `todo` until re-measure DoD item; WU-1/WU-2 were already
+  landed (fmt.myc + prelude seed).
+
+### docs(gap): fractal PARTITION gap analysis G1+G2 — 56 crates (2026-07-16)
+
+PRs #1629 (G1) + #1631 (G2) → `dev`. Orch plan / composer leaves under
+`docs/planning/gap-analysis-2026-07-16/` (PARTITION, WAVE plans, 56 `leaves/*.md`, SYNTHESIS +
+SYNTHESIS-G2).
+
+- **Rust ADR-022 bar:** largely met on transpile-critical + G2 remainder; residuals are named
+  increments (ADR-045, M-740, release hygiene).
+- **Transpile readiness:** still early — default `checked_fraction` ≈ 0 on vet pilots; binding
+  constraint is toolchain acceptance + Phase-2 emit (M-1084 Import, M-1037 conversion, M-740
+  self-host), not missing Rust stdlib code.
+- Shared `CHANGELOG`/`issues.yaml`/`Doc-Index` deliberately deferred to this integration-tier
+  close-out (swarm partition).
+
 ## [0.463.1] - 2026-07-16
 
 ### Added — first SemVer cut from Conventional-Commit history
