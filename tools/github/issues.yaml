@@ -12963,6 +12963,10 @@ issues:
       - src:.claude/kickoffs/trx2.md
       - src:crates/mycelium-transpile/src/map.rs
       - src:crates/mycelium-transpile/src/emit.rs
+      - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-A1A2-2026-07-16.md
+      - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-2026-07-16.md
+      - src:experiments/results/m1006-remeasure-oracler1-a3
+      - src:docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF.md
     body: |
       Minted 2026-07-06 (maintainer decision, trx2 launch clarification -- upgrades the E-B
       breadth resolution from the orchestrator's `Declared` default to a decided two-stage
@@ -13034,6 +13038,21 @@ issues:
       committed manifest churn (the 17 targets are flat single-crate src/ dirs, so mirrored path == bare
       stem). Emission-plumbing only; no metric/tag move. Remaining lever: Import cross-nodule resolution (its
       own scoped wave).
+
+      ORACLE-R1 PILOT REMEASURE (2026-07-16, status stays in-progress; Empirical; NOT ladder-complete):
+      After residual oracle-poison closes on the working tier (PRs #1647 A1 lit-zero / signed field
+      compare; #1648 A2 Strength lattice co-emit; #1650 A4 DEFAULT_FUEL/DEFAULT_DEPTH co-emit;
+      #1651 A5 wide Show + call-arg BinLit) and promote #1652, A3 recorded a default M-1001
+      five-target pilot remeasure post A1+A2 only:
+      `docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-A1A2-2026-07-16.md` +
+      `experiments/results/m1006-remeasure-oracler1-a3/`. Union over the default 5 targets:
+      checked_fraction **8.5%** (20/236), expressible **18.6%** (44/236) — cmp 12.6% Clean, rand
+      17.6% Clean; time/eval still file-gated 0% checked at that tip. **A4/A5 movement (post-A3,
+      L0/PROGRAM-HANDOFF re-ran transpile-vet; Empirical / advisory):** eval myc-check **Clean**
+      (expressible ~21.4%); std-time checked **0% → 45.9% Clean** (17/37). Wide Show is **Declared**
+      opaque `"<Binary{N}>"`, not Exact Debug (VR-5). Full 17-target / phased ladder **not run** —
+      do **not** treat these pilots as corpus-wide or as one-shot readiness. status remains
+      **in-progress** until fuller ladder phases or an explicit scoped close-out decision (G2).
 
   - id: M-1007
     title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
@@ -17335,6 +17354,12 @@ issues:
       M-1006/DN-124 re-measure of `checked_fraction` movement on the 30-body bucket has **not** run
       post-WU-3; float/OQ-1 and width-generic `to_dec` stay explicit residuals. `status:todo` remains
       correct, now scoped to **re-measure + residual honesty**, not the missing emit rule.
+
+      **Append-only note (2026-07-16, ORACLE-R1 MAINT-CLOSE-1 — mit #14 verify-first).** Related
+      pilot remeasures (`M1006-remeasure-post-A1A2-2026-07-16.md`, post-A5 std-time 45.9% Clean)
+      quantify **oracle-poison** movement on the default M-1001 five-target set — they are **not**
+      the DoD's 30-body `write!`/`format!` bucket re-measure. No new close-out evidence for
+      M-1090 DoD; **status stays `todo`**. Cross-ref M-1006 doc_refs for the pilot paths.
 
   - id: M-1091
     title: "M-1091 -- Init + Fault prelude traits + shared seed_prelude_trait helper (DN-129)"
