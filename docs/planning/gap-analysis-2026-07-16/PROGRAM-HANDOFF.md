@@ -4,11 +4,11 @@
 |-------|--------|
 | **Framework** | Repo-root **`maint-guide.md`** (Phase 0–3 + L0→L1→L2 + PM close-out) |
 | **L0** | Grok session (PM/orchestrator only — no product self-implement) |
-| **Phase** | **Close-out / release-hold** — Phase 1 A1–A5 landed; Phase 2 remote CI still watched; Phase 3 security not yet cycle-end; **Epic R SemVer held** |
+| **Phase** | **Close-out / release-hold** — Phase 1 A1–A5 landed; Phase 2 remote CI **one success witnessed** (host); Phase 3 security not yet cycle-end; **Epic R SemVer held** |
 | **main** | `aad96b7a` (v0.463.1) |
-| **integration** | `060326db` (promote #1652) |
-| **dev** | `f783d4ce` |
-| **Trees identical?** | **yes** — `dev` and `integration` share tree `8918798766100044d95ea109cf1d1a639ad7499a` |
+| **integration** | `41234a14` (promote #1654 after MAINT-CLOSE-1) |
+| **dev** | `ba97eb94` (MAINT-CLOSE-1 #1653) |
+| **Trees identical?** | **yes** — `dev` and `integration` share tree `40da1e637f6da600c308b94262db1af7bb751a25` |
 | **Honesty** | Pilot numbers **Empirical**; tracker rows **Declared** until flipped with basis |
 
 ## Goal
@@ -28,6 +28,8 @@ to staging, and **stop short** of one-shot transpile claims and cz SemVer until 
 | **#1650** | **A4** DEFAULT_FUEL/DEPTH | **eval myc-check Clean**; expr ~21.4% |
 | **#1651** | **A5** wide Show + call-arg BinLit | **std-time checked 0% → 45.9% Clean** |
 | **#1652** | Epic I promote | `dev` → `integration` lineage merge |
+| **#1653** | MAINT-CLOSE-1 | maint-guide + handoff + CHANGELOG/issues/Doc-Index on `dev` |
+| **#1654** | promote close-out | `dev` → `integration` (shared tree) |
 
 ## Empirical measures
 
@@ -50,15 +52,32 @@ to staging, and **stop short** of one-shot transpile claims and cz SemVer until 
 
 Wide Show is **Declared** opaque `"<Binary{N}>"` — not Exact Debug (VR-5).
 
+### Phase 2 remote CI — host-witness (Empirical)
+
+| Field | Value |
+|-------|--------|
+| **Tag** | **Empirical** (host podman logs) — **not** API-bound |
+| **Job** | self-hosted `checks` |
+| **Result** | **Succeeded** |
+| **When** | **2026-07-16 23:30:07Z** |
+| **Runner** | `shared-podman-1` |
+| **Host log** | `Job checks completed with result: Succeeded` |
+| **Phase seen** | just ci → nextest `--workspace` |
+| **GH Actions API** | **503 / degraded** at observation — **run id and exact head branch not bound via API** |
+| **Do not invent** | No run URL, no fabricated `run_id` |
+| **Tip SHA honesty** | Which tip SHA the GH job checked is **Declared** if unknown via API. Host context: runner busy **after** tips `dev=ba97eb94` / `integration=41234a14` (same tree `40da1e63…`) — plausible association only, not a checked binding |
+
+**Release implication:** one remote success is **progressing / one success witnessed** — **not** enough to open Epic R or flip SemVer HOLD.
+
 ## Open queue (ranked — next L1 waves)
 
-1. **Phase 2** — tip `checks` on `dev`/`integration` green (runner: `shared-podman-1`; `gha-runner-ctl`).
-2. **PM close-out leaf (MAINT-CLOSE-1)** — in flight / this PR: `CHANGELOG` + `issues.yaml` (M-1006 doc_refs / partial status; M-1090 remeasure note) + Doc-Index + land `maint-guide.md`.
+1. **Phase 2** — re-up ephemeral runner after job exit; re-bind tip `checks` when GH API recovers (confirm run id + head SHA). Runner: `shared-podman-1` via `gha-runner-ctl`.
+2. **PM close-out (MAINT-CLOSE-1)** — **landed** #1653 / #1654; residual only if handoff/CI notes lag tips.
 3. **Epic B (serial transpile):** M-1084 import net-close → M-1037 conversion residual → optional M-1086 derive.
 4. **Optional post-A5 remeasure** — refresh M-1006 table with eval Clean + std-time 45.9%.
 5. **M-875** expand-first — **needs-design** (no implement until Accepted).
 6. **M-740** compiler `.myc` — separate epic.
-7. **Epic R** — cz SemVer **only** when: pilot path honest, remote CI success, L0 authorize, no one-shot over-claim.
+7. **Epic R** — cz SemVer **only** when: pilot path honest, remote CI success **tip-bound**, L0 authorize, no one-shot over-claim. **Still HOLD.**
 
 ## FLAGs (orch-owned)
 
@@ -71,8 +90,9 @@ Wide Show is **Declared** opaque `"<Binary{N}>"` — not Exact Debug (VR-5).
 
 ## Blockers / ops
 
-- GitHub Actions API intermittent **503**
-- `wsl-cpu-1-tzervas-mycelium` offline; `shared-podman-1` online after prepare+up
+- GitHub Actions API **503 / degraded** at CI-success observation — cannot bind run id / exact head branch via API
+- Ephemeral self-hosted runner **exits after job** — `shared-podman-1` needs **re-up** before next remote check
+- `wsl-cpu-1-tzervas-mycelium` offline (prior); host-witness used `shared-podman-1`
 - L2 spawn sometimes unavailable in child sessions → L1 implemented L2-owned paths (process debt — prefer worktree L2)
 
 ## Next L1 brief (paste-ready)
@@ -80,33 +100,31 @@ Wide Show is **Declared** opaque `"<Binary{N}>"` — not Exact Debug (VR-5).
 ```
 You are L1 under L0. Framework: repo-root maint-guide.md (Phases 0–3).
 Model floor: grok-composer-2.5-fast (record actual if different).
-Base: origin/dev @ f783d4ce (fetch first).
+Base: origin/dev @ ba97eb94 (fetch first).
 
-Wave MAINT-CLOSE-1 (docs/PM only, parallel-OK with pure docs):
-- Land maint-guide.md if not on tip
-- Land PROGRAM-HANDOFF.md + update gap-analysis README
-- CHANGELOG entry for ORACLE-R1 A1–A5 (append-only)
-- issues.yaml: M-1006 doc_refs → M1006-remeasure-post-A1A2 + note A4/A5 residual movement;
-  do not mark one-shot done; verify-first status flips only
-- FLAG Doc-Index if needed
-- PR → dev; do not merge
-- Spawn L2 for any single-file-owned slice if tool works; docs-only may be L1
+Phase 2 residual (ops + honesty):
+- When GH Actions API recovers: bind the Succeeded checks run
+  (run id + head SHA) for tips after ba97eb94 / 41234a14 — do not invent.
+- Re-up shared-podman-1 if the ephemeral runner has exited.
+- Do NOT open Epic R / SemVer; HOLD remains.
 
-Then optional Wave B1 M-1084 only if L0 says go (serial transpile).
+Optional product next (only if L0 says go):
+- Wave B1 M-1084 import net-close (serial transpile)
 
-Report: PR#, SHA, FLAGs, model used.
+Report: PR# if any, SHA, FLAGs, model used.
 ```
 
 ## Release gate
 
 - [x] Residual oracle A1–A5 on `dev` + `integration`
-- [ ] Remote CI green on tip
+- [x] Remote CI **progressing / one success witnessed** (Empirical host podman; 2026-07-16 23:30:07Z)
+- [ ] Remote CI green **tip-bound** (API run id + head SHA; re-up runner as needed)
 - [ ] Full post-A5 remeasure committed (optional but preferred)
 - [x] issues.yaml + CHANGELOG close-out (MAINT-CLOSE-1; statuses honest — not one-shot)
 - [x] No one-shot over-claim
 - [ ] L0 authorize SemVer / release history squash
 
-**Status:** **HOLD Epic R.**
+**Status:** **HOLD Epic R.** SemVer still **HOLD** — one host-witnessed success is not tip-bound release green.
 
 ## Artifact map
 
@@ -125,3 +143,4 @@ Report: PR#, SHA, FLAGs, model used.
 |------|------|
 | 2026-07-16 | Initial program handoff after #1647–#1652; maint-guide adopted as durable OS |
 | 2026-07-16 | MAINT-CLOSE-1: land maint-guide + handoff + CHANGELOG/issues/Doc-Index close-out PR → working tier |
+| 2026-07-16 | Phase 2 host-witness: `checks` **Succeeded** @ 23:30:07Z on `shared-podman-1` (Empirical; API 503 — no run URL); tips `dev=ba97eb94` / `int=41234a14`; Epic R still HOLD |
