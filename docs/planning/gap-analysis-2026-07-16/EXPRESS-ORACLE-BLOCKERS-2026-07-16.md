@@ -25,7 +25,16 @@
 
 ## Residual (next leaves)
 
-- std-time: signed field compare to zero (Duration.nanos) still emits bare `0`.
-- eval.rs: unknown type `Strength` (ast enum not co-emitted).
-- Full M-1006 17-target ladder; M-1084 net-close measure; M-740; M-875 design.
+**Post A1+A2 remeasure** (`6d61b3b8`, A3 leaf — `M1006-remeasure-post-A1A2-2026-07-16.md`):
 
+| Pilot | checked / expressible | File | Residual poison |
+|-------|----------------------:|------|-----------------|
+| std-cmp | **12.6% / 12.6%** | Clean | *(none at file level)* |
+| std-rand | **17.6% / 17.6%** | Clean | *(none at file level)* |
+| std-time | **0.0% / 45.9%** | CheckError | `no instance Show for WallInstant` (`render`) — bare-`0`/`is_negative` **cleared by A1** |
+| eval.rs | **0.0% / 16.7%** | CheckError | `unknown name DEFAULT_FUEL` (`init`) — `Strength` **cleared by A2** |
+| default-5 union | **8.5% / 18.6%** (20/236 · 44/236) | — | driven by cmp+rand clean only |
+
+- **A4 candidate:** co-emit or gap `DEFAULT_FUEL` / `DEFAULT_DEPTH` (eval Init).
+- **A5 candidate:** Show for `WallInstant` residual on std-time (derive/Show lowering — careful VR-5).
+- Full M-1006 17-target ladder; M-1084 net-close measure; M-740; M-875 design.
