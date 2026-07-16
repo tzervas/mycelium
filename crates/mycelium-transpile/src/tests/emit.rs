@@ -798,6 +798,65 @@ fn cases() -> Vec<Case> {
                             _ => True } })",
             },
         },
+        // Post-#1645 residual (ORACLE-R1 L2-A1 / std-time lit-zero): a signed *param* compared
+        // to bare decimal `0` rewrites the lit to equal-width BinLit and uses signed `lt_s`
+        // (not unsigned `lt`) so high-bit payloads order correctly (ADR-028). Bare `0` is a
+        // file-level Q6 poison under myc-check.
+        Case {
+            name: "signed_param_lt_zero_emits_binlit_lt_s",
+            rust: "fn f(a: i32) -> bool { a < 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match lt_s(a, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, \
+                            _ => False })",
+            },
+        },
+        Case {
+            name: "signed_param_eq_zero_emits_binlit_eq",
+            rust: "fn f(a: i128) -> bool { a == 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False })",
+            },
+        },
+        // Duration::is_negative / is_zero shape: signed field access on an in-file product.
+        // Field-type map (not name-only layout) recovers Binary{128}!s so lit-zero rewrites
+        // and signed order fire. Mutant: bare `0` or unsigned `lt` without `_s`.
+        Case {
+            name: "signed_field_is_negative_emits_binlit_lt_s",
+            rust: "struct Duration { nanos: i128 } impl Duration { pub const fn is_negative(self) \
+                   -> bool { self.nanos < 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Duration",
+                contains: "lt_s((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
+        Case {
+            name: "signed_field_is_zero_emits_binlit_eq",
+            rust: "struct Duration { nanos: i128 } impl Duration { pub const fn is_zero(self) -> \
+                   bool { self.nanos == 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Duration",
+                contains: "eq((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
+        // Unsigned field compare-to-zero: BinLit rewrite, but unsigned `lt` (not `lt_s`).
+        Case {
+            name: "unsigned_field_lt_zero_emits_binlit_lt",
+            rust: "struct Tick { n: u64 } impl Tick { fn before_epoch(self) -> bool { self.n < 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Tick",
+                contains: "(match lt((match self { Tick(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, \
+                            _ => False })",
+            },
+        },
         // D3 arithmetic-operator-emission residual (this leaf): the UNSIGNED counterpart to the
         // `_s`-suffixed arms above. Prior to this leaf the unsigned `Add`/`Sub`/`Mul` operand-gate
         // fell through to the plain glyph (pinned by this same case's now-superseded
@@ -1236,9 +1295,10 @@ fn narrow_gap_cites_dn41_and_produces_no_fabricated_myc_text() {
          got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| {
-            g.reason.contains("DN-41") || g.reason.contains("non-prelude trait")
-        }),
+        report
+            .gaps
+            .iter()
+            .any(|g| { g.reason.contains("DN-41") || g.reason.contains("non-prelude trait") }),
         "expected Narrow gap to cite DN-41 or non-prelude residual, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
@@ -3490,14 +3550,13 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
             "WithVecOfUser",
         ),
-        // DN-138 WU-4 (post-landing review fix) -- a `u128` field is WIDER than the seeded
-        // `Binary{64}` instance: `PartialEq` (width-generic `eq` prim) and `Default` (a literal
-        // zero at the field's own width, no width_cast at all) still compose cleanly; `Debug`/
-        // `PartialOrd` honestly GAP it instead of composing a `width_cast` that would `myc-check`
-        // clean but overflow at runtime for a real value >= 2^64 (see `derive_debug_and_partialord_
-        // gap_a_wide_scalar_never_a_runtime_throwing_width_cast` below for the negative half).
+        // DN-138 WU-4 / ORACLE-R1 A5 -- a `u128` field is WIDER than the seeded `Binary{64}`
+        // instance: `PartialEq` (width-generic `eq` prim), `Default` (literal zero at own width),
+        // and `Debug` (Declared opaque `"<Binary{128}>"` placeholder — never a narrowing
+        // width_cast) all compose cleanly; `PartialOrd` still honestly GAPs (see
+        // `derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast`).
         (
-            "#[derive(Default, PartialEq)]\nstruct Wide(u128);",
+            "#[derive(Debug, Default, PartialEq)]\nstruct Wide(u128);",
             "Wide",
         ),
     ];
@@ -3899,13 +3958,13 @@ fn derive_eq_and_debug_both_compose_over_a_narrow_scalar_dn138_wu4() {
     );
 }
 
-/// **HIGH (post-landing review finding, fixed here): a WIDE `ScalarBinary` (`u128`/`i128` ->
-/// `Binary{128}`) must NEVER compose `Debug`/`PartialOrd` via a NARROWING `width_cast` down to the
-/// seeded `Binary{64}` instance** -- `width_cast`'s own checked-narrow contract overflows at
-/// runtime for any value `>= 2^64` (`prims.rs::prim_width_cast`), so composing it unconditionally
-/// would `myc-check` clean but THROW at eval time for a real wide value -- silently overstating
-/// DN-138 section 6's stated `u8`/`u16`/`u32` scope. Both rows must leave it an honest,
-/// non-fabricated gap instead (never a partial/wrong-but-plausible-looking impl, G2).
+/// **HIGH (post-landing review + ORACLE-R1 A5):** a WIDE `ScalarBinary` (`u128`/`i128` ->
+/// `Binary{128}`) must NEVER compose via a NARROWING `width_cast` down to the seeded
+/// `Binary{64}` instance — that cast overflows at eval for any value `>= 2^64`. **Debug** now
+/// composes with a Declared opaque `"<Binary{128}>"` placeholder (structure shown, payload not
+/// decimal-rendered — never fabricated Display, G2/VR-5; clears same-file parent `UserNamed`
+/// `render` file-poison). **PartialOrd** still honestly GAPs (no total order surface without a
+/// wide Ord3 seed). Never a partial/wrong-but-plausible-looking narrowing impl (G2).
 #[test]
 fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast() {
     let (debug_myc, debug_report) =
@@ -3916,11 +3975,19 @@ fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_
         "Debug must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{debug_myc}"
     );
     assert!(
-        debug_report
+        debug_myc.contains("impl Show[Wide] for Wide"),
+        "Debug must compose Show with opaque wide-Binary placeholder, got:\n{debug_myc}"
+    );
+    assert!(
+        debug_myc.contains("\"<Binary{128}>\""),
+        "expected Declared opaque Binary{{128}} placeholder in Show body, got:\n{debug_myc}"
+    );
+    assert!(
+        !debug_report
             .gaps
             .iter()
             .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Debug")),
-        "expected a DeriveAttr gap citing Debug for the wide scalar field, got {:?}",
+        "Debug must no longer DeriveAttr-gap a wide scalar (A5 opaque compose), got {:?}",
         debug_report.gaps
     );
 
@@ -3967,6 +4034,58 @@ fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_
         "Default must still compose over a wide (u128) scalar (a literal zero at its own width, \
          no width_cast at all), got {:?}",
         default_report.gaps
+    );
+}
+
+/// ORACLE-R1 A5: `derive(Debug)` on a wide-Binary leaf (`WallInstant`-shape) plus a same-file
+/// `UserNamed` parent (`ManualClock`-shape) both compose Show; parent `render(field)` resolves.
+/// Hand-written `Default` calling `Type::from_nanos(0)` rewrites the bare `0` to a BinLit via
+/// recorded mangled-assoc param widths (post-Show residual).
+#[test]
+fn oracle_r1_a5_wide_show_and_call_arg_lit_zero() {
+    let rust = r#"
+        #[derive(Debug, Clone, Copy)]
+        struct WallInstant { nanos: i128 }
+        impl WallInstant {
+            pub const fn from_nanos(nanos: i128) -> Self { WallInstant { nanos } }
+        }
+        #[derive(Debug, Clone)]
+        struct ManualClock { wall: WallInstant }
+        impl Default for ManualClock {
+            fn default() -> Self {
+                ManualClock { wall: WallInstant::from_nanos(0) }
+            }
+        }
+    "#;
+    let (myc, report) =
+        transpile_source(rust, "std_time_like.rs", "std.time").expect("parses/transpiles");
+    assert!(
+        myc.contains("impl Show[WallInstant] for WallInstant"),
+        "expected WallInstant Show, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("\"<Binary{128}>\""),
+        "expected opaque wide Binary placeholder, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Show[ManualClock] for ManualClock"),
+        "expected ManualClock Show (parent of WallInstant), got:\n{myc}"
+    );
+    assert!(
+        myc.contains("render(p0)") || myc.contains("render(p1)"),
+        "ManualClock Show should dispatch render on UserNamed field, got:\n{myc}"
+    );
+    // Init body: bare 0 rewritten to BinLit (Q6-safe).
+    assert!(
+        myc.contains("impl Init[ManualClock]") || myc.contains("fn init()"),
+        "expected Default→Init, got:\n{myc}\ngaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        !myc.contains("from_nanos(0)")
+            && !myc.contains("from_nanos(0,")
+            && !myc.contains("_from_nanos(0)"),
+        "bare decimal 0 must be rewritten to BinLit in assoc-fn call args, got:\n{myc}"
     );
 }
 
@@ -4291,4 +4410,240 @@ fn bounded_impl_generic_emission_check_clean() {
     }
 
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---- ORACLE-R1 A2: guarantee-lattice co-emit (eval.rs Strength poison) -------------------------
+
+/// Free-fn `strength_of` references `Strength` + `GuaranteeStrength` without declaring either.
+/// Co-emit both lattice types (Exact→Exact_kw) so myc-check never sees `unknown type Strength`.
+#[test]
+fn lattice_co_emit_strength_of_no_unknown_type_poison() {
+    let rust = r#"
+        pub fn strength_of(s: Strength) -> GuaranteeStrength {
+            match s {
+                Strength::Exact => GuaranteeStrength::Exact,
+                Strength::Proven => GuaranteeStrength::Proven,
+                Strength::Empirical => GuaranteeStrength::Empirical,
+                Strength::Declared => GuaranteeStrength::Declared,
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "co-emit:Strength"),
+        "expected co-emitted Strength; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n == "co-emit:GuaranteeStrength"),
+        "expected co-emitted GuaranteeStrength; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "strength_of"),
+        "expected strength_of emitted; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type Strength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "missing Strength co-emit type:\n{myc}"
+    );
+    assert!(
+        myc.contains("type GuaranteeStrength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "missing GuaranteeStrength co-emit type:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn strength_of(s: Strength) => GuaranteeStrength"),
+        "missing strength_of signature:\n{myc}"
+    );
+    // Co-emits must precede the free-fn (type must be in scope before use).
+    let s_pos = myc.find("type Strength =").expect("Strength type position");
+    let fn_pos = myc.find("fn strength_of").expect("strength_of position");
+    assert!(
+        s_pos < fn_pos,
+        "co-emitted Strength must precede strength_of:\n{myc}"
+    );
+
+    // Real-oracle gate when myc-check is available.
+    if let Some(bin) = find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-a2-strength-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("strength_of.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "eval.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "strength_of + lattice co-emit must not file-poison with unknown type Strength; \
+             myc=\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// When `Strength` is declared in-file, co-emit only the missing lattice peer (GuaranteeStrength).
+#[test]
+fn lattice_co_emit_skips_in_file_strength() {
+    let rust = r#"
+        pub enum Strength { Exact, Proven, Empirical, Declared }
+        pub fn strength_of(s: Strength) -> GuaranteeStrength {
+            match s {
+                Strength::Exact => GuaranteeStrength::Exact,
+                Strength::Proven => GuaranteeStrength::Proven,
+                Strength::Empirical => GuaranteeStrength::Empirical,
+                Strength::Declared => GuaranteeStrength::Declared,
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "co-emit:Strength"),
+        "must not co-emit Strength when it is declared in-file; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n == "co-emit:GuaranteeStrength"),
+        "expected co-emitted GuaranteeStrength only; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    // In-file enum still emits (DN-140 variant renames).
+    assert!(
+        myc.contains("type Strength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "in-file Strength enum must emit:\n{myc}"
+    );
+}
+
+// ---- ORACLE-R1 A4: private const co-emit (eval.rs DEFAULT_FUEL / DEFAULT_DEPTH) ----------------
+
+/// `impl Default` for a budget opts struct references private `DEFAULT_FUEL` / `DEFAULT_DEPTH`
+/// consts. Co-emit them as zero-arg BinLit fns and rewrite use sites to calls so myc-check never
+/// sees `unknown name DEFAULT_FUEL` (post-A2 residual on eval.rs Init).
+#[test]
+fn const_co_emit_default_fuel_depth_init_no_unknown_name_poison() {
+    let rust = r#"
+        const DEFAULT_FUEL: u64 = 1_000_000;
+        const DEFAULT_DEPTH: u32 = RecursionBudget::DEFAULT_DEPTH_LIMIT;
+        pub struct EvaluatorOpts {
+            pub fuel: u64,
+            pub depth: u32,
+        }
+        impl Default for EvaluatorOpts {
+            fn default() -> Self {
+                EvaluatorOpts {
+                    fuel: DEFAULT_FUEL,
+                    depth: DEFAULT_DEPTH,
+                }
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DEFAULT_FUEL"),
+        "expected co-emitted DEFAULT_FUEL; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DEFAULT_DEPTH"),
+        "expected co-emitted DEFAULT_DEPTH; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn DEFAULT_FUEL() => Binary{64} ="),
+        "missing DEFAULT_FUEL zero-arg fn:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn DEFAULT_DEPTH() => Binary{32} ="),
+        "missing DEFAULT_DEPTH zero-arg fn:\n{myc}"
+    );
+    assert!(
+        myc.contains("DEFAULT_FUEL()") && myc.contains("DEFAULT_DEPTH()"),
+        "Init body must call co-emitted consts, not bare names:\n{myc}"
+    );
+    assert!(
+        !myc.contains("EvaluatorOpts(DEFAULT_FUEL, DEFAULT_DEPTH)"),
+        "must not leave bare const names in Init (file poison):\n{myc}"
+    );
+    // Co-emitted fns must precede Init (name must be in scope before use).
+    let fuel_pos = myc
+        .find("fn DEFAULT_FUEL()")
+        .expect("DEFAULT_FUEL fn position");
+    let init_pos = myc.find("fn init()").expect("init position");
+    assert!(
+        fuel_pos < init_pos,
+        "co-emitted DEFAULT_FUEL must precede init:\n{myc}"
+    );
+
+    if let Some(bin) = find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-a4-fuel-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("eval_opts.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "eval.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "DEFAULT_FUEL/DEFAULT_DEPTH co-emit must not file-poison with unknown name; \
+             myc=\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// A const whose initializer is not a decidable integer stays a whole-item gap (never invents
+/// a value — VR-5).
+#[test]
+fn const_non_decidable_initializer_still_gapped() {
+    let rust = "const BAD: u64 = foo() + 1;";
+    let (myc, report) =
+        transpile_source(rust, "f.rs", "f").unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "BAD"),
+        "must not emit non-decidable const; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| {
+            g.item_name.as_deref() == Some("BAD")
+                && g.reason.contains("decidable non-negative integer")
+        }),
+        "expected honest gap for non-decidable const; gaps={:?}\nmyc=\n{myc}",
+        report
+            .gaps
+            .iter()
+            .map(|g| (&g.item_name, &g.reason))
+            .collect::<Vec<_>>()
+    );
 }

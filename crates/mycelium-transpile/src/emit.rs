@@ -17,8 +17,8 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
-    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
-    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
+    ImplItem, ItemConst, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat,
+    PathArguments, ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
 };
 
 // DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
@@ -120,28 +120,37 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
-/// Recover `Binary{N}` width from field access `self.field` or a unit match
-/// `match self { Ty(p0, …) => p0 }` using the in-file struct layout (express gap-close).
-fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+/// Recover the mapped field-type text (`Binary{N}` / `Binary{N}!s`) for a field access
+/// `self.<field>` or a single-arm product projection `match self { Ty(p0, …) => p0 }`, using
+/// the per-file field-*type* map (not the name-only layout — names are not `Binary{N}` text).
+/// Express gap-close residual post-#1645: lit-zero rewrite needs this so signed field compares
+/// to a bare `0` rewrite to equal-width `BinLit` instead of poisoning the file on Q6.
+fn match_field_type_text(e: &Expr, self_ty: Option<&str>) -> Option<String> {
     if let Expr::Field(f) = e {
         let base_ty = match f.base.as_ref() {
             Expr::Path(p) if p.path.is_ident("self") => self_ty.map(|s| s.to_string()),
             _ => None,
         }?;
+        // Gate on resolvable layout (constructor exists) AND the parallel type map.
         let layout = struct_layout(&base_ty)?;
-        let syn::Member::Named(id) = &f.member else {
-            // positional: field index
-            let syn::Member::Unnamed(idx) = &f.member else {
-                return None;
-            };
-            let ft = layout.get(idx.index as usize)?.as_ref()?;
-            return binary_width(ft);
+        let types = struct_field_types(&base_ty)?;
+        let pos = match &f.member {
+            syn::Member::Named(id) => {
+                let n = id.to_string();
+                layout
+                    .iter()
+                    .position(|f| f.as_deref() == Some(n.as_str()))?
+            }
+            syn::Member::Unnamed(idx) => {
+                let i = idx.index as usize;
+                if i < layout.len() {
+                    i
+                } else {
+                    return None;
+                }
+            }
         };
-        // Named field — layouts are positional-only in this emitter; first Binary field
-        // is the common Duration/Instant shape (single payload).
-        let ft = layout.iter().find_map(|f| f.as_ref())?;
-        let _ = id;
-        return binary_width(ft);
+        return types.get(pos)?.clone();
     }
     let Expr::Match(m) = e else {
         return None;
@@ -153,15 +162,27 @@ fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32
     let Pat::TupleStruct(ts) = &arm.pat else {
         return None;
     };
+    // Only the "first-field projection" shape: body is the first binder of a single-ctor product.
+    // Used when source already match-projects (rare) or when a paren-wrapped match is compared.
     let ty_name = ts
         .path
         .segments
         .last()
         .map(|s| s.ident.to_string())
         .or_else(|| self_ty.map(|s| s.to_string()))?;
-    let layout = struct_layout(&ty_name)?;
-    let ft = layout.first()?.as_ref()?;
-    binary_width(ft)
+    let _layout = struct_layout(&ty_name)?;
+    let types = struct_field_types(&ty_name)?;
+    types.first()?.clone()
+}
+
+/// Recover `Binary{N}` width from field access / match-first-field (unsigned or signed marker).
+fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+    match_field_type_text(e, self_ty).and_then(|t| binary_width(&t))
+}
+
+/// Recover signed `Binary{N}` width (`!s` marker) from field access / match-first-field.
+fn match_first_field_signed_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+    match_field_type_text(e, self_ty).and_then(|t| signed_binary_width(&t))
 }
 
 /// P4/P5 (DN-99 §8 ENB-6): [`expr_env_type`] narrowed to the **signed**-marked `Binary{N}` case
@@ -223,6 +244,11 @@ fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
 struct EmitCtx {
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    /// Parallel to [`layouts`]: positional mapped field *types* (`Binary{128}`, or
+    /// `Binary{128}!s` when the Rust field was a signed integer). Used by the binary lit-zero
+    /// rewrite so `self.nanos < 0` can recover width/signedness — layouts alone only store
+    /// field *names* and cannot drive `binary_width` (express residual post-#1645).
+    field_types: HashMap<String, Vec<Option<String>>>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
     /// DN-133 (M-1094) tier (i): mangled inherent-impl associated-fn names (`{Type}__{method}`,
@@ -230,11 +256,18 @@ struct EmitCtx {
     /// left-to-right item pass — see [`record_local_mangled_assoc_fn`]/
     /// [`local_mangled_assoc_fn_known`]. A qualified/associated-fn call site
     /// (`EmitVisitor::visit_call`) is only ever reached AFTER every earlier item in the same
-    /// file has already been dispatched, so this set is exactly "what a call here could
+    /// file has already been dispatched, so this map is exactly "what a call here could
     /// legitimately reference" — an observed fact, never a forward reference or a syntactic
     /// prediction (VR-5/G2, the D4 lesson). Starts empty every file; mutated in place as items
     /// are emitted (unlike the other fields here, which are precomputed before the item loop).
-    local_mangled: HashSet<String>,
+    ///
+    /// **ORACLE-R1 A5:** values are the callee's parameter mapped-type Binary widths
+    /// (`Some(N)` for `Binary{N}`, `None` otherwise), in declaration order — so a later call
+    /// site can rewrite a bare decimal lit arg (`from_nanos(0)`) to an equal-width `BinLit`
+    /// instead of file-poisoning `myc check` with Q6 "bare integer literal has no
+    /// representation family" (the post-Show residual on `ManualClock`'s `impl Default` →
+    /// `impl Init` body).
+    local_mangled: HashMap<String, Vec<Option<u32>>>,
     /// DN-133 tier (ii): for each locally `use`-imported type NAME in this file (an
     /// `Item::Use` leaf's [`crate::symtab::CandidateKind::Name`]), the ordered cross-nodule
     /// symbol-table lookup key(s) ([`crate::symtab::SymbolTable::candidate_lookup_keys`]) that
@@ -254,6 +287,23 @@ struct EmitCtx {
     /// Bare (un-mangled) inherent method names already emitted in this file — second occurrence
     /// of the same short name forces D4 mangling (express gap-close / `as_nanos` collision).
     bare_fn_names: HashSet<String>,
+    /// Names successfully resolved by a `use` in this file's item loop (batch mode only — see
+    /// [`record_imported_name`]). Used by the ORACLE-R1 A2 lattice co-emit gate so a type that
+    /// already arrives via a resolved sibling import is **not** re-declared (duplicate type
+    /// declaration would poison `myc check`).
+    imported_names: HashSet<String>,
+    /// Guarantee-lattice types (`Strength` / `GuaranteeStrength`) requested for co-emission —
+    /// referenced in this file's signatures but neither declared in-file nor successfully
+    /// imported. Drained after the item loop into preamble `type` items (ORACLE-R1 A2).
+    lattice_co_emits: HashSet<String>,
+    /// ORACLE-R1 A4: surface names of private consts co-emitted as zero-arg `fn NAME() =>
+    /// Binary{N} = <BinLit>` (no const item production in the grammar). `visit_path` rewrites a
+    /// bare path `NAME` to `NAME()` so Init/default bodies never file-poison with
+    /// `unknown name DEFAULT_FUEL`. Values live in [`const_int_values`] for same-file path RHS.
+    const_zero_arg_fns: HashSet<String>,
+    /// Integer values of co-emitted consts (and known workspace-floor path RHS) keyed by bare
+    /// name — used only to resolve a later const's path RHS honestly (never fabricated).
+    const_int_values: HashMap<String, u128>,
 }
 
 thread_local! {
@@ -272,6 +322,7 @@ thread_local! {
 pub(crate) fn with_emit_ctx<R>(
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    field_types: HashMap<String, Vec<Option<String>>>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
     imported_type_keys: HashMap<String, Vec<String>>,
@@ -281,17 +332,361 @@ pub(crate) fn with_emit_ctx<R>(
         *c.borrow_mut() = Some(EmitCtx {
             resolvable,
             layouts,
+            field_types,
             symtab,
             pub_needed,
-            local_mangled: HashSet::new(),
+            local_mangled: HashMap::new(),
             imported_type_keys,
             ident_emission_sources: HashMap::new(),
             bare_fn_names: HashSet::new(),
+            imported_names: HashSet::new(),
+            lattice_co_emits: HashSet::new(),
+            const_zero_arg_fns: HashSet::new(),
+            const_int_values: HashMap::new(),
         })
     });
     let r = f();
     EMIT_CTX.with(|c| *c.borrow_mut() = None);
     r
+}
+
+// ---- ORACLE-R1 A4: private integer const co-emit (DEFAULT_FUEL / DEFAULT_DEPTH) ----------------
+//
+// Mycelium's `item` production has no `const` form (only use/default/type/trait/impl/fn/object/
+// lower/derive). Leaving a bare `DEFAULT_FUEL` path through from `impl Default` → `impl Init`
+// file-poisons myc-check with `unknown name DEFAULT_FUEL` (eval.rs residual post-A2). Hand-port
+// precedent (`lib/compiler/parse.myc` `max_expr_depth()`, `lib/compiler/ambient.myc`, …) co-emits
+// private numeric floors as **zero-arg fns returning a BinLit** at the const's Binary{N} width.
+// Use sites rewrite `NAME` → `NAME()` (G2/VR-5: Declared co-emit + EXPLAIN; value taken only from
+// an integer literal or a known workspace-floor path — never a fabricated number).
+
+/// Public workspace-floor associated-const last segments whose integer value is pinned in source
+/// (and in hand-ports). Last-segment match only — used solely when a private const's RHS is a
+/// path like `RecursionBudget::DEFAULT_DEPTH_LIMIT` (eval.rs `DEFAULT_DEPTH`). Declared table,
+/// not rustc const-eval (VR-5: value is the documented floor `4096`, Exact when source matches).
+const KNOWN_PATH_CONST_VALUES: &[(&str, u128)] = &[("DEFAULT_DEPTH_LIMIT", 4096)];
+
+/// Unsigned integer types this pass will co-emit. Signed/`bool`/`str`/… stay whole-item gaps
+/// (no fabricated two's-complement / string encoding).
+fn const_unsigned_binary_width(ty: &syn::Type) -> Option<u32> {
+    let syn::Type::Path(tp) = ty else {
+        return None;
+    };
+    if tp.qself.is_some() {
+        return None;
+    }
+    let seg = tp.path.segments.last()?;
+    if !matches!(seg.arguments, PathArguments::None) {
+        return None;
+    }
+    match seg.ident.to_string().as_str() {
+        "u8" => Some(8),
+        "u16" => Some(16),
+        "u32" => Some(32),
+        "u64" | "usize" => Some(64),
+        "u128" => Some(128),
+        _ => None,
+    }
+}
+
+/// MSB-first `BinLit` of exactly `width` bits for `value`, nibble-grouped like
+/// [`zero_bin_literal`]. `None` when `value` does not fit in `width` bits (never truncate — VR-5).
+pub(crate) fn u128_bin_literal(value: u128, width: u32) -> Option<String> {
+    if width == 0 || width > 128 {
+        return None;
+    }
+    if width < 128 {
+        let max = (1u128 << width) - 1;
+        if value > max {
+            return None;
+        }
+    }
+    // width == 128: every u128 fits.
+    let mut s = String::with_capacity(2 + width as usize + width as usize / 4);
+    s.push_str("0b");
+    for i in 0..width {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        let bit = (value >> (width - 1 - i)) & 1;
+        s.push(if bit == 1 { '1' } else { '0' });
+    }
+    Some(s)
+}
+
+fn lookup_const_int_value(name: &str) -> Option<u128> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) => ctx.const_int_values.get(name).copied(),
+        None => None,
+    })
+}
+
+fn is_const_zero_arg_fn(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) => ctx.const_zero_arg_fns.contains(name),
+        None => false,
+    })
+}
+
+fn record_const_zero_arg_fn(name: &str, value: u128) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.const_zero_arg_fns.insert(name.to_string());
+            ctx.const_int_values.insert(name.to_string(), value);
+        }
+    });
+}
+
+/// Extract a non-negative integer from a const initializer when it is honest and decidable:
+/// a decimal/hex/bin `Lit::Int`, a paren-wrapped form of those, a same-file co-emitted const
+/// path, or a last-segment match against [`KNOWN_PATH_CONST_VALUES`]. Everything else → `None`
+/// (caller whole-gaps the const — never guesses a value).
+fn try_const_int_value(expr: &Expr) -> Option<u128> {
+    match expr {
+        Expr::Lit(el) => match &el.lit {
+            Lit::Int(i) => i.base10_parse::<u128>().ok(),
+            _ => None,
+        },
+        Expr::Paren(p) => try_const_int_value(&p.expr),
+        Expr::Path(p) if p.qself.is_none() => {
+            let last = p.path.segments.last()?.ident.to_string();
+            if let Some(v) = lookup_const_int_value(&last) {
+                return Some(v);
+            }
+            KNOWN_PATH_CONST_VALUES
+                .iter()
+                .find(|(n, _)| *n == last)
+                .map(|(_, v)| *v)
+        }
+        _ => None,
+    }
+}
+
+/// ORACLE-R1 A4: co-emit a top-level unsigned integer `const` as a zero-arg fn whose body is a
+/// width-exact `BinLit` (hand-port `max_expr_depth` shape). Gaps when the type is not a plain
+/// unsigned integer, the initializer is not a decidable integer, or the value does not fit the
+/// mapped width — never a fabricated const item or a silent wrong number (G2/VR-5).
+pub fn emit_const(item: &ItemConst) -> Result<Emitted, GapReason> {
+    let raw_name = item.ident.to_string();
+    let Some(width) = const_unsigned_binary_width(&item.ty) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — co-emit (ORACLE-R1 A4) only covers plain unsigned \
+                 integer types (`u8`/`u16`/`u32`/`u64`/`u128`/`usize`); other types have no const \
+                 item production and no faithful zero-arg-fn encoding (gap, never fabricate)"
+            ),
+        ));
+    };
+    let Some(value) = try_const_int_value(&item.expr) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — initializer is not a decidable non-negative integer \
+                 literal or a known workspace-floor path (e.g. `RecursionBudget::DEFAULT_DEPTH_LIMIT`); \
+                 no const item production in the grammar, and co-emit refuses to invent a value \
+                 (ORACLE-R1 A4 / VR-5)"
+            ),
+        ));
+    };
+    let Some(body) = u128_bin_literal(value, width) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — value {value} does not fit in Binary{{{width}}} \
+                 (ORACLE-R1 A4 refuses silent truncation; VR-5)"
+            ),
+        ));
+    };
+
+    let fn_vi = valid_ident(&raw_name);
+    register_ident_emission(&fn_vi, "const co-emit zero-arg fn name")?;
+    let fn_name = fn_vi.text.clone();
+    let mut ident_doc = Vec::new();
+    push_rewrite_doc(&fn_vi, &mut ident_doc);
+
+    // Register under both original and emitted spellings so visit_path rewrites either form.
+    record_const_zero_arg_fn(&raw_name, value);
+    if fn_name != raw_name {
+        record_const_zero_arg_fn(&fn_name, value);
+    }
+    record_bare_fn_name(&fn_name);
+
+    let mut sub_gaps = Vec::new();
+    let non_doc = non_doc_attrs(&item.attrs);
+    if !non_doc.is_empty() {
+        sub_gaps.push(GapReason::new(
+            Category::DeriveAttr,
+            format!(
+                "dropped non-doc attribute(s) on const `{raw_name}`: {}",
+                non_doc.join(" ")
+            ),
+        ));
+    }
+
+    let mut myc = String::new();
+    for d in doc_lines(&item.attrs) {
+        myc.push_str(&d);
+        myc.push('\n');
+    }
+    myc.push_str(
+        "// Declared: co-emitted private const as zero-arg fn returning a BinLit — Mycelium has no \
+         const item production (`item` covers use/default/type/trait/impl/fn/object/lower/derive \
+         only); hand-port precedent `max_expr_depth()` (ORACLE-R1 A4; G2/VR-5: value from the Rust \
+         initializer or a known workspace-floor path, never fabricated). Use sites rewrite \
+         `NAME` → `NAME()`.\n",
+    );
+    for d in &ident_doc {
+        myc.push_str(d);
+        myc.push('\n');
+    }
+    // Decimal in a trailing comment only (EXPLAIN); the body is the paradigm-safe BinLit.
+    myc.push_str(&format!(
+        "fn {fn_name}() => Binary{{{width}}} = {body}; // {value}"
+    ));
+
+    Ok(Emitted {
+        name: fn_name,
+        myc,
+        sub_gaps,
+    })
+}
+
+// ---- ORACLE-R1 A2: guarantee-lattice co-emit ---------------------------------------------------
+//
+// `Strength` (mycelium-l1 AST) and `GuaranteeStrength` (mycelium-core) are isomorphic unit enums
+// over the reserved lattice keywords `Exact|Proven|Empirical|Declared`. When a free fn like
+// `strength_of` references them but the defining enum is **not** in this file and **not**
+// available via a resolved batch `use`, a bare passthrough type name poisons the whole file's
+// `myc check` with `unknown type Strength` (file-level checked_fraction → 0). Co-emitting the
+// same sum type `emit_enum` would produce for that unit enum — with DN-140 `*_kw` variant
+// renames — restores a checkable surface without fabricating language prims (G2/VR-5: Declared
+// co-emit, EXPLAIN comment; never silent). Hand-port precedent: `lib/compiler/*.myc` redeclares
+// `type Strength = GExact | …` in every nodule that needs it.
+
+/// Unit-enum names that are the surface/kernel guarantee lattice (same four reserved variants).
+const LATTICE_TYPE_NAMES: &[&str] = &["Strength", "GuaranteeStrength"];
+
+/// The lattice's four reserved-word variants (DN-140 rewrites each to `*_kw` on emission).
+const LATTICE_VARIANTS: &[&str] = &["Exact", "Proven", "Empirical", "Declared"];
+
+/// Record a name successfully resolved by `transpile::dispatch_use` so lattice co-emit will not
+/// redeclare it.
+pub(crate) fn record_imported_name(name: &str) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.imported_names.insert(name.to_string());
+        }
+    });
+}
+
+/// Whether `name` is already available in this file (declared resolvable, imported, or already
+/// queued for lattice co-emit).
+fn lattice_name_available(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => {
+            ctx.resolvable.contains(name)
+                || ctx.imported_names.contains(name)
+                || ctx.lattice_co_emits.contains(name)
+        }
+    })
+}
+
+/// If `name` is a lattice type and not already available, queue a co-emitted `type` item.
+fn request_lattice_co_emit(name: &str) {
+    if !LATTICE_TYPE_NAMES.contains(&name) {
+        return;
+    }
+    if lattice_name_available(name) {
+        return;
+    }
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.lattice_co_emits.insert(name.to_string());
+        }
+    });
+}
+
+/// Walk a Rust type for bare user-type deps; queue lattice co-emits for any missing lattice names.
+fn note_lattice_deps_from_ty(ty: &syn::Type) {
+    let mut deps = Vec::new();
+    // `field_type_user_deps` returns false when the type is unmappable — nothing to co-emit then
+    // (the surrounding item will gap on map_type for other reasons).
+    let _ = crate::map::field_type_user_deps(ty, &mut deps);
+    for d in deps {
+        request_lattice_co_emit(&d);
+    }
+}
+
+/// Queue lattice co-emits for every user type mentioned in a free-fn / method signature.
+fn note_lattice_deps_from_sig(sig: &Signature) {
+    for input in &sig.inputs {
+        if let FnArg::Typed(pt) = input {
+            note_lattice_deps_from_ty(&pt.ty);
+        }
+    }
+    if let ReturnType::Type(_, ty) = &sig.output {
+        note_lattice_deps_from_ty(ty);
+    }
+}
+
+/// Drain the lattice co-emit set into ordered `(emitted_name, myc_chunk)` pairs. Must be called
+/// **inside** [`with_emit_ctx`] (before the context is cleared) so DN-140 variant renames can
+/// register against the same per-file ident-emission map the item loop used.
+pub(crate) fn drain_lattice_co_emits() -> Vec<(String, String)> {
+    let names: Vec<String> = EMIT_CTX.with(|c| match c.borrow_mut().as_mut() {
+        Some(ctx) => {
+            let mut v: Vec<String> = ctx.lattice_co_emits.drain().collect();
+            v.sort();
+            v
+        }
+        None => Vec::new(),
+    });
+    let mut out = Vec::with_capacity(names.len());
+    for name in names {
+        // Register type name (non-reserved) + each variant via valid_ident so Exact→Exact_kw is
+        // the same rewrite strength_of's match arms already apply (DN-140).
+        let type_vi = valid_ident(&name);
+        if let Err(g) = register_ident_emission(&type_vi, "lattice co-emit type name") {
+            // Collision with a prior emission of a different original → refuse this co-emit
+            // (never silent overwrite). The referencing item stays emitted; myc-check may still
+            // see the type missing — that residual is FLAGged by the collision gap path if the
+            // driver surfaces it. For A2 the lattice names are free in eval.rs.
+            let _ = g;
+            continue;
+        }
+        let mut doc = Vec::new();
+        push_rewrite_doc(&type_vi, &mut doc);
+        let mut ctors = Vec::with_capacity(LATTICE_VARIANTS.len());
+        let mut variant_ok = true;
+        for v in LATTICE_VARIANTS {
+            let vi = valid_ident(v);
+            if register_ident_emission(&vi, "lattice co-emit variant").is_err() {
+                variant_ok = false;
+                break;
+            }
+            push_rewrite_doc(&vi, &mut doc);
+            ctors.push(vi.text);
+        }
+        if !variant_ok {
+            continue;
+        }
+        let mut myc = String::new();
+        myc.push_str(
+            "// Declared: co-emitted guarantee-lattice type — referenced in this file but not \
+             declared here and not available via a resolved batch `use` (ORACLE-R1 A2; never \
+             silent unknown-type file poison — G2/VR-5). Variants use DN-140 `*_kw` renames for \
+             the reserved lattice keywords (Exact/Proven/Empirical/Declared).\n",
+        );
+        for d in &doc {
+            myc.push_str(d);
+            myc.push('\n');
+        }
+        myc.push_str(&format!("type {} = {};", type_vi.text, ctors.join(" | ")));
+        out.push((type_vi.text, myc));
+    }
+    out
 }
 
 /// Re-export for call-site resolution (DN-140 §7).
@@ -362,6 +757,18 @@ pub(crate) fn struct_layout(name: &str) -> Option<StructLayout> {
     })
 }
 
+/// Positional mapped field *types* for the in-file struct `name` (parallel to [`struct_layout`]),
+/// when known and resolvable. Entries are `map_type` text, with a trailing `"!s"` when the Rust
+/// field was a signed integer (same internal marker [`sig_type_env`] uses). `None` when context
+/// is off or the type is not resolvable/emitted.
+fn struct_field_types(name: &str) -> Option<Vec<Option<String>>> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) if ctx.resolvable.contains(name) => ctx.field_types.get(name).cloned(),
+        Some(_) => None,
+    })
+}
+
 /// The M-1006 Lever 1 field-projection text for reading position `pos` of `sty` off `base`: a
 /// `match` binding exactly that position and wildcarding the rest, parenthesized so it composes
 /// as an operand subexpression (`(match self { Ty(p0, _, ..) => p0 })`). Shared by
@@ -417,13 +824,15 @@ pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
 /// produced the mangled inherent-impl associated-fn `mangled_name` (`mangled_inherent_fn_name`'s
 /// `{Type}__{method}` form) — called once, from `emit_impl`'s success path, right after it renames
 /// such a method, so a LATER call site in the SAME file can resolve against it (see
-/// [`local_mangled_assoc_fn_known`]). No-op when the context is off (`None` — direct `emit_impl`
-/// unit tests never install a context, so this degrades to always-absent, matching every OTHER
-/// `EmitCtx`-gated behavior's off-mode).
-fn record_local_mangled_assoc_fn(mangled_name: &str) {
+/// [`local_mangled_assoc_fn_known`]). `param_tys` is the mapped signature params
+/// (`(name, Binary{N}|…)`); their Binary widths power ORACLE-R1 A5 call-arg lit rewrite. No-op
+/// when the context is off (`None` — direct `emit_impl` unit tests never install a context, so
+/// this degrades to always-absent, matching every OTHER `EmitCtx`-gated behavior's off-mode).
+fn record_local_mangled_assoc_fn(mangled_name: &str, param_tys: &[(String, String)]) {
+    let widths: Vec<Option<u32>> = param_tys.iter().map(|(_, ty)| binary_width(ty)).collect();
     EMIT_CTX.with(|c| {
         if let Some(ctx) = c.borrow_mut().as_mut() {
-            ctx.local_mangled.insert(mangled_name.to_string());
+            ctx.local_mangled.insert(mangled_name.to_string(), widths);
         }
     });
 }
@@ -431,11 +840,55 @@ fn record_local_mangled_assoc_fn(mangled_name: &str) {
 /// DN-133 tier (i): whether `mangled_name` was already recorded via
 /// [`record_local_mangled_assoc_fn`] — an EARLIER item in this same file's own left-to-right pass
 /// really did emit it. `false` when the context is off.
-fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
+pub(crate) fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => false,
-        Some(ctx) => ctx.local_mangled.contains(mangled_name),
+        Some(ctx) => ctx.local_mangled.contains_key(mangled_name),
     })
+}
+
+/// ORACLE-R1 A5: per-parameter Binary widths for a known local mangled assoc fn.
+/// `None` when the name is unknown or the emit context is off.
+fn local_mangled_param_binary_widths(mangled_name: &str) -> Option<Vec<Option<u32>>> {
+    EMIT_CTX.with(|c| {
+        c.borrow()
+            .as_ref()
+            .and_then(|ctx| ctx.local_mangled.get(mangled_name).cloned())
+    })
+}
+
+/// Rewrite a bare decimal integer literal to an equal-width Mycelium `BinLit` when it fits in
+/// `width` bits (shared by comparison lit-zero rewrite and ORACLE-R1 A5 call-arg rewrite).
+/// `None` when `e` is not an int lit, the digits do not parse, or the value does not fit.
+fn int_lit_as_bin_literal(e: &Expr, width: u32) -> Option<String> {
+    let Expr::Lit(el) = e else {
+        return None;
+    };
+    let Lit::Int(i) = &el.lit else {
+        return None;
+    };
+    let digits = i.base10_digits();
+    let Ok(v) = digits.parse::<u128>() else {
+        return None;
+    };
+    if v == 0 {
+        return Some(zero_bin_literal(width));
+    }
+    let mut bits = format!("{v:b}");
+    if bits.len() as u32 > width {
+        return None;
+    }
+    while (bits.len() as u32) < width {
+        bits.insert(0, '0');
+    }
+    let mut s = String::from("0b");
+    for (i, c) in bits.chars().enumerate() {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        s.push(c);
+    }
+    Some(s)
 }
 
 /// Express gap-close (2026-07-16): bare top-level fn names already used in this file's emit
@@ -784,10 +1237,11 @@ fn type_is_float(ty: &syn::Type) -> bool {
 /// now maps every one of these to the SAME `Binary{N}` text as its unsigned counterpart (`Binary`
 /// is sign-free, ADR-028) — so signedness can no longer be read back off the *mapped* type text.
 /// This probe reads it off the ORIGINAL `syn::Type` instead, at the one place it is still known
-/// (a fn/method parameter's declared Rust type, in [`map_signature`]) — purely transpile-time
+/// (a fn/method parameter's declared Rust type, in [`map_signature`]; or a struct field's declared
+/// type when seeding the per-file field-type map for lit-zero rewrite) — purely transpile-time
 /// bookkeeping that is never itself emitted into `.myc` text (mirrors [`type_is_float`]'s shape;
 /// never a guess — VR-5).
-fn type_is_signed_int(ty: &syn::Type) -> bool {
+pub(crate) fn type_is_signed_int(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Path(tp)
     if tp.qself.is_none()
         && tp.path.segments.last().is_some_and(|s| {
@@ -2064,7 +2518,13 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             .last()
             .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
         let name = seg.ident.to_string();
-        resolve_surface_ident(&name, "value/constructor reference")
+        let resolved = resolve_surface_ident(&name, "value/constructor reference")?;
+        // ORACLE-R1 A4: a private const co-emitted as a zero-arg fn must be *called* — a bare
+        // name is `unknown name DEFAULT_FUEL` at myc-check (no const binding in the surface).
+        if is_const_zero_arg_fn(&name) || is_const_zero_arg_fn(&resolved) {
+            return Ok(format!("{resolved}()"));
+        }
+        Ok(resolved)
     }
 
     fn visit_lit(&mut self, _expr: &Expr, l: &syn::ExprLit) -> Self::Output {
@@ -2199,42 +2659,19 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // Express gap-close: a bare decimal lit on one side of a Binary comparison has no
         // paradigm (Q6) and wrong width. When the other operand is known Binary{N}, rewrite
         // the lit to an equal-width BinLit zero/value so `lt`/`eq` can fire cleanly.
-        let lit_as_bin = |e: &Expr, width: u32| -> Option<String> {
-            let Expr::Lit(el) = e else {
-                return None;
-            };
-            let Lit::Int(i) = &el.lit else {
-                return None;
-            };
-            let digits = i.base10_digits();
-            let Ok(v) = digits.parse::<u128>() else {
-                return None;
-            };
-            if v == 0 {
-                return Some(zero_bin_literal(width));
-            }
-            // Non-zero: emit minimal binary digits padded to width (MSB-first).
-            let mut bits = format!("{v:b}");
-            if bits.len() as u32 > width {
-                return None;
-            }
-            while (bits.len() as u32) < width {
-                bits.insert(0, '0');
-            }
-            let mut s = String::from("0b");
-            for (i, c) in bits.chars().enumerate() {
-                if i > 0 && i % 4 == 0 {
-                    s.push('_');
-                }
-                s.push(c);
-            }
-            Some(s)
-        };
+        let lit_as_bin =
+            |e: &Expr, width: u32| -> Option<String> { int_lit_as_bin_literal(e, width) };
         let field_bin_w = |e: &Expr| -> Option<u32> {
             let Expr::Paren(p) = e else {
                 return match_first_field_binary_width(e, self.self_ty);
             };
             match_first_field_binary_width(&p.expr, self.self_ty)
+        };
+        let field_signed_w = |e: &Expr| -> Option<u32> {
+            let Expr::Paren(p) = e else {
+                return match_first_field_signed_binary_width(e, self.self_ty);
+            };
+            match_first_field_signed_binary_width(&p.expr, self.self_ty)
         };
         let width_from_myc = |s: &str| -> Option<u32> {
             // Recover `Binary{N}` from emitted projection text.
@@ -2253,12 +2690,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // as glyph operands when the gate uses both_known_binary (fixture corpus).
         let is_cmp = matches!(
             &b.op,
-            BinOp::Eq(_)
-                | BinOp::Ne(_)
-                | BinOp::Lt(_)
-                | BinOp::Gt(_)
-                | BinOp::Le(_)
-                | BinOp::Ge(_)
+            BinOp::Eq(_) | BinOp::Ne(_) | BinOp::Lt(_) | BinOp::Gt(_) | BinOp::Le(_) | BinOp::Ge(_)
         );
         let lhs = if is_cmp {
             if let Some(w) = rw {
@@ -2365,8 +2797,18 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // for an unsigned `Binary{N}` operand stay the PRE-EXISTING (already-broken, out of
         // scope) plain-glyph form; this leaf only adds new signed-specific coverage, never
         // regresses the unsigned path.
-        let both_known_signed_binary = expr_env_signed_binary_width(&b.left, self.env).is_some()
-            && expr_env_signed_binary_width(&b.right, self.env).is_some();
+        // Signedness: bare params via env (`!s` marker) OR in-file struct fields via the
+        // field-type map. A decimal lit has no env entry — so a signed field/param compared
+        // to a rewritten zero must still route to `lt_s` (ADR-028 signed order). Using
+        // unsigned `lt` for `self.nanos < 0` would mis-order high-bit payloads (G2/VR-5).
+        let left_signed_w =
+            expr_env_signed_binary_width(&b.left, self.env).or_else(|| field_signed_w(&b.left));
+        let right_signed_w =
+            expr_env_signed_binary_width(&b.right, self.env).or_else(|| field_signed_w(&b.right));
+        let both_known_signed_binary = left_signed_w.is_some() && right_signed_w.is_some();
+        // One known-signed Binary side + a lit rewritten to equal-width BinLit (the other side).
+        let signed_lit_cmp = lit_rewrote && (left_signed_w.is_some() || right_signed_w.is_some());
+        let use_signed_order = both_known_signed_binary || signed_lit_cmp;
         match &b.op {
             // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
             // — left unchanged (not part of this deliverable's operand-gated rewrite).
@@ -2377,18 +2819,18 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 "(match eq({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
-            BinOp::Lt(_) if both_known_signed_binary => Ok(format!(
+            BinOp::Lt(_) if use_signed_order => Ok(format!(
                 "(match lt_s({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) if lit_rewrote => Ok(format!(
                 "(match lt({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-            BinOp::Ne(_) if both_known_binary || both_known_signed_binary => Ok(format!(
+            BinOp::Ne(_) if both_known_binary || use_signed_order => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
             )),
             BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
-            BinOp::Gt(_) if both_known_signed_binary => Ok(format!(
+            BinOp::Gt(_) if use_signed_order => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt_s({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
             )),
@@ -2519,8 +2961,22 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
         // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
         let func = resolve_surface_ident(&func, "call target")?;
+        // ORACLE-R1 A5: when the callee is a same-file mangled inherent assoc fn whose params
+        // are known Binary{N}, rewrite bare decimal lit args to equal-width BinLit (so
+        // `MonoInstant::from_nanos(0)` / `WallInstant::from_nanos_since_epoch(0)` in a hand-
+        // written `Default` → `Init` body never Q6-poison the file after Show is clean).
+        let param_widths = local_mangled_param_binary_widths(&func);
         let mut args = Vec::with_capacity(c.args.len());
-        for a in &c.args {
+        for (i, a) in c.args.iter().enumerate() {
+            if let Some(w) = param_widths
+                .as_ref()
+                .and_then(|ws| ws.get(i).copied().flatten())
+            {
+                if let Some(bin) = int_lit_as_bin_literal(a, w) {
+                    args.push(bin);
+                    continue;
+                }
+            }
             args.push(emit_expr(a, self.self_ty, self.env)?);
         }
         Ok(format!("{func}({})", args.join(", ")))
@@ -4473,6 +4929,11 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
     let mut ident_doc = Vec::new();
     push_rewrite_doc(&fn_vi, &mut ident_doc);
     check_fn_modifiers(&item.sig)?;
+    // ORACLE-R1 A2: before mapping the signature, queue co-emits for any missing guarantee-
+    // lattice types the params/return mention (so strength_of etc. never file-poison with
+    // `unknown type Strength`). Must run even when map_signature later fails for other reasons —
+    // co-emit is driven by the Rust surface, not the mapped text.
+    note_lattice_deps_from_sig(&item.sig);
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
     // DN-125 (M-1081): a free fn's `&mut T` parameter(s) route through the value-threading body
     // emitter instead of the ordinary one (a free fn has no receiver, so only S2 applies here).
@@ -5089,8 +5550,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                 //     first occurrence).
                                 // Trait-impl methods stay under `impl Trait for T` (or free-fn
                                 // Widen path below).
-                                let raw_method = if default_to_init && f.sig.ident == "default"
-                                {
+                                let raw_method = if default_to_init && f.sig.ident == "default" {
                                     "init".to_string()
                                 } else {
                                     f.sig.ident.to_string()
@@ -5099,7 +5559,8 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                     // Free function, not nested in impl Trait — mangle with both
                                     // self and target widths. i8 and u8 both map to Binary{8}, so
                                     // de-dupe: second identical free-fn is skipped (sub-gapped).
-                                    let targ = trait_targs.first().map(|s| s.as_str()).unwrap_or("?");
+                                    let targ =
+                                        trait_targs.first().map(|s| s.as_str()).unwrap_or("?");
                                     let mangled = mangled_inherent_fn_name(
                                         &format!("{self_ty_text}_to_{targ}"),
                                         "widen",
@@ -5122,32 +5583,32 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                          myc-check is not file-poisoned by `unknown trait Widen` \
                                          (express gap-close 2026-07-16)."
                                     ));
-                                    record_local_mangled_assoc_fn(&mangled);
+                                    record_local_mangled_assoc_fn(&mangled, &sig.params);
                                     record_bare_fn_name(&mangled);
                                     mangled
                                 } else if trait_name.is_none() {
-                                    let bare = resolve_surface_ident(
-                                        &raw_method,
-                                        "impl method name",
-                                    )?;
+                                    let bare =
+                                        resolve_surface_ident(&raw_method, "impl method name")?;
                                     let must_mangle = !has_self_receiver(&f.sig)
                                         || local_mangled_assoc_fn_known(&bare)
                                         || bare_fn_name_taken(&bare);
                                     if must_mangle {
-                                        let mangled = mangled_inherent_fn_name(
-                                            &self_ty_text,
-                                            &raw_method,
-                                        );
+                                        let mangled =
+                                            mangled_inherent_fn_name(&self_ty_text, &raw_method);
                                         doc.push(format!(
                                             "// Declared: renamed `impl {} {{ fn {} }}` -> \
                                              `{mangled}` (D4 inherent-impl flat-fn desugar + \
                                              DN-140 length-prefix mangle, M-664).",
                                             self_ty_text, f.sig.ident,
                                         ));
-                                        record_local_mangled_assoc_fn(&mangled);
+                                        record_local_mangled_assoc_fn(&mangled, &sig.params);
                                         record_bare_fn_name(&mangled);
                                         mangled
                                     } else {
+                                        // Bare un-mangled inherent method — still record param
+                                        // widths under the bare name so same-file calls can
+                                        // rewrite lit args (ORACLE-R1 A5).
+                                        record_local_mangled_assoc_fn(&bare, &sig.params);
                                         record_bare_fn_name(&bare);
                                         bare
                                     }

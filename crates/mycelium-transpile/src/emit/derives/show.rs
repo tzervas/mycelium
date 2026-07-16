@@ -19,14 +19,14 @@ fn recognizes(name: &str) -> bool {
 /// `ScalarBinary` AT OR NARROWER THAN `Binary{64}` all resolve — a `Binary{64}` field dispatches
 /// the seeded `Show` instance directly; a NARROWER width is `width_cast` up to `Binary{64}` first
 /// (DN-41; DN-138 §6 increment-2 unblock). **A width WIDER than 64 (`u128`/`i128` map to
-/// `Binary{128}`, `map.rs`) is an honest, disclosed GAP, never composed** (post-landing review
-/// fix): `width_cast(v, Binary{64})` for a `Binary{128}` value is a NARROWING cast, and
-/// `width_cast`'s own checked-narrow contract REFUSES at runtime (`EvalError::Overflow`) for any
-/// value `>= 2^64` — composing it unconditionally would let a derived `Debug` (a Rust operation
-/// that never panics) `myc-check`-clean but THROW at eval time for a real `u128` value, silently
-/// overstating this leaf's scope beyond DN-138 §6's stated `u8`/`u16`/`u32` widths. `None` also for
-/// `Float`/`Deferred`/`VecOf` (a `Vec`-of-`Vec` element is NOT a supported leaf — DN-138 WU-4's
-/// disclosed depth-1 scope).
+/// `Binary{128}`, `map.rs`) never uses a NARROWING `width_cast`** (post-landing review: that cast
+/// overflows at eval for any value `>= 2^64`, which would `myc-check` clean but THROW at runtime —
+/// silent wrong `Debug` scope, G2). **ORACLE-R1 A5:** instead of gapping the whole derive (which
+/// left same-file `UserNamed` parents like `ManualClock` calling `render(WallInstant)` with no
+/// `Show` instance — file-poison `checked_fraction` 0%), a wide scalar field renders as an opaque
+/// `Bytes` literal `"<Binary{N}>"` — structure kept, payload **not** decimal-rendered (`Declared`,
+/// not fabricated Display; VR-5). `None` still for `Float`/`Deferred`/`VecOf` (a `Vec`-of-`Vec`
+/// element is NOT a supported leaf — DN-138 WU-4's disclosed depth-1 scope).
 fn leaf_show_expr(v: &str, ft: &str) -> Option<String> {
     match field_derive_kind(ft) {
         FieldDeriveKind::UserNamed | FieldDeriveKind::BytesLike | FieldDeriveKind::BoolLike => {
@@ -36,7 +36,10 @@ fn leaf_show_expr(v: &str, ft: &str) -> Option<String> {
         FieldDeriveKind::ScalarBinary => {
             let w = scalar_binary_width(ft)?;
             if w > 64 {
-                return None; // a NARROWING width_cast can overflow at runtime -- honest gap.
+                // Declared opaque placeholder — never width_cast-narrow, never claim decimal Debug.
+                // `v` deliberately unused: the payload is not rendered (G2).
+                let _ = v;
+                return Some(format!("\"<Binary{{{w}}}>\""));
             }
             Some(format!("render(width_cast({v}, {}))", zero_bin_literal(64)))
         }
@@ -90,13 +93,14 @@ fn bytes_concat_chain(parts: &[String]) -> String {
 /// `bytes_concat` fold of `"T(", render(f0), ", ", render(f1), …, ")"`, gated per field via
 /// [`field_derive_kind`] (DN-138 §4.5) — refuses the WHOLE derive (never a partial/fabricated
 /// render, G2) the moment any field is ineligible, citing that field's index + mapped type + the
-/// real reason. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary` (any width,
-/// via `width_cast` for narrower/wider — WU-4) fields now compose (the seeded `Show` instance
-/// resolves `render(field)` — DN-138 §4.1 Alt A); **`Vec[T]` fields now compose too** (WU-4),
-/// routed through a per-element-type auxiliary `show_vec_<mangled>` fn ([`vec_show_aux`]) rather
-/// than trait dispatch (`Vec`'s coherence head admits only one instance per file — see
-/// [`vec_show_aux`]'s doc). `Float`/`Deferred`/a `Vec`-of-ineligible-element stay honest gaps
-/// (DN-138 §6).
+/// real reason. **DN-138 unblock:** `UserNamed`/`BytesLike`/`BoolLike`/`ScalarBinary` fields now
+/// compose — narrow widths via `width_cast` up to the seeded `Binary{64}` `Show` instance, **wide
+/// widths via a Declared `"<Binary{N}>"` opaque placeholder** (ORACLE-R1 A5 — never a narrowing
+/// cast; never a whole-derive gap that file-poisons parent `UserNamed` `render` calls); **`Vec[T]`
+/// fields now compose too** (WU-4), routed through a per-element-type auxiliary
+/// `show_vec_<mangled>` fn ([`vec_show_aux`]) rather than trait dispatch (`Vec`'s coherence head
+/// admits only one instance per file — see [`vec_show_aux`]'s doc). `Float`/`Deferred`/a
+/// `Vec`-of-ineligible-element stay honest gaps (DN-138 §6).
 fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     if field_types.is_empty() {
         return Ok(format!(
@@ -128,16 +132,9 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
                      WU-4's disclosed depth-1 scope)",
                     vec_element(ft).unwrap_or(ft)
                 )
-            } else if field_derive_kind(ft) == FieldDeriveKind::ScalarBinary {
-                format!(
-                    "a scalar WIDER than the seeded `Show` instance's `Binary{{64}}` (`{ft}`, e.g. \
-                     a `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can \
-                     overflow at runtime for a real wide value, so this leaf leaves it an honest \
-                     gap rather than compose a call that would `myc-check` clean but THROW at \
-                     eval time (post-landing review fix, DN-138 section 6's stated scope is \
-                     u8/u16/u32 only)"
-                )
             } else {
+                // Wide ScalarBinary now composes via opaque placeholder (ORACLE-R1 A5); residual
+                // ineligibility is Float / Deferred / other non-Show-routable shapes only.
                 "a primitive repr (or `Seq`/tuple/other bracketed shape) with no ambient `Show` \
                  instance in this file (`lib/std/fmt.myc`'s primitive impls live in a separate, \
                  unimported nodule)"

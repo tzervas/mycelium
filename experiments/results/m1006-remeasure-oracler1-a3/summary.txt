@@ -1,0 +1,220 @@
+=== VET crates/mycelium-l1/src/eval.rs ===
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/vet-stdout.txt:mycelium-transpile: 42 top-level item(s) (42 non-test) — 7 emitted, 43 gap(s) recorded, 16.7% expressible -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/eval.myc, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/eval.gap.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/vet-stdout.txt:mycelium-transpile: --vet over 1 file(s) — checked_fraction 0.0% (0/42 items myc-check-clean, file-gated) vs expressible_fraction 16.7% (7/42 items emitted); 0/1 file(s) with emissions fully clean [CheckError=1] -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/vet.json
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/eval.myc",
+      "source_file": "crates/mycelium-l1/src/eval.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `init`: unknown name `DEFAULT_FUEL`",
+      "non_test_items": 42,
+      "emitted_items": 7
+    }
+  ],
+  "total_non_test_items": 42,
+  "total_emitted_items": 7,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "CheckError": 1
+  },
+  "phylum": null,
+  "total_checked_clean_items_phylum": 0
+}
+total 144
+drwxr-xr-x 2 root root   4096 Jul 16 18:45 .
+drwxr-xr-x 3 root root   4096 Jul 16 18:45 ..
+-rw-r--r-- 1 root root 119800 Jul 16 18:45 eval.gap.json
+-rw-r--r-- 1 root root   6867 Jul 16 18:45 eval.myc
+-rw-r--r-- 1 root root      0 Jul 16 18:45 vet-stderr.txt
+-rw-r--r-- 1 root root    598 Jul 16 18:45 vet-stdout.txt
+-rw-r--r-- 1 root root    585 Jul 16 18:45 vet.json
+
+=== VET crates/mycelium-l1/src/fuse.rs ===
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/vet-stdout.txt:mycelium-transpile: 12 top-level item(s) (12 non-test) — 0 emitted, 13 gap(s) recorded, 0.0% expressible -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/fuse.myc, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/fuse.gap.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/vet-stdout.txt:mycelium-transpile: --vet over 1 file(s) — checked_fraction 0.0% (0/12 items myc-check-clean, file-gated) vs expressible_fraction 0.0% (0/12 items emitted); 0/0 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/vet.json
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_fuse_rs/fuse.myc",
+      "source_file": "crates/mycelium-l1/src/fuse.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 12,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 12,
+  "total_emitted_items": 0,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": null,
+  "total_checked_clean_items_phylum": 0
+}
+total 40
+drwxr-xr-x 2 root root  4096 Jul 16 18:45 .
+drwxr-xr-x 4 root root  4096 Jul 16 18:45 ..
+-rw-r--r-- 1 root root 17715 Jul 16 18:45 fuse.gap.json
+-rw-r--r-- 1 root root  3816 Jul 16 18:45 fuse.myc
+-rw-r--r-- 1 root root     0 Jul 16 18:45 vet-stderr.txt
+-rw-r--r-- 1 root root   591 Jul 16 18:45 vet-stdout.txt
+-rw-r--r-- 1 root root   512 Jul 16 18:45 vet.json
+
+=== VET crates/mycelium-std-time/src ===
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/vet-stdout.txt:mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 38 top-level item(s) (37 non-test), 17 emitted, 69 gap(s), 45.9% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/summary.json, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/REMAP.md, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/union.gap.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/vet-stdout.txt:mycelium-transpile: --vet over 1 file(s) — checked_fraction 0.0% (0/37 items myc-check-clean, file-gated) vs expressible_fraction 45.9% (17/37 items emitted); 0/1 file(s) with emissions fully clean [CheckError=1] -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/vet.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/vet-stdout.txt:mycelium-transpile: --vet --phylum: checked_fraction_phylum 0.0% (0/37 items, same denominator) vs checked_fraction (oracle) 0.0% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: false)
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/lib.myc",
+      "source_file": "crates/mycelium-std-time/src/lib.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `render`: no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) \u2014 declare `impl Show<\u2026> for std.time::WallInstant { \u2026 }` (RFC-0019 \u00a74.5, never assumed)",
+      "non_test_items": 37,
+      "emitted_items": 17
+    }
+  ],
+  "total_non_test_items": 37,
+  "total_emitted_items": 17,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "CheckError": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.time",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "render",
+        "on": null,
+        "message": "no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) \u2014 declare `impl Show<\u2026> for std.time::WallInstant { \u2026 }` (RFC-0019 \u00a74.5, never assumed)"
+      }
+    ],
+    "diagnostic": "no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) \u2014 declare `impl Show<\u2026> for std.time::WallInstant { \u2026 }` (RFC-0019 \u00a74.5, never assumed)"
+  },
+  "total_checked_clean_items_phylum": 0
+}
+total 360
+drwxr-xr-x 2 root root   4096 Jul 16 18:45 .
+drwxr-xr-x 5 root root   4096 Jul 16 18:45 ..
+-rw-r--r-- 1 root root    933 Jul 16 18:45 REMAP.md
+-rw-r--r-- 1 root root 155862 Jul 16 18:45 lib.gap.json
+-rw-r--r-- 1 root root  20955 Jul 16 18:45 lib.myc
+-rw-r--r-- 1 root root   1809 Jul 16 18:45 summary.json
+-rw-r--r-- 1 root root 155655 Jul 16 18:45 union.gap.json
+-rw-r--r-- 1 root root      0 Jul 16 18:45 vet-stderr.txt
+-rw-r--r-- 1 root root   1010 Jul 16 18:45 vet-stdout.txt
+-rw-r--r-- 1 root root   1431 Jul 16 18:45 vet.json
+
+=== VET crates/mycelium-std-rand/src ===
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/vet-stdout.txt:mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 35 top-level item(s) (34 non-test), 6 emitted, 36 gap(s), 17.6% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/summary.json, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/REMAP.md, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/union.gap.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/vet-stdout.txt:mycelium-transpile: --vet over 1 file(s) — checked_fraction 17.6% (6/34 items myc-check-clean, file-gated) vs expressible_fraction 17.6% (6/34 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/vet.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/vet-stdout.txt:mycelium-transpile: --vet --phylum: checked_fraction_phylum 17.6% (6/34 items, same denominator) vs checked_fraction (oracle) 17.6% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/lib.myc",
+      "source_file": "crates/mycelium-std-rand/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 34,
+      "emitted_items": 6
+    }
+  ],
+  "total_non_test_items": 34,
+  "total_emitted_items": 6,
+  "total_checked_clean_items": 6,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.rand",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 6
+}
+total 172
+drwxr-xr-x 2 root root  4096 Jul 16 18:45 .
+drwxr-xr-x 6 root root  4096 Jul 16 18:45 ..
+-rw-r--r-- 1 root root   933 Jul 16 18:45 REMAP.md
+-rw-r--r-- 1 root root 66273 Jul 16 18:45 lib.gap.json
+-rw-r--r-- 1 root root  8634 Jul 16 18:45 lib.myc
+-rw-r--r-- 1 root root  1765 Jul 16 18:45 summary.json
+-rw-r--r-- 1 root root 66350 Jul 16 18:45 union.gap.json
+-rw-r--r-- 1 root root     0 Jul 16 18:45 vet-stderr.txt
+-rw-r--r-- 1 root root  1005 Jul 16 18:45 vet-stdout.txt
+-rw-r--r-- 1 root root   758 Jul 16 18:45 vet.json
+
+=== VET crates/mycelium-std-cmp/src ===
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/vet-stdout.txt:mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 112 top-level item(s) (111 non-test), 14 emitted, 105 gap(s), 12.6% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/summary.json, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/REMAP.md, experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/union.gap.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/vet-stdout.txt:mycelium-transpile: --vet over 1 file(s) — checked_fraction 12.6% (14/111 items myc-check-clean, file-gated) vs expressible_fraction 12.6% (14/111 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/vet.json
+experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/vet-stdout.txt:mycelium-transpile: --vet --phylum: checked_fraction_phylum 12.6% (14/111 items, same denominator) vs checked_fraction (oracle) 12.6% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-cmp_src/lib.myc",
+      "source_file": "crates/mycelium-std-cmp/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 111,
+      "emitted_items": 14
+    }
+  ],
+  "total_non_test_items": 111,
+  "total_emitted_items": 14,
+  "total_checked_clean_items": 14,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.cmp",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 14
+}
+total 216
+drwxr-xr-x 2 root root  4096 Jul 16 18:45 .
+drwxr-xr-x 7 root root  4096 Jul 16 18:45 ..
+-rw-r--r-- 1 root root   929 Jul 16 18:45 REMAP.md
+-rw-r--r-- 1 root root 88760 Jul 16 18:45 lib.gap.json
+-rw-r--r-- 1 root root 14134 Jul 16 18:45 lib.myc
+-rw-r--r-- 1 root root  1818 Jul 16 18:45 summary.json
+-rw-r--r-- 1 root root 88465 Jul 16 18:45 union.gap.json
+-rw-r--r-- 1 root root     0 Jul 16 18:45 vet-stderr.txt
+-rw-r--r-- 1 root root  1011 Jul 16 18:45 vet-stdout.txt
+-rw-r--r-- 1 root root   761 Jul 16 18:45 vet.json
+
+DONE

@@ -1,0 +1,35 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-rand_src/lib.myc",
+      "source_file": "crates/mycelium-std-rand/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 34,
+      "emitted_items": 6
+    }
+  ],
+  "total_non_test_items": 34,
+  "total_emitted_items": 6,
+  "total_checked_clean_items": 6,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.rand",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 6
+}

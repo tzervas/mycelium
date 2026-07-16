@@ -1,0 +1,35 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-std-time_src/lib.myc",
+      "source_file": "crates/mycelium-std-time/src/lib.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `render`: no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) — declare `impl Show<…> for std.time::WallInstant { … }` (RFC-0019 §4.5, never assumed)",
+      "non_test_items": 37,
+      "emitted_items": 17
+    }
+  ],
+  "total_non_test_items": 37,
+  "total_emitted_items": 17,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "CheckError": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.time",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "render",
+        "on": null,
+        "message": "no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) — declare `impl Show<…> for std.time::WallInstant { … }` (RFC-0019 §4.5, never assumed)"
+      }
+    ],
+    "diagnostic": "no instance `Show` for `std.time::WallInstant` (no instance/bound provides `Show::render` for these arguments) — declare `impl Show<…> for std.time::WallInstant { … }` (RFC-0019 §4.5, never assumed)"
+  },
+  "total_checked_clean_items_phylum": 0
+}

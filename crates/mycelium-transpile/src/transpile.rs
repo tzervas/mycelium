@@ -138,6 +138,8 @@ pub(crate) fn transpile_source_with_ctx(
     // in-file reference (which would poison the file's `myc check` and cost its clean items).
     let resolvable = resolvable_type_names(&parsed.items);
     let layouts = struct_layouts(&parsed.items, &resolvable);
+    // Parallel type map for lit-zero / signed-order rewrite on field compares (post-#1645 residual).
+    let field_types = struct_field_type_map(&parsed.items, &layouts);
     // M-1084: this file's own `use`-resolution context — its crate-root-relative module segments
     // (`self::`/`super::` resolve relative to this) and, when derivable, its own extern-crate
     // identifier (the cross-phylum same-crate-vs-bare precedence — see `symtab.rs` module docs).
@@ -157,6 +159,7 @@ pub(crate) fn transpile_source_with_ctx(
     crate::emit::with_emit_ctx(
         resolvable,
         layouts,
+        field_types,
         symtab.clone(),
         pub_needed.clone(),
         imported_type_keys,
@@ -224,6 +227,24 @@ pub(crate) fn transpile_source_with_ctx(
                         });
                     }
                 }
+            }
+            // ORACLE-R1 A2: co-emitted lattice types must land *before* any free-fn that
+            // references them (e.g. strength_of). Drain inside the emit ctx so DN-140 variant
+            // renames share the item-loop's per-file ident-emission map.
+            let lattice = emit::drain_lattice_co_emits();
+            if !lattice.is_empty() {
+                let mut preamble = Vec::with_capacity(lattice.len() + body_chunks.len());
+                let mut lattice_names = Vec::with_capacity(lattice.len());
+                for (name, myc) in lattice {
+                    preamble.push(myc);
+                    lattice_names.push(format!("co-emit:{name}"));
+                }
+                preamble.append(&mut body_chunks);
+                body_chunks = preamble;
+                // Prepend so emitted_items order matches file order (co-emits first).
+                let mut names = lattice_names;
+                names.append(&mut emitted_items);
+                emitted_items = names;
             }
         },
     );
@@ -474,6 +495,64 @@ fn struct_layouts(
     out
 }
 
+/// Parallel to [`struct_layouts`]: positional mapped field *types* for every layout key that
+/// still has a name layout after collision refusal. Each entry is `map_type` text, with a
+/// trailing `"!s"` when the Rust field was a signed integer (same internal marker
+/// `sig_type_env` uses — never emitted into `.myc`). Keys missing from `layouts` (collision-
+/// refused names) are omitted so emit never resolves a wrong-type bind for an ambiguous ctor
+/// name (G2 — same refusal discipline as name layouts).
+///
+/// Used by the binary lit-zero rewrite so `self.nanos < 0` recovers `Binary{128}` width +
+/// signedness; the name-only layout cannot drive `binary_width` (post-#1645 residual).
+fn struct_field_type_map(
+    items: &[Item],
+    layouts: &HashMap<String, Vec<Option<String>>>,
+) -> HashMap<String, Vec<Option<String>>> {
+    fn map_field_ty(ty: &syn::Type) -> Option<String> {
+        let mapped = crate::map::map_type(ty, None).ok()?;
+        if crate::emit::type_is_signed_int(ty) {
+            Some(format!("{mapped}!s"))
+        } else {
+            Some(mapped)
+        }
+    }
+
+    fn fields_types(fields: &syn::Fields) -> Vec<Option<String>> {
+        match fields {
+            syn::Fields::Named(fs) => fs.named.iter().map(|f| map_field_ty(&f.ty)).collect(),
+            syn::Fields::Unnamed(fs) => fs.unnamed.iter().map(|f| map_field_ty(&f.ty)).collect(),
+            syn::Fields::Unit => Vec::new(),
+        }
+    }
+
+    let mut out: HashMap<String, Vec<Option<String>>> = HashMap::new();
+    for item in items {
+        match item {
+            Item::Struct(s) => {
+                let key = s.ident.to_string();
+                if !layouts.contains_key(&key) {
+                    continue;
+                }
+                out.insert(key, fields_types(&s.fields));
+            }
+            Item::Enum(e) => {
+                for v in &e.variants {
+                    let key = v.ident.to_string();
+                    if !layouts.contains_key(&key) {
+                        continue;
+                    }
+                    // Only named-field variants are registered in `struct_layouts`.
+                    if matches!(v.fields, syn::Fields::Named(_)) {
+                        out.insert(key, fields_types(&v.fields));
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
 /// DN-133 (M-1094) tier (ii): for every locally `use`-imported type NAME in this file, the
 /// ordered cross-nodule symbol-table lookup key(s)
 /// ([`SymbolTable::candidate_lookup_keys`]) that head would resolve through — consumed by
@@ -575,14 +654,9 @@ fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
                 ))
             }
         }
-        Item::Const(c) => Outcome::Gap(GapReason::new(
-            Category::Other,
-            format!(
-                "top-level `const {}` — no const item production in the grammar (`item` covers \
-                 use/default/type/trait/impl/fn/object/lower/derive only)",
-                c.ident
-            ),
-        )),
+        // ORACLE-R1 A4: unsigned integer consts with a decidable value co-emit as zero-arg
+        // BinLit fns (`max_expr_depth` hand-port shape); everything else stays an honest gap.
+        Item::Const(c) => emit::emit_const(c).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Static(s) => Outcome::Gap(GapReason::new(
             Category::Other,
             format!(
@@ -689,6 +763,9 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                             SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
                         emitted_lines.push(format!("use {prefix}.{name};"));
                         resolved_names.push(name.clone());
+                        // ORACLE-R1 A2: a successfully resolved import makes the name available
+                        // so lattice co-emit will not redeclare it (duplicate type = check poison).
+                        emit::record_imported_name(name);
                     }
                     None => leaf_gaps.push(GapReason::new(
                         Category::Import,
