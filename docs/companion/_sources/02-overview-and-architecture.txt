@@ -1,0 +1,41 @@
+# Mycelium: What It Is and How It's Built
+
+> **Basis:** analysis of `tzervas/mycelium` @ `aad96b7` (workspace v0.463.1), 2026-07-16. Code-first review, documentation second. Part of a nine-document set; see `00-mycelium-complete-analysis.md` for the combined edition.
+
+## The thesis
+
+The thesis, stated in `docs/guide/why-and-design.md` and enforced everywhere in the code, is that modern computing keeps four representation families in walled gardens — bits, balanced ternary, dense embeddings, and VSA hypervectors — and the place correctness quietly dies is the *conversion* between them. Conversions are implicit, lossy in undocumented ways, and impossible to audit. Mycelium makes the representation swap the explicit, first-class, certifiable operation of the language, and makes every approximation disclosed, bounded, and tagged with how trustworthy that bound is.
+
+Three non-negotiables shape every decision: no hidden or opaque behavior in core semantics; dual intelligibility (human-readable *and* useful for AI agents); and formal reasoning-amenability — "no black boxes" realized as mechanically-checkable invariants, not a slogan. The original "certified-everything" premise was explicitly repositioned by ADR-032 (Enacted 2026-06-24): the north star is now a fast, memory-safe, ergonomic multi-paradigm language, with certification and transparency as optional, tunable capabilities (`fast` by default, `certified` on request) rather than a tax on every line. The honesty rule was reframed as the transparency-and-auditability rule, mechanism unchanged.
+
+## Scale
+
+As checked out: roughly 300K lines of Rust across 56 workspace crates plus `xtask`, about 22K lines of Mycelium (`.myc`) in `lib/std`, `lib/compiler`, and `examples/`, a 450-line normative EBNF with a 57-program accept/reject conformance corpus, and a governance corpus whose own verified digest (2026-07-09) counts 33 in-tree ADRs, 41 RFCs, and 97 design notes — with ADR numbering reaching 045, RFC numbering 0041, and DN numbering 140. Discharged proof artifacts live in `proofs/`: a Z3 SMT obligation for binary↔ternary round-trip injectivity (returns `unsat`, i.e., the injectivity property holds), a Liquid Haskell bundle, and Lean/Haskell/SMT examples for VSA multi-hop bounds.
+
+## Architecture: a layered tower with a tiny trusted base
+
+**L0 Core IR** (`mycelium-core`, compiled under `#![forbid(unsafe_code)]`) is a deliberately small node grammar — `Const`, `Var`, `Let`, `Op`, `Swap`, plus the r3 additions `Construct` and `Match` and the r4 additions `Lam`, `App`, `Fix` — where `Swap` is *the only node that can change a value's representation* and is required by construction to carry a `PolicyRef` (the field is mandatory, so the well-formedness rules WF1/WF2 cannot be violated by any code path). RFC-0036 later ratified the single-frozen-kernel position: nine of ten nodes judged irreducibly primitive, with `FixGroup` derivability the one flagged open question.
+
+**`mycelium-interp`** is the reference interpreter: a small-step, call-by-value substitution semantics documented as inference rules in the crate root. It *is* the meaning of the language — the MLIR→LLVM AOT backend (`mycelium-mlir`) is differential-tested against it, never the other way around. The interpreter threads metadata honestly: an operation's result guarantee is the lattice meet of its inputs and the operation's intrinsic strength, and provenance is recorded as `Derived{op, inputs}` over content hashes. A free variable is stuck with an explicit `EvalError::FreeVariable`, never a silent default.
+
+**L1 kernel calculus** (`mycelium-l1`) adds the type discipline: a bidirectional checker, generics and traits with dictionary-free static resolution, higher-order functions via Reynolds static defunctionalization (RFC-0024 — closures become a tag-sum struct plus a generated `apply` dispatcher, so the kernel never needs heap closures), operator syntax as pure frontend sugar desugaring to word-function calls, totality and usefulness analyses, and the elaborator that lowers everything to closed L0 terms. **L2/L3** are the surface term language and the concrete grammar (RFC-0020/RFC-0030/RFC-0037), where guarantee tags appear directly in signatures: `fn narrow(x: Dense{768, F32}) => Dense{768, BF16} @ Empirical`.
+
+## The crate organization and why it is the way it is
+
+The 56-crate split follows a strict dependency-strata discipline enforced by `xtask` against `deps-strata.toml` — dependency cycles between strata are refused mechanically, and at least one crate (`mycelium-vsa-decode`) exists specifically because hosting its function in `mycelium-vsa` would have closed a forbidden interp↔vsa↔select cycle. The organizing principles:
+
+The **kernel stays small and auditable** (principle KC-3). `mycelium-core` carries only the value model, the guarantee lattice, content addressing, and the node grammar. The VSA algebra (`mycelium-vsa` — six models: MAP-I, MAP-B, BSC, FHRR, HRR, SBC, plus resonator factorization and cleanup memories) is a dependency-gated submodule: the kernel type-checks hypervector *mentions* without pulling in the algebra, so VSA is opt-in without being second-class.
+
+**Optimization is untrusted by construction.** `mycelium-mir-passes` (the reference-count elision pass) lives outside the trusted base, so a bug there is a missed optimization, never unsoundness — the runtime reference-count probe is always the sound fallback.
+
+**The standard library is Rust-first, mirrored in Mycelium.** Each `mycelium-std-*` crate has a corresponding `lib/std/*.myc` port produced under RFC-0031's discipline: everything expressible is ported and differentially witnessed against the live Rust oracle, and everything at the kernel boundary is FLAGGED explicitly rather than faked — "a mostly-FLAGged result is the honest outcome for a re-export facade."
+
+**The toolchain is real**: CLI (`myc check`/`myc run`), LSP, formatter (`mycfmt`), linter, doc generator (a themed docsite rendering the whole corpus plus rustdoc), build/project system (`mycelium-proj` manifests), security scanning, a fuzzing setup, mutation testing output, and a Rust→Mycelium transpiler (`mycelium-transpile`) that is now the engine of the self-hosting program.
+
+## Self-hosting direction
+
+ADR-042/043 (Accepted 2026-07-07) commit the project to full Mycelium self-hosting: freeze the Rust base and progressively rewrite everything — kernel, toolchain, and codegen backend included — to Mycelium ("zero foreign first-party languages"), retiring each Rust component only once proven by a dual witness (the Rust differential plus the native `myc` toolchain) and archiving it to a protected legacy branch, never deleting. The `lib/compiler/*.myc` files (lexer, parser, AST, semantic core, totality) are the visible start of that program. Notably, the `mycelium-tero` HTTP context/memory service — the one component that pulled `tokio`/`axum` into the workspace (ADR-044) — was extracted verbatim into its own published repo (`tzervas/tero-rs`) during a trim pass, so the workspace no longer carries an async runtime at all.
+
+## The governance culture
+
+The project's most unusual property may be that the documentation practices what the language preaches. Every claim in the corpus is tagged at the strength its evidence actually supports — `Declared` for asserted goals, `Empirical` for measured results with the measurement named, `Proven` for machine-checked facts with the checker named — under the standing rule VR-5 (downgrade, don't overclaim) and G2 (never silent). Design notes routinely correct their own task framings on the merits ("no sycophancy" is a literal house rule), record ratification bases verbatim, and draw the landed-versus-`Declared` boundary explicitly. The result is a corpus where "what is actually true right now" is a resolvable query rather than an archaeology project — see the documentation-strategy document for the resolution chain.

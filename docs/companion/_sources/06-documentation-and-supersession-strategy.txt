@@ -1,0 +1,23 @@
+# Reading the Corpus: The Append-Only Supersession Strategy
+
+> **Basis:** analysis of `tzervas/mycelium` @ `aad96b7` (workspace v0.463.1), 2026-07-16. Code-first review, documentation second. Part of a nine-document set; see `00-mycelium-complete-analysis.md` for the combined edition.
+
+## How supersession works
+
+The strategy is append-only with explicit status promotion, never edit-in-place: documents move `Draft → Proposed → Accepted → Enacted` (house rule #3, "stepped, not skipped"), decision bodies are never rewritten, and corrections arrive as dated changelog rows or follow-on documents. The consequence is that the *tail* of the DN/ADR/RFC sequences carries the freshest truth — the latest documents refine, resolve, or supersede specific clauses of earlier ones by reference, while the earlier documents stand as the permanent record of what was decided and why.
+
+Crucially, **Accepted ≠ built.** An Accepted DN or RFC ratifies a *design* whose every mechanism claim stays `Declared` until an implementation lands and is differential-witnessed, at which point the status row appends "Enacted — with code" naming the exact test suites and their state. The recent DN cluster makes this explicit in each status field ("Accepted, not Enacted — it builds nothing yet; every mechanism stays `Declared`/unbuilt until the FLAGGED build issue lands"). Ratification itself is a tagged claim: recent notes record the ratification basis verbatim, including when ratification happened under explicit maintainer delegation, so assent is auditable at the strength actually checked (VR-5 applied to governance itself).
+
+## The resolution chain
+
+`docs/Doc-Index.md` is the authoritative per-document status resolver. `docs/CURRENT-STATE.md` (refreshed 2026-07-16 at promote-to-staging close-out) is the fast pointer index — a dense, link-heavy "what's true now" — with the explicit rule that if it looks stale, the top of `CHANGELOG.md` wins. So the practical resolution path for any question is: `CHANGELOG.md` top → `CURRENT-STATE.md` → `Doc-Index.md` → the highest-numbered DN/ADR/RFC touching the question. There is exactly one formal document-level supersession so far (ADR-021 → ADR-022, the release gate), with the retired document archived verbatim to a protected branch rather than deleted — the same archive-never-lose discipline ADR-043 applies to retired Rust code.
+
+## Versioning as an honesty artifact
+
+The workspace version itself follows the tagging discipline: `0.463.1` was cut on 2026-07-16 as the first *history-derived* SemVer — computed `Empirical` from the Conventional-Commit stack on the dev branch (each `feat` a minor bump under major-version-zero, each `fix`/`perf` a patch) rather than declared, with the note that main's squash-only history alone would only justify `0.19.0` and that dev granularity is the chosen basis until the tree decomposes into component repos.
+
+## Current gate and freeze state
+
+As of the analyzed checkout: the ADR-022 release-gate tracks stand at T2–T7 **done** (surface language, runtime, stdlib on the ADR-035-narrowed bar, FFI, AOT, toolchain), T1 (kernel) **gate-met but tag-reserved** to the maintainer (M-703), T8 (docs/stability) blocked only on the maintainer's own release act (M-738), and T9 (self-hosting) explicitly **not tag-gating** (ADR-036/038's function-first release strategy).
+
+The most important structural fact for reading the tail: the kernel/L0/L1/lexicon **freeze** declared 2026-07-02 (DN-56, on the DN-76 green scorecard, with post-freeze kernel diffs restricted to the DN-39 class) was **suspended by ADR-045** (Accepted 2026-07-10, maintainer-ratified) for a bounded gap-closure window, so the language can close its expressibility gaps early rather than after the stdlib fans out into per-component repos. The ADR-042 end-state (full `.myc` self-hosting, kernel included) is unchanged; re-freeze triggers only once the DN-99 residual worklist (M-1024…M-1034) is exhausted, a successor scorecard re-scores green, and a follow-up maintainer-ratified ADR reinstates the diff policy. The DN-119–140 cluster documented in the tails writeup is that window's output.

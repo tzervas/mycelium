@@ -12,6 +12,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(companion): thematic historian + airlocks + decision clusters (2026-07-16)
+
+Maintained **non-normative** supplement under `docs/companion/` driven by external analysis
+pack + audio critique (guarantee-lattice friction / memory lifecycle / thematic DN grouping):
+
+- Guarantee **airlock** patterns for weakest-wins contamination (cleanroom metaphor).
+- Memory L1–L3 as one lifecycle (colony bridge; L3 safety net for RC elision).
+- Three trust axes (lattice · cert depth · DN-126 strictness) + thematic DN clusters A–F.
+- Mermaid diagrams; archive/refresh policy; sources under `docs/companion/_sources/`.
+- Wired from README, guide reading-order, Doc-Index. Normative RFC/ADR/DN bodies untouched.
+
 ### feat(transpile): M-1090 WU-3 `write!`/`format!` → Show/`bytes_concat` (DN-127) (2026-07-16)
 
 PR #1630 → `dev` (`74171eca`). Composer leaf `claude/leaf/M1090-wu3-write-format-lowering`.

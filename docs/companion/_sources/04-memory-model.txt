@@ -1,0 +1,51 @@
+# The Mycelium Memory Model
+
+> **Basis:** analysis of `tzervas/mycelium` @ `aad96b7` (workspace v0.463.1), 2026-07-16. Code-first review, documentation second. Part of a nine-document set; see `00-mycelium-complete-analysis.md` for the combined edition.
+
+## The foundation: what value semantics buys
+
+Mycelium values are immutable and *acyclic* — immutability makes cycles unconstructible, and acyclicity is exactly Perceus's garbage-free precondition, which RFC-0027 leans on to justify precise reference counting as the reclamation mechanism without ever needing a cycle collector. The language rules make the outcome explicit (LR-9): Rust-grade safety *outcomes* without Rust's mechanism. Value semantics removes use-after-free, data races, and double-free from the language model outright; the language exposes no manual allocation or free; reclamation is automatic and deterministic; the only leak vector — an unreleased *external resource* — is closed by the affine `Substrate` kind (the LR-8 position: Rust-style ownership/borrowing is "likely not applicable" to a value substrate, with linearity reserved for external resources only); and anything that could violate this (raw FFI, foreign memory) is unreachable from safe code — it must appear in a lexically-marked `wild` block, denied by default, legal only in an `@std-sys` nodule whose enclosing function declares the `!{ffi}` effect. The stated guarantee: *in safe Mycelium a memory leak is not expressible.*
+
+The reference interpreter deliberately does not participate in any of the cleverness below — it is substitution-based, values cloned into the tree, because it is the trusted *meaning*. Performance lives in the AOT path and the runtime memory architecture, both differential-tested against that meaning.
+
+On this substrate, DN-32 (maintainer-ratified 2026-06-25) defines a **three-layer hybrid memory architecture**, with the reclamation mechanism fixed by RFC-0027 and the static-optimization leg by MEM-4/DN-33. It is the memory-tier analogue of the certification modes: the cheapest mechanism is the default, and the expensive machinery engages only when the program's structure actually demands it.
+
+## Layer 1 — affine/linear ownership (the primary path)
+
+Unique data is owned and *moved*, never shared. A value with a single owner carries no reference count at all; ownership transfer is a move, and reclamation is a scope-exit drop (LIFO per RT7, `Exact` by Rust's drop specification in the current runtime). This inverts the Swift/Python "everything is counted" default — Rust-style move semantics as the ambient discipline, but without a borrow checker, because with no mutation there is no aliased-mutable-state problem for a borrow checker to solve. The corpus grounding is RFC-0008's RT1 ("values move; state is never shared") and the affine `Sender`/`Receiver` channel pair (non-`Clone`, single-owner cross-hypha transfer); prior art is Clean's uniqueness types and linear type systems.
+
+**Pro:** the common case is genuinely zero-cost, and the safety argument is structural rather than analytical. **Con:** affine ownership without borrowing means "use it twice" forces an explicit step into Layer 2, and threading unique values through code is a discipline some programmers will feel.
+
+## Layer 2 — optimized reference counting (explicit sharing only)
+
+When a value *is* shared: non-atomic reference counting within a hypha (the unit of concurrent execution — single-threaded inside, so no atomic traffic), Perceus/FBIP-style `rc == 1` in-place reuse so "functional but in-place" updates are recoverable, and — for the R1 release horizon — cross-hypha transfer is **sole-move only** (`RcCell` stays `!Send`; shared-across-atomic-RC is explicitly deferred to R2 as a named open question, not fudged). The atomic cost is paid only after a value genuinely crosses into concurrent use.
+
+On top sits MEM-4/DN-33's **static RC elision** in `mycelium-mir-passes`: the Core IR is lowered to a *separate* RC-annotated IR (`RcNode` with explicit `Dup`/`Drop` operations), the pass first emits the naive fully-owned baseline, then elides operations where uniqueness or borrowing is statically provable — Increment 1 borrow-elides fully-borrowable `let` bindings, replacing `Dup`s with non-consuming `Borrow`s and a single `DropAfter`. Soundness follows the ratified differential-plus-structural-invariant strategy: a balance invariant on the emitted IR, plus a reference RC-evaluator confirming that elided and non-elided emissions reclaim the *same* value set with no use-after-free. The tagging is characteristically honest: semantics-preservation is `Empirical`, the `Dup`-count reduction is `Exact` (read off the IR), and the *performance* benefit stays `Declared` until measured on a corpus. Critically, the pass lives outside the trusted base, so a bug there is a missed optimization, never a use-after-free — the runtime count is always the sound fallback.
+
+**Pro:** the Koka/Lean-4 lineage's performance story (non-atomic counts, reuse analysis, static elision) with a soundness architecture in which the optimizer cannot hurt you. **Con:** RC has cascade-drop latency (RFC-0027's OQ-3 pause-budget question is acknowledged and mitigated, not eliminated); `rc == 1` reuse-writes (Increment 2) and the full functional-in-place guarantee (Increment 3), interprocedural borrowing, and recursion RC are all still deferred; and sole-move cross-hypha transfer is a real expressiveness restriction today.
+
+## Layer 3 — region-based batched scope reclamation
+
+A scope is a region; values dying within it are reclaimed in bulk at scope exit. Parent–child reclamation is total-ordered (child before parent), but *sibling* regions reclaim **concurrently** — the resolution of RFC-0027's hardest open question (OQ-1), decided in favor of weak coupling. The argument is structural: RT7's structured concurrency already makes sibling scopes concurrent by construction, and acyclicity guarantees no cross-sibling aliases exist to police, so concurrent teardown is safe rather than merely fast.
+
+**Pro:** bulk reclamation amortizes RC bookkeeping for scope-local allocation patterns, and concurrent sibling teardown composes directly with the structured-concurrency runtime (an orphan hypha is not grammatically expressible — every hypha lives inside a `colony` scope that cannot exit before its children resolve). **Con:** region-inference quality determines whether values are held to scope exit longer than a precise counter would keep them — the classic regions trade of peak memory for throughput.
+
+## Never-silent reclamation
+
+The distinctive move: every reclamation event emits a structured `ReclamationRecord` — `{scope_id, sweep_epoch, trigger, value_meta_hash, channel_id?}` — routed through a `ReclamationSink`, and a reclamation that produces no record is *defined* as a transparency violation. Three triggers are live and wired in `mycelium-std-runtime`: `RcZero` (last reference dropped), `ScopeExit` (a region closes, batch-reclaiming deferred values), and `ChannelClose` (a channel torn down with values in transit), with an end-to-end composition test exercising all three through one audit trail.
+
+**Pro:** memory behavior becomes observable the way values are — memory management with structured logging built into the semantics, which neither Rust nor any GC'd language offers natively, and which an SRE sensibility will recognize immediately. **Con:** overhead on every reclamation path that sink implementations must keep cheap, and the audit stream is only as valuable as the tooling that consumes it.
+
+## The defensive layer
+
+The same philosophy shows up at the implementation level. RFC-0041 (**Enacted** 2026-07-05 via the promoted W0–W7 wave) closed the recursion-depth failure class: `Node` and `Datum` have *manual, iterative* `Clone`/`PartialEq`/`Drop` implementations — a derived recursive `Drop` would `SIGABRT` on a deeply-nested spine, a silent failure violating G2 — bit-identical to the derived forms and mutation-witnessed; the content hasher is likewise iterative; deep evaluation runs on an explicit work stack under a unified fuel budget, closing the `myc run` SIGABRT. And `Repr` deserialization's `MAX_DIM = 2^30` cap closes the crafted-descriptor over-allocation vector before any payload is materialized.
+
+## Current frontier (from the document tail)
+
+Two recent Accepted-not-Enacted decisions complete the design story while honestly remaining `Declared`/unbuilt on the build side.
+
+**DN-120 — identity coherence, solved-by-design.** ADR-003's disclosed residual ("content-addressed identity ⇒ efficient temporary-copy mutation may remain to be solved") is formally ruled closed: DN-35 §5's mechanism *is* the answer — in-place reuse fires only at `rc == 1`, meaning no live alias of the old identity exists, and the intern/hash-cons table is modeled as a weak map, evicted-or-copied on reuse. `rc == 1` detection is landed `Exact`; the reuse-write itself stays `Declared`.
+
+**DN-125 — value-threading as the native answer to `&mut`.** Mycelium's solution to the problem Rust's `&mut self`/`&mut T` solves (in-place mutation through a reference) is **value-threading**: take the receiver by value, return the mutated value, rewrite the call site to rebind (`x.f()` → `x = f(x)`). This is correct-with-a-copy immediately and zero-copy once DN-33's static uniqueness analysis and the DN-35 reuse-write land — the mechanism is answered-by-design out of already-ratified pieces, and only the transpiler *application* was genuinely open (now scoped, build issue M-1081). Two adversarial narrowings are held never-silently: unprovable uniqueness/aliasing routes to a borrow-check precondition or a uniqueness proof on the emitted Mycelium, never a possibly-divergent rebind; and interior-`&mut`-return shapes (`get_mut`, `iter_mut`, `IndexMut`) route to the Approximation/Interop-Bridge taxonomy cells, never a fabricated value-threaded form.
+
+The upshot: Layers 1–2 are not just a reclamation strategy — they are the mechanism that makes mutation-*shaped* code expressible in a value-semantic language without a reference type ever entering the model. Today that is honest-copy performance; the zero-copy half rests on the two still-deferred DN-33 increments, and the design says so.
