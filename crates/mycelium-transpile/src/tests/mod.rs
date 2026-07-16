@@ -18,4 +18,5 @@ mod symtab;
 mod taxonomy;
 mod transpile;
 mod type_map;
+mod valid_ident;
 mod vet;

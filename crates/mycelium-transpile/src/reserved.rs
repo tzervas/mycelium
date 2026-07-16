@@ -11,6 +11,10 @@
 //! **gapped** ([`crate::gap::Category::ReservedWord`]), never silently emitted or auto-renamed
 //! (G2/VR-5).
 //!
+//! **DN-140 (M-1106)** supersedes the gap-only posture for program identifiers with a unified
+//! [`valid_ident`] emission contract; [`guard_ident`] is retained as a no-op call-through so legacy
+//! call sites keep their `?` shape while emission uses [`valid_ident`] for the real text.
+//!
 //! # Guarantee: `Declared`
 //!
 //! [`RESERVED`] is a verbatim **snapshot** of `mycelium-l1`'s lexer keyword table
@@ -116,23 +120,163 @@ pub fn is_reserved(word: &str) -> bool {
     RESERVED.contains(&word)
 }
 
-/// Guard an identifier the emitter is about to place into `.myc` surface text. `Ok(())` when it is a
-/// legal identifier; `Err(GapReason)` (category [`Category::ReservedWord`]) when it collides with a
-/// reserved word — so the caller gaps the construct rather than emit un-parseable text. `context`
-/// names the position (e.g. `"enum variant"`, `"match pattern"`, `"type name"`) for the diagnostic.
-pub fn guard_ident(name: &str, context: &str) -> Result<(), GapReason> {
-    if is_reserved(name) {
-        Err(GapReason::new(
-            Category::ReservedWord,
-            format!(
-                "{context} `{name}` collides with a Mycelium reserved word — emitting it verbatim \
-                 would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no \
-                 sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)"
-            ),
-        ))
-    } else {
-        Ok(())
+/// Suffix appended to escape a reserved-word identifier or nodule-path segment (DN-139/DN-140).
+pub const RESERVED_SEGMENT_SUFFIX: &str = "_kw";
+
+/// DN-140 §4 — why a non-identity [`valid_ident`] rewrite happened.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RewriteKind {
+    Reserved,
+    IllegalChars,
+    Both,
+}
+
+/// DN-140 §4 — metadata for a non-identity rewrite (G2 / EXPLAIN).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Rewrite {
+    pub original: String,
+    pub kind: RewriteKind,
+}
+
+/// DN-140 §4 — a guaranteed-legal Mycelium identifier plus optional rewrite metadata.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ValidIdent {
+    pub text: String,
+    pub rewrite: Option<Rewrite>,
+}
+
+fn is_ident_start(c: char) -> bool {
+    c.is_ascii_alphabetic() || c == '_'
+}
+
+fn is_ident_continue(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '_'
+}
+
+/// Whether `s` matches `^[A-Za-z_][A-Za-z0-9_]*$` (Mycelium identifier shape, reserved or not).
+pub fn has_valid_ident_shape(s: &str) -> bool {
+    let mut it = s.chars();
+    match it.next() {
+        None => false,
+        Some(c) if !is_ident_start(c) => false,
+        Some(_) => s.chars().all(is_ident_continue),
     }
+}
+
+/// Whether `text` is a legal, non-reserved Mycelium identifier (DN-140 §2).
+pub fn is_legal_non_reserved_ident(text: &str) -> bool {
+    has_valid_ident_shape(text) && !is_reserved(text)
+}
+
+fn escape_illegal_chars(raw: &str) -> String {
+    if raw.is_empty() {
+        return "_".to_string();
+    }
+    let mut work = raw.to_string();
+    if work.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+        work.insert(0, '_');
+    }
+    let mut out = String::new();
+    for c in work.chars() {
+        if is_ident_continue(c) {
+            if out.is_empty() && !is_ident_start(c) {
+                out.push('_');
+            }
+            out.push(c);
+        } else {
+            out.push_str(&format!("_u{:X}_", c as u32));
+        }
+    }
+    if out.is_empty() {
+        out.push('_');
+    } else if !out.chars().next().is_some_and(is_ident_start) {
+        out.insert(0, '_');
+    }
+    out
+}
+
+fn apply_reserved_suffix(text: &str, kind: RewriteKind, original: &str) -> ValidIdent {
+    let escaped = format!("{text}{RESERVED_SEGMENT_SUFFIX}");
+    ValidIdent {
+        text: escaped,
+        rewrite: Some(Rewrite {
+            original: original.to_string(),
+            kind,
+        }),
+    }
+}
+
+/// Map an arbitrary identifier-position string to a legal Mycelium identifier (DN-140 §4).
+///
+/// Total, deterministic, position-independent, idempotent. Never fails to produce legal `text`.
+pub fn valid_ident(raw: &str) -> ValidIdent {
+    if raw.is_empty() {
+        return ValidIdent {
+            text: "_".to_string(),
+            rewrite: Some(Rewrite {
+                original: raw.to_string(),
+                kind: RewriteKind::IllegalChars,
+            }),
+        };
+    }
+
+    if has_valid_ident_shape(raw) && !is_reserved(raw) {
+        return ValidIdent {
+            text: raw.to_string(),
+            rewrite: None,
+        };
+    }
+
+    if has_valid_ident_shape(raw) && is_reserved(raw) {
+        return apply_reserved_suffix(raw, RewriteKind::Reserved, raw);
+    }
+
+    let escaped = escape_illegal_chars(raw);
+    if is_reserved(&escaped) {
+        return apply_reserved_suffix(&escaped, RewriteKind::Both, raw);
+    }
+    ValidIdent {
+        text: escaped,
+        rewrite: Some(Rewrite {
+            original: raw.to_string(),
+            kind: RewriteKind::IllegalChars,
+        }),
+    }
+}
+
+/// G2 reification line for a non-identity [`valid_ident`] rewrite (DN-140 §9).
+pub fn declared_rewrite_comment(vi: &ValidIdent) -> Option<String> {
+    let r = vi.rewrite.as_ref()?;
+    let why = match r.kind {
+        RewriteKind::Reserved => "reserved-word collision",
+        RewriteKind::IllegalChars => "illegal identifier characters",
+        RewriteKind::Both => "reserved-word collision after illegal-character escape",
+    };
+    Some(format!(
+        "// Declared: renamed {} -> {} ({why}, DN-140)",
+        r.original, vi.text
+    ))
+}
+
+/// DN-140 length-prefix inherent-fn mangle: `_` + `dec(|vt|)` + `vt` + `dec(|vm|)` + `vm` (§7).
+pub fn length_prefix_mangle(vt: &str, vm: &str) -> String {
+    format!("_{}{}{}{}", vt.len(), vt, vm.len(), vm)
+}
+
+/// Compose [`valid_ident`] on both parts, then length-prefix mangle (DN-140 §7).
+pub fn mangled_inherent_fn_name(self_ty_text: &str, method_name: &str) -> String {
+    let vt = valid_ident(self_ty_text).text;
+    let vm = valid_ident(method_name).text;
+    length_prefix_mangle(&vt, &vm)
+}
+
+/// Guard an identifier the emitter is about to place into `.myc` surface text.
+///
+/// **DN-140 call-through:** emission sites must use [`valid_ident`] for the emitted spelling;
+/// this function always returns `Ok(())` so callers keep their control flow while the real
+/// legalization happens at the reference/declaration site.
+pub fn guard_ident(_name: &str, _context: &str) -> Result<(), GapReason> {
+    Ok(())
 }
 
 /// **Gap-close-2 Phase-0 regression fix, revised (PR #1517 review HIGH — cross-file nodule-path
@@ -165,6 +309,9 @@ pub fn guard_ident(name: &str, context: &str) -> Result<(), GapReason> {
 /// (the non-colliding crate/module prefix) is passed through unchanged, so `l1.fuse` -> `l1.fuse_kw`
 /// and `l1.nodule` -> `l1.nodule_kw` are now distinct.
 ///
+/// **DN-140:** each segment is the reserved-word branch of [`valid_ident`] (per-segment
+/// specialization, §7).
+///
 /// **Documented residual (`Declared`, not `Proven` — VR-5):** because both Rust and Mycelium
 /// identifiers are ASCII-only (`is_ident_continue` in `mycelium-l1/src/lexer.rs` — no
 /// non-ASCII-marker escape is available to either language), this is not a mathematical proof of
@@ -182,28 +329,22 @@ pub fn guard_ident(name: &str, context: &str) -> Result<(), GapReason> {
 /// fixed, disclosed marker is a deterministic, EXPLAIN-traceable transform, not a guess. Returns
 /// `(sanitized_path, Some(reason))` when a segment collided, or `(nodule_path.to_owned(), None)`
 /// unchanged when it did not.
-pub const RESERVED_SEGMENT_SUFFIX: &str = "_kw";
-
 pub fn sanitize_nodule_path(nodule_path: &str) -> (String, Option<GapReason>) {
     let segments: Vec<&str> = nodule_path.split('.').collect();
-    let colliding: Vec<&str> = segments
+    let mut colliding = Vec::new();
+    let escaped: Vec<String> = segments
         .iter()
-        .copied()
-        .filter(|s| is_reserved(s))
+        .map(|&s| {
+            let vi = valid_ident(s);
+            if vi.rewrite.is_some() && is_reserved(s) {
+                colliding.push(s);
+            }
+            vi.text
+        })
         .collect();
     if colliding.is_empty() {
         return (nodule_path.to_string(), None);
     }
-    let escaped: Vec<String> = segments
-        .into_iter()
-        .map(|s| {
-            if is_reserved(s) {
-                format!("{s}{RESERVED_SEGMENT_SUFFIX}")
-            } else {
-                s.to_string()
-            }
-        })
-        .collect();
     let sanitized = escaped.join(".");
     let reason = GapReason::new(
         Category::ReservedWord,

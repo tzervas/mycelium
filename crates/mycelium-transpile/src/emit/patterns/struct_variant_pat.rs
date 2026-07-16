@@ -82,7 +82,7 @@ fn emit(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReason> {
     } else {
         raw
     };
-    crate::reserved::guard_ident(&name, "match pattern constructor")?;
+    let name = crate::reserved::valid_ident(&name).text;
     let layout = struct_layout(&name).ok_or_else(|| {
         GapReason::new(
             Category::Other,

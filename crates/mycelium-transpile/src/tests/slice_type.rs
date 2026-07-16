@@ -105,11 +105,10 @@ fn cases() -> Vec<Case> {
             rust: "&[f32]",
             expect: Gap(Category::Other, "f32"),
         },
-        // A reserved-word element (e.g. a Rust type literally named `Exact`) gaps with the
-        // element's own `ReservedWord` reason, exactly as it would as a bare/`Vec<..>` argument.
+        // DN-140 (M-1106): reserved element types escape before the `Vec[…]` slice convention.
         Case {
             rust: "[Exact]",
-            expect: Gap(Category::ReservedWord, "Exact"),
+            expect: Ok("Vec[Exact_kw]"),
         },
     ]
 }

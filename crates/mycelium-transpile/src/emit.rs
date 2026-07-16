@@ -12,13 +12,13 @@
 
 use crate::gap::{guarded, Category, GapReason};
 use crate::map::{map_type, tokens_to_string};
-use crate::reserved::guard_ident;
+use crate::reserved::{declared_rewrite_comment, valid_ident, ValidIdent};
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
     ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
-    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, Type, TypeParamBound,
+    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
 };
 
 // DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
@@ -203,6 +203,9 @@ struct EmitCtx {
     /// associated fn does not resolve through this tier today — a real, FLAGged residual, not a
     /// silently-assumed close).
     imported_type_keys: HashMap<String, Vec<String>>,
+    /// DN-140 §8②/⑤: first original Rust name recorded for each emitted identifier spelling in
+    /// this nodule — catches sentinel/escape self-collisions (never a silent overwrite).
+    ident_emission_sources: HashMap<String, String>,
 }
 
 thread_local! {
@@ -234,11 +237,58 @@ pub(crate) fn with_emit_ctx<R>(
             pub_needed,
             local_mangled: HashSet::new(),
             imported_type_keys,
+            ident_emission_sources: HashMap::new(),
         })
     });
     let r = f();
     EMIT_CTX.with(|c| *c.borrow_mut() = None);
     r
+}
+
+/// Re-export for call-site resolution (DN-140 §7).
+pub(crate) use crate::reserved::mangled_inherent_fn_name;
+
+/// DN-140: map `raw` to a legal emitted identifier and register per-unit self-collision state.
+fn resolve_surface_ident(raw: &str, position: &str) -> Result<String, GapReason> {
+    let vi = valid_ident(raw);
+    register_ident_emission(&vi, position)?;
+    Ok(vi.text)
+}
+
+fn register_ident_emission(vi: &ValidIdent, position: &str) -> Result<(), GapReason> {
+    let Some(r) = &vi.rewrite else {
+        return Ok(());
+    };
+    EMIT_CTX.with(|c| {
+        let mut slot = c.borrow_mut();
+        let Some(ctx) = slot.as_mut() else {
+            return Ok(());
+        };
+        if let Some(prev) = ctx.ident_emission_sources.get(&vi.text) {
+            if prev != &r.original {
+                return Err(GapReason::new(
+                    Category::ReservedWord,
+                    format!(
+                        "identifier emission collision at {position}: `{prev}` and `{}` both map to \
+                         emitted `{emitted}` — DN-140 §8②/⑤ per-unit self-collision GAP, never a silent \
+                         overwrite (G2)",
+                        r.original,
+                        emitted = vi.text,
+                    ),
+                ));
+            }
+        } else {
+            ctx.ident_emission_sources
+                .insert(vi.text.clone(), r.original.clone());
+        }
+        Ok(())
+    })
+}
+
+fn push_rewrite_doc(vi: &ValidIdent, doc: &mut Vec<String>) {
+    if let Some(line) = declared_rewrite_comment(vi) {
+        doc.push(line);
+    }
 }
 
 /// Whether a named-field record named `name` may be emitted under the M-1006 resolvability gate.
@@ -460,8 +510,8 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
                 }
                 // Same emit-verbatim exposure as fn parameters: an UNUSED type-param name never
                 // reaches map_type's guard, so guard at the declaration site too.
-                crate::reserved::guard_ident(&tp.ident.to_string(), "type parameter")?;
-                names.push(tp.ident.to_string());
+                let name = resolve_surface_ident(&tp.ident.to_string(), "type parameter")?;
+                names.push(name);
             }
             GenericParam::Lifetime(lt) => {
                 return Err(GapReason::new(
@@ -512,9 +562,9 @@ fn bounded_impl_type_params(generics: &Generics) -> Result<Vec<String>, GapReaso
             GenericParam::Type(tp) => {
                 // Same emit-verbatim exposure as `plain_type_params`: an UNUSED type-param
                 // name never reaches `map_type`'s guard, so guard at the declaration site too.
-                guard_ident(&tp.ident.to_string(), "impl type parameter")?;
+                let tp_name = resolve_surface_ident(&tp.ident.to_string(), "impl type parameter")?;
                 if tp.bounds.is_empty() {
-                    names.push(tp.ident.to_string());
+                    names.push(tp_name);
                     continue;
                 }
                 let mut bound_names = Vec::with_capacity(tp.bounds.len());
@@ -566,10 +616,11 @@ fn bounded_impl_type_params(generics: &Generics) -> Result<Vec<String>, GapReaso
                             ),
                         ));
                     }
-                    guard_ident(&seg.ident.to_string(), "impl type parameter bound")?;
-                    bound_names.push(seg.ident.to_string());
+                    let bound =
+                        resolve_surface_ident(&seg.ident.to_string(), "impl type parameter bound")?;
+                    bound_names.push(bound);
                 }
-                names.push(format!("{}: {}", tp.ident, bound_names.join(" + ")));
+                names.push(format!("{tp_name}: {}", bound_names.join(" + ")));
             }
             GenericParam::Lifetime(lt) => {
                 return Err(GapReason::new(
@@ -894,7 +945,7 @@ fn map_signature(
                 // A parameter name is emitted verbatim into `param ::= Ident ':' type_ref`, and
                 // an UNUSED param's body references never pass through Expr::Path — so the
                 // reserved-word guard must fire here, not only at use sites (PR #1207 review).
-                crate::reserved::guard_ident(&name, "fn parameter")?;
+                let name = resolve_surface_ident(&name, "fn parameter")?;
                 // DN-125 (M-1081) S2: a top-level `&mut T` PARAMETER value-threads exactly like
                 // the receiver above — erase to the referent's value type and record it as
                 // threaded, rather than the blanket `&mut T` gap `map_type`'s `visit_reference`
@@ -1942,8 +1993,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             .last()
             .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
         let name = seg.ident.to_string();
-        guard_ident(&name, "value/constructor reference")?;
-        Ok(name)
+        resolve_surface_ident(&name, "value/constructor reference")
     }
 
     fn visit_lit(&mut self, _expr: &Expr, l: &syn::ExprLit) -> Self::Output {
@@ -2305,7 +2355,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             };
         // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
         // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
-        guard_ident(&func, "call target")?;
+        let func = resolve_surface_ident(&func, "call target")?;
         let mut args = Vec::with_capacity(c.args.len());
         for a in &c.args {
             args.push(emit_expr(a, self.self_ty, self.env)?);
@@ -2392,7 +2442,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
         // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
         // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
-        guard_ident(&method_name, "method call")?;
+        let method_name = resolve_surface_ident(&method_name, "method call")?;
         let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
         let mut args = vec![recv];
         for a in &m.args {
@@ -2831,7 +2881,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                     ))
                 }
             };
-            guard_ident(&name, "closure parameter")?;
+            let name = resolve_surface_ident(&name, "closure parameter")?;
             let ty = map_type(&pt.ty, self.self_ty)?;
             params.push((name, ty));
         }
@@ -3121,11 +3171,13 @@ fn inline_closure_arg(
         return None;
     }
     let binder = closure_single_param_binder(&c.inputs[0])?;
-    if binder != "_" {
-        guard_ident(&binder, "closure parameter").ok()?;
-    }
+    let emitted_binder = if binder != "_" {
+        resolve_surface_ident(&binder, "closure parameter").ok()?
+    } else {
+        binder.clone()
+    };
     let mut bound: HashSet<String> = HashSet::new();
-    bound.insert(binder.clone());
+    bound.insert(emitted_binder);
     let mutation = match &*c.body {
         Expr::Block(b) => scan_block_for_capture_mutation(&b.block.stmts, &bound),
         other => scan_expr_for_capture_mutation(other, &bound),
@@ -3655,8 +3707,7 @@ fn map_pattern_inner(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReas
         Pat::Wild(_) => Ok("_".to_string()),
         Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => {
             let name = pi.ident.to_string();
-            guard_ident(&name, "match pattern binding/constructor")?;
-            Ok(name)
+            resolve_surface_ident(&name, "match pattern binding/constructor")
         }
         Pat::Path(pp) if pp.qself.is_none() => {
             let seg = pp
@@ -3665,19 +3716,18 @@ fn map_pattern_inner(pat: &Pat, self_ty: Option<&str>) -> Result<String, GapReas
                 .last()
                 .ok_or_else(|| GapReason::new(Category::Other, "empty path pattern"))?;
             let name = seg.ident.to_string();
-            guard_ident(&name, "match pattern constructor")?;
-            Ok(name)
+            resolve_surface_ident(&name, "match pattern constructor")
         }
         Pat::TupleStruct(pts) if pts.qself.is_none() => {
             let seg = pts.path.segments.last().ok_or_else(|| {
                 GapReason::new(Category::Other, "empty tuple-struct pattern path")
             })?;
-            guard_ident(&seg.ident.to_string(), "match pattern constructor")?;
+            let ctor = resolve_surface_ident(&seg.ident.to_string(), "match pattern constructor")?;
             let mut elems = Vec::with_capacity(pts.elems.len());
             for e in &pts.elems {
                 elems.push(map_pattern(e, self_ty)?);
             }
-            Ok(format!("{}({})", seg.ident, elems.join(", ")))
+            Ok(format!("{}({})", ctor, elems.join(", ")))
         }
         Pat::Lit(pl) => match &pl.lit {
             Lit::Bool(b) => Ok(if b.value { "True" } else { "False" }.to_string()),
@@ -3854,7 +3904,11 @@ fn lower_struct_derives(
 
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
-    guard_ident(&item.ident.to_string(), "enum type name")?;
+    let enum_vi = valid_ident(&item.ident.to_string());
+    register_ident_emission(&enum_vi, "enum type name")?;
+    let enum_name = enum_vi.text.clone();
+    let mut doc = Vec::new();
+    push_rewrite_doc(&enum_vi, &mut doc);
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
     // Tracks whether any variant is a **named-field** record — the M-1006 resolvability gate applies
@@ -3874,7 +3928,10 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     }
     let mut ctors = Vec::with_capacity(item.variants.len());
     for v in &item.variants {
-        guard_ident(&v.ident.to_string(), "enum variant/constructor")?;
+        let variant_vi = valid_ident(&v.ident.to_string());
+        register_ident_emission(&variant_vi, "enum variant/constructor")?;
+        push_rewrite_doc(&variant_vi, &mut doc);
+        let variant_name = variant_vi.text.clone();
         if v.discriminant.is_some() {
             return Err(GapReason::new(
                 Category::Other,
@@ -3886,7 +3943,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
             ));
         }
         match &v.fields {
-            Fields::Unit => ctors.push(v.ident.to_string()),
+            Fields::Unit => ctors.push(variant_name),
             Fields::Unnamed(fields) => {
                 let mut tys = Vec::with_capacity(fields.unnamed.len());
                 for f in &fields.unnamed {
@@ -3902,7 +3959,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                     })?;
                     tys.push(mapped);
                 }
-                ctors.push(format!("{}({})", v.ident, tys.join(", ")));
+                ctors.push(format!("{variant_name}({})", tys.join(", ")));
             }
             Fields::Named(fields) => {
                 // Named-field variant `Ctor { a: T, b: U }` -> positional `Ctor(T, U)` (grammar
@@ -3932,7 +3989,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                         tys.join(", ")
                     ),
                 ));
-                ctors.push(format!("{}({})", v.ident, tys.join(", ")));
+                ctors.push(format!("{variant_name}({})", tys.join(", ")));
             }
         }
     }
@@ -3940,7 +3997,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     // wins): an enum with a named-field variant only emits when it resolves in-file — otherwise
     // emitting that variant positionally would introduce an out-of-file reference that poisons the
     // file's `myc check`, costing its clean items. An enum with no named-field variant is unaffected.
-    if has_named_variant && !named_field_emit_allowed(&item.ident.to_string()) {
+    if has_named_variant && !named_field_emit_allowed(&enum_name) {
         return Err(GapReason::new(
             Category::PayloadVariant,
             format!(
@@ -3961,15 +4018,19 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
+    for d in &doc {
+        myc.push_str(d);
+        myc.push('\n');
+    }
     myc.push_str(&format!(
         "{}type {}{} = {};",
-        pub_prefix(&item.ident.to_string()),
-        item.ident,
+        pub_prefix(&enum_name),
+        enum_name,
         params_text,
         ctors.join(" | ")
     ));
     Ok(Emitted {
-        name: item.ident.to_string(),
+        name: enum_name,
         myc,
         sub_gaps,
     })
@@ -3980,7 +4041,11 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
 /// (named fields emit positionally with names dropped + recorded — see
 /// [`map_named_fields_positional`]). A field whose *type* has no mapping still refuses the struct.
 pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
-    guard_ident(&item.ident.to_string(), "struct type/constructor name")?;
+    let struct_vi = valid_ident(&item.ident.to_string());
+    register_ident_emission(&struct_vi, "struct type/constructor name")?;
+    let struct_name = struct_vi.text.clone();
+    let mut ident_doc = Vec::new();
+    push_rewrite_doc(&struct_vi, &mut ident_doc);
     let type_params = plain_type_params(&item.generics)?;
     let mut sub_gaps = Vec::new();
     let non_derive = non_doc_non_derive_attrs(&item.attrs);
@@ -3996,7 +4061,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     }
     let mut field_types: Vec<String> = Vec::new();
     let ctor = match &item.fields {
-        Fields::Unit => item.ident.to_string(),
+        Fields::Unit => struct_name.clone(),
         Fields::Unnamed(fields) => {
             let mut tys = Vec::with_capacity(fields.unnamed.len());
             for f in &fields.unnamed {
@@ -4012,7 +4077,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
                 tys.push(mapped);
             }
             field_types = tys.clone();
-            format!("{}({})", item.ident, tys.join(", "))
+            format!("{struct_name}({})", tys.join(", "))
         }
         Fields::Named(fields) => {
             // Named-field struct `Foo { a: T, b: U }` -> positional `Foo(T, U)` (grammar
@@ -4034,7 +4099,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
             // resolves in-file — otherwise the emission would introduce an out-of-file reference
             // (e.g. a sibling-crate/kernel type) that poisons the file's `myc check`, costing its
             // clean items. When gated out, keep the honest named-field refusal.
-            if !named_field_emit_allowed(&item.ident.to_string()) {
+            if !named_field_emit_allowed(&struct_name) {
                 return Err(GapReason::new(
                     Category::Struct,
                     format!(
@@ -4059,7 +4124,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
                 ),
             ));
             field_types = tys.clone();
-            format!("{}({})", item.ident, tys.join(", "))
+            format!("{struct_name}({})", tys.join(", "))
         }
     };
     let params_text = if type_params.is_empty() {
@@ -4072,10 +4137,14 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
+    for d in &ident_doc {
+        myc.push_str(d);
+        myc.push('\n');
+    }
     myc.push_str(&format!(
         "{}type {}{} = {};",
-        pub_prefix(&item.ident.to_string()),
-        item.ident,
+        pub_prefix(&struct_name),
+        struct_name,
         params_text,
         ctor
     ));
@@ -4084,7 +4153,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     // exactly like `transpile.rs`'s own item-to-item `"\n\n"` join, so a single-item and a
     // multi-item `Emitted.myc` are textually indistinguishable — see `lower_struct_derives` docs).
     let (derive_impls, derive_gaps) = lower_struct_derives(
-        &item.ident.to_string(),
+        &struct_name,
         &item.attrs,
         &field_types,
         !type_params.is_empty(),
@@ -4095,7 +4164,7 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
     }
     sub_gaps.extend(derive_gaps);
     Ok(Emitted {
-        name: item.ident.to_string(),
+        name: struct_name,
         myc,
         sub_gaps,
     })
@@ -4103,7 +4172,11 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
 
 /// Top-level `fn` -> `fn_item`. No `self` (no enclosing impl/trait).
 pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
-    guard_ident(&item.sig.ident.to_string(), "function name")?;
+    let fn_vi = valid_ident(&item.sig.ident.to_string());
+    register_ident_emission(&fn_vi, "function name")?;
+    let fn_name = fn_vi.text.clone();
+    let mut ident_doc = Vec::new();
+    push_rewrite_doc(&fn_vi, &mut ident_doc);
     check_fn_modifiers(&item.sig)?;
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
     // DN-125 (M-1081): a free fn's `&mut T` parameter(s) route through the value-threading body
@@ -4131,16 +4204,11 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
             ),
         ));
     }
-    let name = item.sig.ident.to_string();
-    let myc = render_fn(
-        &name,
-        &sig,
-        &body,
-        &doc_lines(&item.attrs),
-        pub_prefix(&name),
-    );
+    let mut doc = doc_lines(&item.attrs);
+    doc.extend(ident_doc);
+    let myc = render_fn(&fn_name, &sig, &body, &doc, pub_prefix(&fn_name));
     Ok(Emitted {
-        name: item.sig.ident.to_string(),
+        name: fn_name,
         myc,
         sub_gaps,
     })
@@ -4152,7 +4220,11 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
 /// still requires a concrete substitution the grammar has no slot for at trait-definition time,
 /// so such methods fail their signature mapping (an honest, not a fabricated, "Self" binding).
 pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
-    guard_ident(&item.ident.to_string(), "trait name")?;
+    let trait_vi = valid_ident(&item.ident.to_string());
+    register_ident_emission(&trait_vi, "trait name")?;
+    let trait_name = trait_vi.text.clone();
+    let mut ident_doc = Vec::new();
+    push_rewrite_doc(&trait_vi, &mut ident_doc);
     if !item.supertraits.is_empty() {
         return Err(GapReason::new(
             Category::Trait,
@@ -4168,7 +4240,8 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
     for ti in &item.items {
         match ti {
             TraitItem::Fn(f) => {
-                guard_ident(&f.sig.ident.to_string(), "trait method name")?;
+                let method_name =
+                    resolve_surface_ident(&f.sig.ident.to_string(), "trait method name")?;
                 if f.default.is_some() {
                     return Err(GapReason::new(
                         Category::Trait,
@@ -4192,7 +4265,7 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
                             ),
                         )
                     })?;
-                sigs.push(render_fn_sig(&f.sig.ident.to_string(), &sig));
+                sigs.push(render_fn_sig(&method_name, &sig));
             }
             TraitItem::Const(c) => {
                 return Err(GapReason::new(
@@ -4241,6 +4314,10 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
+    for d in &ident_doc {
+        myc.push_str(d);
+        myc.push('\n');
+    }
     // Each signature on its own indented line (readability, and consistency with the diff
     // harness's line-prefix `fn `/`type ` extraction — see `src/tests/diff.rs`).
     let sig_lines = sigs
@@ -4250,13 +4327,13 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
         .join("\n");
     myc.push_str(&format!(
         "{}trait {}{} {{\n{}\n}};",
-        pub_prefix(&item.ident.to_string()),
-        item.ident,
+        pub_prefix(&trait_name),
+        trait_name,
         params_text,
         sig_lines
     ));
     Ok(Emitted {
-        name: item.ident.to_string(),
+        name: trait_name,
         myc,
         sub_gaps: Vec::new(),
     })
@@ -4273,11 +4350,9 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
 /// Mycelium's own desugaring, not a transpiler artifact — DN-34 §8.14 deferred closing this ("D4")
 /// while the corpus had zero instances; the Phase-0 re-measure (gap-close-2) found 3.
 ///
-/// The fix is a **type-qualified mangled name** — `{Type}__{method}` — deterministic (a pure
-/// function of the two already-known names), EXPLAIN-traceable (grep `Type__method` in the .myc
-/// straight back to `impl Type { fn method }` in the Rust source), and collision-free *by
-/// construction* (two distinct Rust items can never share both their enclosing inherent-impl
-/// type name and their method name — that would already be a Rust compile error). This
+/// The fix is a **length-prefixed mangled name** (DN-140 §7, [`crate::reserved::mangled_inherent_fn_name`])
+/// after [`crate::reserved::valid_ident`] on each part — deterministic, EXPLAIN-traceable, and
+/// boundary-injective by construction. This
 /// intentionally does **not** reuse the hand-authored `lib/compiler/README.md` FLAG-ast-5
 /// single-letter-per-type constructor-prefix convention (`Nil`/`MNil`/`SNil` in
 /// `lib/std/collections.myc`) — that is a curated human choice per type, not mechanically
@@ -4299,56 +4374,13 @@ pub fn emit_trait(item: &ItemTrait) -> Result<Emitted, GapReason> {
 /// change than this fix's scope. So `self`-receiving methods are left un-mangled here (still
 /// subject to the ordinary flat-namespace collision risk the DN-34 §8.14 "D4" residual already
 /// named) — a documented, narrower fix, not a silently partial one (G2/VR-5).
-fn mangled_inherent_fn_name(self_ty_text: &str, method_name: &str) -> String {
-    format!("{self_ty_text}__{method_name}")
-}
-
+///
 /// Whether `sig` has a `self`/`&self`/`&mut self` receiver (an ordinary Rust *method*) as opposed
 /// to a receiver-less *associated function* (typically a constructor). Only the receiver-less case
-/// is eligible for [`mangled_inherent_fn_name`] — see that function's doc for why.
+/// is eligible for [`crate::reserved::mangled_inherent_fn_name`] — see [`crate::reserved`] for the
+/// DN-140 encoding (generic self types like `Foo[T]` are escaped before length-prefix join).
 fn has_self_receiver(sig: &Signature) -> bool {
     sig.inputs.iter().any(|a| matches!(a, FnArg::Receiver(_)))
-}
-
-/// **Regression fix (this leaf) — a generic-argument self type is NEVER eligible for
-/// [`mangled_inherent_fn_name`].** DN-131 (M-1088/M-1101) taught `emit_impl` to accept an
-/// impl-level generic parameter (`impl[T] Foo[T] { .. }`) instead of gapping the whole block, but
-/// `mangled_inherent_fn_name`'s `{Type}__{method}` scheme was never updated for that: `self_ty_text`
-/// is `map_type`'s mapped text for `item.self_ty`, and `map_type`'s ONLY bracket-producing arm is a
-/// generic-argument application (`map.rs`'s `PathArguments::AngleBracketed` arm, `"{name}[{args}]"`)
-/// — so a generic self type (`Foo<T>`/`Foo<Concrete>`) maps to `Foo[T]`/`Foo[Concrete]`, and
-/// splicing that into `{Type}__{method}` embeds Mycelium `type_args` bracket syntax inside an
-/// identifier position: `Foo[T]__method` is never a valid Mycelium identifier (grammar's
-/// `Ident` production has no `[`/`]`) — a **hard parse failure** the moment `myc check`/any
-/// Mycelium parser reads the emission (G2: the transpiler must never emit unparseable text).
-/// Reached from BOTH an impl-level generic (`impl<T> Foo<T>`, self type repeats the impl's own
-/// `<T>`) and a concrete monomorphized inherent impl (`impl Foo<Concrete>`, self type has closed
-/// generic args but the impl itself declares none) — this check is purely syntactic on
-/// `item.self_ty`'s own shape, so it catches both without needing to special-case which one.
-///
-/// **Why the fix is a gap, not a "strip to the base type name" repair.** Stripping brackets would
-/// produce a *valid* identifier (`Foo__method`) and — for a single generic type with only one
-/// inherent-impl block — would even be collision-free. But `mangled_inherent_fn_name`'s own
-/// collision-freedom argument ("two distinct Rust items can never share both their enclosing
-/// inherent-impl type name and their method name — that would already be a Rust compile error")
-/// is **FALSE once generic arguments are stripped**: `impl Foo<A> { fn new(..) }` and
-/// `impl Foo<B> { fn new(..) }` are two separate, perfectly legal Rust inherent impls (distinct
-/// concrete instantiations of the same generic type), each free to declare a same-named
-/// receiver-less associated fn — a real collision under Mycelium's flat-fn desugar (M-664) that
-/// base-name-only mangling would silently reintroduce, undoing exactly what D4 exists to prevent
-/// (DN-34 §8.13/8.14). So the receiver-less-associated-fn case on a generic self type is left an
-/// honest per-method gap (this function's own impl-partial-emission asymmetry — sibling methods on
-/// the same impl are unaffected) rather than either an invalid identifier or a reintroduced
-/// collision (VR-5/G2).
-fn self_ty_is_generic_application(self_ty: &Type) -> bool {
-    match self_ty {
-        Type::Path(tp) if tp.qself.is_none() => tp
-            .path
-            .segments
-            .last()
-            .is_some_and(|seg| matches!(seg.arguments, PathArguments::AngleBracketed(_))),
-        _ => false,
-    }
 }
 
 // ---- DN-122 §13 (M-1080; WU-A) — the MVP foreign-trait-impl rule-swap ----------------------------
@@ -4572,7 +4604,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
             .segments
             .last()
             .ok_or_else(|| GapReason::new(Category::Impl, "impl trait path is empty"))?;
-        guard_ident(&seg.ident.to_string(), "impl trait name")?;
+        let _trait_head = resolve_surface_ident(&seg.ident.to_string(), "impl trait name")?;
         let targs =
             match &seg.arguments {
                 PathArguments::None => Vec::new(),
@@ -4620,15 +4652,6 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
     for ii in &item.items {
         match ii {
             ImplItem::Fn(f) => {
-                // M-1001: a reserved-word method name would emit un-parseable `fn <keyword>`; make
-                // it a per-method sub-gap (keeping sibling methods independent), never emitted.
-                if let Err(e) = guard_ident(&f.sig.ident.to_string(), "impl method name") {
-                    sub_gaps.push(GapReason::new(
-                        e.category,
-                        format!("impl method `{}`: {}", f.sig.ident, e.reason),
-                    ));
-                    continue;
-                }
                 // DN-41 §2: `Narrow::narrow` is fallible (`Result<To, NarrowError>`) — no
                 // `= expr fn_item` body can express a Result-returning refuse in this grammar
                 // fragment, regardless of whether `Self`/the target type otherwise map. Intercept
@@ -4731,69 +4754,33 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                 // flat-fn desugar + why only the receiver-less case is safe to
                                 // rename). EXPLAIN-traceable: recorded as a doc line on the
                                 // emitted `fn` itself, not just in this module's comments.
-                                let emitted_fn_name =
-                                    if trait_name.is_none() && !has_self_receiver(&f.sig) {
-                                        // Regression fix (this leaf, DN-34 §8.13/8.14 "D4"): a
-                                        // generic-argument self type (`Foo<T>`/`Foo<Concrete>`)
-                                        // must NEVER reach `mangled_inherent_fn_name` — see
-                                        // `self_ty_is_generic_application`'s doc for the full
-                                        // hard-parse-failure + collision-reintroduction rationale.
-                                        // This method alone gaps; sibling methods on the SAME impl
-                                        // (and any `self`-receiving method here) are unaffected —
-                                        // this function's own documented per-method partial-
-                                        // emission asymmetry.
-                                        if self_ty_is_generic_application(&item.self_ty) {
-                                            sub_gaps.push(GapReason::new(
-                                                Category::GenericBound,
-                                                format!(
-                                                    "impl method `{method}`: a receiver-less \
-                                                     inherent-impl associated fn on a \
-                                                     generic-argument self type `{self_ty_text}` \
-                                                     cannot be mangled — the D4 \
-                                                     `{{Type}}__{{method}}` scheme's mapped \
-                                                     self-type text embeds Mycelium `type_args` \
-                                                     bracket syntax (`{self_ty_text}__{method}`), \
-                                                     which is never a valid identifier (would \
-                                                     hard-parse-fail, G2); stripping to the bare \
-                                                     base type name would avoid the parse failure \
-                                                     but reintroduce the exact same-name \
-                                                     collision D4 exists to close: two DIFFERENT \
-                                                     concrete instantiations of this generic type \
-                                                     (e.g. two separate `impl` blocks for two \
-                                                     different type arguments) are distinct, \
-                                                     non-conflicting Rust items that could each \
-                                                     declare a same-named receiver-less \
-                                                     associated fn, which would silently collide \
-                                                     under a base-name-only mangle — left an \
-                                                     explicit gap rather than either (VR-5/G2)",
-                                                    method = f.sig.ident,
-                                                    self_ty_text = self_ty_text,
-                                                ),
-                                            ));
-                                            continue;
-                                        }
-                                        doc.push(format!(
-                                            "// Declared: renamed `{}` -> `{}__{}` (DN-34 \
-                                             §8.13/8.14 \"D4\") — Mycelium's inherent-impl \
-                                             desugar (M-664, crates/mycelium-l1/src/checkty.rs) \
-                                             lifts every method to a flat top-level fn, so a \
-                                             bare name here could collide with another type's \
-                                             same-named associated fn in this nodule.",
-                                            f.sig.ident, self_ty_text, f.sig.ident
+                                let emitted_fn_name = if trait_name.is_none()
+                                    && !has_self_receiver(&f.sig)
+                                {
+                                    let mangled = mangled_inherent_fn_name(
+                                        &self_ty_text,
+                                        &f.sig.ident.to_string(),
+                                    );
+                                    doc.push(format!(
+                                            "// Declared: renamed `impl {} {{ fn {} }}` -> \
+                                             `{mangled}` (D4 inherent-impl flat-fn desugar + \
+                                             DN-140 length-prefix mangle, M-664) — Mycelium \
+                                             lifts receiver-less associated fns to top-level names.",
+                                            self_ty_text,
+                                            f.sig.ident,
                                         ));
-                                        let mangled = mangled_inherent_fn_name(
-                                            &self_ty_text,
-                                            &f.sig.ident.to_string(),
-                                        );
-                                        // DN-133 (M-1094) tier (i): record this real, observed
-                                        // emission so a LATER call site in this same file can
-                                        // resolve `Type::method(...)` against it — see
-                                        // `record_local_mangled_assoc_fn`'s doc.
-                                        record_local_mangled_assoc_fn(&mangled);
-                                        mangled
-                                    } else {
-                                        f.sig.ident.to_string()
-                                    };
+                                    // DN-133 (M-1094) tier (i): record this real, observed
+                                    // emission so a LATER call site in this same file can
+                                    // resolve `Type::method(...)` against it — see
+                                    // `record_local_mangled_assoc_fn`'s doc.
+                                    record_local_mangled_assoc_fn(&mangled);
+                                    mangled
+                                } else {
+                                    resolve_surface_ident(
+                                        &f.sig.ident.to_string(),
+                                        "impl method name",
+                                    )?
+                                };
                                 // Lifted inherent-impl methods are never a cross-nodule `use`
                                 // target in the corpus's own Rust source shape (Rust imports a
                                 // free fn by name via `use`, never an inherent method that way —

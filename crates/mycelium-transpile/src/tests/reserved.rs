@@ -6,7 +6,7 @@
 
 use crate::gap::Category;
 use crate::reserved::{
-    guard_ident, is_reserved, sanitize_nodule_path, RESERVED, RESERVED_SEGMENT_SUFFIX,
+    guard_ident, is_reserved, sanitize_nodule_path, valid_ident, RESERVED, RESERVED_SEGMENT_SUFFIX,
 };
 
 /// **Drift guard.** Every word in the [`RESERVED`] snapshot must still be rejected as an identifier
@@ -46,8 +46,7 @@ fn snapshot_is_nonempty_and_deduplicated() {
     }
 }
 
-/// `is_reserved` / `guard_ident` accept ordinary identifiers and reject reserved words, tagging the
-/// rejection [`Category::ReservedWord`] with a diagnostic that names the colliding word (G2).
+/// `valid_ident` accepts ordinary identifiers and rewrites reserved words (DN-140).
 #[test]
 fn guard_rejects_reserved_accepts_ordinary() {
     // Ordinary Rust identifiers that are NOT Mycelium reserved words → accepted.
@@ -63,10 +62,10 @@ fn guard_rejects_reserved_accepts_ordinary() {
         assert!(!is_reserved(ok), "`{ok}` should not be reserved");
         assert!(
             guard_ident(ok, "test position").is_ok(),
-            "`{ok}` should pass the guard"
+            "`{ok}` should pass the guard call-through"
         );
+        assert_eq!(valid_ident(ok).text, ok);
     }
-    // Reserved words that a Rust enum/variant/type could easily be named → rejected as ReservedWord.
     for bad in [
         "Exact",
         "Proven",
@@ -78,40 +77,33 @@ fn guard_rejects_reserved_accepts_ordinary() {
         "fuse",
     ] {
         assert!(is_reserved(bad), "`{bad}` should be reserved");
-        let err = guard_ident(bad, "match pattern").expect_err("reserved word must be gapped");
-        assert_eq!(err.category, Category::ReservedWord);
-        assert!(
-            err.reason.contains(bad),
-            "the gap reason names the colliding word `{bad}` (never silent): {}",
-            err.reason
-        );
+        let vi = valid_ident(bad);
+        assert_eq!(vi.text, format!("{bad}{RESERVED_SEGMENT_SUFFIX}"));
+        assert!(vi.rewrite.is_some());
     }
 }
 
 /// **Declaration-site coverage (PR #1207 review HIGH).** A reserved word used as an *unused* fn
 /// parameter name never flows through `Expr::Path`'s use-site guard, and its name is emitted
 /// verbatim into `param ::= Ident ':' type_ref` — so the guard must fire in `map_signature`
-/// itself. Repro from the review: `fn set_default(default: u32)` emitted, then failed
-/// `myc check` at parse (`expected an identifier, found Default`). Now it must be GAPPED as
-/// `ReservedWord`, never emitted.
+/// itself. Repro from the review: `fn set_default(default: u32)` must not emit the reserved
+/// parameter name verbatim — DN-140 renames it to `default_kw`.
 #[test]
 fn unused_reserved_fn_parameter_is_gapped_not_emitted() {
     let src = "pub fn set_default(default: u32) -> u32 { 42 }\n";
     let (myc, report) = crate::transpile::transpile_source(src, "reserved_param", "test")
-        .expect("transpile_source itself succeeds; the item is gapped");
+        .expect("transpile_source itself succeeds");
     assert!(
-        report.emitted_items.is_empty(),
-        "the fn must not be emitted: {myc}"
+        report.emitted_items.iter().any(|n| n == "set_default"),
+        "the fn should emit: {myc}"
     );
-    let gap = report
-        .gaps
-        .iter()
-        .find(|g| g.category == Category::ReservedWord)
-        .expect("a ReservedWord gap for the parameter");
     assert!(
-        gap.reason.contains("default"),
-        "the gap names the colliding word (never silent): {}",
-        gap.reason
+        myc.contains("default_kw"),
+        "reserved parameter must be escaped, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("default: u32"),
+        "verbatim reserved parameter name must not appear, got:\n{myc}"
     );
 }
 
@@ -119,8 +111,8 @@ fn unused_reserved_fn_parameter_is_gapped_not_emitted() {
 /// `plain_type_params`) — defensive twin of the fn-parameter case.
 #[test]
 fn reserved_type_parameter_is_gapped_not_emitted() {
-    let err = guard_ident("Binary", "type parameter").expect_err("reserved type param must gap");
-    assert_eq!(err.category, Category::ReservedWord);
+    let vi = valid_ident("Binary");
+    assert_eq!(vi.text, format!("Binary{RESERVED_SEGMENT_SUFFIX}"));
 }
 
 /// **Gap-close-2 Phase-0 regression fix — `sanitize_nodule_path` unit coverage.** M-1042 added
