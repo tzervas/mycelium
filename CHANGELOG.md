@@ -28,7 +28,6 @@ Haiku-swarm Wave-0 under the maint-guide framework (orch plans; leaves execute).
 - **tracking** — minted M-1108…M-1118 release-gate todos for all open epics (E9-1, E10-1, E17-1,
   E18-1, E20-1, E22-1, E23-1, E28-1, E33-1, E39-1, E40-1).
 
-
 ### chore(tracking): integration-tier close-out — D4-regression fix + DN-138 increment-1/2 + DN-140 ratified, mint 4 M-ids, flip M-1102 (2026-07-13)
 
 Reconciles `tools/github/issues.yaml`/`docs/Doc-Index.md` against the batch that landed on `dev`
