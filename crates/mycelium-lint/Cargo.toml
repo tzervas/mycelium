@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-lint"
-version = "0.0.0"
+version.workspace = true
 description = "myc-lint — lint + auto-fix (M-366): surfaces the M-141 invariant lints + the header lints as ACTIONABLE, reified, opt-in fixes with a suggest/apply/scaffold boundary (a control-flow change is a scaffold, never auto-applied — RFC-0014 I1/I5). Hosts the M-363 §4.1 doc quality-bar lint (dormant-but-defined until the doc IR lands). No silent rewrite (G2). KC-3 — above the kernel; no new dependency."
 edition.workspace = true
 rust-version.workspace = true

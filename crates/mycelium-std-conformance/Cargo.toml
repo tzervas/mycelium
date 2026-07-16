@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-conformance"
-version = "0.0.0"
+version.workspace = true
 description = "Standard-library port-conformance test harness (M-971; RFC-0031 D5/D6): the three-way differential (L1-eval ≡ elaborate→L0-interp ≡ AOT) between each `lib/std/<name>.myc` nodule port and its retained Rust `mycelium-std-<name>` oracle. Relocated out of `mycelium-l1` (M-971) so the trusted `core`-tier L1 crate no longer dev-depends on the `std`-tier oracle crates — the tests legitimately live in this higher-tier crate that may depend on both. Test-only: the crate has no library surface."
 edition.workspace = true
 rust-version.workspace = true

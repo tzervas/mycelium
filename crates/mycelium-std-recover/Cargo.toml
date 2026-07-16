@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-recover"
-version = "0.0.0"
+version.workspace = true
 description = "std.recover — the declarative recovery bridge (Outcome / PolicyRef; every error recovered or re-propagated, never dropped) over the mycelium-diag record (M-520, Rust-first half)."
 edition.workspace = true
 rust-version.workspace = true

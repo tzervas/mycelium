@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-build"
-version = "0.0.0"
+version.workspace = true
 description = "Stable-component build layer (RFC-0004 §4; ADR-003/009): classifies AOT-eligible stable components vs interpreted/JIT and emits content-addressed build certificates. M-311/M-312. Outside the trusted kernel (KC-3)."
 edition.workspace = true
 rust-version.workspace = true

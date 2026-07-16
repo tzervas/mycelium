@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-transpile"
-version = "0.0.0"
+version.workspace = true
 description = "Rust->Mycelium transpiler PoC (M-873, kickoff trx): best-effort .myc emission over a single Rust crate's syn AST, plus a structured, never-silent gap report for everything it cannot express."
 edition.workspace = true
 rust-version.workspace = true

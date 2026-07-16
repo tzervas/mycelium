@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-time"
-version = "0.0.0"
+version.workspace = true
 description = "std.time — clocks, durations, instants (monotonic vs wall)."
 edition.workspace = true
 rust-version.workspace = true
