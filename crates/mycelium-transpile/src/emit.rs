@@ -120,6 +120,50 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
+/// Recover `Binary{N}` width from field access `self.field` or a unit match
+/// `match self { Ty(p0, …) => p0 }` using the in-file struct layout (express gap-close).
+fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+    if let Expr::Field(f) = e {
+        let base_ty = match f.base.as_ref() {
+            Expr::Path(p) if p.path.is_ident("self") => self_ty.map(|s| s.to_string()),
+            _ => None,
+        }?;
+        let layout = struct_layout(&base_ty)?;
+        let syn::Member::Named(id) = &f.member else {
+            // positional: field index
+            let syn::Member::Unnamed(idx) = &f.member else {
+                return None;
+            };
+            let ft = layout.get(idx.index as usize)?.as_ref()?;
+            return binary_width(ft);
+        };
+        // Named field — layouts are positional-only in this emitter; first Binary field
+        // is the common Duration/Instant shape (single payload).
+        let ft = layout.iter().find_map(|f| f.as_ref())?;
+        let _ = id;
+        return binary_width(ft);
+    }
+    let Expr::Match(m) = e else {
+        return None;
+    };
+    if m.arms.len() != 1 {
+        return None;
+    }
+    let arm = &m.arms[0];
+    let Pat::TupleStruct(ts) = &arm.pat else {
+        return None;
+    };
+    let ty_name = ts
+        .path
+        .segments
+        .last()
+        .map(|s| s.ident.to_string())
+        .or_else(|| self_ty.map(|s| s.to_string()))?;
+    let layout = struct_layout(&ty_name)?;
+    let ft = layout.first()?.as_ref()?;
+    binary_width(ft)
+}
+
 /// P4/P5 (DN-99 §8 ENB-6): [`expr_env_type`] narrowed to the **signed**-marked `Binary{N}` case
 /// (via [`signed_binary_width`]) — `Expr::Binary`'s signed-op gate (`add_s`/`sub_s`/`mul_s`/
 /// `lt_s`) and `Expr::Unary`'s `neg_s` gate read this directly. `None` for an unmarked (unsigned)
@@ -207,6 +251,9 @@ struct EmitCtx {
     /// DN-140 §8②/⑤: first original Rust name recorded for each emitted identifier spelling in
     /// this nodule — catches sentinel/escape self-collisions (never a silent overwrite).
     ident_emission_sources: HashMap<String, String>,
+    /// Bare (un-mangled) inherent method names already emitted in this file — second occurrence
+    /// of the same short name forces D4 mangling (express gap-close / `as_nanos` collision).
+    bare_fn_names: HashSet<String>,
 }
 
 thread_local! {
@@ -239,6 +286,7 @@ pub(crate) fn with_emit_ctx<R>(
             local_mangled: HashSet::new(),
             imported_type_keys,
             ident_emission_sources: HashMap::new(),
+            bare_fn_names: HashSet::new(),
         })
     });
     let r = f();
@@ -388,6 +436,23 @@ fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
         None => false,
         Some(ctx) => ctx.local_mangled.contains(mangled_name),
     })
+}
+
+/// Express gap-close (2026-07-16): bare top-level fn names already used in this file's emit
+/// (inherent methods left un-mangled on first occurrence). Second use forces D4 mangling.
+fn bare_fn_name_taken(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.bare_fn_names.contains(name),
+    })
+}
+
+fn record_bare_fn_name(name: &str) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.bare_fn_names.insert(name.to_string());
+        }
+    });
 }
 
 /// DN-133 tier (ii): resolve `mangled_name` via the M-1084 cross-nodule symbol table, using
@@ -684,7 +749,9 @@ fn bounded_impl_type_params(generics: &Generics) -> Result<Vec<String>, GapReaso
 /// [`sig_type_env`]'s doc for why that opacity is load-bearing for `Expr::Cast`, and
 /// [`signed_binary_width`] for the marker-aware counterpart.
 pub(crate) fn binary_width(ty_text: &str) -> Option<u32> {
-    ty_text
+    // Accept plain `Binary{N}` and the signed env marker `Binary{N}!s` (sig_type_env).
+    let plain = ty_text.strip_suffix("!s").unwrap_or(ty_text);
+    plain
         .strip_prefix("Binary{")
         .and_then(|rest| rest.strip_suffix('}'))
         .and_then(|digits| digits.parse::<u32>().ok())
@@ -2129,8 +2196,88 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
 
     fn visit_binary(&mut self, _expr: &Expr, b: &syn::ExprBinary) -> Self::Output {
         use syn::BinOp;
-        let lhs = emit_expr(&b.left, self.self_ty, self.env)?;
-        let rhs = emit_expr(&b.right, self.self_ty, self.env)?;
+        // Express gap-close: a bare decimal lit on one side of a Binary comparison has no
+        // paradigm (Q6) and wrong width. When the other operand is known Binary{N}, rewrite
+        // the lit to an equal-width BinLit zero/value so `lt`/`eq` can fire cleanly.
+        let lit_as_bin = |e: &Expr, width: u32| -> Option<String> {
+            let Expr::Lit(el) = e else {
+                return None;
+            };
+            let Lit::Int(i) = &el.lit else {
+                return None;
+            };
+            let digits = i.base10_digits();
+            let Ok(v) = digits.parse::<u128>() else {
+                return None;
+            };
+            if v == 0 {
+                return Some(zero_bin_literal(width));
+            }
+            // Non-zero: emit minimal binary digits padded to width (MSB-first).
+            let mut bits = format!("{v:b}");
+            if bits.len() as u32 > width {
+                return None;
+            }
+            while (bits.len() as u32) < width {
+                bits.insert(0, '0');
+            }
+            let mut s = String::from("0b");
+            for (i, c) in bits.chars().enumerate() {
+                if i > 0 && i % 4 == 0 {
+                    s.push('_');
+                }
+                s.push(c);
+            }
+            Some(s)
+        };
+        let field_bin_w = |e: &Expr| -> Option<u32> {
+            let Expr::Paren(p) = e else {
+                return match_first_field_binary_width(e, self.self_ty);
+            };
+            match_first_field_binary_width(&p.expr, self.self_ty)
+        };
+        let width_from_myc = |s: &str| -> Option<u32> {
+            // Recover `Binary{N}` from emitted projection text.
+            let i = s.find("Binary{")?;
+            let rest = &s[i + "Binary{".len()..];
+            let end = rest.find('}')?;
+            rest[..end].parse().ok()
+        };
+        let lw = expr_env_binary_width(&b.left, self.env).or_else(|| field_bin_w(&b.left));
+        let rw = expr_env_binary_width(&b.right, self.env).or_else(|| field_bin_w(&b.right));
+        let lhs_raw = emit_expr(&b.left, self.self_ty, self.env)?;
+        let rhs_raw = emit_expr(&b.right, self.self_ty, self.env)?;
+        let lw = lw.or_else(|| width_from_myc(&lhs_raw));
+        let rw = rw.or_else(|| width_from_myc(&rhs_raw));
+        // Only rewrite decimal lits on *comparison* ops — bitand/or with `0x5` must stay
+        // as glyph operands when the gate uses both_known_binary (fixture corpus).
+        let is_cmp = matches!(
+            &b.op,
+            BinOp::Eq(_)
+                | BinOp::Ne(_)
+                | BinOp::Lt(_)
+                | BinOp::Gt(_)
+                | BinOp::Le(_)
+                | BinOp::Ge(_)
+        );
+        let lhs = if is_cmp {
+            if let Some(w) = rw {
+                lit_as_bin(&b.left, w).unwrap_or_else(|| lhs_raw.clone())
+            } else {
+                lhs_raw.clone()
+            }
+        } else {
+            lhs_raw.clone()
+        };
+        let rhs = if is_cmp {
+            if let Some(w) = lw {
+                lit_as_bin(&b.right, w).unwrap_or_else(|| rhs_raw.clone())
+            } else {
+                rhs_raw.clone()
+            }
+        } else {
+            rhs_raw.clone()
+        };
         // trx2 Lane C Deliverable 1 — operand-type-gated operator emission (VERIFY-FIRST,
         // mitigation #14; every claim below is a *measured* `myc check` result over the built
         // `target/debug/myc`, not a doc-derived guess — see the crate's `src/tests/emit.rs`
@@ -2180,8 +2327,11 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // `expr_env_binary_width` (only a bare identifier already in `env` can ever resolve —
         // never a guess, VR-5); an unresolved operand keeps the prior, unchanged glyph
         // emission (Declared heuristic, exactly as before this deliverable).
-        let both_known_binary = expr_env_binary_width(&b.left, self.env).is_some()
-            && expr_env_binary_width(&b.right, self.env).is_some();
+        // Peer Binary known on both sides (original gate). Lit rewrite only for comparisons.
+        let lit_rewrote = is_cmp
+            && ((lw.is_some() && lit_as_bin(&b.right, lw.unwrap()).is_some())
+                || (rw.is_some() && lit_as_bin(&b.left, rw.unwrap()).is_some()));
+        let both_known_binary = lw.is_some() && rw.is_some();
         // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028; VERIFY-FIRST, mitigation #14 — every claim
         // below is a *measured* `myc check` result over the built `target/debug/myc-check`, not a
         // doc-derived guess, mirroring the Deliverable-1 probes above; see this crate's
@@ -2220,9 +2370,18 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         match &b.op {
             // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
             // — left unchanged (not part of this deliverable's operand-gated rewrite).
+            // Glyph `==`/`<` stay when both sides are already Binary idents (fixture corpus /
+            // D1). Bridge to `match eq/lt {… Bool}` only when a decimal lit was rewritten to a
+            // BinLit (otherwise bare `x < 0` fails Q6 ambient).
+            BinOp::Eq(_) if lit_rewrote => Ok(format!(
+                "(match eq({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
+            )),
             BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
             BinOp::Lt(_) if both_known_signed_binary => Ok(format!(
                 "(match lt_s({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
+            )),
+            BinOp::Lt(_) if lit_rewrote => Ok(format!(
+                "(match lt({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
             BinOp::Ne(_) if both_known_binary || both_known_signed_binary => Ok(format!(
@@ -2466,6 +2625,17 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                  gapped never-silently (M-1037, G2/VR-5)",
             ));
         }
+        if method_name.starts_with("saturating_") {
+            return Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "Rust `.{method_name}` is saturating (silent clamp) — Mycelium has no \
+                     saturating prim surface; desugaring to `{method_name}(…)` would fabricate \
+                     an unknown prim or lie about overflow (G2/VR-5). Gap never-silently \
+                     (express gap-close 2026-07-16)."
+                ),
+            ));
+        }
         // A Rust **ownership/identity-conversion no-op method** (`ToOwned::to_owned`,
         // `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow` accessors, …)
         // has NO Mycelium free-function or prim referent: Mycelium is value-semantic (ADR-003),
@@ -2489,11 +2659,65 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 ),
             ));
         }
+        // rotate_left/right: no kernel prim (FLAG-math-3); compose from bin.shl/bin.shr when
+        // the receiver maps to Binary{N} and the shift arg is emit-able — never fabricate
+        // `rotate_left` (G2; express gap-close 2026-07-16, unblocks std-rand rotl64).
+        if method_name == "rotate_left" || method_name == "rotate_right" {
+            let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
+            if m.args.len() != 1 {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "`.{method_name}(k)` expects exactly one shift arg; got {}",
+                        m.args.len()
+                    ),
+                ));
+            }
+            let k = emit_expr(&m.args[0], self.self_ty, self.env)?;
+            let width = expr_env_type(&m.receiver, self.env)
+                .and_then(|t| binary_width(&t))
+                .or_else(|| self.self_ty.and_then(binary_width));
+            let Some(n) = width else {
+                return Err(GapReason::new(
+                    Category::Other,
+                    format!(
+                        "`.{method_name}` composition needs a known Binary{{N}} receiver \
+                         width (TypeEnv); gapped rather than fabricating `rotate_left` \
+                         (FLAG-math-3 / G2)"
+                    ),
+                ));
+            };
+            let n_lit = zero_bin_literal(n);
+            // Surface prims are `shl_u`/`shr_u`/`sub_u` (checkty), not bare `shl`/`shr`.
+            let k_n = format!("width_cast({k}, {n_lit})");
+            let n_minus_k = format!("sub_u({n_lit}, {k_n})");
+            let body = if method_name == "rotate_left" {
+                format!("or(shl_u({recv}, {k_n}), shr_u({recv}, {n_minus_k}))")
+            } else {
+                format!("or(shr_u({recv}, {k_n}), shl_u({recv}, {n_minus_k}))")
+            };
+            return Ok(body);
+        }
         // Declared mapping decision: the grammar's `app_expr` has no postfix method-call
         // form (`primary ('(' args? ')')*` only) — desugar `recv.method(args)` to
         // `method(recv, args...)`, matching how `lib/std/cmp.myc`'s free functions
         // (`cmp`/`le`/`ge`/...) take the receiver as an ordinary first argument.
-        let method_name = resolve_surface_ident(&method_name, "method call")?;
+        //
+        // D4 / express gap-close: if the receiver's TypeEnv type has a locally mangled
+        // inherent method (always true for same-file inherent emits after 2026-07-16),
+        // call the mangled name so declaration/call stay in sync.
+        let mut method_name = resolve_surface_ident(&method_name, "method call")?;
+        if let Some(recv_ty) = expr_env_type(&m.receiver, self.env) {
+            let mangled = mangled_inherent_fn_name(&recv_ty, &method_name);
+            if local_mangled_assoc_fn_known(&mangled) {
+                method_name = mangled;
+            }
+        } else if let Some(st) = self.self_ty {
+            let mangled = mangled_inherent_fn_name(st, &method_name);
+            if local_mangled_assoc_fn_known(&mangled) {
+                method_name = mangled;
+            }
+        }
         let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
         let mut args = vec![recv];
         for a in &m.args {
@@ -4718,6 +4942,43 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         )
     });
 
+    // **File-gated myc-check poison (2026-07-16 remeasure / express gap-close).** Emitting
+    // `impl Trait` for a non-prelude foreign trait produces `unknown trait` CheckErrors that
+    // zero an entire file's `checked_fraction`. DN-122 MVP only seeds Ord3 (+ derive Show/Init);
+    // synthetic trait defs failed (DN-34 §8.8). **Default → Init** remaps (DN-129). **Widen**
+    // with a resolvable width_cast body emits as a free `fn` (no trait wrapper) — keeps the
+    // DN-41 width_cast path without ambient `trait Widen`. Other non-prelude trait-impls gap
+    // wholesale (G2).
+    let (trait_name, trait_targs, mvp_shape, default_to_init, widen_free_fn) =
+        match (trait_name, trait_targs, mvp_shape) {
+            (Some(n), targs, None) if n == "Default" && targs.is_empty() => {
+                (Some("Init".to_string()), targs, None, true, false)
+            }
+            (Some(n), targs, None) if n == "Widen" => {
+                // Free-fn path: still emit width_cast bodies without `impl Widen … for …`.
+                (Some(n), targs, None, false, true)
+            }
+            // Non-prelude foreign traits only (Ord3/Show/Init/Fuse/Fault keep prior emit
+            // paths even when MVP shape doesn't match — e.g. self-receiver Ord3 residual).
+            (Some(n), _targs, None)
+                if !matches!(
+                    n.as_str(),
+                    "Ord3" | "Show" | "Init" | "Fuse" | "Fault" | "Default"
+                ) =>
+            {
+                return Err(GapReason::new(
+                    Category::Impl,
+                    format!(
+                        "trait-impl of non-prelude trait `{n}` — no ambient trait definition \
+                         and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); \
+                         gapped the whole impl so the residual cannot file-poison myc-check \
+                         (G2; express gap-close 2026-07-16)"
+                    ),
+                ));
+            }
+            (n, targs, shape) => (n, targs, shape, false, false),
+        };
+
     let mut sub_gaps = Vec::new();
     let mut method_bodies = Vec::new();
     for ii in &item.items {
@@ -4819,38 +5080,79 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                             .to_string(),
                                     );
                                 }
-                                // DN-34 §8.13/8.14 "D4": a no-`self` inherent-impl associated fn
-                                // (constructor-shaped) is mangled `Type__method` — see
-                                // `mangled_inherent_fn_name`'s doc for the full rationale (M-664's
-                                // flat-fn desugar + why only the receiver-less case is safe to
-                                // rename). EXPLAIN-traceable: recorded as a doc line on the
-                                // emitted `fn` itself, not just in this module's comments.
-                                let emitted_fn_name = if trait_name.is_none()
-                                    && !has_self_receiver(&f.sig)
+                                // DN-34 §8.13/8.14 "D4" + express gap-close (2026-07-16):
+                                // Mycelium lifts inherent-impl methods to flat top-level `fn`s
+                                // (M-664). Collision policy:
+                                //   - no-`self` methods: always mangle (pre-existing D4);
+                                //   - self-receivers: mangle when the bare name was already
+                                //     emitted (fixes multi-type `as_nanos` without renaming the
+                                //     first occurrence).
+                                // Trait-impl methods stay under `impl Trait for T` (or free-fn
+                                // Widen path below).
+                                let raw_method = if default_to_init && f.sig.ident == "default"
                                 {
+                                    "init".to_string()
+                                } else {
+                                    f.sig.ident.to_string()
+                                };
+                                let emitted_fn_name = if widen_free_fn {
+                                    // Free function, not nested in impl Trait — mangle with both
+                                    // self and target widths. i8 and u8 both map to Binary{8}, so
+                                    // de-dupe: second identical free-fn is skipped (sub-gapped).
+                                    let targ = trait_targs.first().map(|s| s.as_str()).unwrap_or("?");
                                     let mangled = mangled_inherent_fn_name(
-                                        &self_ty_text,
-                                        &f.sig.ident.to_string(),
+                                        &format!("{self_ty_text}_to_{targ}"),
+                                        "widen",
                                     );
+                                    if bare_fn_name_taken(&mangled) {
+                                        sub_gaps.push(GapReason::new(
+                                            Category::Impl,
+                                            format!(
+                                                "Widen free-fn `{mangled}` already emitted for \
+                                                 this Binary width pair (signed+unsigned collapse \
+                                                 to the same Binary{{N}}); de-duplicated, not \
+                                                 double-emitted (G2)"
+                                            ),
+                                        ));
+                                        continue;
+                                    }
                                     doc.push(format!(
+                                        "// Declared: Widen free-fn emit `{mangled}` (no ambient \
+                                         trait Widen — DN-34 §8.8; width_cast body DN-41) so \
+                                         myc-check is not file-poisoned by `unknown trait Widen` \
+                                         (express gap-close 2026-07-16)."
+                                    ));
+                                    record_local_mangled_assoc_fn(&mangled);
+                                    record_bare_fn_name(&mangled);
+                                    mangled
+                                } else if trait_name.is_none() {
+                                    let bare = resolve_surface_ident(
+                                        &raw_method,
+                                        "impl method name",
+                                    )?;
+                                    let must_mangle = !has_self_receiver(&f.sig)
+                                        || local_mangled_assoc_fn_known(&bare)
+                                        || bare_fn_name_taken(&bare);
+                                    if must_mangle {
+                                        let mangled = mangled_inherent_fn_name(
+                                            &self_ty_text,
+                                            &raw_method,
+                                        );
+                                        doc.push(format!(
                                             "// Declared: renamed `impl {} {{ fn {} }}` -> \
                                              `{mangled}` (D4 inherent-impl flat-fn desugar + \
-                                             DN-140 length-prefix mangle, M-664) — Mycelium \
-                                             lifts receiver-less associated fns to top-level names.",
-                                            self_ty_text,
-                                            f.sig.ident,
+                                             DN-140 length-prefix mangle, M-664).",
+                                            self_ty_text, f.sig.ident,
                                         ));
-                                    // DN-133 (M-1094) tier (i): record this real, observed
-                                    // emission so a LATER call site in this same file can
-                                    // resolve `Type::method(...)` against it — see
-                                    // `record_local_mangled_assoc_fn`'s doc.
-                                    record_local_mangled_assoc_fn(&mangled);
-                                    mangled
+                                        record_local_mangled_assoc_fn(&mangled);
+                                        record_bare_fn_name(&mangled);
+                                        mangled
+                                    } else {
+                                        record_bare_fn_name(&bare);
+                                        bare
+                                    }
                                 } else {
-                                    resolve_surface_ident(
-                                        &f.sig.ident.to_string(),
-                                        "impl method name",
-                                    )?
+                                    resolve_surface_ident(&raw_method, "impl method name")?
                                 };
                                 // Lifted inherent-impl methods are never a cross-nodule `use`
                                 // target in the corpus's own Rust source shape (Rust imports a
@@ -4919,17 +5221,20 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         return Err(GapReason::new(Category::Impl, reason));
     }
 
-    // Each method (and, when present, its own doc-comment lines) indented — same
-    // readability/extraction rationale as `emit_trait`'s `sig_lines` above. `render_fn`'s output
-    // may itself span multiple lines (doc comment + the `fn ...;` line), so indent every line,
-    // not just the first.
+    // Each method (and, when present, its own doc-comment lines) indented inside an `impl`
+    // block — same readability/extraction rationale as `emit_trait`'s `sig_lines`. Free-fn
+    // Widen path skips the indent (top-level `fn`s). `render_fn` may span multiple lines.
     let body_text = method_bodies
         .iter()
         .map(|m| {
-            m.lines()
-                .map(|l| format!("  {l}"))
-                .collect::<Vec<_>>()
-                .join("\n")
+            if widen_free_fn {
+                m.clone()
+            } else {
+                m.lines()
+                    .map(|l| format!("  {l}"))
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }
         })
         .collect::<Vec<_>>()
         .join("\n");
@@ -4938,25 +5243,26 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         myc.push_str(&d);
         myc.push('\n');
     }
-    if mvp_shape.is_some() {
-        // DN-122 §13 (M-1080; WU-A) — EXPLAIN-traceable provenance (G2: never a silent swap): this
-        // impl matched a registered MVP prelude-trait shape, so it needs no `use` (the trait is
-        // ambiently seeded — `crates/mycelium-l1/src/ord3.rs`, mirroring `Fuse`/M-965) and the
-        // Mycelium-side type argument below is SYNTHESIZED from the impl's own `Self`, not read off
-        // the Rust source (which, for this trait shape, never spells one).
+    if mvp_shape.is_some() || default_to_init {
+        // DN-122 §13 (M-1080; WU-A) / DN-129 Default→Init — EXPLAIN-traceable provenance (G2).
         myc.push_str(
-            "// Declared: DN-122 §13 / M-1080 MVP — foreign-trait impl of a prelude-seeded, \
-             single-param, param-only-sig trait; the `[<SelfTy>]` argument below is synthesized \
-             (Rust's own zero-explicit-arg `impl Trait for T` never spells it — Mycelium's stage-1 \
-             trait model has no implicit `Self` slot, RFC-0019 §4.1).\n",
+            "// Declared: prelude-trait remapping — foreign-trait impl of a prelude-seeded \
+             single-param trait (DN-122 Ord3 MVP and/or DN-129 Default→Init); the `[<SelfTy>]` \
+             argument below is synthesized (Rust's zero-explicit-arg `impl Trait for T` never \
+             spells it — Mycelium stage-1 has no implicit Self slot, RFC-0019 §4.1).\n",
         );
     }
-    let name = if let Some(trait_name) = trait_name {
-        let targs_text = if let Some(_shape) = mvp_shape {
-            // The MVP `T`-for-`T` idiom (mirrors `Fuse`): the trait's sole Mycelium parameter IS
-            // the impl's own `Self`, regardless of whether Rust's source carried an explicit
-            // `<...>` (this registry only ever matches the zero-explicit-arg case — see
-            // `mvp_prelude_trait_shape`'s `trait_targs.is_empty()` guard).
+    let name = if widen_free_fn {
+        // Free functions only — body_text lines are already full `fn …;` rows (no impl wrap).
+        myc.push_str(&body_text);
+        format!(
+            "widen_free {} -> {}",
+            self_ty_text,
+            trait_targs.first().map(|s| s.as_str()).unwrap_or("?")
+        )
+    } else if let Some(trait_name) = trait_name {
+        let targs_text = if mvp_shape.is_some() || default_to_init {
+            // The MVP `T`-for-`T` idiom (mirrors `Fuse`/`Init`): sole Mycelium parameter IS Self.
             format!("[{self_ty_text}]")
         } else if trait_targs.is_empty() {
             String::new()

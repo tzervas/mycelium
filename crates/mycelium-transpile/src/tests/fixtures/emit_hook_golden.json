@@ -438,9 +438,9 @@
     ]
   },
   "impl_method_self_known_binary_participates_in_gate": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Foo for Binary{16} {\n  fn m(self: Binary{16}, b: Binary{16}) => Binary{16} = and(self, b);\n};\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Binary{16} {\n  fn m(self: Binary{16}, b: Binary{16}) => Binary{16} = and(self, b);\n};\n",
     "emitted_items": [
-      "impl Foo for Binary{16}"
+      "impl Binary{16}"
     ],
     "gaps": []
   },
@@ -557,7 +557,7 @@
     ]
   },
   "mvp_cmp_eligible_synthesizes_trait_arg": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: DN-122 §13 / M-1080 MVP — foreign-trait impl of a prelude-seeded, single-param, param-only-sig trait; the `[<SelfTy>]` argument below is synthesized (Rust's own zero-explicit-arg `impl Trait for T` never spells it — Mycelium's stage-1 trait model has no implicit `Self` slot, RFC-0019 §4.1).\nimpl Ord3[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{8} = a;\n};\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: prelude-trait remapping — foreign-trait impl of a prelude-seeded single-param trait (DN-122 Ord3 MVP and/or DN-129 Default→Init); the `[<SelfTy>]` argument below is synthesized (Rust's zero-explicit-arg `impl Trait for T` never spells it — Mycelium stage-1 has no implicit Self slot, RFC-0019 §4.1).\nimpl Ord3[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{8} = a;\n};\n",
     "emitted_items": [
       "impl Ord3[Binary{8}] for Binary{8}"
     ],
@@ -571,9 +571,9 @@
     "gaps": []
   },
   "mvp_widen_unaffected_by_mvp_recognizer": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Widen[Binary{16}] for Binary{8} {\n  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).\n  fn widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);\n};\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).\n// Declared: Widen free-fn emit `_39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).\nfn _39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);\n",
     "emitted_items": [
-      "impl Widen[Binary{16}] for Binary{8}"
+      "widen_free Binary{8} -> Binary{16}"
     ],
     "gaps": []
   },
@@ -583,7 +583,7 @@
     "gaps": [
       [
         "Impl",
-        "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `narrow`: DN-41 (docs/notes/DN-41-Width-Cast-Prim.md §2) specifies narrowing as fallible — `Result<To, NarrowError>`, refusing on an out-of-range/non-representable value — but this grammar fragment's `fn_item` body is a single `= expr` with no Result-returning surface to express that refuse; left an explicit gap rather than forced (VR-5)",
+        "trait-impl of non-prelude trait `Narrow` — no ambient trait definition and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); gapped the whole impl so the residual cannot file-poison myc-check (G2; express gap-close 2026-07-16)",
         "u16"
       ]
     ]
@@ -872,9 +872,9 @@
     "gaps": []
   },
   "widen_binary_emits_width_cast": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nimpl Widen[Binary{16}] for Binary{8} {\n  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).\n  fn widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);\n};\n",
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).\n// Declared: Widen free-fn emit `_39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).\nfn _39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);\n",
     "emitted_items": [
-      "impl Widen[Binary{16}] for Binary{8}"
+      "widen_free Binary{8} -> Binary{16}"
     ],
     "gaps": []
   },

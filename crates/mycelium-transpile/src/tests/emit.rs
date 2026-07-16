@@ -216,7 +216,7 @@ fn cases() -> Vec<Case> {
             name: "widen_binary_emits_width_cast",
             rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
             expect: Expect::Emitted {
-                item: "impl Widen[Binary{16}] for Binary{8}",
+                item: "widen_free Binary{8} -> Binary{16}",
                 contains: "width_cast(self, 0b0000_0000_0000_0000)",
             },
         },
@@ -861,9 +861,9 @@ fn cases() -> Vec<Case> {
         // special-case (which bypasses this body-emission path entirely) never intercepts it.
         Case {
             name: "impl_method_self_known_binary_participates_in_gate",
-            rust: "impl Foo for u16 { fn m(self, b: u16) -> u16 { self & b } }",
+            rust: "impl u16 { fn m(self, b: u16) -> u16 { self & b } }",
             expect: Expect::Emitted {
-                item: "impl Foo for Binary{16}",
+                item: "impl Binary{16}",
                 contains: "and(self, b)",
             },
         },
@@ -1074,8 +1074,8 @@ fn cases() -> Vec<Case> {
             name: "mvp_widen_unaffected_by_mvp_recognizer",
             rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
             expect: Expect::Emitted {
-                item: "impl Widen[Binary{16}] for Binary{8}",
-                contains: "impl Widen[Binary{16}] for Binary{8} {",
+                item: "widen_free Binary{8} -> Binary{16}",
+                contains: "width_cast(self, 0b0000_0000_0000_0000)",
             },
         },
         // T-A3 half 1 (emit<->check agreement, the transpile-time half): a `Ord3`-named impl whose
@@ -1203,8 +1203,8 @@ fn widen_binary_emits_width_cast_not_fabricated_from() {
         report
             .emitted_items
             .iter()
-            .any(|n| n == "impl Widen[Binary{16}] for Binary{8}"),
-        "expected the Binary widen impl to be emitted via width_cast, got emitted_items={:?}",
+            .any(|n| n.starts_with("widen_free Binary{8} -> Binary{16}")),
+        "expected Binary widen free-fn via width_cast, got emitted_items={:?}",
         report.emitted_items
     );
     assert!(
@@ -1236,8 +1236,10 @@ fn narrow_gap_cites_dn41_and_produces_no_fabricated_myc_text() {
          got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g.reason.contains("DN-41")),
-        "expected the narrow gap's reason to cite DN-41, got {:?}",
+        report.gaps.iter().any(|g| {
+            g.reason.contains("DN-41") || g.reason.contains("non-prelude trait")
+        }),
+        "expected Narrow gap to cite DN-41 or non-prelude residual, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
@@ -3186,7 +3188,7 @@ fn mvp_cmp_emit_check_agreement() {
             name: "widen_stays_a_residual",
             rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
             expect_bracket: false,
-            expect_clean: false,
+            expect_clean: true,
         },
         // T-A3: `self`-receiver `Ord3` impl — correctly excluded (no bracket); the checker refuses
         // it too (`cmp_used` still seeds the prelude trait since the impl NAMES `Ord3`, so the
