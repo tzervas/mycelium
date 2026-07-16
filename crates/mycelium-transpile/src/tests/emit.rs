@@ -4352,3 +4352,124 @@ fn bounded_impl_generic_emission_check_clean() {
 
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+// ---- ORACLE-R1 A2: guarantee-lattice co-emit (eval.rs Strength poison) -------------------------
+
+/// Free-fn `strength_of` references `Strength` + `GuaranteeStrength` without declaring either.
+/// Co-emit both lattice types (Exact→Exact_kw) so myc-check never sees `unknown type Strength`.
+#[test]
+fn lattice_co_emit_strength_of_no_unknown_type_poison() {
+    let rust = r#"
+        pub fn strength_of(s: Strength) -> GuaranteeStrength {
+            match s {
+                Strength::Exact => GuaranteeStrength::Exact,
+                Strength::Proven => GuaranteeStrength::Proven,
+                Strength::Empirical => GuaranteeStrength::Empirical,
+                Strength::Declared => GuaranteeStrength::Declared,
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "co-emit:Strength"),
+        "expected co-emitted Strength; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n == "co-emit:GuaranteeStrength"),
+        "expected co-emitted GuaranteeStrength; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "strength_of"),
+        "expected strength_of emitted; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type Strength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "missing Strength co-emit type:\n{myc}"
+    );
+    assert!(
+        myc.contains("type GuaranteeStrength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "missing GuaranteeStrength co-emit type:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn strength_of(s: Strength) => GuaranteeStrength"),
+        "missing strength_of signature:\n{myc}"
+    );
+    // Co-emits must precede the free-fn (type must be in scope before use).
+    let s_pos = myc.find("type Strength =").expect("Strength type position");
+    let fn_pos = myc.find("fn strength_of").expect("strength_of position");
+    assert!(
+        s_pos < fn_pos,
+        "co-emitted Strength must precede strength_of:\n{myc}"
+    );
+
+    // Real-oracle gate when myc-check is available.
+    if let Some(bin) = find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-a2-strength-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("strength_of.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "eval.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "strength_of + lattice co-emit must not file-poison with unknown type Strength; \
+             myc=\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// When `Strength` is declared in-file, co-emit only the missing lattice peer (GuaranteeStrength).
+#[test]
+fn lattice_co_emit_skips_in_file_strength() {
+    let rust = r#"
+        pub enum Strength { Exact, Proven, Empirical, Declared }
+        pub fn strength_of(s: Strength) -> GuaranteeStrength {
+            match s {
+                Strength::Exact => GuaranteeStrength::Exact,
+                Strength::Proven => GuaranteeStrength::Proven,
+                Strength::Empirical => GuaranteeStrength::Empirical,
+                Strength::Declared => GuaranteeStrength::Declared,
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "co-emit:Strength"),
+        "must not co-emit Strength when it is declared in-file; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n == "co-emit:GuaranteeStrength"),
+        "expected co-emitted GuaranteeStrength only; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    // In-file enum still emits (DN-140 variant renames).
+    assert!(
+        myc.contains("type Strength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;"),
+        "in-file Strength enum must emit:\n{myc}"
+    );
+}

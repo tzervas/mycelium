@@ -280,6 +280,15 @@ struct EmitCtx {
     /// Bare (un-mangled) inherent method names already emitted in this file — second occurrence
     /// of the same short name forces D4 mangling (express gap-close / `as_nanos` collision).
     bare_fn_names: HashSet<String>,
+    /// Names successfully resolved by a `use` in this file's item loop (batch mode only — see
+    /// [`record_imported_name`]). Used by the ORACLE-R1 A2 lattice co-emit gate so a type that
+    /// already arrives via a resolved sibling import is **not** re-declared (duplicate type
+    /// declaration would poison `myc check`).
+    imported_names: HashSet<String>,
+    /// Guarantee-lattice types (`Strength` / `GuaranteeStrength`) requested for co-emission —
+    /// referenced in this file's signatures but neither declared in-file nor successfully
+    /// imported. Drained after the item loop into preamble `type` items (ORACLE-R1 A2).
+    lattice_co_emits: HashSet<String>,
 }
 
 thread_local! {
@@ -315,11 +324,150 @@ pub(crate) fn with_emit_ctx<R>(
             imported_type_keys,
             ident_emission_sources: HashMap::new(),
             bare_fn_names: HashSet::new(),
+            imported_names: HashSet::new(),
+            lattice_co_emits: HashSet::new(),
         })
     });
     let r = f();
     EMIT_CTX.with(|c| *c.borrow_mut() = None);
     r
+}
+
+// ---- ORACLE-R1 A2: guarantee-lattice co-emit ---------------------------------------------------
+//
+// `Strength` (mycelium-l1 AST) and `GuaranteeStrength` (mycelium-core) are isomorphic unit enums
+// over the reserved lattice keywords `Exact|Proven|Empirical|Declared`. When a free fn like
+// `strength_of` references them but the defining enum is **not** in this file and **not**
+// available via a resolved batch `use`, a bare passthrough type name poisons the whole file's
+// `myc check` with `unknown type Strength` (file-level checked_fraction → 0). Co-emitting the
+// same sum type `emit_enum` would produce for that unit enum — with DN-140 `*_kw` variant
+// renames — restores a checkable surface without fabricating language prims (G2/VR-5: Declared
+// co-emit, EXPLAIN comment; never silent). Hand-port precedent: `lib/compiler/*.myc` redeclares
+// `type Strength = GExact | …` in every nodule that needs it.
+
+/// Unit-enum names that are the surface/kernel guarantee lattice (same four reserved variants).
+const LATTICE_TYPE_NAMES: &[&str] = &["Strength", "GuaranteeStrength"];
+
+/// The lattice's four reserved-word variants (DN-140 rewrites each to `*_kw` on emission).
+const LATTICE_VARIANTS: &[&str] = &["Exact", "Proven", "Empirical", "Declared"];
+
+/// Record a name successfully resolved by `transpile::dispatch_use` so lattice co-emit will not
+/// redeclare it.
+pub(crate) fn record_imported_name(name: &str) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.imported_names.insert(name.to_string());
+        }
+    });
+}
+
+/// Whether `name` is already available in this file (declared resolvable, imported, or already
+/// queued for lattice co-emit).
+fn lattice_name_available(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => {
+            ctx.resolvable.contains(name)
+                || ctx.imported_names.contains(name)
+                || ctx.lattice_co_emits.contains(name)
+        }
+    })
+}
+
+/// If `name` is a lattice type and not already available, queue a co-emitted `type` item.
+fn request_lattice_co_emit(name: &str) {
+    if !LATTICE_TYPE_NAMES.contains(&name) {
+        return;
+    }
+    if lattice_name_available(name) {
+        return;
+    }
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.lattice_co_emits.insert(name.to_string());
+        }
+    });
+}
+
+/// Walk a Rust type for bare user-type deps; queue lattice co-emits for any missing lattice names.
+fn note_lattice_deps_from_ty(ty: &syn::Type) {
+    let mut deps = Vec::new();
+    // `field_type_user_deps` returns false when the type is unmappable — nothing to co-emit then
+    // (the surrounding item will gap on map_type for other reasons).
+    let _ = crate::map::field_type_user_deps(ty, &mut deps);
+    for d in deps {
+        request_lattice_co_emit(&d);
+    }
+}
+
+/// Queue lattice co-emits for every user type mentioned in a free-fn / method signature.
+fn note_lattice_deps_from_sig(sig: &Signature) {
+    for input in &sig.inputs {
+        if let FnArg::Typed(pt) = input {
+            note_lattice_deps_from_ty(&pt.ty);
+        }
+    }
+    if let ReturnType::Type(_, ty) = &sig.output {
+        note_lattice_deps_from_ty(ty);
+    }
+}
+
+/// Drain the lattice co-emit set into ordered `(emitted_name, myc_chunk)` pairs. Must be called
+/// **inside** [`with_emit_ctx`] (before the context is cleared) so DN-140 variant renames can
+/// register against the same per-file ident-emission map the item loop used.
+pub(crate) fn drain_lattice_co_emits() -> Vec<(String, String)> {
+    let names: Vec<String> = EMIT_CTX.with(|c| match c.borrow_mut().as_mut() {
+        Some(ctx) => {
+            let mut v: Vec<String> = ctx.lattice_co_emits.drain().collect();
+            v.sort();
+            v
+        }
+        None => Vec::new(),
+    });
+    let mut out = Vec::with_capacity(names.len());
+    for name in names {
+        // Register type name (non-reserved) + each variant via valid_ident so Exact→Exact_kw is
+        // the same rewrite strength_of's match arms already apply (DN-140).
+        let type_vi = valid_ident(&name);
+        if let Err(g) = register_ident_emission(&type_vi, "lattice co-emit type name") {
+            // Collision with a prior emission of a different original → refuse this co-emit
+            // (never silent overwrite). The referencing item stays emitted; myc-check may still
+            // see the type missing — that residual is FLAGged by the collision gap path if the
+            // driver surfaces it. For A2 the lattice names are free in eval.rs.
+            let _ = g;
+            continue;
+        }
+        let mut doc = Vec::new();
+        push_rewrite_doc(&type_vi, &mut doc);
+        let mut ctors = Vec::with_capacity(LATTICE_VARIANTS.len());
+        let mut variant_ok = true;
+        for v in LATTICE_VARIANTS {
+            let vi = valid_ident(v);
+            if register_ident_emission(&vi, "lattice co-emit variant").is_err() {
+                variant_ok = false;
+                break;
+            }
+            push_rewrite_doc(&vi, &mut doc);
+            ctors.push(vi.text);
+        }
+        if !variant_ok {
+            continue;
+        }
+        let mut myc = String::new();
+        myc.push_str(
+            "// Declared: co-emitted guarantee-lattice type — referenced in this file but not \
+             declared here and not available via a resolved batch `use` (ORACLE-R1 A2; never \
+             silent unknown-type file poison — G2/VR-5). Variants use DN-140 `*_kw` renames for \
+             the reserved lattice keywords (Exact/Proven/Empirical/Declared).\n",
+        );
+        for d in &doc {
+            myc.push_str(d);
+            myc.push('\n');
+        }
+        myc.push_str(&format!("type {} = {};", type_vi.text, ctors.join(" | ")));
+        out.push((type_vi.text, myc));
+    }
+    out
 }
 
 /// Re-export for call-site resolution (DN-140 §7).
@@ -4525,6 +4673,11 @@ pub fn emit_fn(item: &ItemFn) -> Result<Emitted, GapReason> {
     let mut ident_doc = Vec::new();
     push_rewrite_doc(&fn_vi, &mut ident_doc);
     check_fn_modifiers(&item.sig)?;
+    // ORACLE-R1 A2: before mapping the signature, queue co-emits for any missing guarantee-
+    // lattice types the params/return mention (so strength_of etc. never file-poison with
+    // `unknown type Strength`). Must run even when map_signature later fails for other reasons —
+    // co-emit is driven by the Rust surface, not the mapped text.
+    note_lattice_deps_from_sig(&item.sig);
     let sig = map_signature(&item.sig.generics, &item.sig.inputs, &item.sig.output, None)?;
     // DN-125 (M-1081): a free fn's `&mut T` parameter(s) route through the value-threading body
     // emitter instead of the ordinary one (a free fn has no receiver, so only S2 applies here).
