@@ -37,7 +37,7 @@ handoffs hold **intent** (CLAUDE.md mitigation #8).
 
 ---
 
-# Phase 0 — Repository, Documentation & Project Alignment
+## Phase 0 — Repository, Documentation & Project Alignment
 
 Before modifying the implementation, perform a comprehensive review of the repository to understand
 the project's intended direction.
@@ -89,15 +89,15 @@ The implementation should continuously converge toward the documented goals of t
 
 ### Phase 0 exit criteria (Mycelium)
 
-- [ ] Tip SHAs recorded for `main` / `integration` / `dev`
-- [ ] Active M-ids verified against code (mitigation #14)
-- [ ] Wave goal + honesty tags (`Empirical` / `Declared`) stated
-- [ ] `PROGRAM-HANDOFF.md` (or dated successor) current
-- [ ] Collision map (serial vs parallel crates) fixed before fan-out
+* [ ] Tip SHAs recorded for `main` / `integration` / `dev`
+* [ ] Active M-ids verified against code (mitigation #14)
+* [ ] Wave goal + honesty tags (`Empirical` / `Declared`) stated
+* [ ] `PROGRAM-HANDOFF.md` (or dated successor) current
+* [ ] Collision map (serial vs parallel crates) fixed before fan-out
 
 ---
 
-# Phase 1 — Performance, Efficiency & Code Quality
+## Phase 1 — Performance, Efficiency & Code Quality
 
 Perform a comprehensive review of the implementation to identify opportunities to improve:
 
@@ -128,7 +128,7 @@ append-only ADR/RFC/DN, grounding.
 
 ---
 
-# Phase 2 — Validation & Regression Prevention
+## Phase 2 — Validation & Regression Prevention
 
 After all implementation changes have been completed:
 
@@ -157,7 +157,7 @@ proceeding.
 
 ---
 
-# Phase 3 — Final Security Audit (Always Last)
+## Phase 3 — Final Security Audit (Always Last)
 
 After all implementation and documentation changes are complete, perform a comprehensive security
 review of the resulting project (use `/security-review` skill or L0-spawned `security-reviewer`).
@@ -182,7 +182,7 @@ The security review is intentionally performed last so it evaluates the fully up
 
 ---
 
-# Security Exception Workflow
+## Security Exception Workflow
 
 If a security issue cannot be remediated without introducing regressions or removing required
 functionality:
@@ -197,7 +197,7 @@ functionality:
 
 ---
 
-# Automated Integration & Project Management Workflow
+## Automated Integration & Project Management Workflow
 
 When every validation step succeeds:
 
@@ -240,7 +240,7 @@ Same-content trunks after promote: tree SHAs should match after `dev`→`integra
 
 ---
 
-# Handoff packet template
+## Handoff packet template
 
 Copy into `docs/planning/<wave>/PROGRAM-HANDOFF.md` (or date-stamped successor). **Update before
 every L0 pause, compaction risk, or L1 spawn.**
@@ -282,9 +282,7 @@ every L0 pause, compaction risk, or L1 spawn.**
 - GHA / runners / model floor / design gates: …
 
 ## Next L1 brief (paste-ready)
-```
 (contract: model floor, base tip, leaves, serial rules, do not merge, report shape)
-```
 
 ## Release gate
 - [ ] Pilot path honest
@@ -295,7 +293,7 @@ every L0 pause, compaction risk, or L1 spawn.**
 
 ---
 
-# Acceptance Criteria
+## Acceptance Criteria
 
 Every accepted maintenance cycle must satisfy all of the following:
 
@@ -324,7 +322,7 @@ follow the Security Exception Workflow or an equivalent draft-review workflow fo
 
 ---
 
-# See also
+## See also
 
 * `CLAUDE.md` — house rules, swarm, PR workflow, check tiers
 * `.claude/kickoffs/_doc-maintenance.md` — docs DoD on land
