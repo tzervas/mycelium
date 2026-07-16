@@ -45,17 +45,22 @@
 //! resolve and why (never silently dropped).
 //!
 //! **No bare-name collapse (the M-1060 lesson):** a resolved leaf is always emitted as a
-//! nodule-qualified `use` (`use <emit_qualifier>.<Item>;`), never a bare `<Item>` — the identical
-//! discipline DN-113/M-1060 use for cross-nodule visibility. The **emit qualifier** is NOT always
-//! the sibling's full derived nodule path: for **same-crate** batch siblings the kernel's
-//! intra-phylum resolver ([`crates/mycelium-l1/src/checkty.rs`] `resolve_imports`, M-662/DN-113)
-//! keys exports as `<nodule-suffix>.<Item>` *within* the phylum (e.g. `checkty.Width`, never
-//! `l1.checkty.Width`). Emitting the full path was the measured **−2 phylum-clean regression**
-//! (59→57 on the DN-124 corpus): imports *resolved* in the symtab but phylum-mode `myc check`
-//! refused `use l1.checkty.Width` as `no such name l1.checkty.Width` — a classification win paired
-//! with a checker regression, not net progress (VR-5). [`Self::use_emit_qualifier`] strips the
-//! crate-root nodule prefix for same-crate hits; **cross-crate** hits in one combined batch phylum
-//! keep the full target nodule path (e.g. `use crate.b.Foo;`).
+//! nodule-qualified `use` (`use <full_nodule_path>.<Item>;`), never a bare `<Item>` — the identical
+//! discipline DN-113/M-1060 use for cross-nodule visibility.
+//!
+//! **M-1084 net-close / the inverted-strip root cause (Empirical, 2026-07-16).** The kernel's
+//! `resolve_imports` keys exports as **full** `nodule.path` + `.` + item (e.g. `l1.checkty.Width`,
+//! `std.fs.error.FsErr` — see `mycelium-l1::checkty::qualify`). A live `myc check --phylum`
+//! differential witnesses:
+//! - `use l1.checkty.Width` / `use std.fs.error.FsErr` → **Clean**
+//! - `use checkty.Width` / `use error.FsErr` → **CheckError** (`no such name … in the phylum`)
+//!
+//! PR #1635's same-crate crate-root **strip** (`use_emit_qualifier` → short suffix) inverted that
+//! basis: imports *resolved* in the symtab but were emitted under a path the checker refuses — a
+//! classification win paired with a phylum-clean regression, not net progress (the original
+//! 59→57 shape, recreated by the wrong emit form). Net-close is identity emit of the resolved
+//! sibling's full [`NoduleSymbols::nodule_path`] for **both** same-crate and cross-crate batch
+//! hits — never a guessed rename, never a bare name, never a silent short form (VR-5/G2).
 
 use std::collections::{HashMap, HashSet};
 use syn::UseTree;
@@ -359,59 +364,18 @@ impl SymbolTable {
     }
 
     /// The dotted path prefix for an emitted `use <prefix>.<Item>;` line — see the module docs
-    /// (M-1084 net-close / −2 regression). `resolved_via_key` is the symbol-table key that
-    /// actually hit ([`Self::resolve`]'s lookup key), used only to detect cross-crate vs same-crate.
+    /// (M-1084 net-close). Always the resolved sibling's **full** [`NoduleSymbols::nodule_path`]:
+    /// the kernel's export registry keys by that full path (Empirical vs PR #1635's inverted strip).
+    ///
+    /// `importer_crate` / `resolved_via_key` are retained so call sites stay stable and so a future
+    /// cross-phylum `use dep::…` emit form (DN-113 `::` boundary) can branch without rewiring every
+    /// consumer; today both same-crate and same-batch multi-crate hits share one combined phylum
+    /// and therefore the same full-path form (never a silent short-form collapse — G2).
     pub fn use_emit_qualifier(
-        importer_crate: Option<&str>,
+        _importer_crate: Option<&str>,
         resolved_nodule_path: &str,
-        resolved_via_key: &str,
+        _resolved_via_key: &str,
     ) -> String {
-        let target_crate = key_crate_ident(resolved_via_key);
-        let same_crate = match (importer_crate, target_crate.as_deref()) {
-            (Some(a), Some(b)) => a == b,
-            (None, None) => true,
-            (None, Some(_)) => false,
-            (Some(_), None) => true,
-        };
-        if !same_crate {
-            return resolved_nodule_path.to_string();
-        }
-        let Some(c) = importer_crate.or(target_crate.as_deref()) else {
-            return resolved_nodule_path.to_string();
-        };
-        strip_dot_prefix(resolved_nodule_path, &crate_root_nodule_from_ident(c))
-    }
-}
-
-/// Crate-directory name → the crate's root nodule path (mirrors [`crate::transpile::derive_nodule_path`]
-/// on a crate-root `lib.rs`: `mycelium-l1` → `l1`, `mycelium-std-fs` → `std.fs`).
-fn crate_root_nodule_from_ident(crate_ident: &str) -> String {
-    let stripped = crate_ident.strip_prefix("mycelium_").unwrap_or(crate_ident);
-    stripped.replace('_', ".")
-}
-
-/// When a lookup `key` is crate-qualified (`mycelium_l1.checkty`), the head is the target crate;
-/// a standalone `crate_b` key (cross-phylum crate root) is the crate ident; a bare `checkty` is not.
-fn key_crate_ident(key: &str) -> Option<String> {
-    if let Some((head, rest)) = key.split_once('.') {
-        if !rest.is_empty() {
-            return Some(head.to_string());
-        }
-    }
-    if key.contains('_') || key.starts_with("mycelium_") {
-        return Some(key.to_string());
-    }
-    None
-}
-
-fn strip_dot_prefix(path: &str, prefix: &str) -> String {
-    if path == prefix {
-        return String::new();
-    }
-    let dotted = format!("{prefix}.");
-    if let Some(suffix) = path.strip_prefix(&dotted) {
-        suffix.to_string()
-    } else {
-        path.to_string()
+        resolved_nodule_path.to_string()
     }
 }
