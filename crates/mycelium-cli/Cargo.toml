@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-cli"
-version = "0.0.0"
+version.workspace = true
 description = "myc — the one-command toolchain driver (M-733): `myc init|build|check|test|run` over a Mycelium phylum, with DN-22 structured, actionable diagnostics (never a raw panic; G2). Orchestrates the real library APIs (mycelium-proj/-spore/-l1) directly — no fragile subprocess plumbing. KC-3: above the kernel."
 edition.workspace = true
 rust-version.workspace = true

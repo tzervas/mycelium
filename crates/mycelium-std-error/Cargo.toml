@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-error"
-version = "0.0.0"
+version.workspace = true
 description = "std.error/option/result — errors-as-values propagation ergonomics."
 edition.workspace = true
 rust-version.workspace = true

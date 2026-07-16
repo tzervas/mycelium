@@ -1,9 +1,10 @@
 # Commitizen — Conventional Commits + 0.x.x SemVer policy (ADR-018 / ADR-038).
 #
-# Message lint is ON (commit-msg hook). Auto-bump / tags stay OFF until a deliberate
-# publish window opens (ADR-038 §2.8 — crates stay 0.0.0 + publish=false for now).
-# When bumps are used: major_version_zero=true so BREAKING under 0.x → 0.(y+1).0, never
-# auto-1.0.0 (1.0.0 is a manual gate act: M-703 / M-738 class).
+# Message lint is ON (commit-msg hook). First history-derived cut: **0.463.1** (2026-07-16).
+# Basis (Empirical): chronological Conventional-Commit stack on origin/dev — each feat → +minor,
+# each fix/perf → +patch; merge/wip skipped → 0.463.1. monorepo co-version until component split.
+# Still source-only: publish=false (ADR-018). major_version_zero=true → BREAKING under 0.x bumps
+# 0.y, never auto-1.0.0 (1.0.0 is M-703/M-738 class).
 #
 # Type set matches tools/github/conventions.json type_to_label keys (DRY — do not invent
 # parallel types). Default cz_conventional_commits covers: feat fix docs refactor perf
@@ -12,7 +13,7 @@
 
 [tool.commitizen]
 name = "cz_conventional_commits"
-version = "0.0.0"
+version = "0.463.1"
 version_provider = "commitizen"
 version_scheme = "semver"
 tag_format = "v$version"
@@ -38,6 +39,9 @@ allowed_prefixes = [
     "wip",
     "WIP",
 ]
-# version_files intentionally empty — do NOT mass-edit 56 crate Cargo.toml versions
-# (ADR-038 stay 0.0.0 until publish; per-crate versions are independent).
-version_files = []
+# version_files: workspace root Cargo.toml [workspace.package].version + this file.
+# Members use version.workspace = true (co-release until component-repo decomposition).
+version_files = [
+    "Cargo.toml:version",
+    ".cz.toml:version",
+]

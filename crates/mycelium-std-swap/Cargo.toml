@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-swap"
-version = "0.0.0"
+version.workspace = true
 description = "std.swap — certified representation-change capability surface (M-516)."
 edition.workspace = true
 rust-version.workspace = true

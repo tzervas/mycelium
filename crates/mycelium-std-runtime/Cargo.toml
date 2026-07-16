@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-runtime"
-version = "0.0.0"
+version.workspace = true
 description = "std.runtime — the fungal concurrency surface (M-521 / ADR-020): Colony, Scope, Task, Network, and the v0 R1 guarantee matrix."
 edition.workspace = true
 rust-version.workspace = true

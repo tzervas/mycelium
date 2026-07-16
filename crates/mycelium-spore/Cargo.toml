@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-spore"
-version = "0.0.0"
+version.workspace = true
 description = "spore — packaging & publishing (M-368; ADR-013): builds a content-addressed deployable `spore` from a `mycelium-proj.toml` project. Identity is the content-addressed DAG (code-by-hash + dependency edges + surface); metadata (version/authors/…) is NOT identity (ADR-003). A missing/ambiguous publish input is an explicit error, never a guess (G2). KC-3 — above the kernel; no new dependency."
 edition.workspace = true
 rust-version.workspace = true
