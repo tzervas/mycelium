@@ -3550,14 +3550,13 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
             "WithVecOfUser",
         ),
-        // DN-138 WU-4 (post-landing review fix) -- a `u128` field is WIDER than the seeded
-        // `Binary{64}` instance: `PartialEq` (width-generic `eq` prim) and `Default` (a literal
-        // zero at the field's own width, no width_cast at all) still compose cleanly; `Debug`/
-        // `PartialOrd` honestly GAP it instead of composing a `width_cast` that would `myc-check`
-        // clean but overflow at runtime for a real value >= 2^64 (see `derive_debug_and_partialord_
-        // gap_a_wide_scalar_never_a_runtime_throwing_width_cast` below for the negative half).
+        // DN-138 WU-4 / ORACLE-R1 A5 -- a `u128` field is WIDER than the seeded `Binary{64}`
+        // instance: `PartialEq` (width-generic `eq` prim), `Default` (literal zero at own width),
+        // and `Debug` (Declared opaque `"<Binary{128}>"` placeholder — never a narrowing
+        // width_cast) all compose cleanly; `PartialOrd` still honestly GAPs (see
+        // `derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast`).
         (
-            "#[derive(Default, PartialEq)]\nstruct Wide(u128);",
+            "#[derive(Debug, Default, PartialEq)]\nstruct Wide(u128);",
             "Wide",
         ),
     ];
@@ -3959,13 +3958,13 @@ fn derive_eq_and_debug_both_compose_over_a_narrow_scalar_dn138_wu4() {
     );
 }
 
-/// **HIGH (post-landing review finding, fixed here): a WIDE `ScalarBinary` (`u128`/`i128` ->
-/// `Binary{128}`) must NEVER compose `Debug`/`PartialOrd` via a NARROWING `width_cast` down to the
-/// seeded `Binary{64}` instance** -- `width_cast`'s own checked-narrow contract overflows at
-/// runtime for any value `>= 2^64` (`prims.rs::prim_width_cast`), so composing it unconditionally
-/// would `myc-check` clean but THROW at eval time for a real wide value -- silently overstating
-/// DN-138 section 6's stated `u8`/`u16`/`u32` scope. Both rows must leave it an honest,
-/// non-fabricated gap instead (never a partial/wrong-but-plausible-looking impl, G2).
+/// **HIGH (post-landing review + ORACLE-R1 A5):** a WIDE `ScalarBinary` (`u128`/`i128` ->
+/// `Binary{128}`) must NEVER compose via a NARROWING `width_cast` down to the seeded
+/// `Binary{64}` instance — that cast overflows at eval for any value `>= 2^64`. **Debug** now
+/// composes with a Declared opaque `"<Binary{128}>"` placeholder (structure shown, payload not
+/// decimal-rendered — never fabricated Display, G2/VR-5; clears same-file parent `UserNamed`
+/// `render` file-poison). **PartialOrd** still honestly GAPs (no total order surface without a
+/// wide Ord3 seed). Never a partial/wrong-but-plausible-looking narrowing impl (G2).
 #[test]
 fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_cast() {
     let (debug_myc, debug_report) =
@@ -3976,11 +3975,19 @@ fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_
         "Debug must never emit a NARROWING width_cast for a wide (u128) scalar, got:\n{debug_myc}"
     );
     assert!(
-        debug_report
+        debug_myc.contains("impl Show[Wide] for Wide"),
+        "Debug must compose Show with opaque wide-Binary placeholder, got:\n{debug_myc}"
+    );
+    assert!(
+        debug_myc.contains("\"<Binary{128}>\""),
+        "expected Declared opaque Binary{{128}} placeholder in Show body, got:\n{debug_myc}"
+    );
+    assert!(
+        !debug_report
             .gaps
             .iter()
             .any(|g| g.category == Category::DeriveAttr && g.reason.contains("Debug")),
-        "expected a DeriveAttr gap citing Debug for the wide scalar field, got {:?}",
+        "Debug must no longer DeriveAttr-gap a wide scalar (A5 opaque compose), got {:?}",
         debug_report.gaps
     );
 
@@ -4027,6 +4034,58 @@ fn derive_debug_and_partialord_gap_a_wide_scalar_never_a_runtime_throwing_width_
         "Default must still compose over a wide (u128) scalar (a literal zero at its own width, \
          no width_cast at all), got {:?}",
         default_report.gaps
+    );
+}
+
+/// ORACLE-R1 A5: `derive(Debug)` on a wide-Binary leaf (`WallInstant`-shape) plus a same-file
+/// `UserNamed` parent (`ManualClock`-shape) both compose Show; parent `render(field)` resolves.
+/// Hand-written `Default` calling `Type::from_nanos(0)` rewrites the bare `0` to a BinLit via
+/// recorded mangled-assoc param widths (post-Show residual).
+#[test]
+fn oracle_r1_a5_wide_show_and_call_arg_lit_zero() {
+    let rust = r#"
+        #[derive(Debug, Clone, Copy)]
+        struct WallInstant { nanos: i128 }
+        impl WallInstant {
+            pub const fn from_nanos(nanos: i128) -> Self { WallInstant { nanos } }
+        }
+        #[derive(Debug, Clone)]
+        struct ManualClock { wall: WallInstant }
+        impl Default for ManualClock {
+            fn default() -> Self {
+                ManualClock { wall: WallInstant::from_nanos(0) }
+            }
+        }
+    "#;
+    let (myc, report) =
+        transpile_source(rust, "std_time_like.rs", "std.time").expect("parses/transpiles");
+    assert!(
+        myc.contains("impl Show[WallInstant] for WallInstant"),
+        "expected WallInstant Show, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("\"<Binary{128}>\""),
+        "expected opaque wide Binary placeholder, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("impl Show[ManualClock] for ManualClock"),
+        "expected ManualClock Show (parent of WallInstant), got:\n{myc}"
+    );
+    assert!(
+        myc.contains("render(p0)") || myc.contains("render(p1)"),
+        "ManualClock Show should dispatch render on UserNamed field, got:\n{myc}"
+    );
+    // Init body: bare 0 rewritten to BinLit (Q6-safe).
+    assert!(
+        myc.contains("impl Init[ManualClock]") || myc.contains("fn init()"),
+        "expected Default→Init, got:\n{myc}\ngaps={:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        !myc.contains("from_nanos(0)")
+            && !myc.contains("from_nanos(0,")
+            && !myc.contains("_from_nanos(0)"),
+        "bare decimal 0 must be rewritten to BinLit in assoc-fn call args, got:\n{myc}"
     );
 }
 

@@ -256,11 +256,18 @@ struct EmitCtx {
     /// left-to-right item pass — see [`record_local_mangled_assoc_fn`]/
     /// [`local_mangled_assoc_fn_known`]. A qualified/associated-fn call site
     /// (`EmitVisitor::visit_call`) is only ever reached AFTER every earlier item in the same
-    /// file has already been dispatched, so this set is exactly "what a call here could
+    /// file has already been dispatched, so this map is exactly "what a call here could
     /// legitimately reference" — an observed fact, never a forward reference or a syntactic
     /// prediction (VR-5/G2, the D4 lesson). Starts empty every file; mutated in place as items
     /// are emitted (unlike the other fields here, which are precomputed before the item loop).
-    local_mangled: HashSet<String>,
+    ///
+    /// **ORACLE-R1 A5:** values are the callee's parameter mapped-type Binary widths
+    /// (`Some(N)` for `Binary{N}`, `None` otherwise), in declaration order — so a later call
+    /// site can rewrite a bare decimal lit arg (`from_nanos(0)`) to an equal-width `BinLit`
+    /// instead of file-poisoning `myc check` with Q6 "bare integer literal has no
+    /// representation family" (the post-Show residual on `ManualClock`'s `impl Default` →
+    /// `impl Init` body).
+    local_mangled: HashMap<String, Vec<Option<u32>>>,
     /// DN-133 tier (ii): for each locally `use`-imported type NAME in this file (an
     /// `Item::Use` leaf's [`crate::symtab::CandidateKind::Name`]), the ordered cross-nodule
     /// symbol-table lookup key(s) ([`crate::symtab::SymbolTable::candidate_lookup_keys`]) that
@@ -328,7 +335,7 @@ pub(crate) fn with_emit_ctx<R>(
             field_types,
             symtab,
             pub_needed,
-            local_mangled: HashSet::new(),
+            local_mangled: HashMap::new(),
             imported_type_keys,
             ident_emission_sources: HashMap::new(),
             bare_fn_names: HashSet::new(),
@@ -817,13 +824,15 @@ pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
 /// produced the mangled inherent-impl associated-fn `mangled_name` (`mangled_inherent_fn_name`'s
 /// `{Type}__{method}` form) — called once, from `emit_impl`'s success path, right after it renames
 /// such a method, so a LATER call site in the SAME file can resolve against it (see
-/// [`local_mangled_assoc_fn_known`]). No-op when the context is off (`None` — direct `emit_impl`
-/// unit tests never install a context, so this degrades to always-absent, matching every OTHER
-/// `EmitCtx`-gated behavior's off-mode).
-fn record_local_mangled_assoc_fn(mangled_name: &str) {
+/// [`local_mangled_assoc_fn_known`]). `param_tys` is the mapped signature params
+/// (`(name, Binary{N}|…)`); their Binary widths power ORACLE-R1 A5 call-arg lit rewrite. No-op
+/// when the context is off (`None` — direct `emit_impl` unit tests never install a context, so
+/// this degrades to always-absent, matching every OTHER `EmitCtx`-gated behavior's off-mode).
+fn record_local_mangled_assoc_fn(mangled_name: &str, param_tys: &[(String, String)]) {
+    let widths: Vec<Option<u32>> = param_tys.iter().map(|(_, ty)| binary_width(ty)).collect();
     EMIT_CTX.with(|c| {
         if let Some(ctx) = c.borrow_mut().as_mut() {
-            ctx.local_mangled.insert(mangled_name.to_string());
+            ctx.local_mangled.insert(mangled_name.to_string(), widths);
         }
     });
 }
@@ -831,11 +840,55 @@ fn record_local_mangled_assoc_fn(mangled_name: &str) {
 /// DN-133 tier (i): whether `mangled_name` was already recorded via
 /// [`record_local_mangled_assoc_fn`] — an EARLIER item in this same file's own left-to-right pass
 /// really did emit it. `false` when the context is off.
-fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
+pub(crate) fn local_mangled_assoc_fn_known(mangled_name: &str) -> bool {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => false,
-        Some(ctx) => ctx.local_mangled.contains(mangled_name),
+        Some(ctx) => ctx.local_mangled.contains_key(mangled_name),
     })
+}
+
+/// ORACLE-R1 A5: per-parameter Binary widths for a known local mangled assoc fn.
+/// `None` when the name is unknown or the emit context is off.
+fn local_mangled_param_binary_widths(mangled_name: &str) -> Option<Vec<Option<u32>>> {
+    EMIT_CTX.with(|c| {
+        c.borrow()
+            .as_ref()
+            .and_then(|ctx| ctx.local_mangled.get(mangled_name).cloned())
+    })
+}
+
+/// Rewrite a bare decimal integer literal to an equal-width Mycelium `BinLit` when it fits in
+/// `width` bits (shared by comparison lit-zero rewrite and ORACLE-R1 A5 call-arg rewrite).
+/// `None` when `e` is not an int lit, the digits do not parse, or the value does not fit.
+fn int_lit_as_bin_literal(e: &Expr, width: u32) -> Option<String> {
+    let Expr::Lit(el) = e else {
+        return None;
+    };
+    let Lit::Int(i) = &el.lit else {
+        return None;
+    };
+    let digits = i.base10_digits();
+    let Ok(v) = digits.parse::<u128>() else {
+        return None;
+    };
+    if v == 0 {
+        return Some(zero_bin_literal(width));
+    }
+    let mut bits = format!("{v:b}");
+    if bits.len() as u32 > width {
+        return None;
+    }
+    while (bits.len() as u32) < width {
+        bits.insert(0, '0');
+    }
+    let mut s = String::from("0b");
+    for (i, c) in bits.chars().enumerate() {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        s.push(c);
+    }
+    Some(s)
 }
 
 /// Express gap-close (2026-07-16): bare top-level fn names already used in this file's emit
@@ -2606,37 +2659,8 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // Express gap-close: a bare decimal lit on one side of a Binary comparison has no
         // paradigm (Q6) and wrong width. When the other operand is known Binary{N}, rewrite
         // the lit to an equal-width BinLit zero/value so `lt`/`eq` can fire cleanly.
-        let lit_as_bin = |e: &Expr, width: u32| -> Option<String> {
-            let Expr::Lit(el) = e else {
-                return None;
-            };
-            let Lit::Int(i) = &el.lit else {
-                return None;
-            };
-            let digits = i.base10_digits();
-            let Ok(v) = digits.parse::<u128>() else {
-                return None;
-            };
-            if v == 0 {
-                return Some(zero_bin_literal(width));
-            }
-            // Non-zero: emit minimal binary digits padded to width (MSB-first).
-            let mut bits = format!("{v:b}");
-            if bits.len() as u32 > width {
-                return None;
-            }
-            while (bits.len() as u32) < width {
-                bits.insert(0, '0');
-            }
-            let mut s = String::from("0b");
-            for (i, c) in bits.chars().enumerate() {
-                if i > 0 && i % 4 == 0 {
-                    s.push('_');
-                }
-                s.push(c);
-            }
-            Some(s)
-        };
+        let lit_as_bin =
+            |e: &Expr, width: u32| -> Option<String> { int_lit_as_bin_literal(e, width) };
         let field_bin_w = |e: &Expr| -> Option<u32> {
             let Expr::Paren(p) = e else {
                 return match_first_field_binary_width(e, self.self_ty);
@@ -2937,8 +2961,22 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // M-1001: a call to a function whose name is a reserved word (e.g. a Rust `.swap()`
         // method or a `to(..)` helper) would emit un-parseable text; gap it (VR-5/G2).
         let func = resolve_surface_ident(&func, "call target")?;
+        // ORACLE-R1 A5: when the callee is a same-file mangled inherent assoc fn whose params
+        // are known Binary{N}, rewrite bare decimal lit args to equal-width BinLit (so
+        // `MonoInstant::from_nanos(0)` / `WallInstant::from_nanos_since_epoch(0)` in a hand-
+        // written `Default` → `Init` body never Q6-poison the file after Show is clean).
+        let param_widths = local_mangled_param_binary_widths(&func);
         let mut args = Vec::with_capacity(c.args.len());
-        for a in &c.args {
+        for (i, a) in c.args.iter().enumerate() {
+            if let Some(w) = param_widths
+                .as_ref()
+                .and_then(|ws| ws.get(i).copied().flatten())
+            {
+                if let Some(bin) = int_lit_as_bin_literal(a, w) {
+                    args.push(bin);
+                    continue;
+                }
+            }
             args.push(emit_expr(a, self.self_ty, self.env)?);
         }
         Ok(format!("{func}({})", args.join(", ")))
@@ -5545,7 +5583,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                          myc-check is not file-poisoned by `unknown trait Widen` \
                                          (express gap-close 2026-07-16)."
                                     ));
-                                    record_local_mangled_assoc_fn(&mangled);
+                                    record_local_mangled_assoc_fn(&mangled, &sig.params);
                                     record_bare_fn_name(&mangled);
                                     mangled
                                 } else if trait_name.is_none() {
@@ -5563,10 +5601,14 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                              DN-140 length-prefix mangle, M-664).",
                                             self_ty_text, f.sig.ident,
                                         ));
-                                        record_local_mangled_assoc_fn(&mangled);
+                                        record_local_mangled_assoc_fn(&mangled, &sig.params);
                                         record_bare_fn_name(&mangled);
                                         mangled
                                     } else {
+                                        // Bare un-mangled inherent method — still record param
+                                        // widths under the bare name so same-file calls can
+                                        // rewrite lit args (ORACLE-R1 A5).
+                                        record_local_mangled_assoc_fn(&bare, &sig.params);
                                         record_bare_fn_name(&bare);
                                         bare
                                     }
