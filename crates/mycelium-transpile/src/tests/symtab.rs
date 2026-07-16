@@ -447,13 +447,16 @@ fn resolve_goes_cross_phylum_only_from_non_root_file_even_with_a_same_crate_subm
     );
 }
 
-// ── M-1084 net-close: `use_emit_qualifier` (intra-phylum −2 regression) ─────────────────────────
+// ── M-1084 net-close: `use_emit_qualifier` always keeps full nodule path ────────────────────────
+// Kernel `resolve_imports` keys exports as full `nodule.path` + `.` + item (e.g. `l1.checkty.Width`).
+// Live `myc check --phylum` accepts full paths and refuses crate-root-stripped short forms
+// (`use checkty.Width` → no such name). Identity emit is the net-close; never strip (VR-5).
 
 #[test]
-fn use_emit_qualifier_strips_crate_root_for_same_crate_sibling() {
+fn use_emit_qualifier_keeps_full_nodule_for_same_crate_sibling() {
     assert_eq!(
         SymbolTable::use_emit_qualifier(Some("mycelium_l1"), "l1.checkty", "mycelium_l1.checkty"),
-        "checkty"
+        "l1.checkty"
     );
     assert_eq!(
         SymbolTable::use_emit_qualifier(
@@ -461,7 +464,7 @@ fn use_emit_qualifier_strips_crate_root_for_same_crate_sibling() {
             "std.fs.error",
             "mycelium_std_fs.error"
         ),
-        "error"
+        "std.fs.error"
     );
 }
 
