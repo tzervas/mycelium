@@ -138,6 +138,8 @@ pub(crate) fn transpile_source_with_ctx(
     // in-file reference (which would poison the file's `myc check` and cost its clean items).
     let resolvable = resolvable_type_names(&parsed.items);
     let layouts = struct_layouts(&parsed.items, &resolvable);
+    // Parallel type map for lit-zero / signed-order rewrite on field compares (post-#1645 residual).
+    let field_types = struct_field_type_map(&parsed.items, &layouts);
     // M-1084: this file's own `use`-resolution context — its crate-root-relative module segments
     // (`self::`/`super::` resolve relative to this) and, when derivable, its own extern-crate
     // identifier (the cross-phylum same-crate-vs-bare precedence — see `symtab.rs` module docs).
@@ -157,6 +159,7 @@ pub(crate) fn transpile_source_with_ctx(
     crate::emit::with_emit_ctx(
         resolvable,
         layouts,
+        field_types,
         symtab.clone(),
         pub_needed.clone(),
         imported_type_keys,
@@ -469,6 +472,64 @@ fn struct_layouts(
             if enum_resolvable {
                 out.insert(key, named_field_layout(fs));
             }
+        }
+    }
+    out
+}
+
+/// Parallel to [`struct_layouts`]: positional mapped field *types* for every layout key that
+/// still has a name layout after collision refusal. Each entry is `map_type` text, with a
+/// trailing `"!s"` when the Rust field was a signed integer (same internal marker
+/// `sig_type_env` uses — never emitted into `.myc`). Keys missing from `layouts` (collision-
+/// refused names) are omitted so emit never resolves a wrong-type bind for an ambiguous ctor
+/// name (G2 — same refusal discipline as name layouts).
+///
+/// Used by the binary lit-zero rewrite so `self.nanos < 0` recovers `Binary{128}` width +
+/// signedness; the name-only layout cannot drive `binary_width` (post-#1645 residual).
+fn struct_field_type_map(
+    items: &[Item],
+    layouts: &HashMap<String, Vec<Option<String>>>,
+) -> HashMap<String, Vec<Option<String>>> {
+    fn map_field_ty(ty: &syn::Type) -> Option<String> {
+        let mapped = crate::map::map_type(ty, None).ok()?;
+        if crate::emit::type_is_signed_int(ty) {
+            Some(format!("{mapped}!s"))
+        } else {
+            Some(mapped)
+        }
+    }
+
+    fn fields_types(fields: &syn::Fields) -> Vec<Option<String>> {
+        match fields {
+            syn::Fields::Named(fs) => fs.named.iter().map(|f| map_field_ty(&f.ty)).collect(),
+            syn::Fields::Unnamed(fs) => fs.unnamed.iter().map(|f| map_field_ty(&f.ty)).collect(),
+            syn::Fields::Unit => Vec::new(),
+        }
+    }
+
+    let mut out: HashMap<String, Vec<Option<String>>> = HashMap::new();
+    for item in items {
+        match item {
+            Item::Struct(s) => {
+                let key = s.ident.to_string();
+                if !layouts.contains_key(&key) {
+                    continue;
+                }
+                out.insert(key, fields_types(&s.fields));
+            }
+            Item::Enum(e) => {
+                for v in &e.variants {
+                    let key = v.ident.to_string();
+                    if !layouts.contains_key(&key) {
+                        continue;
+                    }
+                    // Only named-field variants are registered in `struct_layouts`.
+                    if matches!(v.fields, syn::Fields::Named(_)) {
+                        out.insert(key, fields_types(&v.fields));
+                    }
+                }
+            }
+            _ => {}
         }
     }
     out

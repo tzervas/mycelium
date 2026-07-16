@@ -685,6 +685,34 @@
     ],
     "gaps": []
   },
+  "signed_field_is_negative_emits_binlit_lt_s": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Duration = Duration(Binary{128});\n\nimpl Duration {\n  fn is_negative(self: Duration) => Bool = (match lt_s((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False });\n};\n",
+    "emitted_items": [
+      "Duration",
+      "impl Duration"
+    ],
+    "gaps": [
+      [
+        "NamedFieldDrop",
+        "struct `Duration` named field(s) `nanos` emitted positionally as `Duration(Binary{128})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+        "Duration"
+      ]
+    ]
+  },
+  "signed_field_is_zero_emits_binlit_eq": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Duration = Duration(Binary{128});\n\nimpl Duration {\n  fn is_zero(self: Duration) => Bool = (match eq((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False });\n};\n",
+    "emitted_items": [
+      "Duration",
+      "impl Duration"
+    ],
+    "gaps": [
+      [
+        "NamedFieldDrop",
+        "struct `Duration` named field(s) `nanos` emitted positionally as `Duration(Binary{128})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+        "Duration"
+      ]
+    ]
+  },
   "signed_gt_composes_from_eq_and_lt_s": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}, b: Binary{32}) => Bool = (match eq(a, b) { 0b1 => False, _ => match lt_s(a, b) { 0b1 => False, _ => True } });\n",
     "emitted_items": [
@@ -708,6 +736,20 @@
   },
   "signed_neg_emits_neg_s": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}) => Binary{32} = neg_s(a);\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "signed_param_eq_zero_emits_binlit_eq": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{128}) => Bool = (match eq(a, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False });\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "signed_param_lt_zero_emits_binlit_lt_s": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}) => Bool = (match lt_s(a, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False });\n",
     "emitted_items": [
       "f"
     ],
@@ -856,6 +898,20 @@
       "f"
     ],
     "gaps": []
+  },
+  "unsigned_field_lt_zero_emits_binlit_lt": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Tick = Tick(Binary{64});\n\nimpl Tick {\n  fn before_epoch(self: Tick) => Bool = (match lt((match self { Tick(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False });\n};\n",
+    "emitted_items": [
+      "Tick",
+      "impl Tick"
+    ],
+    "gaps": [
+      [
+        "NamedFieldDrop",
+        "struct `Tick` named field(s) `n` emitted positionally as `Tick(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+        "Tick"
+      ]
+    ]
   },
   "unsigned_mul_emits_mul_u": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}, b: Binary{32}) => Binary{32} = mul_u(a, b);\n",
