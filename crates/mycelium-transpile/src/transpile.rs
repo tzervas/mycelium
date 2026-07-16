@@ -228,6 +228,24 @@ pub(crate) fn transpile_source_with_ctx(
                     }
                 }
             }
+            // ORACLE-R1 A2: co-emitted lattice types must land *before* any free-fn that
+            // references them (e.g. strength_of). Drain inside the emit ctx so DN-140 variant
+            // renames share the item-loop's per-file ident-emission map.
+            let lattice = emit::drain_lattice_co_emits();
+            if !lattice.is_empty() {
+                let mut preamble = Vec::with_capacity(lattice.len() + body_chunks.len());
+                let mut lattice_names = Vec::with_capacity(lattice.len());
+                for (name, myc) in lattice {
+                    preamble.push(myc);
+                    lattice_names.push(format!("co-emit:{name}"));
+                }
+                preamble.append(&mut body_chunks);
+                body_chunks = preamble;
+                // Prepend so emitted_items order matches file order (co-emits first).
+                let mut names = lattice_names;
+                names.append(&mut emitted_items);
+                emitted_items = names;
+            }
         },
     );
 
@@ -750,6 +768,9 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                             SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
                         emitted_lines.push(format!("use {prefix}.{name};"));
                         resolved_names.push(name.clone());
+                        // ORACLE-R1 A2: a successfully resolved import makes the name available
+                        // so lattice co-emit will not redeclare it (duplicate type = check poison).
+                        emit::record_imported_name(name);
                     }
                     None => leaf_gaps.push(GapReason::new(
                         Category::Import,
