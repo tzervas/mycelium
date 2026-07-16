@@ -2784,18 +2784,18 @@
 | `mycelium_transpile::build_remap_manifest` | fn | `crates/mycelium-transpile/src/remap.rs:160` | Build the v0 [`RemapManifest`] for a batch run: the `phylum` header derived from `root`, one |
 | `mycelium_transpile::discover_rs_files` | fn | `crates/mycelium-transpile/src/batch.rs:31` | Recursively discover every `*.rs` file under `root`, skipping test infrastructure: any |
 | `mycelium_transpile::emit` | mod | `crates/mycelium-transpile/src/lib.rs:36` | — |
-| `mycelium_transpile::emit::Emitted` | struct | `crates/mycelium-transpile/src/emit.rs:416` | The `.myc` text (+ any dropped sub-features, e.g. |
-| `mycelium_transpile::emit::doc_lines` | fn | `crates/mycelium-transpile/src/emit.rs:435` | Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = "..."]` attributes), |
-| `mycelium_transpile::emit::emit_block_as_expr` | fn | `crates/mycelium-transpile/src/emit.rs:1175` | — |
-| `mycelium_transpile::emit::emit_enum` | fn | `crates/mycelium-transpile/src/emit.rs:3906` | `enum` -> `type_item` (`type Name = C1 \| C2(T1, T2) \| ...;`). |
-| `mycelium_transpile::emit::emit_expr` | fn | `crates/mycelium-transpile/src/emit.rs:1941` | Translate one Rust expression. |
-| `mycelium_transpile::emit::emit_fn` | fn | `crates/mycelium-transpile/src/emit.rs:4174` | Top-level `fn` -> `fn_item`. |
-| `mycelium_transpile::emit::emit_impl` | fn | `crates/mycelium-transpile/src/emit.rs:4548` | `impl` -> `impl_item` (trait-instance or inherent form). |
-| `mycelium_transpile::emit::emit_struct` | fn | `crates/mycelium-transpile/src/emit.rs:4043` | `struct` -> a single-constructor `type_item`. |
-| `mycelium_transpile::emit::emit_trait` | fn | `crates/mycelium-transpile/src/emit.rs:4222` | `trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ... |
-| `mycelium_transpile::emit::is_cfg_test` | fn | `crates/mycelium-transpile/src/emit.rs:479` | Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains("test")` check, not a |
-| `mycelium_transpile::emit::map_pattern` | fn | `crates/mycelium-transpile/src/emit.rs:3685` | Translate one Rust pattern. |
-| `mycelium_transpile::emit::non_doc_attrs` | fn | `crates/mycelium-transpile/src/emit.rs:455` | Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD |
+| `mycelium_transpile::emit::Emitted` | struct | `crates/mycelium-transpile/src/emit.rs:417` | The `.myc` text (+ any dropped sub-features, e.g. |
+| `mycelium_transpile::emit::doc_lines` | fn | `crates/mycelium-transpile/src/emit.rs:436` | Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = "..."]` attributes), |
+| `mycelium_transpile::emit::emit_block_as_expr` | fn | `crates/mycelium-transpile/src/emit.rs:1176` | — |
+| `mycelium_transpile::emit::emit_enum` | fn | `crates/mycelium-transpile/src/emit.rs:3927` | `enum` -> `type_item` (`type Name = C1 \| C2(T1, T2) \| ...;`). |
+| `mycelium_transpile::emit::emit_expr` | fn | `crates/mycelium-transpile/src/emit.rs:1942` | Translate one Rust expression. |
+| `mycelium_transpile::emit::emit_fn` | fn | `crates/mycelium-transpile/src/emit.rs:4195` | Top-level `fn` -> `fn_item`. |
+| `mycelium_transpile::emit::emit_impl` | fn | `crates/mycelium-transpile/src/emit.rs:4569` | `impl` -> `impl_item` (trait-instance or inherent form). |
+| `mycelium_transpile::emit::emit_struct` | fn | `crates/mycelium-transpile/src/emit.rs:4064` | `struct` -> a single-constructor `type_item`. |
+| `mycelium_transpile::emit::emit_trait` | fn | `crates/mycelium-transpile/src/emit.rs:4243` | `trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ... |
+| `mycelium_transpile::emit::is_cfg_test` | fn | `crates/mycelium-transpile/src/emit.rs:480` | Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains("test")` check, not a |
+| `mycelium_transpile::emit::map_pattern` | fn | `crates/mycelium-transpile/src/emit.rs:3706` | Translate one Rust pattern. |
+| `mycelium_transpile::emit::non_doc_attrs` | fn | `crates/mycelium-transpile/src/emit.rs:456` | Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD |
 | `mycelium_transpile::gap` | mod | `crates/mycelium-transpile/src/lib.rs:37` | — |
 | `mycelium_transpile::gap::Category::as_str` | fn | `crates/mycelium-transpile/src/gap.rs:115` | — |
 | `mycelium_transpile::gap::Category::excluded_from_denominator` | fn | `crates/mycelium-transpile/src/gap.rs:152` | Whether a gap of this category is **excluded from the expressible-fraction denominator** — |
