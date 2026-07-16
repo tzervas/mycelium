@@ -1893,15 +1893,13 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
         "no fabricated `to_owned(...)` may leak even inside a now-emittable string-match, got:\n{myc2}"
     );
 
-    // An explicit `.deref()` call is the same fabrication class (the docstring claims `Deref`
-    // coverage): it must gap, never emit a fabricated `deref(recv)` bare call (PR #1372 review
-    // fix) — `deref` is not in `prim_map::TABLE`, deliberately withheld, unaffected by this leaf.
+    // M-1037: `.deref()` on a bare `&str` identifier (`Bytes`) is sound identity — must emit, not gap.
     let deref = "fn g(s: &str) -> &str { s.deref() }";
     let (myc3, report3) = transpile_source(deref, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        !report3.emitted_items.iter().any(|n| n == "g"),
-        "a `.deref()`-bodied fn must gap (no fabricated bare-call emission), got {:?}",
+        report3.emitted_items.iter().any(|n| n == "g"),
+        "`.deref()` on builtin `&str` receiver must emit identity (M-1037), got {:?}",
         report3.emitted_items
     );
     assert!(
@@ -1935,6 +1933,42 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
             .contains("ownership/identity-conversion no-op method")),
         "expected `snap` to gap via the `is_unmappable_conversion_method` catch-all, got {:?}",
         report4.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// M-1037 — generalized never-fabricates pin: mapped conversion/accessor methods and explicit
+/// unmapped methods (`ne`/`fetch_add`/`contains`) must not leak fabricated bare-call surface.
+#[test]
+fn conversion_and_unmapped_methods_never_fabricate_unknown_prim() {
+    for (rust, forbidden_call) in [
+        (
+            "fn atom(x: u64) -> u64 { x.fetch_add(1, std::sync::atomic::Ordering::Relaxed) }",
+            "fetch_add(",
+        ),
+        (
+            "fn has(s: String, c: char) -> bool { s.contains(c) }",
+            "contains(",
+        ),
+    ] {
+        let (myc, _report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
+        assert!(
+            !myc.contains(forbidden_call),
+            "`{rust}` leaked fabricated `{forbidden_call}`, got:\n{myc}"
+        );
+    }
+    // Composed `.ne` on known `Binary{N}` operands must emit (not gap) without `ne(` fabrication.
+    let ne_ok = "fn ne_u(a: u64, b: u64) -> bool { a.ne(&b) }";
+    let (myc_ne, report_ne) =
+        transpile_source(ne_ok, "fixture.rs", "fixture").unwrap_or_else(|e| panic!("failed: {e}"));
+    assert!(
+        report_ne.emitted_items.iter().any(|n| n == "ne_u"),
+        "composed `.ne` on u64 should emit, got {:?}",
+        report_ne.emitted_items
+    );
+    assert!(
+        myc_ne.contains("match eq") && !myc_ne.contains("ne("),
+        "expected composed `eq` lowering, got:\n{myc_ne}"
     );
 }
 

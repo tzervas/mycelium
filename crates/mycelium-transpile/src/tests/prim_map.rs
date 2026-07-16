@@ -289,29 +289,45 @@ fn clone_on_unresolved_receiver_type_still_gaps_never_fabricates() {
     );
 }
 
-/// NEVER-SILENT (G2/VR-5) regression guard: `to_string`/`into`/`deref` are DELIBERATELY WITHHELD
-/// from `TABLE` (L4, DN-136 Phase-2, M-1100 — see the module doc's L4 section for each one's own
-/// verify-first finding), so the pre-existing `is_unmappable_conversion_method` gap in `emit.rs`
-/// keeps handling them exactly as before — unchanged. Pins that decision directly against the
-/// table (not a guess about emitted text), so a future accidental/silent addition of one of these
-/// rows is caught here first. `to_owned` was withheld by the original L4 leaf (a flagged residual)
-/// but is added by this follow-on leaf — see the converse check below.
+/// NEVER-SILENT (G2/VR-5) regression guard: `to_string`/`into` stay DELIBERATELY WITHHELD from
+/// `TABLE` (verify-first findings in the module doc). M-1037 added accessor identity rows instead.
 #[test]
-fn to_string_into_deref_are_not_in_the_table_deliberately_withheld() {
-    for method in ["to_string", "into", "deref"] {
+fn to_string_and_into_are_not_in_the_table_deliberately_withheld() {
+    for method in ["to_string", "into"] {
         assert!(
             crate::prim_map::lookup(method).is_none(),
-            "`{method}` must NOT be in prim_map::TABLE (deliberately withheld — see the module \
-             doc's L4 section for its verify-first finding); the existing \
-             `is_unmappable_conversion_method` gap in `emit.rs` must keep handling it unchanged"
+            "`{method}` must NOT be in prim_map::TABLE (deliberately withheld — see module doc)"
         );
     }
-    // `clone`/`to_owned` ARE in the table — the converse check, so this test cannot pass by
-    // accident (e.g. an empty table).
-    for method in ["clone", "to_owned"] {
+    for method in [
+        "clone", "to_owned", "as_ref", "borrow", "as_str", "as_slice", "deref",
+    ] {
         assert!(
             crate::prim_map::lookup(method).is_some(),
-            "`{method}` must be in prim_map::TABLE (an identity-conversion addition)"
+            "`{method}` must be in prim_map::TABLE (identity-conversion row)"
+        );
+    }
+}
+
+/// M-1037 — builtin-scalar accessor methods emit identity passthrough, never fabricated bare calls.
+#[test]
+fn m1037_accessor_identity_rows() {
+    let cases = [
+        ("fn f(x: u64) -> u64 { x.as_ref() }", "as_ref"),
+        ("fn f(x: String) -> &str { x.as_str() }", "as_str"),
+        ("fn f(s: &str) -> &str { s.deref() }", "deref"),
+    ];
+    for (rust, fabricated) in cases {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+            .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
+        assert!(
+            report.emitted_items.iter().any(|n| n == "f"),
+            "`{rust}` should emit `f`, got {:?}",
+            report.emitted_items
+        );
+        assert!(
+            !myc.contains(&format!("{fabricated}(")),
+            "`{rust}` must not fabricate `{fabricated}(...)`, got:\n{myc}"
         );
     }
 }

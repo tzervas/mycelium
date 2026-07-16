@@ -684,8 +684,10 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                     emit::cross_nodule_resolve(k, name).map(|nodule_path| (k, nodule_path))
                 });
                 match hit {
-                    Some((_, nodule_path)) => {
-                        emitted_lines.push(format!("use {nodule_path}.{name};"));
+                    Some((key, nodule_path)) => {
+                        let prefix =
+                            SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
+                        emitted_lines.push(format!("use {prefix}.{name};"));
                         resolved_names.push(name.clone());
                     }
                     None => leaf_gaps.push(GapReason::new(
