@@ -2,27 +2,32 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **ORACLE-R1 A1–A5 landed; Phase 2 one CI success witnessed (host)** — see **`PROGRAM-HANDOFF.md`** (live); Epic R HOLD |
+| **Status** | **ONESHOT prep program active** — foundation ORACLE-R1 A1–A5 landed; Epic R / one-shot claim **HOLD** |
+| **Active handoff** | **`PROGRAM-HANDOFF-ONESHOT.md`** (live L0↔L1 for one-shot prep; Epic B/C/D map) |
+| **Prior handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (still valid history; not the active spawn packet) |
 | **Framework** | Repo-root **`maint-guide.md`** (L0→L1→L2; Phase 0–3; PM close-out) |
-| **Tree tip** | `origin/dev` @ `ba97eb94`; `origin/integration` @ `41234a14` (same tree); `origin/main` @ `aad96b7a` |
+| **Tree tip** | `origin/dev` @ `2ac85a84`+ (post A5 + MAINT); remeasure `M1006-baseline-oneshot-2026-07-16.md` |
 | **Model floor** | `grok-composer-2.5-fast` (record actual if runtime differs) |
-| **Goal** | Residual oracle close + honest `checked_fraction`; **not** one-shot claim until release gate |
+| **Goal** | Prep language + transpiler for hands-off whole-repo transpile; honest `checked_fraction`; **not** one-shot claim until DoD + release gate |
 | **Updates** | language-completeness-gap-inventory, DN-136 phase2 worklist, DN-99, zero-hand-port-delta-ledger, DN-34 §8 |
 
 ## Structure (program management)
 
 | Doc | Role |
 |-----|------|
-| **`PROGRAM-HANDOFF.md`** | **Live L0↔L1 handoff** — tips, done PRs, queue, FLAGs, release gate |
-| **`WAVE-L0-ORCHESTRATION-2026-07-16.md`** | L0 wave map (Epic A complete; B/C/R next) |
+| **`PROGRAM-HANDOFF-ONESHOT.md`** | **Active** L0↔L1 handoff — one-shot prep DoD, Epic B/C/D, mycelium-only |
+| `PROGRAM-HANDOFF.md` | ORACLE-R1 residual close-out packet (A1–A5 done, CI witness, Epic R HOLD) |
+| `M1006-baseline-oneshot-2026-07-16.md` | **Post-A5 Empirical baseline** (default-5 + std-fs/io) |
+| `WAVE-L0-ORCHESTRATION-2026-07-16.md` | L0 wave map (Epic A complete; B/C/R next) |
 | `PARTITION.md` | epic scopes → crate ownership |
 | `WAVE1-PRIORITY.md` / `WAVE-EXPRESSIBILITY-NEXT.md` | critical path backlog |
 | `leaves/<crate>.md` | per-crate leaf report (one agent each) |
 | `SYNTHESIS.md` / `SYNTHESIS-G2.md` | orch integration after G1/G2 |
-| `M1006-remeasure-*.md` | Empirical remeasures |
+| `M1006-remeasure-*.md` | earlier Empirical remeasures (pre-/mid-ORACLE-R1) |
 | `EXPRESS-ORACLE-BLOCKERS-2026-07-16.md` | technical residual notes |
 
 ## Prior assessments (read, do not rewrite)
+
 - `docs/planning/language-completeness-gap-inventory.md`
 - `docs/planning/DN-136-phase2-bulk-gap-close-worklist.md`
 - `docs/notes/DN-99-Surface-Gap-Closure-Register.md`
