@@ -33,7 +33,7 @@ permissions:
 jobs:
   publish-wiki:
     if: ${{ inputs.publish_wiki }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, podman]
     permissions:
       contents: write # the wiki is part of the repository
     steps:
@@ -74,7 +74,7 @@ jobs:
 
   publish-site:
     if: ${{ inputs.publish_site }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, podman]
     permissions:
       pages: write
       id-token: write

@@ -34,7 +34,7 @@ permissions:
 
 jobs:
   release-dry-run:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, podman]
     steps:
       - name: Checkout (full history — release-plz needs the commit range since the last tag)
         uses: actions/checkout@v7
