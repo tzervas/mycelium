@@ -12,6 +12,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): ONESHOT handoff + M-1006 post-A5 baseline remeasure (2026-07-16)
+
+- **`PROGRAM-HANDOFF-ONESHOT.md`** — active one-shot prep program (DoD, Epic B/C/D, mycelium-only).
+- **`M1006-baseline-oneshot-2026-07-16.md`** + `experiments/results/m1006-baseline-oneshot/` — Empirical
+  default-5 union **checked 19.5%** (46/236, all Clean) post A4/A5; std-fs/io expansion; ranked residual
+  classes. **No** one-shot claim (VR-5).
+
 ### docs(pm): maint-guide OS + ORACLE-R1 A1–A5 program handoff (2026-07-16)
 
 PM / docs close-out for the residual oracle wave (code already on the working tier via

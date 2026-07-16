@@ -1,0 +1,104 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-baseline-oneshot/crates_mycelium-std-io_src/error.myc",
+      "source_file": "crates/mycelium-std-io/src/error.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 19,
+      "emitted_items": 7
+    },
+    {
+      "myc_file": "experiments/results/m1006-baseline-oneshot/crates_mycelium-std-io_src/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `eq_MatrixRow`: unknown function/constructor/prim `eq_GuaranteeTag`",
+      "non_test_items": 6,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "experiments/results/m1006-baseline-oneshot/crates_mycelium-std-io_src/io.myc",
+      "source_file": "crates/mycelium-std-io/src/io.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.io.io.<use>`: `use error.IoError`: no such name `error.IoError` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
+      "non_test_items": 13,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "experiments/results/m1006-baseline-oneshot/crates_mycelium-std-io_src/lib.myc",
+      "source_file": "crates/mycelium-std-io/src/lib.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.io.<use>`: `use error.ByteCount`: no such name `error.ByteCount` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
+      "non_test_items": 4,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "experiments/results/m1006-baseline-oneshot/crates_mycelium-std-io_src/serialize.myc",
+      "source_file": "crates/mycelium-std-io/src/serialize.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.io.serialize.<use>`: `use error.ByteOffset`: no such name `error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
+      "non_test_items": 17,
+      "emitted_items": 2
+    }
+  ],
+  "total_non_test_items": 59,
+  "total_emitted_items": 20,
+  "total_checked_clean_items": 7,
+  "class_counts": {
+    "CheckError": 4,
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.io.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "CheckError",
+        "site": "eq_MatrixRow",
+        "on": null,
+        "message": "unknown function/constructor/prim `eq_GuaranteeTag`"
+      },
+      {
+        "nodule": "std.io.io",
+        "file": "io.myc",
+        "class": "CheckError",
+        "site": "std.io.io.<use>",
+        "on": null,
+        "message": "`use error.IoError`: no such name `error.IoError` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)"
+      },
+      {
+        "nodule": "std.io",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "std.io.<use>",
+        "on": null,
+        "message": "`use error.ByteCount`: no such name `error.ByteCount` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)"
+      },
+      {
+        "nodule": "std.io.serialize",
+        "file": "serialize.myc",
+        "class": "CheckError",
+        "site": "std.io.serialize.<use>",
+        "on": null,
+        "message": "`use error.ByteOffset`: no such name `error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)"
+      }
+    ],
+    "diagnostic": "unknown function/constructor/prim `eq_GuaranteeTag`"
+  },
+  "total_checked_clean_items_phylum": 7
+}

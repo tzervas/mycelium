@@ -1,0 +1,2 @@
+mycelium-transpile: 12 top-level item(s) (12 non-test) — 0 emitted, 13 gap(s) recorded, 0.0% expressible -> experiments/results/m1006-baseline-oneshot/crates_mycelium-l1_src_fuse_rs/fuse.myc, experiments/results/m1006-baseline-oneshot/crates_mycelium-l1_src_fuse_rs/fuse.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 0.0% (0/12 items myc-check-clean, file-gated) vs expressible_fraction 0.0% (0/12 items emitted); 0/0 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-baseline-oneshot/crates_mycelium-l1_src_fuse_rs/vet.json
