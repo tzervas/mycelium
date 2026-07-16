@@ -62,7 +62,9 @@ def pct(numerator: int, denom: int) -> float:
     return numerator / denom * 100.0
 
 
-def phylum_dual_report(vet: dict, non_test_items: int, checked_fraction_pct: float) -> dict | None:
+def phylum_dual_report(
+    vet: dict, non_test_items: int, checked_fraction_pct: float
+) -> dict | None:
     """Extract the DN-124 M-A dual-report block from a batch-mode `vet.json`'s additive `phylum`
     field (Unit 2, `mycelium-transpile::vet::VetReport::with_phylum`). Returns `None` when the field
     is absent (an older, pre-M-1079 `vet.json`, or a run where `--vet` never reached directory mode)
@@ -217,7 +219,9 @@ def render_markdown(manifest: dict) -> str:
     # checks); `Δ_basis (pp)` is `phylum - oracle`, explicitly labeled a ONE-TIME BASIS CORRECTION
     # (recovered false-fails), never presented as lever/transpiler progress (VR-5).
     phylum_targets = [t for t in ok_targets if t.get("phylum") is not None]
-    lines.append("## Phylum-mode dual-report (DN-124/M-1079 -- transition-cycle basis correction)")
+    lines.append(
+        "## Phylum-mode dual-report (DN-124/M-1079 -- transition-cycle basis correction)"
+    )
     lines.append("")
     lines.append(
         "> `checked_fraction_phylum` measures myc-check-clean coverage against the REAL phylum a "
@@ -262,7 +266,9 @@ def render_markdown(manifest: dict) -> str:
             lines.append(
                 "**Not run this cycle (myc-check --phylum could not execute -- never counted "
                 "clean, G2):** "
-                + ", ".join(f"`{t['target']}` ({t['phylum']['diagnostic']})" for t in not_ran)
+                + ", ".join(
+                    f"`{t['target']}` ({t['phylum']['diagnostic']})" for t in not_ran
+                )
             )
             lines.append("")
     else:
