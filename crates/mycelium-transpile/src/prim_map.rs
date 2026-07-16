@@ -114,6 +114,13 @@
 //! all (only [`crate::emit::TypeEnv`]'s *receiver*-type tracking), so "identity when source/target
 //! coincide" is undecidable here without guessing the target. Left gapped, unchanged.
 //!
+//! **M-1037 accessor identity rows (`as_ref`/`borrow`/`as_str`/`as_slice`/`deref`).** On a fixed
+//! builtin/primitive mapped receiver (`AnyBuiltinScalar`), these `AsRef`/`Borrow`/`Deref` trait
+//! methods are representation-preserving in value-semantic Mycelium (ADR-003): the receiver passed
+//! through as `(recv)` is exact for the same orphan-rule soundness basis as `clone`/`to_owned`.
+//! `as_mut`/`borrow_mut`/`deref_mut` stay gapped (mutable-reference surface is not value-safe
+//! without DN-125 threading facts). `to_vec` stays gapped (not identity — allocates a new `Seq`).
+//!
 //! CU-3 (float<->int conversion) is also excluded: DN-34 §8.16 records a *directional* ruling
 //! ("prims for the total directions") but no confirmed prim **name**, and Rust's natural spelling
 //! for a value conversion is the `as` cast (`syn::Expr::Cast`), which is out of this `Call`/
@@ -385,6 +392,64 @@ pub const TABLE: &[PrimMapping] = &[
                    myc-check-clean by direct probe against target/debug/myc-check for a \
                    Binary{64}/Bool/Bytes receiver (see src/tests/prim_map.rs's committed \
                    regression + live-oracle witness)",
+    },
+    // M-1037 — representation-preserving accessor conversions (same identity sentinel as `clone`).
+    PrimMapping {
+        rust_method: "as_ref",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1037",
+        citation: "M-1037; ADR-003 value semantics; AsRef on foreign primitives is std-fixed \
+                   (orphan rule); identity `(recv)` confirmed myc-check-clean for Binary{64}/Bool/\
+                   Bytes receivers (see src/tests/prim_map.rs::m1037_accessor_identity_rows)",
+    },
+    PrimMapping {
+        rust_method: "borrow",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1037",
+        citation:
+            "M-1037; ADR-003; Borrow on foreign primitives is std-fixed; identity passthrough",
+    },
+    PrimMapping {
+        rust_method: "as_str",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1037",
+        citation: "M-1037; ADR-003; str/String -> Bytes mapping — as_str is representation \
+                   identity on the mapped scalar",
+    },
+    PrimMapping {
+        rust_method: "as_slice",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1037",
+        citation: "M-1037; ADR-003; slice view on a mapped builtin scalar is identity when types \
+                   align (conservative AnyBuiltinScalar gate)",
+    },
+    PrimMapping {
+        rust_method: "deref",
+        myc_prim: "",
+        wired: true,
+        receiver_gate: ReceiverGate::AnyBuiltinScalar,
+        bridge_binary1_to_bool: false,
+        pending_category: Category::Other,
+        slug: "M-1037",
+        citation: "M-1037; ADR-003; Deref on foreign primitives is std-fixed; identity \
+                   passthrough for bare-identifier receivers (literal/call receivers still gap via \
+                   gate miss + is_unmappable_conversion_method)",
     },
 ];
 
