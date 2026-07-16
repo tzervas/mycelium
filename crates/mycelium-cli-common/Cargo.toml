@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-cli-common"
-version = "0.0.0"
+version.workspace = true
 description = "mycelium-cli-common (M-643) — the small, dependency-free helper shared by the toolchain CLIs (mycfmt / myc-check / myc-lint / myc-sec). Folds out the duplicated stdin-or-file `read_source`, the `.myc` source-walking, and the hand-rolled arg loop. Never-silent on missing/ambiguous input (G2): a refusal prints to stderr and yields a structured outcome the caller maps to its existing exit code; behaviour-preserving (DRY/KISS, KC-3). No new external dependency — std only."
 edition.workspace = true
 rust-version.workspace = true

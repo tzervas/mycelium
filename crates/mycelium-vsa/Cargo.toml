@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-vsa"
-version = "0.0.0"
+version.workspace = true
 description = "VSA submodule: VsaModel trait + MAP-I algebra, dependency-gated (RFC-0003; ADR-008). M-130."
 edition.workspace = true
 rust-version.workspace = true

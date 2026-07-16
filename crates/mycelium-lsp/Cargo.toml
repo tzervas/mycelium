@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-lsp"
-version = "0.0.0"
+version.workspace = true
 description = "Minimal toolchain surface (FR-S5): invariant linter (M-141), canonical formatter (M-142), and the LSP feedback facade (M-140/M-221) — one surface for diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps, and selection EXPLAIN traces."
 edition.workspace = true
 rust-version.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-ternary"
-version = "0.0.0"
+version.workspace = true
 description = "std.ternary — balanced ternary + bit/trit capability surface (M-517)."
 edition.workspace = true
 rust-version.workspace = true

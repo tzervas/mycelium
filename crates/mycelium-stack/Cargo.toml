@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-stack"
-version = "0.0.0"
+version.workspace = true
 description = "Host-stack management for the L1 frontend's recursive passes (checker/elaborator), kept OUTSIDE the trusted kernel (`mycelium-l1`) so the kernel stays `unsafe`-free and auditable (ADR-014, KC-3). Default `with_deep_stack` is std-only and `unsafe`-free; any future grow-on-demand stack growth is the one place upstream `unsafe` would be contained — behind a leaf dependency, never in Mycelium-authored source. The explicit depth budgets stay in the kernel (the portable, self-hosting primitive); this crate is the transitional Rust-host adapter."
 edition.workspace = true
 rust-version.workspace = true

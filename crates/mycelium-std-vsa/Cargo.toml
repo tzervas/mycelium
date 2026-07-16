@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-vsa"
-version = "0.0.0"
+version.workspace = true
 description = "std.vsa — hypervectors / VSA encoding capability surface (M-513)."
 edition.workspace = true
 rust-version.workspace = true
