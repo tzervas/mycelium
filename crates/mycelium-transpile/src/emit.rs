@@ -758,6 +758,9 @@ fn zero_bin_literal(width: u32) -> String {
 /// the canonical `ToOwned`/`Clone`/`ToString`/`Into`/`AsRef`/`Borrow`/`Deref` accessors whose sole
 /// effect is ownership/representation identity, never an operation that computes a value.
 fn is_unmappable_conversion_method(method: &str) -> bool {
+    // Methods with a `prim_map` identity row (`clone`/`to_owned`/M-1037 accessors) are handled
+    // there first when `AnyBuiltinScalar` matches; this catch-all covers gate misses (user types,
+    // unresolved receivers) and deliberately withheld conversions (`into`/`to_string`/`to_vec`/…).
     matches!(
         method,
         "to_owned"
@@ -2415,6 +2418,53 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                     call
                 });
             }
+        }
+        // M-1037 — `.ne(other)` is `PartialEq::ne`; bare `ne(recv, other)` fabricates the same
+        // non-prim `lib/std/cmp.myc` surface that `!=` already avoids (see `visit_binary`'s
+        // composed-`eq` arm). When both operands resolve to a known `Binary{N}`, emit that
+        // faithful composition; otherwise gap never-silently (VR-5/G2).
+        if method_name == "ne" && m.args.len() == 1 {
+            let both_known_binary = expr_env_binary_width(&m.receiver, self.env).is_some()
+                && expr_env_binary_width(&m.args[0], self.env).is_some();
+            let both_known_signed_binary = expr_env_signed_binary_width(&m.receiver, self.env)
+                .is_some()
+                && expr_env_signed_binary_width(&m.args[0], self.env).is_some();
+            if both_known_binary || both_known_signed_binary {
+                let lhs = emit_expr(&m.receiver, self.self_ty, self.env)?;
+                let rhs = emit_expr(&m.args[0], self.self_ty, self.env)?;
+                return Ok(format!(
+                    "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
+                ));
+            }
+            return Err(GapReason::new(
+                Category::Other,
+                "Rust `.ne()` method has no faithful bare `ne(recv, arg)` referent (same \
+                 class as `!=` — cmp.myc's `ne` is not a bare-call prim); operands did not \
+                 both resolve to a known `Binary{N}` for the composed `eq` lowering, so it \
+                 is gapped rather than fabricated (M-1037, G2/VR-5)",
+            ));
+        }
+        // M-1037 — atomics / unmapped std methods that must never desugar to fabricated bare calls.
+        if matches!(
+            method_name.as_str(),
+            "fetch_add" | "fetch_sub" | "fetch_and" | "fetch_or" | "fetch_xor"
+        ) {
+            return Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "PENDING-BACKEND(CU-8): atomic `.{method_name}()` needs a memory-model RFC \
+                     surface — desugaring to `{method_name}(recv, …)` would fabricate an unknown \
+                     prim (M-1037, G2/VR-5)"
+                ),
+            ));
+        }
+        if method_name == "contains" {
+            return Err(GapReason::new(
+                Category::Other,
+                "Rust `.contains()` has no verified bare-call kernel prim mapping in this \
+                 pipeline; desugaring to `contains(recv, …)` would fabricate an unknown prim — \
+                 gapped never-silently (M-1037, G2/VR-5)",
+            ));
         }
         // A Rust **ownership/identity-conversion no-op method** (`ToOwned::to_owned`,
         // `Clone::clone`, `ToString::to_string`, `Into::into`, `AsRef`/`Borrow` accessors, …)
