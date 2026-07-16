@@ -120,28 +120,37 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
-/// Recover `Binary{N}` width from field access `self.field` or a unit match
-/// `match self { Ty(p0, …) => p0 }` using the in-file struct layout (express gap-close).
-fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+/// Recover the mapped field-type text (`Binary{N}` / `Binary{N}!s`) for a field access
+/// `self.<field>` or a single-arm product projection `match self { Ty(p0, …) => p0 }`, using
+/// the per-file field-*type* map (not the name-only layout — names are not `Binary{N}` text).
+/// Express gap-close residual post-#1645: lit-zero rewrite needs this so signed field compares
+/// to a bare `0` rewrite to equal-width `BinLit` instead of poisoning the file on Q6.
+fn match_field_type_text(e: &Expr, self_ty: Option<&str>) -> Option<String> {
     if let Expr::Field(f) = e {
         let base_ty = match f.base.as_ref() {
             Expr::Path(p) if p.path.is_ident("self") => self_ty.map(|s| s.to_string()),
             _ => None,
         }?;
+        // Gate on resolvable layout (constructor exists) AND the parallel type map.
         let layout = struct_layout(&base_ty)?;
-        let syn::Member::Named(id) = &f.member else {
-            // positional: field index
-            let syn::Member::Unnamed(idx) = &f.member else {
-                return None;
-            };
-            let ft = layout.get(idx.index as usize)?.as_ref()?;
-            return binary_width(ft);
+        let types = struct_field_types(&base_ty)?;
+        let pos = match &f.member {
+            syn::Member::Named(id) => {
+                let n = id.to_string();
+                layout
+                    .iter()
+                    .position(|f| f.as_deref() == Some(n.as_str()))?
+            }
+            syn::Member::Unnamed(idx) => {
+                let i = idx.index as usize;
+                if i < layout.len() {
+                    i
+                } else {
+                    return None;
+                }
+            }
         };
-        // Named field — layouts are positional-only in this emitter; first Binary field
-        // is the common Duration/Instant shape (single payload).
-        let ft = layout.iter().find_map(|f| f.as_ref())?;
-        let _ = id;
-        return binary_width(ft);
+        return types.get(pos)?.clone();
     }
     let Expr::Match(m) = e else {
         return None;
@@ -153,15 +162,27 @@ fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32
     let Pat::TupleStruct(ts) = &arm.pat else {
         return None;
     };
+    // Only the "first-field projection" shape: body is the first binder of a single-ctor product.
+    // Used when source already match-projects (rare) or when a paren-wrapped match is compared.
     let ty_name = ts
         .path
         .segments
         .last()
         .map(|s| s.ident.to_string())
         .or_else(|| self_ty.map(|s| s.to_string()))?;
-    let layout = struct_layout(&ty_name)?;
-    let ft = layout.first()?.as_ref()?;
-    binary_width(ft)
+    let _layout = struct_layout(&ty_name)?;
+    let types = struct_field_types(&ty_name)?;
+    types.first()?.clone()
+}
+
+/// Recover `Binary{N}` width from field access / match-first-field (unsigned or signed marker).
+fn match_first_field_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+    match_field_type_text(e, self_ty).and_then(|t| binary_width(&t))
+}
+
+/// Recover signed `Binary{N}` width (`!s` marker) from field access / match-first-field.
+fn match_first_field_signed_binary_width(e: &Expr, self_ty: Option<&str>) -> Option<u32> {
+    match_field_type_text(e, self_ty).and_then(|t| signed_binary_width(&t))
 }
 
 /// P4/P5 (DN-99 §8 ENB-6): [`expr_env_type`] narrowed to the **signed**-marked `Binary{N}` case
@@ -223,6 +244,11 @@ fn known_struct_literal_ty(e: &Expr, self_ty: Option<&str>) -> Option<String> {
 struct EmitCtx {
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    /// Parallel to [`layouts`]: positional mapped field *types* (`Binary{128}`, or
+    /// `Binary{128}!s` when the Rust field was a signed integer). Used by the binary lit-zero
+    /// rewrite so `self.nanos < 0` can recover width/signedness — layouts alone only store
+    /// field *names* and cannot drive `binary_width` (express residual post-#1645).
+    field_types: HashMap<String, Vec<Option<String>>>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
     /// DN-133 (M-1094) tier (i): mangled inherent-impl associated-fn names (`{Type}__{method}`,
@@ -272,6 +298,7 @@ thread_local! {
 pub(crate) fn with_emit_ctx<R>(
     resolvable: HashSet<String>,
     layouts: HashMap<String, StructLayout>,
+    field_types: HashMap<String, Vec<Option<String>>>,
     symtab: crate::symtab::SymbolTable,
     pub_needed: HashSet<String>,
     imported_type_keys: HashMap<String, Vec<String>>,
@@ -281,6 +308,7 @@ pub(crate) fn with_emit_ctx<R>(
         *c.borrow_mut() = Some(EmitCtx {
             resolvable,
             layouts,
+            field_types,
             symtab,
             pub_needed,
             local_mangled: HashSet::new(),
@@ -358,6 +386,18 @@ pub(crate) fn struct_layout(name: &str) -> Option<StructLayout> {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => None,
         Some(ctx) if ctx.resolvable.contains(name) => ctx.layouts.get(name).cloned(),
+        Some(_) => None,
+    })
+}
+
+/// Positional mapped field *types* for the in-file struct `name` (parallel to [`struct_layout`]),
+/// when known and resolvable. Entries are `map_type` text, with a trailing `"!s"` when the Rust
+/// field was a signed integer (same internal marker [`sig_type_env`] uses). `None` when context
+/// is off or the type is not resolvable/emitted.
+fn struct_field_types(name: &str) -> Option<Vec<Option<String>>> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) if ctx.resolvable.contains(name) => ctx.field_types.get(name).cloned(),
         Some(_) => None,
     })
 }
@@ -784,10 +824,11 @@ fn type_is_float(ty: &syn::Type) -> bool {
 /// now maps every one of these to the SAME `Binary{N}` text as its unsigned counterpart (`Binary`
 /// is sign-free, ADR-028) — so signedness can no longer be read back off the *mapped* type text.
 /// This probe reads it off the ORIGINAL `syn::Type` instead, at the one place it is still known
-/// (a fn/method parameter's declared Rust type, in [`map_signature`]) — purely transpile-time
+/// (a fn/method parameter's declared Rust type, in [`map_signature`]; or a struct field's declared
+/// type when seeding the per-file field-type map for lit-zero rewrite) — purely transpile-time
 /// bookkeeping that is never itself emitted into `.myc` text (mirrors [`type_is_float`]'s shape;
 /// never a guess — VR-5).
-fn type_is_signed_int(ty: &syn::Type) -> bool {
+pub(crate) fn type_is_signed_int(ty: &syn::Type) -> bool {
     matches!(ty, syn::Type::Path(tp)
     if tp.qself.is_none()
         && tp.path.segments.last().is_some_and(|s| {
@@ -2236,6 +2277,12 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             };
             match_first_field_binary_width(&p.expr, self.self_ty)
         };
+        let field_signed_w = |e: &Expr| -> Option<u32> {
+            let Expr::Paren(p) = e else {
+                return match_first_field_signed_binary_width(e, self.self_ty);
+            };
+            match_first_field_signed_binary_width(&p.expr, self.self_ty)
+        };
         let width_from_myc = |s: &str| -> Option<u32> {
             // Recover `Binary{N}` from emitted projection text.
             let i = s.find("Binary{")?;
@@ -2253,12 +2300,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // as glyph operands when the gate uses both_known_binary (fixture corpus).
         let is_cmp = matches!(
             &b.op,
-            BinOp::Eq(_)
-                | BinOp::Ne(_)
-                | BinOp::Lt(_)
-                | BinOp::Gt(_)
-                | BinOp::Le(_)
-                | BinOp::Ge(_)
+            BinOp::Eq(_) | BinOp::Ne(_) | BinOp::Lt(_) | BinOp::Gt(_) | BinOp::Le(_) | BinOp::Ge(_)
         );
         let lhs = if is_cmp {
             if let Some(w) = rw {
@@ -2365,8 +2407,18 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // for an unsigned `Binary{N}` operand stay the PRE-EXISTING (already-broken, out of
         // scope) plain-glyph form; this leaf only adds new signed-specific coverage, never
         // regresses the unsigned path.
-        let both_known_signed_binary = expr_env_signed_binary_width(&b.left, self.env).is_some()
-            && expr_env_signed_binary_width(&b.right, self.env).is_some();
+        // Signedness: bare params via env (`!s` marker) OR in-file struct fields via the
+        // field-type map. A decimal lit has no env entry — so a signed field/param compared
+        // to a rewritten zero must still route to `lt_s` (ADR-028 signed order). Using
+        // unsigned `lt` for `self.nanos < 0` would mis-order high-bit payloads (G2/VR-5).
+        let left_signed_w =
+            expr_env_signed_binary_width(&b.left, self.env).or_else(|| field_signed_w(&b.left));
+        let right_signed_w =
+            expr_env_signed_binary_width(&b.right, self.env).or_else(|| field_signed_w(&b.right));
+        let both_known_signed_binary = left_signed_w.is_some() && right_signed_w.is_some();
+        // One known-signed Binary side + a lit rewritten to equal-width BinLit (the other side).
+        let signed_lit_cmp = lit_rewrote && (left_signed_w.is_some() || right_signed_w.is_some());
+        let use_signed_order = both_known_signed_binary || signed_lit_cmp;
         match &b.op {
             // RFC-0032 D1 (ratified): `==`/`<` glyphs are the canonical surface for `eq`/`lt`
             // — left unchanged (not part of this deliverable's operand-gated rewrite).
@@ -2377,18 +2429,18 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 "(match eq({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Eq(_) => Ok(format!("{lhs} == {rhs}")),
-            BinOp::Lt(_) if both_known_signed_binary => Ok(format!(
+            BinOp::Lt(_) if use_signed_order => Ok(format!(
                 "(match lt_s({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) if lit_rewrote => Ok(format!(
                 "(match lt({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-            BinOp::Ne(_) if both_known_binary || both_known_signed_binary => Ok(format!(
+            BinOp::Ne(_) if both_known_binary || use_signed_order => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
             )),
             BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
-            BinOp::Gt(_) if both_known_signed_binary => Ok(format!(
+            BinOp::Gt(_) if use_signed_order => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt_s({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
             )),
@@ -5089,8 +5141,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                 //     first occurrence).
                                 // Trait-impl methods stay under `impl Trait for T` (or free-fn
                                 // Widen path below).
-                                let raw_method = if default_to_init && f.sig.ident == "default"
-                                {
+                                let raw_method = if default_to_init && f.sig.ident == "default" {
                                     "init".to_string()
                                 } else {
                                     f.sig.ident.to_string()
@@ -5099,7 +5150,8 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                     // Free function, not nested in impl Trait — mangle with both
                                     // self and target widths. i8 and u8 both map to Binary{8}, so
                                     // de-dupe: second identical free-fn is skipped (sub-gapped).
-                                    let targ = trait_targs.first().map(|s| s.as_str()).unwrap_or("?");
+                                    let targ =
+                                        trait_targs.first().map(|s| s.as_str()).unwrap_or("?");
                                     let mangled = mangled_inherent_fn_name(
                                         &format!("{self_ty_text}_to_{targ}"),
                                         "widen",
@@ -5126,18 +5178,14 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                     record_bare_fn_name(&mangled);
                                     mangled
                                 } else if trait_name.is_none() {
-                                    let bare = resolve_surface_ident(
-                                        &raw_method,
-                                        "impl method name",
-                                    )?;
+                                    let bare =
+                                        resolve_surface_ident(&raw_method, "impl method name")?;
                                     let must_mangle = !has_self_receiver(&f.sig)
                                         || local_mangled_assoc_fn_known(&bare)
                                         || bare_fn_name_taken(&bare);
                                     if must_mangle {
-                                        let mangled = mangled_inherent_fn_name(
-                                            &self_ty_text,
-                                            &raw_method,
-                                        );
+                                        let mangled =
+                                            mangled_inherent_fn_name(&self_ty_text, &raw_method);
                                         doc.push(format!(
                                             "// Declared: renamed `impl {} {{ fn {} }}` -> \
                                              `{mangled}` (D4 inherent-impl flat-fn desugar + \

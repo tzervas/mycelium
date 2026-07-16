@@ -798,6 +798,65 @@ fn cases() -> Vec<Case> {
                             _ => True } })",
             },
         },
+        // Post-#1645 residual (ORACLE-R1 L2-A1 / std-time lit-zero): a signed *param* compared
+        // to bare decimal `0` rewrites the lit to equal-width BinLit and uses signed `lt_s`
+        // (not unsigned `lt`) so high-bit payloads order correctly (ADR-028). Bare `0` is a
+        // file-level Q6 poison under myc-check.
+        Case {
+            name: "signed_param_lt_zero_emits_binlit_lt_s",
+            rust: "fn f(a: i32) -> bool { a < 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match lt_s(a, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, \
+                            _ => False })",
+            },
+        },
+        Case {
+            name: "signed_param_eq_zero_emits_binlit_eq",
+            rust: "fn f(a: i128) -> bool { a == 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, _ => False })",
+            },
+        },
+        // Duration::is_negative / is_zero shape: signed field access on an in-file product.
+        // Field-type map (not name-only layout) recovers Binary{128}!s so lit-zero rewrites
+        // and signed order fire. Mutant: bare `0` or unsigned `lt` without `_s`.
+        Case {
+            name: "signed_field_is_negative_emits_binlit_lt_s",
+            rust: "struct Duration { nanos: i128 } impl Duration { pub const fn is_negative(self) \
+                   -> bool { self.nanos < 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Duration",
+                contains: "lt_s((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
+        Case {
+            name: "signed_field_is_zero_emits_binlit_eq",
+            rust: "struct Duration { nanos: i128 } impl Duration { pub const fn is_zero(self) -> \
+                   bool { self.nanos == 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Duration",
+                contains: "eq((match self { Duration(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)",
+            },
+        },
+        // Unsigned field compare-to-zero: BinLit rewrite, but unsigned `lt` (not `lt_s`).
+        Case {
+            name: "unsigned_field_lt_zero_emits_binlit_lt",
+            rust: "struct Tick { n: u64 } impl Tick { fn before_epoch(self) -> bool { self.n < 0 } }",
+            expect: Expect::Emitted {
+                item: "impl Tick",
+                contains: "(match lt((match self { Tick(p0) => p0 }), 0b0000_0000_0000_0000_0000_\
+                            0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => True, \
+                            _ => False })",
+            },
+        },
         // D3 arithmetic-operator-emission residual (this leaf): the UNSIGNED counterpart to the
         // `_s`-suffixed arms above. Prior to this leaf the unsigned `Add`/`Sub`/`Mul` operand-gate
         // fell through to the plain glyph (pinned by this same case's now-superseded
@@ -1236,9 +1295,10 @@ fn narrow_gap_cites_dn41_and_produces_no_fabricated_myc_text() {
          got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| {
-            g.reason.contains("DN-41") || g.reason.contains("non-prelude trait")
-        }),
+        report
+            .gaps
+            .iter()
+            .any(|g| { g.reason.contains("DN-41") || g.reason.contains("non-prelude trait") }),
         "expected Narrow gap to cite DN-41 or non-prelude residual, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
