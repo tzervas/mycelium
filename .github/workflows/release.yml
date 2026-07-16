@@ -1,17 +1,13 @@
-# release-plz DRY-RUN preview, run on demand only (M-384; implements ADR-018).
+# release-plz DRY-RUN preview (M-384; ADR-018) — self-hosted fleet.
 #
-# POLICY (see CLAUDE.md "Remote CI policy" + ADR-018): no automatic remote CI, and SOURCE-ONLY in the
-# design phase. This workflow triggers ONLY via manual dispatch (no push / pull_request auto-triggers)
-# to avoid surprise Actions cost, and it is ADVISORY (the preview step is non-blocking — it informs,
-# it never gates). It runs `release-plz` in DRY-RUN: it PREVIEWS the per-crate version bumps + the
-# changelog fragments derived from the squash-only Conventional-Commit history, and PUBLISHES NOTHING
-# — no crates.io publish, no GitHub Release, no git tag, no release PR. release-plz.toml is the
-# config-level second guard (publish=false, git_release_enable=false, git_tag_enable=false,
-# release_pr=false), so even a misfired non-dry-run invocation would mutate nothing.
+# POLICY (ADR-018): SOURCE-ONLY — this workflow runs release-plz in DRY-RUN only (preview bumps +
+# changelog fragments). PUBLISHES NOTHING: no crates.io, no GitHub Release, no git tag, no release
+# PR. release-plz.toml is the second guard (publish=false, git_release_enable=false, …). ADVISORY
+# (continue-on-error). Self-hosted Podman fleet.
 #
-# A *real* release is a deliberate, gated, manual act (ADR-018 §3/§4) — turning on publishing is its
-# own superseding decision, never a silent edit here.
-name: release (manual, dry-run, advisory)
+# Triggers: push to main (preview after landings) + workflow_dispatch. A *real* release remains a
+# deliberate superseding act (ADR-018 §3/§4), never a silent flip of dry-run flags here.
+name: release (dry-run, advisory)
 
 # B1-01 (target posture, mirrors checks.yml): the `uses:` actions below are pinned to mutable major
 # tags (@v4, @v0.5, …), not 40-char commit SHAs. Full-SHA pinning is the intended hardening target;
@@ -20,6 +16,8 @@ name: release (manual, dry-run, advisory)
 # keeps those pins current. Resolve each `uses:` to its SHA when network access is available.
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       verbose:
@@ -34,7 +32,7 @@ permissions:
 
 jobs:
   release-dry-run:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, podman]
     steps:
       - name: Checkout (full history — release-plz needs the commit range since the last tag)
         uses: actions/checkout@v7
