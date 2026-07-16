@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-oracler1-a3/crates_mycelium-l1_src_eval_rs/eval.myc",
+      "source_file": "crates/mycelium-l1/src/eval.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `init`: unknown name `DEFAULT_FUEL`",
+      "non_test_items": 42,
+      "emitted_items": 7
+    }
+  ],
+  "total_non_test_items": 42,
+  "total_emitted_items": 7,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "CheckError": 1
+  },
+  "phylum": null,
+  "total_checked_clean_items_phylum": 0
+}
