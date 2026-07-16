@@ -1,3 +1,120 @@
+ Documenting mycelium-transpile v0.0.0 (/root/git/isolated/mycelium/crates/mycelium-transpile)
+warning: public documentation for `transpile_batch` links to private item `build_symbol_table`
+   --> crates/mycelium-transpile/src/batch.rs:243:61
+    |
+243 | /// 2. **Symbol-table build + a light `use`-only scan** — [`build_symbol_table`] indexes every
+    |                                                             ^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+    = note: `#[warn(rustdoc::private_intra_doc_links)]` on by default
+
+warning: public documentation for `transpile_batch` links to private item `scan_pub_needed`
+   --> crates/mycelium-transpile/src/batch.rs:245:47
+    |
+245 | ///    identity is derivable — M-1084) key; [`scan_pub_needed`] then walks every file's `use` items
+    |                                               ^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `transpile_batch` links to private item `transpile_file_with_ctx`
+   --> crates/mycelium-transpile/src/batch.rs:253:55
+    |
+253 | /// 3. **Final pass** — re-transpile every file via [`transpile_file_with_ctx`] with the symbol
+    |                                                       ^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: unresolved link to `Gap`
+ --> crates/mycelium-transpile/src/emit.rs:5:86
+  |
+5 | //! driver (`transpile.rs`) is responsible for turning every `Err` into a recorded [`Gap`] (never
+  |                                                                                      ^^^ no item named `Gap` in scope
+  |
+  = help: to escape `[` and `]` characters, add '\' before them like `\[` or `\]`
+  = note: `#[warn(rustdoc::broken_intra_doc_links)]` on by default
+
+warning: unresolved link to `map_struct_pattern`
+    --> crates/mycelium-transpile/src/emit.rs:3675:45
+     |
+3675 | /// `map_type` already use) — DN-132 P1's [`map_struct_pattern`] is the only arm that consults it
+     |                                             ^^^^^^^^^^^^^^^^^^ no item named `map_struct_pattern` in scope
+     |
+     = help: to escape `[` and `]` characters, add '\' before them like `\[` or `\]`
+
+warning: public documentation for `map_pattern` links to private item `known_struct_literal_ty`
+    --> crates/mycelium-transpile/src/emit.rs:3677:35
+     |
+3677 | /// pattern-side counterpart of [`known_struct_literal_ty`]'s expression-side resolution); every
+     |                                   ^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+     |
+     = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `emit_struct` links to private item `map_named_fields_positional`
+    --> crates/mycelium-transpile/src/emit.rs:4042:7
+     |
+4042 | /// [`map_named_fields_positional`]). A field whose *type* has no mapping still refuses the struct.
+     |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+     |
+     = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: unresolved link to `emit_expr_inner`
+  --> crates/mycelium-transpile/src/prim_map.rs:10:69
+   |
+10 | //!   `target/debug/myc` (see each row's citation for the probe). [`emit_expr_inner`]'s
+   |                                                                     ^^^^^^^^^^^^^^^ no item named `emit_expr_inner` in scope
+   |
+   = help: to escape `[` and `]` characters, add '\' before them like `\[` or `\]`
+
+warning: public documentation for `prim_map` links to private item `crate::emit::TypeEnv`
+   --> crates/mycelium-transpile/src/prim_map.rs:114:17
+    |
+114 | //! all (only [`crate::emit::TypeEnv`]'s *receiver*-type tracking), so "identity when source/target
+    |                 ^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `ReceiverGate` links to private item `crate::emit::TypeEnv`
+   --> crates/mycelium-transpile/src/prim_map.rs:147:53
+    |
+147 | /// operand type). Checked against the receiver's [`crate::emit::TypeEnv`] entry (only a bare
+    |                                                     ^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `receiver_gate_matches` links to private item `crate::emit::TypeEnv`
+   --> crates/mycelium-transpile/src/prim_map.rs:399:41
+    |
+399 | /// Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known
+    |                                         ^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `receiver_gate_matches` links to private item `crate::emit::expr_env_type`
+   --> crates/mycelium-transpile/src/prim_map.rs:400:29
+    |
+400 | /// bare identifier — see [`crate::emit::expr_env_type`]) satisfies `gate`.
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `PhylumRemap` links to private item `derive_nodule_path`
+   --> crates/mycelium-transpile/src/remap.rs:109:56
+    |
+109 | /// `mycelium-` prefix-strip / `-`-to-`.` convention [`derive_nodule_path`] already uses for the
+    |                                                        ^^^^^^^^^^^^^^^^^^ this item is private
+    |
+    = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: public documentation for `transpile_file` links to private item `transpile_file_with_ctx`
+  --> crates/mycelium-transpile/src/transpile.rs:25:7
+   |
+25 | /// [`transpile_file_with_ctx`]) — a lone file has no sibling to resolve against by construction.
+   |       ^^^^^^^^^^^^^^^^^^^^^^^ this item is private
+   |
+   = note: this link will resolve properly if you pass `--document-private-items`
+
+warning: `mycelium-transpile` (lib doc) generated 14 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.37s
 pub mod mycelium_transpile
 pub mod mycelium_transpile::batch
 pub struct mycelium_transpile::batch::BatchSummary
@@ -475,11 +592,73 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::remap::RemapSo
 pub fn mycelium_transpile::remap::build_remap_manifest(&[mycelium_transpile::batch::FileResult], &std::path::Path) -> mycelium_transpile::remap::RemapManifest
 pub fn mycelium_transpile::remap::render_remap_md(&mycelium_transpile::remap::RemapManifest) -> alloc::string::String
 pub mod mycelium_transpile::reserved
+pub enum mycelium_transpile::reserved::RewriteKind
+pub mycelium_transpile::reserved::RewriteKind::Both
+pub mycelium_transpile::reserved::RewriteKind::IllegalChars
+pub mycelium_transpile::reserved::RewriteKind::Reserved
+impl core::clone::Clone for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::clone(&self) -> mycelium_transpile::reserved::RewriteKind
+impl core::cmp::Eq for mycelium_transpile::reserved::RewriteKind
+impl core::cmp::PartialEq for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::eq(&self, &mycelium_transpile::reserved::RewriteKind) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::RewriteKind
+pub fn mycelium_transpile::reserved::RewriteKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::reserved::RewriteKind
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Freeze for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Send for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Sync for mycelium_transpile::reserved::RewriteKind
+impl core::marker::Unpin for mycelium_transpile::reserved::RewriteKind
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::RewriteKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::RewriteKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::RewriteKind
+pub struct mycelium_transpile::reserved::Rewrite
+pub mycelium_transpile::reserved::Rewrite::kind: mycelium_transpile::reserved::RewriteKind
+pub mycelium_transpile::reserved::Rewrite::original: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::clone(&self) -> mycelium_transpile::reserved::Rewrite
+impl core::cmp::Eq for mycelium_transpile::reserved::Rewrite
+impl core::cmp::PartialEq for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::eq(&self, &mycelium_transpile::reserved::Rewrite) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::Rewrite
+pub fn mycelium_transpile::reserved::Rewrite::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::Rewrite
+impl core::marker::Freeze for mycelium_transpile::reserved::Rewrite
+impl core::marker::Send for mycelium_transpile::reserved::Rewrite
+impl core::marker::Sync for mycelium_transpile::reserved::Rewrite
+impl core::marker::Unpin for mycelium_transpile::reserved::Rewrite
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::Rewrite
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::Rewrite
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::Rewrite
+pub struct mycelium_transpile::reserved::ValidIdent
+pub mycelium_transpile::reserved::ValidIdent::rewrite: core::option::Option<mycelium_transpile::reserved::Rewrite>
+pub mycelium_transpile::reserved::ValidIdent::text: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::clone(&self) -> mycelium_transpile::reserved::ValidIdent
+impl core::cmp::Eq for mycelium_transpile::reserved::ValidIdent
+impl core::cmp::PartialEq for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::eq(&self, &mycelium_transpile::reserved::ValidIdent) -> bool
+impl core::fmt::Debug for mycelium_transpile::reserved::ValidIdent
+pub fn mycelium_transpile::reserved::ValidIdent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Freeze for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Send for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Sync for mycelium_transpile::reserved::ValidIdent
+impl core::marker::Unpin for mycelium_transpile::reserved::ValidIdent
+impl core::marker::UnsafeUnpin for mycelium_transpile::reserved::ValidIdent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::reserved::ValidIdent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::reserved::ValidIdent
 pub const mycelium_transpile::reserved::RESERVED: &[&str]
 pub const mycelium_transpile::reserved::RESERVED_SEGMENT_SUFFIX: &str
+pub fn mycelium_transpile::reserved::declared_rewrite_comment(&mycelium_transpile::reserved::ValidIdent) -> core::option::Option<alloc::string::String>
 pub fn mycelium_transpile::reserved::guard_ident(&str, &str) -> core::result::Result<(), mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::reserved::has_valid_ident_shape(&str) -> bool
+pub fn mycelium_transpile::reserved::is_legal_non_reserved_ident(&str) -> bool
 pub fn mycelium_transpile::reserved::is_reserved(&str) -> bool
+pub fn mycelium_transpile::reserved::length_prefix_mangle(&str, &str) -> alloc::string::String
+pub fn mycelium_transpile::reserved::mangled_inherent_fn_name(&str, &str) -> alloc::string::String
 pub fn mycelium_transpile::reserved::sanitize_nodule_path(&str) -> (alloc::string::String, core::option::Option<mycelium_transpile::gap::GapReason>)
+pub fn mycelium_transpile::reserved::valid_ident(&str) -> mycelium_transpile::reserved::ValidIdent
 pub mod mycelium_transpile::transpile
 pub fn mycelium_transpile::transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
 pub fn mycelium_transpile::transpile::transpile_source(&str, &str, &str) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
