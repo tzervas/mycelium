@@ -17326,6 +17326,16 @@ issues:
       correct, **scoped to this residual only** (WU-3, the transpiler emission rule); WU-1/WU-2 are
       done.
 
+      **Append-only note (2026-07-16, integration close-out — mit #14).** **WU-3 landed** on
+      `dev` via PR **#1630** (`74171eca`, branch `claude/leaf/M1090-wu3-write-format-lowering`):
+      `crates/mycelium-transpile/src/emit/macros/write_format.rs` + `visit`/`emit` wiring + T-1/T-2/T-3
+      property tests (`src/tests/write_format.rs`); `cargo test -p mycelium-transpile` 241 green.
+      Mechanism remains **`Declared`** (structural `syn` lowering; not upgraded to `Empirical`
+      without live-oracle corpus witness — VR-5). **Residual still gating `done`:** the DoD
+      M-1006/DN-124 re-measure of `checked_fraction` movement on the 30-body bucket has **not** run
+      post-WU-3; float/OQ-1 and width-generic `to_dec` stay explicit residuals. `status:todo` remains
+      correct, now scoped to **re-measure + residual honesty**, not the missing emit rule.
+
   - id: M-1091
     title: "M-1091 -- Init + Fault prelude traits + shared seed_prelude_trait helper (DN-129)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
