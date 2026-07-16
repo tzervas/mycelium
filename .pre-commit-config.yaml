@@ -3,7 +3,8 @@
 #   install:  just hooks      (or: pre-commit install --install-hooks)
 #   run all:  just pre-commit (or: pre-commit run --all-files)
 minimum_pre_commit_version: "3.5.0"
-default_install_hook_types: [pre-commit, pre-push]
+# commit-msg installs the commitizen conventional-commits lint (M-1107 / Wave 0-CZ).
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
 
 repos:
   # Fast file-hygiene hooks (not covered by our scripts).
@@ -26,6 +27,15 @@ repos:
     hooks:
       - id: gitleaks
         args: ["--redact", "--config", ".gitleaks.toml"]
+
+  # Commitizen — Conventional Commits message lint (M-1107). commit-msg stage only;
+  # does not touch existing pre-commit/pre-push hooks. Config: .cz.toml.
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.16.5
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
 
   # Substantive checks — delegate to our scripts so local == pre-commit == CI.
   - repo: local
