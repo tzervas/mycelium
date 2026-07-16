@@ -28,6 +28,7 @@ use syn::{
 // own doc for its axis's ordered-pass-preservation invariant (DN-136 §3/§7).
 mod calls;
 mod derives;
+mod macros;
 mod patterns;
 
 /// One struct's positional field layout — the M-1006 field-projection input (Lever 1): its field
@@ -1871,7 +1872,7 @@ fn reconstruct_positional(
 /// `\u{..}` form (grammar §StrLit note, lines 424-428), so such a char *cannot* be faithfully
 /// represented (G2/VR-5). Every other char — including non-ASCII like `μ` — is a valid `StrChar`
 /// (`[^"\\\n\r]`, line 431) that lowers to its UTF-8 bytes (line 427), so it is emitted verbatim.
-fn myc_string_literal(value: &str) -> Result<String, GapReason> {
+pub(crate) fn myc_string_literal(value: &str) -> Result<String, GapReason> {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('"');
     for c in value.chars() {
@@ -2449,6 +2450,26 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             args.push(emit_expr(a, self.self_ty, self.env)?);
         }
         Ok(format!("{method_name}({})", args.join(", ")))
+    }
+
+    fn visit_macro(&mut self, _expr: &Expr, m: &syn::ExprMacro) -> Self::Output {
+        if m.mac.path.is_ident("format") || m.mac.path.is_ident("write") {
+            macros::try_lower_expr_macro(&m.mac, self.self_ty, self.env)
+        } else {
+            Err(GapReason::new(
+                Category::MacroInvocation,
+                format!(
+                    "expression-position macro `{}` — no macro system in this grammar fragment \
+                     (`write!`/`format!` lower to pure `Bytes` per DN-127/M-1090 WU-3)",
+                    m.mac
+                        .path
+                        .segments
+                        .last()
+                        .map(|s| s.ident.to_string())
+                        .unwrap_or_default()
+                ),
+            ))
+        }
     }
 
     fn visit_paren(&mut self, _expr: &Expr, p: &syn::ExprParen) -> Self::Output {
