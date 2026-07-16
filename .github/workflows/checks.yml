@@ -51,20 +51,44 @@ jobs:
       - name: Set up uv (drives the experiments/ Python 3.13 tests — M-092)
         uses: astral-sh/setup-uv@v7
 
+      # Self-hosted Podman fleet does not ship rustup on PATH by default (observed 2026-07-16:
+      # every checks run failed at `rustup show` with exit 127). Mirror fuzz.yml: install via
+      # dtolnay/rust-toolchain so cargo/rustc/rustfmt/clippy land on PATH before `just ci`.
+      # Pin matches rust-toolchain.toml / ADR-041 MSRV — do not bump without an ADR.
       - name: Set up Rust (pinned to MSRV via rust-toolchain.toml — M-091)
-        run: rustup show
+        uses: dtolnay/rust-toolchain@1.96.1
+        with:
+          components: rustfmt, clippy
 
       - name: Set up Haskell (GHC + cabal) for proofs — M-001
+        # Proofs are skip-graceful in `just ci` when GHC is absent; do not fail the advisory
+        # suite on a self-hosted image that lacks cabal bootstrap.
+        continue-on-error: true
         uses: haskell-actions/setup@v2
         with:
           ghc-version: "9.8.2"
           cabal-version: "3.16.1.0"
 
       - name: Install z3 (LiquidHaskell proofs need it on PATH)
-        # B1-03: z3 is intentionally unpinned. This is an advisory, manual-dispatch-only job and
-        # z3 is a distro-signed apt package (Ubuntu archive, GPG-verified), so the supply-chain
-        # risk is low; pinning a distro version would churn on every runner-image bump.
-        run: sudo apt-get update && sudo apt-get install -y z3
+        # B1-03: z3 is intentionally unpinned. Distro-signed apt package (Ubuntu archive).
+        # Skip-graceful: proofs already skip without z3; self-hosted may lack sudo or apt.
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          if command -v z3 >/dev/null 2>&1; then
+            z3 --version
+            exit 0
+          fi
+          if command -v sudo >/dev/null 2>&1; then
+            sudo apt-get update
+            sudo apt-get install -y z3
+          elif command -v apt-get >/dev/null 2>&1; then
+            apt-get update
+            apt-get install -y z3
+          else
+            echo "z3 not installed and no apt available — proofs will skip-graceful (G2)"
+            exit 0
+          fi
 
       - name: Cache cabal store + LH build (proofs are a cold-build pole)
         uses: actions/cache@v4
