@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **ORACLE-R1 A1–A5 on `dev`+`integration`** — see **`PROGRAM-HANDOFF.md`** (live) |
+| **Status** | **ORACLE-R1 A1–A5 landed; Phase 2 one CI success witnessed (host)** — see **`PROGRAM-HANDOFF.md`** (live); Epic R HOLD |
 | **Framework** | Repo-root **`maint-guide.md`** (L0→L1→L2; Phase 0–3; PM close-out) |
-| **Tree tip** | `origin/dev` @ `f783d4ce`; `origin/integration` @ `060326db` (same tree); `origin/main` @ `aad96b7a` |
+| **Tree tip** | `origin/dev` @ `ba97eb94`; `origin/integration` @ `41234a14` (same tree); `origin/main` @ `aad96b7a` |
 | **Model floor** | `grok-composer-2.5-fast` (record actual if runtime differs) |
 | **Goal** | Residual oracle close + honest `checked_fraction`; **not** one-shot claim until release gate |
 | **Updates** | language-completeness-gap-inventory, DN-136 phase2 worklist, DN-99, zero-hand-port-delta-ledger, DN-34 §8 |
