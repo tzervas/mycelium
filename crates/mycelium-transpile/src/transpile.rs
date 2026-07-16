@@ -654,14 +654,9 @@ fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
                 ))
             }
         }
-        Item::Const(c) => Outcome::Gap(GapReason::new(
-            Category::Other,
-            format!(
-                "top-level `const {}` — no const item production in the grammar (`item` covers \
-                 use/default/type/trait/impl/fn/object/lower/derive only)",
-                c.ident
-            ),
-        )),
+        // ORACLE-R1 A4: unsigned integer consts with a decidable value co-emit as zero-arg
+        // BinLit fns (`max_expr_depth` hand-port shape); everything else stays an honest gap.
+        Item::Const(c) => emit::emit_const(c).map_or_else(Outcome::Gap, Outcome::Emitted),
         Item::Static(s) => Outcome::Gap(GapReason::new(
             Category::Other,
             format!(

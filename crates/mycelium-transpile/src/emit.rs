@@ -17,8 +17,8 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use syn::{
     Attribute, Block, Expr, Fields, FieldsNamed, FnArg, GenericArgument, GenericParam, Generics,
-    ImplItem, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat, PathArguments,
-    ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
+    ImplItem, ItemConst, ItemEnum, ItemFn, ItemImpl, ItemStruct, ItemTrait, Lit, Pat,
+    PathArguments, ReturnType, Signature, Stmt, TraitBoundModifier, TraitItem, TypeParamBound,
 };
 
 // DN-136/P1-a — the emit hook-dispatch axes (Alt B: static per-axis handler tables generalizing
@@ -289,6 +289,14 @@ struct EmitCtx {
     /// referenced in this file's signatures but neither declared in-file nor successfully
     /// imported. Drained after the item loop into preamble `type` items (ORACLE-R1 A2).
     lattice_co_emits: HashSet<String>,
+    /// ORACLE-R1 A4: surface names of private consts co-emitted as zero-arg `fn NAME() =>
+    /// Binary{N} = <BinLit>` (no const item production in the grammar). `visit_path` rewrites a
+    /// bare path `NAME` to `NAME()` so Init/default bodies never file-poison with
+    /// `unknown name DEFAULT_FUEL`. Values live in [`const_int_values`] for same-file path RHS.
+    const_zero_arg_fns: HashSet<String>,
+    /// Integer values of co-emitted consts (and known workspace-floor path RHS) keyed by bare
+    /// name — used only to resolve a later const's path RHS honestly (never fabricated).
+    const_int_values: HashMap<String, u128>,
 }
 
 thread_local! {
@@ -326,11 +334,215 @@ pub(crate) fn with_emit_ctx<R>(
             bare_fn_names: HashSet::new(),
             imported_names: HashSet::new(),
             lattice_co_emits: HashSet::new(),
+            const_zero_arg_fns: HashSet::new(),
+            const_int_values: HashMap::new(),
         })
     });
     let r = f();
     EMIT_CTX.with(|c| *c.borrow_mut() = None);
     r
+}
+
+// ---- ORACLE-R1 A4: private integer const co-emit (DEFAULT_FUEL / DEFAULT_DEPTH) ----------------
+//
+// Mycelium's `item` production has no `const` form (only use/default/type/trait/impl/fn/object/
+// lower/derive). Leaving a bare `DEFAULT_FUEL` path through from `impl Default` → `impl Init`
+// file-poisons myc-check with `unknown name DEFAULT_FUEL` (eval.rs residual post-A2). Hand-port
+// precedent (`lib/compiler/parse.myc` `max_expr_depth()`, `lib/compiler/ambient.myc`, …) co-emits
+// private numeric floors as **zero-arg fns returning a BinLit** at the const's Binary{N} width.
+// Use sites rewrite `NAME` → `NAME()` (G2/VR-5: Declared co-emit + EXPLAIN; value taken only from
+// an integer literal or a known workspace-floor path — never a fabricated number).
+
+/// Public workspace-floor associated-const last segments whose integer value is pinned in source
+/// (and in hand-ports). Last-segment match only — used solely when a private const's RHS is a
+/// path like `RecursionBudget::DEFAULT_DEPTH_LIMIT` (eval.rs `DEFAULT_DEPTH`). Declared table,
+/// not rustc const-eval (VR-5: value is the documented floor `4096`, Exact when source matches).
+const KNOWN_PATH_CONST_VALUES: &[(&str, u128)] = &[("DEFAULT_DEPTH_LIMIT", 4096)];
+
+/// Unsigned integer types this pass will co-emit. Signed/`bool`/`str`/… stay whole-item gaps
+/// (no fabricated two's-complement / string encoding).
+fn const_unsigned_binary_width(ty: &syn::Type) -> Option<u32> {
+    let syn::Type::Path(tp) = ty else {
+        return None;
+    };
+    if tp.qself.is_some() {
+        return None;
+    }
+    let seg = tp.path.segments.last()?;
+    if !matches!(seg.arguments, PathArguments::None) {
+        return None;
+    }
+    match seg.ident.to_string().as_str() {
+        "u8" => Some(8),
+        "u16" => Some(16),
+        "u32" => Some(32),
+        "u64" | "usize" => Some(64),
+        "u128" => Some(128),
+        _ => None,
+    }
+}
+
+/// MSB-first `BinLit` of exactly `width` bits for `value`, nibble-grouped like
+/// [`zero_bin_literal`]. `None` when `value` does not fit in `width` bits (never truncate — VR-5).
+pub(crate) fn u128_bin_literal(value: u128, width: u32) -> Option<String> {
+    if width == 0 || width > 128 {
+        return None;
+    }
+    if width < 128 {
+        let max = (1u128 << width) - 1;
+        if value > max {
+            return None;
+        }
+    }
+    // width == 128: every u128 fits.
+    let mut s = String::with_capacity(2 + width as usize + width as usize / 4);
+    s.push_str("0b");
+    for i in 0..width {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        let bit = (value >> (width - 1 - i)) & 1;
+        s.push(if bit == 1 { '1' } else { '0' });
+    }
+    Some(s)
+}
+
+fn lookup_const_int_value(name: &str) -> Option<u128> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) => ctx.const_int_values.get(name).copied(),
+        None => None,
+    })
+}
+
+fn is_const_zero_arg_fn(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        Some(ctx) => ctx.const_zero_arg_fns.contains(name),
+        None => false,
+    })
+}
+
+fn record_const_zero_arg_fn(name: &str, value: u128) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.const_zero_arg_fns.insert(name.to_string());
+            ctx.const_int_values.insert(name.to_string(), value);
+        }
+    });
+}
+
+/// Extract a non-negative integer from a const initializer when it is honest and decidable:
+/// a decimal/hex/bin `Lit::Int`, a paren-wrapped form of those, a same-file co-emitted const
+/// path, or a last-segment match against [`KNOWN_PATH_CONST_VALUES`]. Everything else → `None`
+/// (caller whole-gaps the const — never guesses a value).
+fn try_const_int_value(expr: &Expr) -> Option<u128> {
+    match expr {
+        Expr::Lit(el) => match &el.lit {
+            Lit::Int(i) => i.base10_parse::<u128>().ok(),
+            _ => None,
+        },
+        Expr::Paren(p) => try_const_int_value(&p.expr),
+        Expr::Path(p) if p.qself.is_none() => {
+            let last = p.path.segments.last()?.ident.to_string();
+            if let Some(v) = lookup_const_int_value(&last) {
+                return Some(v);
+            }
+            KNOWN_PATH_CONST_VALUES
+                .iter()
+                .find(|(n, _)| *n == last)
+                .map(|(_, v)| *v)
+        }
+        _ => None,
+    }
+}
+
+/// ORACLE-R1 A4: co-emit a top-level unsigned integer `const` as a zero-arg fn whose body is a
+/// width-exact `BinLit` (hand-port `max_expr_depth` shape). Gaps when the type is not a plain
+/// unsigned integer, the initializer is not a decidable integer, or the value does not fit the
+/// mapped width — never a fabricated const item or a silent wrong number (G2/VR-5).
+pub fn emit_const(item: &ItemConst) -> Result<Emitted, GapReason> {
+    let raw_name = item.ident.to_string();
+    let Some(width) = const_unsigned_binary_width(&item.ty) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — co-emit (ORACLE-R1 A4) only covers plain unsigned \
+                 integer types (`u8`/`u16`/`u32`/`u64`/`u128`/`usize`); other types have no const \
+                 item production and no faithful zero-arg-fn encoding (gap, never fabricate)"
+            ),
+        ));
+    };
+    let Some(value) = try_const_int_value(&item.expr) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — initializer is not a decidable non-negative integer \
+                 literal or a known workspace-floor path (e.g. `RecursionBudget::DEFAULT_DEPTH_LIMIT`); \
+                 no const item production in the grammar, and co-emit refuses to invent a value \
+                 (ORACLE-R1 A4 / VR-5)"
+            ),
+        ));
+    };
+    let Some(body) = u128_bin_literal(value, width) else {
+        return Err(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {raw_name}` — value {value} does not fit in Binary{{{width}}} \
+                 (ORACLE-R1 A4 refuses silent truncation; VR-5)"
+            ),
+        ));
+    };
+
+    let fn_vi = valid_ident(&raw_name);
+    register_ident_emission(&fn_vi, "const co-emit zero-arg fn name")?;
+    let fn_name = fn_vi.text.clone();
+    let mut ident_doc = Vec::new();
+    push_rewrite_doc(&fn_vi, &mut ident_doc);
+
+    // Register under both original and emitted spellings so visit_path rewrites either form.
+    record_const_zero_arg_fn(&raw_name, value);
+    if fn_name != raw_name {
+        record_const_zero_arg_fn(&fn_name, value);
+    }
+    record_bare_fn_name(&fn_name);
+
+    let mut sub_gaps = Vec::new();
+    let non_doc = non_doc_attrs(&item.attrs);
+    if !non_doc.is_empty() {
+        sub_gaps.push(GapReason::new(
+            Category::DeriveAttr,
+            format!(
+                "dropped non-doc attribute(s) on const `{raw_name}`: {}",
+                non_doc.join(" ")
+            ),
+        ));
+    }
+
+    let mut myc = String::new();
+    for d in doc_lines(&item.attrs) {
+        myc.push_str(&d);
+        myc.push('\n');
+    }
+    myc.push_str(
+        "// Declared: co-emitted private const as zero-arg fn returning a BinLit — Mycelium has no \
+         const item production (`item` covers use/default/type/trait/impl/fn/object/lower/derive \
+         only); hand-port precedent `max_expr_depth()` (ORACLE-R1 A4; G2/VR-5: value from the Rust \
+         initializer or a known workspace-floor path, never fabricated). Use sites rewrite \
+         `NAME` → `NAME()`.\n",
+    );
+    for d in &ident_doc {
+        myc.push_str(d);
+        myc.push('\n');
+    }
+    // Decimal in a trailing comment only (EXPLAIN); the body is the paradigm-safe BinLit.
+    myc.push_str(&format!(
+        "fn {fn_name}() => Binary{{{width}}} = {body}; // {value}"
+    ));
+
+    Ok(Emitted {
+        name: fn_name,
+        myc,
+        sub_gaps,
+    })
 }
 
 // ---- ORACLE-R1 A2: guarantee-lattice co-emit ---------------------------------------------------
@@ -2253,7 +2465,13 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             .last()
             .ok_or_else(|| GapReason::new(Category::Other, "empty path expression"))?;
         let name = seg.ident.to_string();
-        resolve_surface_ident(&name, "value/constructor reference")
+        let resolved = resolve_surface_ident(&name, "value/constructor reference")?;
+        // ORACLE-R1 A4: a private const co-emitted as a zero-arg fn must be *called* — a bare
+        // name is `unknown name DEFAULT_FUEL` at myc-check (no const binding in the surface).
+        if is_const_zero_arg_fn(&name) || is_const_zero_arg_fn(&resolved) {
+            return Ok(format!("{resolved}()"));
+        }
+        Ok(resolved)
     }
 
     fn visit_lit(&mut self, _expr: &Expr, l: &syn::ExprLit) -> Self::Output {

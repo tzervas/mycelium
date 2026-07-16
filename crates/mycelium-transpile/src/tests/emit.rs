@@ -4473,3 +4473,118 @@ fn lattice_co_emit_skips_in_file_strength() {
         "in-file Strength enum must emit:\n{myc}"
     );
 }
+
+// ---- ORACLE-R1 A4: private const co-emit (eval.rs DEFAULT_FUEL / DEFAULT_DEPTH) ----------------
+
+/// `impl Default` for a budget opts struct references private `DEFAULT_FUEL` / `DEFAULT_DEPTH`
+/// consts. Co-emit them as zero-arg BinLit fns and rewrite use sites to calls so myc-check never
+/// sees `unknown name DEFAULT_FUEL` (post-A2 residual on eval.rs Init).
+#[test]
+fn const_co_emit_default_fuel_depth_init_no_unknown_name_poison() {
+    let rust = r#"
+        const DEFAULT_FUEL: u64 = 1_000_000;
+        const DEFAULT_DEPTH: u32 = RecursionBudget::DEFAULT_DEPTH_LIMIT;
+        pub struct EvaluatorOpts {
+            pub fuel: u64,
+            pub depth: u32,
+        }
+        impl Default for EvaluatorOpts {
+            fn default() -> Self {
+                EvaluatorOpts {
+                    fuel: DEFAULT_FUEL,
+                    depth: DEFAULT_DEPTH,
+                }
+            }
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "eval.rs", "l1.eval")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DEFAULT_FUEL"),
+        "expected co-emitted DEFAULT_FUEL; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "DEFAULT_DEPTH"),
+        "expected co-emitted DEFAULT_DEPTH; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn DEFAULT_FUEL() => Binary{64} ="),
+        "missing DEFAULT_FUEL zero-arg fn:\n{myc}"
+    );
+    assert!(
+        myc.contains("fn DEFAULT_DEPTH() => Binary{32} ="),
+        "missing DEFAULT_DEPTH zero-arg fn:\n{myc}"
+    );
+    assert!(
+        myc.contains("DEFAULT_FUEL()") && myc.contains("DEFAULT_DEPTH()"),
+        "Init body must call co-emitted consts, not bare names:\n{myc}"
+    );
+    assert!(
+        !myc.contains("EvaluatorOpts(DEFAULT_FUEL, DEFAULT_DEPTH)"),
+        "must not leave bare const names in Init (file poison):\n{myc}"
+    );
+    // Co-emitted fns must precede Init (name must be in scope before use).
+    let fuel_pos = myc
+        .find("fn DEFAULT_FUEL()")
+        .expect("DEFAULT_FUEL fn position");
+    let init_pos = myc.find("fn init()").expect("init position");
+    assert!(
+        fuel_pos < init_pos,
+        "co-emitted DEFAULT_FUEL must precede init:\n{myc}"
+    );
+
+    if let Some(bin) = find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-a4-fuel-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("eval_opts.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "eval.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "DEFAULT_FUEL/DEFAULT_DEPTH co-emit must not file-poison with unknown name; \
+             myc=\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// A const whose initializer is not a decidable integer stays a whole-item gap (never invents
+/// a value — VR-5).
+#[test]
+fn const_non_decidable_initializer_still_gapped() {
+    let rust = "const BAD: u64 = foo() + 1;";
+    let (myc, report) =
+        transpile_source(rust, "f.rs", "f").unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "BAD"),
+        "must not emit non-decidable const; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.gaps.iter().any(|g| {
+            g.item_name.as_deref() == Some("BAD")
+                && g.reason.contains("decidable non-negative integer")
+        }),
+        "expected honest gap for non-decidable const; gaps={:?}\nmyc=\n{myc}",
+        report
+            .gaps
+            .iter()
+            .map(|g| (&g.item_name, &g.reason))
+            .collect::<Vec<_>>()
+    );
+}
