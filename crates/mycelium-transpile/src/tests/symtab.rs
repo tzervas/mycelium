@@ -446,3 +446,37 @@ fn resolve_goes_cross_phylum_only_from_non_root_file_even_with_a_same_crate_subm
          is never consulted, so it cannot wrongly shadow it"
     );
 }
+
+// ── M-1084 net-close: `use_emit_qualifier` (intra-phylum −2 regression) ─────────────────────────
+
+#[test]
+fn use_emit_qualifier_strips_crate_root_for_same_crate_sibling() {
+    assert_eq!(
+        SymbolTable::use_emit_qualifier(Some("mycelium_l1"), "l1.checkty", "mycelium_l1.checkty"),
+        "checkty"
+    );
+    assert_eq!(
+        SymbolTable::use_emit_qualifier(
+            Some("mycelium_std_fs"),
+            "std.fs.error",
+            "mycelium_std_fs.error"
+        ),
+        "error"
+    );
+}
+
+#[test]
+fn use_emit_qualifier_keeps_full_nodule_for_cross_crate_in_one_batch() {
+    assert_eq!(
+        SymbolTable::use_emit_qualifier(Some("crate_a"), "crate.b", "crate_b"),
+        "crate.b"
+    );
+}
+
+#[test]
+fn use_emit_qualifier_bare_fixture_key_same_as_pre_m1084() {
+    assert_eq!(
+        SymbolTable::use_emit_qualifier(None, "checkty", "checkty"),
+        "checkty"
+    );
+}

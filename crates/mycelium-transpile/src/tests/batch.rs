@@ -862,9 +862,12 @@ fn same_crate_submodule_shadows_a_same_named_sibling_phylum() {
         .find(|r| r.path.ends_with("crate-a/src/lib.rs"))
         .unwrap();
     assert!(
-        a.myc.contains("a.crate_b.Foo") || a.myc.contains(".crate_b.Foo"),
-        "expected the SAME-CRATE submodule interpretation to win (a.crate_b.Foo), not the sibling \
-         phylum's crate-b.Foo; got:\n{}",
+        a.myc.lines().any(|l| {
+            let t = l.trim();
+            t == "use crate_b.Foo;" || t.contains("a.crate_b.Foo")
+        }),
+        "expected the SAME-CRATE submodule interpretation to win (intra-phylum `use crate_b.Foo;` \
+         per DN-113/M-662, or legacy full path), not the sibling phylum's crate-b.Foo; got:\n{}",
         a.myc
     );
     assert!(
@@ -1037,8 +1040,11 @@ fn same_named_bare_submodule_across_two_crates_does_not_cross_contaminate_symbol
     // Each crate's own `use crate::rng::Thing;` must resolve to ITS OWN `rng` (never bare, and
     // never the SIBLING crate's `rng`) — the cross-contamination the qualified-key fix prevents.
     assert!(
-        a.myc.contains("crate.a.rng.Thing") || a.myc.contains("a.rng.Thing"),
-        "crate-a's use must resolve to crate-a's OWN rng.rs; got:\n{}",
+        a.myc.lines().any(|l| {
+            let t = l.trim();
+            t == "use rng.Thing;" || t.contains("crate.a.rng.Thing") || t.contains("a.rng.Thing")
+        }),
+        "crate-a's use must resolve to crate-a's OWN rng.rs (intra-phylum `use rng.Thing;`); got:\n{}",
         a.myc
     );
     assert!(
@@ -1048,8 +1054,11 @@ fn same_named_bare_submodule_across_two_crates_does_not_cross_contaminate_symbol
         a.myc
     );
     assert!(
-        b.myc.contains("crate.b.rng.Thing") || b.myc.contains("b.rng.Thing"),
-        "crate-b's use must resolve to crate-b's OWN rng.rs; got:\n{}",
+        b.myc.lines().any(|l| {
+            let t = l.trim();
+            t == "use rng.Thing;" || t.contains("crate.b.rng.Thing") || t.contains("b.rng.Thing")
+        }),
+        "crate-b's use must resolve to crate-b's OWN rng.rs (intra-phylum `use rng.Thing;`); got:\n{}",
         b.myc
     );
     assert!(
