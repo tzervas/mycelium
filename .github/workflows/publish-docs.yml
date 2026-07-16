@@ -1,8 +1,7 @@
 # Publish the wiki (from docs/wiki/) and the full docsite — the themed myc-doc corpus site plus the
 # agent code index and the rustdoc API docs — to GitHub Pages.
 #
-# Manual-dispatch only (workflow_dispatch) — Mycelium keeps CI advisory / on-demand by policy
-# (see .github/workflows/checks.yml). Nothing here runs on push.
+# Triggers: push to main (docs paths) + workflow_dispatch. Self-hosted Podman fleet.
 #
 # Requires, in repo Settings:
 #   - the **Wiki** feature enabled (for the wiki sync) and **Pages** set to "GitHub Actions"
@@ -16,6 +15,13 @@
 name: Publish wiki & API docs
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "crates/**/src/**"
+      - "tools/docgen/**"
+      - ".github/workflows/publish-docs.yml"
   workflow_dispatch:
     inputs:
       publish_wiki:
@@ -32,7 +38,7 @@ permissions:
 
 jobs:
   publish-wiki:
-    if: ${{ inputs.publish_wiki }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish_wiki }}
     runs-on: [self-hosted, linux, x64, podman]
     permissions:
       contents: write # the wiki is part of the repository
@@ -73,7 +79,7 @@ jobs:
           git_wiki push origin HEAD:master || git_wiki push origin HEAD:main
 
   publish-site:
-    if: ${{ inputs.publish_site }}
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.publish_site }}
     runs-on: [self-hosted, linux, x64, podman]
     permissions:
       pages: write
