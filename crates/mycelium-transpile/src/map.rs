@@ -196,8 +196,7 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
             // Mycelium reserved word (e.g. a Rust type literally named `Binary`/`Float`), the
             // bare identifier would lex as a keyword and fail to parse. Gap it (never emit
             // un-parseable text) rather than guess a rename (VR-5/G2).
-            crate::reserved::guard_ident(&name, "type name")?;
-            return Ok(name);
+            return Ok(crate::reserved::valid_ident(&name).text);
         }
         // A single-segment named *generic application* (`Result<Duration, TimeErr>`,
         // `Vec<u8>`, `Option<T>`). Confirmed surface: `base_type ::= Ident type_args?` with
@@ -212,7 +211,7 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
             PathArguments::AngleBracketed(ab) => {
                 // Head maps exactly as the bare-named arm does — a reserved-word head still
                 // gaps (never emit un-lexable text; VR-5/G2), before any argument work.
-                crate::reserved::guard_ident(&name, "type name")?;
+                let head = crate::reserved::valid_ident(&name).text;
                 let mut args = Vec::with_capacity(ab.args.len());
                 for arg in &ab.args {
                     match arg {
@@ -253,7 +252,7 @@ impl crate::visit::TypeVisitor for MapTypeVisitor<'_> {
                         ),
                     ));
                 }
-                Ok(format!("{name}[{}]", args.join(", ")))
+                Ok(format!("{head}[{}]", args.join(", ")))
             }
             // Non-angle-bracketed arguments (e.g. an `Fn(..)`-trait parenthesized form) —
             // no confirmed grammar surface; left an explicit gap.

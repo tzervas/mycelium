@@ -640,26 +640,18 @@
     ]
   },
   "reserved_type_name": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
-    "emitted_items": [],
-    "gaps": [
-      [
-        "ReservedWord",
-        "enum type name `Float` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
-        "Float"
-      ]
-    ]
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: renamed Float -> Float_kw (reserved-word collision, DN-140)\ntype Float_kw = A | B;\n",
+    "emitted_items": [
+      "Float_kw"
+    ],
+    "gaps": []
   },
   "reserved_variant": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n\n",
-    "emitted_items": [],
-    "gaps": [
-      [
-        "ReservedWord",
-        "enum variant/constructor `Exact` collides with a Mycelium reserved word — emitting it verbatim would fail to parse (the lexer tokenizes it as a keyword, not an identifier); no sanctioned auto-rename in this PoC, so flagged rather than emitted (G2/VR-5)",
-        "GuaranteeStrength"
-      ]
-    ]
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\n// Declared: renamed Exact -> Exact_kw (reserved-word collision, DN-140)\ntype GuaranteeStrength = Exact_kw | Loose;\n",
+    "emitted_items": [
+      "GuaranteeStrength"
+    ],
+    "gaps": []
   },
   "shared_ref_params_emit": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn digest_eq(a: Ordering, b: Ordering) => Bool = a == b;\n",

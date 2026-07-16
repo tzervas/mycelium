@@ -580,22 +580,21 @@ fn cases() -> Vec<Case> {
                 category: Category::Import,
             },
         },
-        // M-1001: a type whose name is a Mycelium reserved word (`Float`) can't be emitted verbatim
-        // (it would lex as a keyword) — gapped ReservedWord, never renamed (VR-5/G2).
+        // DN-140 (M-1106): reserved type/variant names rewrite to `*_kw` (G2 comment + emitted text).
         Case {
             name: "reserved_type_name",
             rust: "enum Float { A, B }",
-            expect: Expect::Gapped {
-                category: Category::ReservedWord,
+            expect: Expect::Emitted {
+                item: "Float_kw",
+                contains: "type Float_kw = A | B",
             },
         },
-        // M-1001: a variant/constructor named a reserved word (`Exact`) — the collision that poisoned
-        // `mycelium-l1/src/eval.rs`'s parse in the §8.7 baseline.
         Case {
             name: "reserved_variant",
             rust: "enum GuaranteeStrength { Exact, Loose }",
-            expect: Expect::Gapped {
-                category: Category::ReservedWord,
+            expect: Expect::Emitted {
+                item: "GuaranteeStrength",
+                contains: "Exact_kw",
             },
         },
         // Shared-reference erasure (this leaf, ADR-003): a fn whose params are `&T` shared references
@@ -2469,13 +2468,15 @@ fn inherent_impl_no_self_name_collision_is_mangled_and_checks_clean() {
         report.emitted_items,
         report.gaps
     );
+    let foo_mangled = crate::reserved::mangled_inherent_fn_name("Foo", "new");
+    let bar_mangled = crate::reserved::mangled_inherent_fn_name("Bar", "new");
     assert!(
-        myc.contains("Foo__new"),
-        "expected the mangled name `Foo__new` in the emitted text, got:\n{myc}"
+        myc.contains(&foo_mangled),
+        "expected the mangled name `{foo_mangled}` in the emitted text, got:\n{myc}"
     );
     assert!(
-        myc.contains("Bar__new"),
-        "expected the mangled name `Bar__new` in the emitted text, got:\n{myc}"
+        myc.contains(&bar_mangled),
+        "expected the mangled name `{bar_mangled}` in the emitted text, got:\n{myc}"
     );
     assert!(
         !myc.contains("fn new("),
@@ -2532,7 +2533,8 @@ fn self_receiving_inherent_method_is_left_unmangled() {
         report.gaps
     );
     assert!(
-        myc.contains("fn get(") && !myc.contains("Foo__get"),
+        myc.contains("fn get(")
+            && !myc.contains(&crate::reserved::mangled_inherent_fn_name("Foo", "get")),
         "a `self`-receiving method must keep its bare name (never mangled), got:\n{myc}"
     );
 }
@@ -2563,9 +2565,10 @@ fn qualified_call_to_same_file_associated_fn_resolves_and_mangles() {
         report.emitted_items,
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
+    let foo_mangled = crate::reserved::mangled_inherent_fn_name("Foo", "new");
     assert!(
-        myc.contains("Foo__new(x)"),
-        "expected the mangled call `Foo__new(x)` in the emitted text, got:\n{myc}"
+        myc.contains(&format!("{foo_mangled}(x)")),
+        "expected the mangled call `{foo_mangled}(x)` in the emitted text, got:\n{myc}"
     );
     assert!(
         !myc.contains("= new(x)") && !myc.contains(" new(x)"),
@@ -2591,8 +2594,10 @@ fn qualified_call_via_self_resolves_within_own_impl() {
         report.emitted_items,
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
+    let new_m = crate::reserved::mangled_inherent_fn_name("Foo", "new");
+    let default_m = crate::reserved::mangled_inherent_fn_name("Foo", "default_new");
     assert!(
-        myc.contains("Foo__new(") && myc.contains("Foo__default_new("),
+        myc.contains(&format!("{new_m}(")) && myc.contains(&format!("{default_m}(")),
         "expected both mangled decls in the emitted text, got:\n{myc}"
     );
     // The `Self::new(0u32)` call site itself must resolve to the mangled name, not gap.
@@ -2753,8 +2758,16 @@ fn qualified_call_resolved_mangled_check_clean_against_real_toolchain() {
         report.emitted_items,
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
+    let foo_call = format!(
+        "{}(x)",
+        crate::reserved::mangled_inherent_fn_name("Foo", "new")
+    );
+    let bar_call = format!(
+        "{}(x)",
+        crate::reserved::mangled_inherent_fn_name("Bar", "new")
+    );
     assert!(
-        myc.contains("Foo__new(x)") && myc.contains("Bar__new(x)"),
+        myc.contains(&foo_call) && myc.contains(&bar_call),
         "expected both mangled calls in the emitted text (never cross-wired to the wrong type), \
          got:\n{myc}"
     );
@@ -2823,11 +2836,11 @@ fn impl_level_generic_self_type_ctor_gaps_never_emits_invalid_identifier() {
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
     assert!(
-        !report
+        report
             .emitted_items
             .iter()
-            .any(|n| n.starts_with("impl DeclaredTime")),
-        "the impl must NOT be counted as emitted (its sole method gapped): {:?}",
+            .any(|n| n.contains("impl") && n.contains("DeclaredTime")),
+        "the impl should emit with DN-140 mangling: {:?}",
         report.emitted_items
     );
     assert!(
@@ -2836,14 +2849,8 @@ fn impl_level_generic_self_type_ctor_gaps_never_emits_invalid_identifier() {
          `Foo[T]__method` (a hard parse failure, G2), got:\n{myc}"
     );
     assert!(
-        report
-            .gaps
-            .iter()
-            .any(|g| g.reason.contains("cannot be mangled")),
-        "expected a gap reason explaining the un-mangleable generic self type (folded into the \
-         whole-impl `Category::Impl` gap since this impl's only method failed — see \
-         `emit_impl`'s wholesale-failure fold), got {:?}",
-        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        myc.contains("DeclaredTime_u5B_T_u5D_"),
+        "generic self type text must be escaped in the mangled fn name, got:\n{myc}"
     );
 }
 
@@ -2872,11 +2879,11 @@ fn concrete_generic_instantiation_self_type_ctor_gaps_never_emits_invalid_identi
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
     assert!(
-        !report
+        report
             .emitted_items
             .iter()
             .any(|n| n.starts_with("impl Wrapper")),
-        "the impl must NOT be counted as emitted (its sole method gapped): {:?}",
+        "the impl should emit with DN-140 mangling: {:?}",
         report.emitted_items
     );
     assert!(
@@ -2885,14 +2892,8 @@ fn concrete_generic_instantiation_self_type_ctor_gaps_never_emits_invalid_identi
          `Wrapper[Inner]__new` (a hard parse failure, G2), got:\n{myc}"
     );
     assert!(
-        report
-            .gaps
-            .iter()
-            .any(|g| g.reason.contains("cannot be mangled")),
-        "expected a gap reason explaining the un-mangleable generic self type (folded into the \
-         whole-impl `Category::Impl` gap since this impl's only method failed — see \
-         `emit_impl`'s wholesale-failure fold), got {:?}",
-        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+        myc.contains("Wrapper_u5B_Inner_u5D_"),
+        "concrete generic self type must be escaped in mangled fn name, got:\n{myc}"
     );
 }
 
