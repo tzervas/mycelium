@@ -12,6 +12,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### chore(maint): Wave-0 hygiene — M-1085 gates + Commitizen 0.x + PR Tracking / epic release-gates (2026-07-15)
+
+Haiku-swarm Wave-0 under the maint-guide framework (orch plans; leaves execute).
+
+- **fix(gates) M-1085** — re-cite `tools/grammar/sugar.yaml` `token.rs:LINE` citations; make
+  sugar_index drift-guard demo line-number agnostic; regenerate `docs/sugar-index/`; ruff-format
+  `gen/myc-drafts/manifest_gen.py`. Public-api baseline for `mycelium-transpile` already green
+  (verify-first residual 0). Flipped `status:todo` → `done`.
+- **feat(gates) M-1107** — Commitizen Conventional Commits + `major_version_zero` 0.x.x SemVer
+  policy (`.cz.toml`, commit-msg hook, `just cz-check` / `just cz-bump-dry`, `scripts/checks/cz-check.sh`).
+  Aligns with ADR-018 / ADR-038 (no auto-1.0.0; dry-run bumps only until publish).
+- **docs(contributing)** — required PR **Tracking** footer; GitHub auto-close only on merge to
+  `main` (`Closes` vs `Refs`); **epic release-gate** pattern (terminal promote-to-main + release child).
+- **tracking** — minted M-1108…M-1118 release-gate todos for all open epics (E9-1, E10-1, E17-1,
+  E18-1, E20-1, E22-1, E23-1, E28-1, E33-1, E39-1, E40-1).
+
 ### chore(tracking): integration-tier close-out — D4-regression fix + DN-138 increment-1/2 + DN-140 ratified, mint 4 M-ids, flip M-1102 (2026-07-13)
 
 Reconciles `tools/github/issues.yaml`/`docs/Doc-Index.md` against the batch that landed on `dev`

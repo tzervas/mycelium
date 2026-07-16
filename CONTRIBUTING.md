@@ -86,7 +86,14 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
 ## Branches, commits, PRs
 
 - Branch from `main`; keep branches focused on one task/issue.
-- Conventional, imperative commit subjects (e.g., `docs(rfc-0003): tighten capacity-bound wording`). Reference the issue/task.
+- **Conventional Commits are enforced** via Commitizen (config: `.cz.toml`; check: `just cz-check`;
+  pre-commit `commit-msg` hook). Subjects stay imperative and scoped (e.g.
+  `docs(rfc-0003): tighten capacity-bound wording`) and reference the issue/task. Agent intermediate
+  commits may use the allowed `wip` / `WIP` prefix (see `allowed_prefixes` in `.cz.toml`). In
+  repo-scoped sessions that use `git commit --no-verify`, run the equivalent out-of-band
+  (`just cz-check`, or `cz check --rev-range HEAD~1..HEAD`) before push — the bypass is only for
+  unreachable external hooks, never a license to skip the message lint (see `CLAUDE.md` §Local
+  checks).
 - A PR should state which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements), and how it was verified. Editorial-only PRs say so.
 - **No force pushes.** `git push --force` / `--force-with-lease` (and `+refs` push specs) are prohibited
   on every branch — and never on the protected `main`/`integration`/`dev`/`claude/head/*`. Correct a
@@ -123,6 +130,57 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   the **merge to `main` the terminal (maintainer) checkpoint**. Operationalized as the **`/wave`**,
   **`/pr-land`**, and **`/worktree-guard`** skills (`.claude/skills/`). Full agent-facing form:
   `CLAUDE.md` §Concurrent-PR development and §Autonomous PR workflow.
+
+### PR Tracking footer (required on every PR)
+
+Every PR description ends with a **Tracking** block so the issue graph, epic lineage, and close
+intent stay explicit (never-silent — G2). Resolve `M-####` / `E#-#` to GitHub issue numbers via
+`tools/github/idmap.tsv` — **never invent** `#N` values.
+
+```markdown
+## Tracking
+- Task: M-#### (and/or E#-#)
+- Epic: E#-# (if any)
+- Refs: #N [, #M …]     # GitHub issue numbers from tools/github/idmap.tsv
+- Closes: #N            # ONLY when PR base is main AND DoD fully met
+```
+
+- **Task / Epic** carry the project ids (`M-####`, `E#-#`) used in `tools/github/issues.yaml`.
+- **Refs** lists the GitHub issue numbers the PR advances (looked up from `idmap.tsv`). Use
+  `Refs` or `Part of` on every non-`main` PR.
+- **Closes** is reserved for completed issues on a **main-bound** PR whose Definition of Done is
+  fully met (see auto-close rules below). Omit the line entirely when it does not apply — do not
+  put a placeholder `Closes:`.
+
+### GitHub auto-close rules
+
+GitHub's closing keywords (`Closes` / `Fixes` / `Resolves` plus `#N`) fire **only on merge into the
+default branch `main`**. They do nothing useful on other bases and confuse readers who expect a
+close that never happens.
+
+| PR hop | Closing keywords | Use instead |
+|---|---|---|
+| leaf → `dev` | **Never** `Closes` / `Fixes` / `Resolves` | `Refs: #N` or `Part of #N` |
+| `dev` → `integration` | **Never** `Closes` / `Fixes` / `Resolves` | `Refs: #N` or `Part of #N` |
+| `integration` → `main` (or any release PR into `main`) | `Closes #N` for each completed issue | — |
+
+A leaf or staging-tier PR that puts `Closes #N` in its body will **not** close the issue on merge
+(the base is not `main`) and will mislead reviewers. Keep close intent on the main-bound PR only,
+and only when that issue's DoD is fully met.
+
+### Epic release-gate pattern
+
+Each open epic carries a **terminal child** issue of the form:
+
+`E#-# — release-gate: promote to main + cut release`
+
+- The epic **stays open** until that gate lands on `main` and is closed (via `Closes #N` on the
+  main-bound PR — never earlier).
+- **Gate Definition of Done:** every other child of the epic is `done`; the epic's work is
+  promoted to `main`; and the release notes / version act follow **ADR-018** (per-crate `0.x`
+  SemVer; no accidental `1.0.0`) and **ADR-038** (public release is a sub-`1.0.0` usability cut;
+  `1.0.0` is a separate, manual gate act — never auto-bumped). Release-gate issues themselves are
+  minted by the orchestrator when an epic opens; leaves do not invent them.
 
 ---
 
