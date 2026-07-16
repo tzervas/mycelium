@@ -44,10 +44,18 @@
 //! a [`crate::gap::Category::Import`] [`crate::gap::GapReason`] naming exactly what could not
 //! resolve and why (never silently dropped).
 //!
-//! **No bare-name collapse (the M-1060 lesson):** a resolved leaf is always emitted against the
-//! sibling's *derived, home-qualified* nodule path (`use <nodule_path>.<Item>;`), never a bare
-//! `<Item>` — the identical discipline `crates/mycelium-l1/src/checkty.rs`'s DN-113
-//! `qualify_cross_phylum`/`merge_phyla_exports` use for the kernel's own cross-phylum resolution.
+//! **No bare-name collapse (the M-1060 lesson):** a resolved leaf is always emitted as a
+//! nodule-qualified `use` (`use <emit_qualifier>.<Item>;`), never a bare `<Item>` — the identical
+//! discipline DN-113/M-1060 use for cross-nodule visibility. The **emit qualifier** is NOT always
+//! the sibling's full derived nodule path: for **same-crate** batch siblings the kernel's
+//! intra-phylum resolver ([`crates/mycelium-l1/src/checkty.rs`] `resolve_imports`, M-662/DN-113)
+//! keys exports as `<nodule-suffix>.<Item>` *within* the phylum (e.g. `checkty.Width`, never
+//! `l1.checkty.Width`). Emitting the full path was the measured **−2 phylum-clean regression**
+//! (59→57 on the DN-124 corpus): imports *resolved* in the symtab but phylum-mode `myc check`
+//! refused `use l1.checkty.Width` as `no such name l1.checkty.Width` — a classification win paired
+//! with a checker regression, not net progress (VR-5). [`Self::use_emit_qualifier`] strips the
+//! crate-root nodule prefix for same-crate hits; **cross-crate** hits in one combined batch phylum
+//! keep the full target nodule path (e.g. `use crate.b.Foo;`).
 
 use std::collections::{HashMap, HashSet};
 use syn::UseTree;
@@ -348,5 +356,62 @@ impl SymbolTable {
             keys.push(Self::qualify_key(head, &Self::module_key(rest)));
         }
         keys
+    }
+
+    /// The dotted path prefix for an emitted `use <prefix>.<Item>;` line — see the module docs
+    /// (M-1084 net-close / −2 regression). `resolved_via_key` is the symbol-table key that
+    /// actually hit ([`Self::resolve`]'s lookup key), used only to detect cross-crate vs same-crate.
+    pub fn use_emit_qualifier(
+        importer_crate: Option<&str>,
+        resolved_nodule_path: &str,
+        resolved_via_key: &str,
+    ) -> String {
+        let target_crate = key_crate_ident(resolved_via_key);
+        let same_crate = match (importer_crate, target_crate.as_deref()) {
+            (Some(a), Some(b)) => a == b,
+            (None, None) => true,
+            (None, Some(_)) => false,
+            (Some(_), None) => true,
+        };
+        if !same_crate {
+            return resolved_nodule_path.to_string();
+        }
+        let Some(c) = importer_crate.or(target_crate.as_deref()) else {
+            return resolved_nodule_path.to_string();
+        };
+        strip_dot_prefix(resolved_nodule_path, &crate_root_nodule_from_ident(c))
+    }
+}
+
+/// Crate-directory name → the crate's root nodule path (mirrors [`crate::transpile::derive_nodule_path`]
+/// on a crate-root `lib.rs`: `mycelium-l1` → `l1`, `mycelium-std-fs` → `std.fs`).
+fn crate_root_nodule_from_ident(crate_ident: &str) -> String {
+    let stripped = crate_ident.strip_prefix("mycelium_").unwrap_or(crate_ident);
+    stripped.replace('_', ".")
+}
+
+/// When a lookup `key` is crate-qualified (`mycelium_l1.checkty`), the head is the target crate;
+/// a standalone `crate_b` key (cross-phylum crate root) is the crate ident; a bare `checkty` is not.
+fn key_crate_ident(key: &str) -> Option<String> {
+    if let Some((head, rest)) = key.split_once('.') {
+        if !rest.is_empty() {
+            return Some(head.to_string());
+        }
+    }
+    if key.contains('_') || key.starts_with("mycelium_") {
+        return Some(key.to_string());
+    }
+    None
+}
+
+fn strip_dot_prefix(path: &str, prefix: &str) -> String {
+    if path == prefix {
+        return String::new();
+    }
+    let dotted = format!("{prefix}.");
+    if let Some(suffix) = path.strip_prefix(&dotted) {
+        suffix.to_string()
+    } else {
+        path.to_string()
     }
 }
