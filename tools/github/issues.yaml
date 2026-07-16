@@ -9311,6 +9311,8 @@ issues:
       - corpus:DN-34
       - corpus:DN-110
       - src:crates/mycelium-transpile/fixtures/UNION-BACKLOG.md
+      - src:docs/planning/gap-analysis-2026-07-16/M875-expand-first-design-DRAFT.md
+      - src:docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF-ONESHOT.md
     body: |
       The #2 demand bucket (DN-34 §8.5): 22% of gaps are macro_rules! definitions + item-position
       macro invocations (syn cannot expand macros). The load-bearing conclusion from the PoC: the
@@ -9337,6 +9339,13 @@ issues:
       designed in DN-110 -- complementary, not a re-decision of this issue's scope. This issue stays
       scoped to the transpiler-side expand-first question, which DN-100 already answered; DN-110 is
       the native-language-side counterpart DN-100's expansions map INTO (DN-110 §10).
+
+      DESIGN DRAFT LANDED (2026-07-16, PR #1657, status stays needs-design; Declared/Draft):
+      `docs/planning/gap-analysis-2026-07-16/M875-expand-first-design-DRAFT.md` (ONESHOT B5).
+      Path rationale: DN-100 already Accepted the expand-first mechanism; this draft fills residual
+      design surface (pipeline integration, env, sequencing vs M-1084/M-1037, implement-issue DoD)
+      without re-litigating DN-100. **No implement** until this close-out is Accepted (or a follow-on
+      implement issue is opened under an Accepted basis). status remains **needs-design**.
 
   - id: M-876
     title: "M-876 -- design: surface completeness for transpilation (bounded generics, records, trait Self-bodies)"
@@ -12965,8 +12974,11 @@ issues:
       - src:crates/mycelium-transpile/src/emit.rs
       - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-A1A2-2026-07-16.md
       - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-2026-07-16.md
+      - src:docs/planning/gap-analysis-2026-07-16/M1006-baseline-oneshot-2026-07-16.md
       - src:experiments/results/m1006-remeasure-oracler1-a3
+      - src:experiments/results/m1006-baseline-oneshot
       - src:docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF.md
+      - src:docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF-ONESHOT.md
     body: |
       Minted 2026-07-06 (maintainer decision, trx2 launch clarification -- upgrades the E-B
       breadth resolution from the orchestrator's `Declared` default to a decided two-stage
@@ -13053,6 +13065,15 @@ issues:
       opaque `"<Binary{N}>"`, not Exact Debug (VR-5). Full 17-target / phased ladder **not run** —
       do **not** treat these pilots as corpus-wide or as one-shot readiness. status remains
       **in-progress** until fuller ladder phases or an explicit scoped close-out decision (G2).
+
+      ONESHOT C0 BASELINE (2026-07-16, PR #1658, status stays in-progress; Empirical; NOT ladder-complete):
+      Post-A5 committed baseline for the one-shot prep program:
+      `docs/planning/gap-analysis-2026-07-16/M1006-baseline-oneshot-2026-07-16.md` +
+      `experiments/results/m1006-baseline-oneshot/` + active program pointer
+      `docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF-ONESHOT.md`. Default-5 union
+      checked_fraction **19.5%** (46/236, all Clean) after A4/A5; std-fs/std-io expansion + ranked
+      residual classes recorded. **No one-shot claim.** Follow-on: post-B1 (M-1084 #1659 emit form
+      fixed) full 768-item phylum remeasure still pending under this ladder (B3 wave).
 
   - id: M-1007
     title: "semcore Stage-5 increment 2: checkty type algebra (has_var/type_head/subst_ty/param_subst)"
@@ -16961,6 +16982,8 @@ issues:
       - corpus:language-completeness-gap-inventory
       - src:crates/mycelium-transpile/src/symtab.rs
       - src:crates/mycelium-transpile/src/vet.rs
+      - src:crates/mycelium-transpile/src/tests/batch.rs
+      - src:docs/planning/gap-analysis-2026-07-16/PROGRAM-HANDOFF-ONESHOT.md
     body: |
       Filed 2026-07-12 at the gap-close-2 integration close-out (mitigation #1 -- verified M-1084 free
       before minting; M-1083 was highest) -- the Import-lever M-id both DN-124 (M-1079's own body) and
@@ -16990,6 +17013,18 @@ issues:
         (resolves more references than it reclassifies), re-measured under M-1079's harness.
       - `std-fs`/`std-io` per-target deltas from PR #1521 are re-verified against the fix, not assumed
         stable.
+
+      EMIT FORM FIXED (2026-07-16, PR #1659 @ `ec10a0ef`, status stays in-progress; Empirical):
+      ONESHOT B1 landed full-nodule-path `use` emit. Root cause of the inverted strip (PR #1635):
+      kernel `resolve_imports` keys exports as **full** `nodule.path` + item; live `myc check
+      --phylum` accepts `use l1.checkty.Width` / `use std.fs.error.FsErr` and refuses short forms.
+      `SymbolTable::use_emit_qualifier` is now identity on the resolved sibling path (same-crate and
+      same-batch cross-crate). Measured: std-fs Import residual 5; std-io residual 14 + 13 resolved
+      full-path use leaves; synthetic full-path Clean vs strip CheckError. **Honest residual:** emit
+      form fixed; **M-1006 remeasure pending** for the full 768-item phylum `checked_fraction`
+      net-close claim (DoD item 2) — do not flip to `done` until that remeasure lands or an explicit
+      scoped close-out records the residual as out-of-scope (G2/VR-5). Residual Import leaves are
+      out-of-batch externals / sibling-gapped names / renames / globs — not fabricatable.
 
   - id: M-1085
     title: "M-1085 -- dev-trunk just check-canary drift from PR #1521: mycelium-transpile public-api baseline + manifest_gen.py format"
