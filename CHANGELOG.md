@@ -12,6 +12,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile): DN-140 valid_ident + length-prefix mangler (M-1106) (2026-07-16)
+
+Composer leaf `claude/leaf/L-EMIT-m1106-valid-ident` (`fd7a984b`).
+
+- **`valid_ident`** in `reserved.rs` — total, idempotent map: identity on legal non-reserved
+  idents, `_kw` reserved escape, `_u{HEX}_` illegal-char escape; `sanitize_nodule_path` /
+  `guard_ident` call-throughs (DN-140 §4/§7).
+- **D4 mangler** — parts run through `valid_ident` + length-prefix boundary (injective by
+  construction); generic `Foo[T]` ctor emission no longer hard-parse-fails as the M-1103 gap class.
+- Non-identity rewrites emit `// Declared: renamed … (DN-140)` (G2). Mechanism stays **`Declared`**
+  until a fuller differential upgrades it (VR-5).
+- Tests: `src/tests/valid_ident.rs` + corpus/golden updates; `cargo test -p mycelium-transpile`
+  231 passed / 1 ignored.
+
 ### chore(maint): Wave-0 hygiene — M-1085 gates + Commitizen 0.x + PR Tracking / epic release-gates (2026-07-15)
 
 Haiku-swarm Wave-0 under the maint-guide framework (orch plans; leaves execute).

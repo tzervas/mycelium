@@ -17822,7 +17822,9 @@ issues:
   - id: M-1106
     title: "M-1106 -- DN-140 build: implement valid_ident (unified reserved+illegal-char identifier escape) + length-prefix mangler composition"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    landed_date: 2026-07-16
+    landed_basis: "Wave-1 composer leaf L-EMIT-m1106-valid-ident fd7a984b; cargo test -p mycelium-transpile 231/1 ok"
     epic: E28-1
     depends_on: [M-1103]
     doc_refs:
