@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-select"
-version = "0.0.0"
+version.workspace = true
 description = "Selection-policy language: total, non-learned, content-addressed decision tables with an explicit cost function and mandatory EXPLAIN (RFC-0005; ADR-006; M-220/M-221/M-222)."
 edition.workspace = true
 rust-version.workspace = true

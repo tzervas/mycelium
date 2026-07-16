@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-fmt"
-version = "0.0.0"
+version.workspace = true
 description = "mycfmt — the canonical formatter (M-364; M-142 grows up): an identity-preserving projection over .myc sources (RFC-0001 §4.6/§4.8; ADR-003 — formatting never changes content-addressed identity). Three checked invariants (identity-preservation · idempotence · header-preservation); never-silent refusals (no partial rewrite, G2); reads the [toolchain].format hard pin (M-359). KC-3 — above the kernel; no new dependency."
 edition.workspace = true
 rust-version.workspace = true

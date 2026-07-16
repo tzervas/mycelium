@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-io"
-version = "0.0.0"
+version.workspace = true
 description = "std.io + serialize — single-consumption IO + canonical serialization."
 edition.workspace = true
 rust-version.workspace = true

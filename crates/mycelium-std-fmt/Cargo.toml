@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-fmt"
-version = "0.0.0"
+version.workspace = true
 description = "std.fmt — dual human/machine formatting/display (G11)."
 edition.workspace = true
 rust-version.workspace = true

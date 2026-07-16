@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-numerics"
-version = "0.0.0"
+version.workspace = true
 description = "std.numerics — the honest ε/δ carrier (Approx<T>) and meet-composition surface over the ADR-010 numerics kernels (M-512)."
 edition.workspace = true
 rust-version.workspace = true

@@ -1,17 +1,17 @@
 # cargo-fuzz smoke CI — ADR-021 Gate A3 (M-654), WS8 durability.
 #
-# POLICY (see CLAUDE.md): manual-dispatch only (no push / pull_request auto-triggers) to match
-# the repo's "no automatic remote CI" policy. This workflow is ADVISORY — it does not gate
-# merges. It confirms the three fuzz targets build and run without crashing for a bounded time
-# under AddressSanitizer. A crash here is a real bug (G2/VR-5); the artifact is uploaded so the
-# crashing input can be reproduced locally.
+# Self-hosted Podman fleet. ADVISORY — does not gate merges. Confirms the three fuzz targets
+# build and run without crashing for a bounded time under AddressSanitizer. A crash is a real
+# bug (G2/VR-5); the artifact is uploaded for local repro.
 #
-# B1-01 note: `uses:` pins use mutable major tags (not 40-char SHAs) because SHA pinning was not
-# possible in an offline environment. Dependabot (.github/dependabot.yml) is configured to surface
-# action updates and should be used to resolve to SHAs.
-name: fuzz smoke (manual, advisory)
+# B1-01 note: `uses:` pins use mutable major tags (not 40-char SHAs). Dependabot surfaces updates.
+name: fuzz smoke (advisory)
 
 on:
+  push:
+    branches: [main, integration]
+  pull_request:
+    branches: [main, integration]
   workflow_dispatch:
     inputs:
       max_total_time:
@@ -24,7 +24,7 @@ permissions:
 
 jobs:
   fuzz-smoke:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, x64, podman]
     strategy:
       fail-fast: false
       matrix:

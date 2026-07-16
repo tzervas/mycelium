@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-l1"
-version = "0.0.0"
+version.workspace = true
 description = "L1 prototype (RFC-0006/RFC-0007; NON-NORMATIVE until those RFCs are ratified): lexer + parser for the ratified DN-02 vocabulary (conformance-corpus gated), the v0 monomorphic typechecker, the structural totality checker + matured gate, the fuel-guarded L1 evaluator, and elaboration to the L0 Core IR on the evaluation-complete fragment."
 edition.workspace = true
 rust-version.workspace = true

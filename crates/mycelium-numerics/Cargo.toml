@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-numerics"
-version = "0.0.0"
+version.workspace = true
 description = "Verified-numerics foundation: ErrorBound (ε, affine arithmetic) + ProbBound (δ, union/apRHL) kernels meeting at one shared {ε,δ,strength} certificate with a tier-i Rust checker (ADR-010; E2-4)."
 edition.workspace = true
 rust-version.workspace = true
