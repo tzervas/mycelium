@@ -2,8 +2,8 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **In progress** — fractal swarm Wave G1 |
-| **Tree tip** | `origin/main` @ `aad96b7a` (`v0.463.1`) |
+| **Status** | **Wave G1 integrated** — see `SYNTHESIS.md` |
+| **Tree tip** | `origin/dev` @ `cd71de69` (sync-down); `origin/main` @ `aad96b7a` |
 | **Model** | `grok-composer-2.5-fast` only (all leaves) |
 | **Goal** | Exact residual to (1) full Rust implementation completion (2) transpile-to-Mycelium readiness |
 | **Updates** | language-completeness-gap-inventory, DN-136 phase2 worklist, DN-99, zero-hand-port-delta-ledger, DN-34 §8 |
