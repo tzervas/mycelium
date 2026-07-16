@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-sec"
-version = "0.0.0"
+version.workspace = true
 description = "myc-sec — security checks as tooling (M-367): the /security-review posture as a suite tool. v0 implements the Mycelium-specific `wild`-block audit (LR-9/S6 — inventory every denied-by-default unsafe block + require an ADR-014 // SAFETY: justification) and orchestrates the existing secrets/supply-chain gates. Every finding cites why; a missing scanner is REDUCED COVERAGE, never a silent pass (G2/VR-5). KC-3 — above the kernel; no new dependency."
 edition.workspace = true
 rust-version.workspace = true

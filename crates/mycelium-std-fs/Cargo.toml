@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-fs"
-version = "0.0.0"
+version.workspace = true
 description = "std.fs — filesystem over substrates (explicit failures)."
 edition.workspace = true
 rust-version.workspace = true

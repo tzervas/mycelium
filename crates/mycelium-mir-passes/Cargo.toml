@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-mir-passes"
-version = "0.0.0"
+version.workspace = true
 description = "MEM-4 (DN-33) — the RC-annotated IR + reference-counting lowering passes (static uniqueness analysis / Perceus-style RC emission and elision). Optimisation-only, OUTSIDE the trusted Core IR (KC-3): the Core IR (mycelium-core) stays pristine."
 edition.workspace = true
 rust-version.workspace = true

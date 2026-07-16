@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-std-content"
-version = "0.0.0"
+version.workspace = true
 description = "std.content — content-addressing / hash primitives capability surface (M-523)."
 edition.workspace = true
 rust-version.workspace = true

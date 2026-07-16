@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-sched"
-version = "0.0.0"
+version.workspace = true
 description = "mycelium-sched — the foundational work-stealing OS-thread Scheduler (M-709/M-861), relocated below mycelium-interp so the interpreter can consume it without a interp<->std-runtime dependency cycle."
 edition.workspace = true
 rust-version.workspace = true

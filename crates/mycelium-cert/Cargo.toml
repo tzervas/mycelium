@@ -1,6 +1,6 @@
 [package]
 name = "mycelium-cert"
-version = "0.0.0"
+version.workspace = true
 description = "Swap certificates, the binary<->ternary certified swap (RFC-0002 §3/§4; M-120), and the single shared translation-validation checker (RFC-0002 §2 / RFC-0004 §3; M-210)."
 edition.workspace = true
 rust-version.workspace = true
