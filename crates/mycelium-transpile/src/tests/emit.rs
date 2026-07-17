@@ -965,28 +965,77 @@ fn cases() -> Vec<Case> {
                 contains: "truncate(x, 0b0000_0000_0000_0000)",
             },
         },
-        // ── D3 operand-type-inference depth (DN-34 §8.16 residual, trx2 follow-on) ───────────────
-        // A literal operand (suffixed or not) is STILL left unresolved — never guessed. A suffixed
-        // literal's *type* is decidable, but composing it into a prim call does not `myc check`-clean
-        // (verify-first finding: the real toolchain refuses a bare decimal `Int` operand — "no
-        // representation family" — and fixing that needs the width-correct `BinLit` spelling DN-34
-        // §8.13/§8.14 already flagged as an undecided "typed-literal form" design decision; see
-        // `expr_env_type`'s doc). So the gate still does not fire here, and the prior glyph emission
-        // is unchanged — this pins that non-result.
+        // ── ONESHOT C3: mask lit / !=0 / Bool not (std-fs metadata residual) ─────────────────────
+        // When the *other* operand is a known Binary{N} (env / field), a decimal/octal/hex mask
+        // lit rewrites to an equal-width BinLit and rides `and`/`or`/`eq`-composed `!=` —
+        // never a bare decimal (Q6) and never the unknown prims `band`/`ne`. Bool `!`/`!=`
+        // compose total match forms (`lib/std/core.myc` bool_not / inverted bool_eq); Binary `!`
+        // keeps the glyph (`bit.not` via parse desugar — already clean).
         Case {
-            name: "bitand_known_binary_with_suffixed_literal_keeps_glyph",
+            name: "bitand_known_binary_with_suffixed_literal_emits_and_binlit",
             rust: "fn f(a: u16) -> u16 { a & 5u16 }",
             expect: Expect::Emitted {
                 item: "f",
-                contains: "a & 5",
+                contains: "and(a, 0b0000_0000_0000_0101)",
             },
         },
         Case {
-            name: "bitand_known_binary_with_unsuffixed_literal_keeps_glyph",
+            name: "bitand_known_binary_with_unsuffixed_literal_emits_and_binlit",
             rust: "fn f(a: u16) -> u16 { a & 5 }",
             expect: Expect::Emitted {
                 item: "f",
-                contains: "a & 5",
+                contains: "and(a, 0b0000_0000_0000_0101)",
+            },
+        },
+        Case {
+            name: "ne_known_binary_vs_zero_composes_from_eq",
+            rust: "fn f(a: u32) -> bool { a != 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(a, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, \
+                           _ => True })",
+            },
+        },
+        Case {
+            name: "bitand_ne_zero_mask_composes_clean",
+            rust: "fn f(a: u32) -> bool { a & 0o400 != 0 }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "(match eq(and(a, 0b0000_0000_0000_0000_0000_0001_0000_0000), \
+                           0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True })",
+            },
+        },
+        Case {
+            name: "bool_not_composes_match_invert",
+            rust: "fn f(b: bool) -> bool { !b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "match (b) { True => False, False => True }",
+            },
+        },
+        Case {
+            name: "bool_ne_composes_match",
+            rust: "fn f(a: bool, b: bool) -> bool { a != b }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "match (a) { True => match (b) { True => False, False => True }, False => (b) }",
+            },
+        },
+        Case {
+            name: "binary_not_keeps_glyph",
+            rust: "fn f(a: u16) -> u16 { !a }",
+            expect: Expect::Emitted {
+                item: "f",
+                contains: "!a",
+            },
+        },
+        // ONESHOT C3: user-enum `==` routes through co-emitted `eq_<T>` (not kernel `eq`).
+        Case {
+            name: "enum_eq_uses_co_emitted_eq_fn",
+            rust: "#[derive(PartialEq)] enum K { A, B } impl K { fn is_a(self) -> bool { self == K::A } }",
+            expect: Expect::Emitted {
+                item: "impl K",
+                contains: "(match eq_K(self, A) { 0b1 => True, _ => False })",
             },
         },
         // `(e)`/`&e` ARE structurally transparent to the operand-type gate (this module's own
@@ -2128,6 +2177,12 @@ fn binop_operand_gated_forms_check_clean() {
         "fn f_add_u(a: u16, b: u16) -> u16 { a + b }",
         "fn f_sub_u(a: u16, b: u16) -> u16 { a - b }",
         "fn f_mul_u(a: u16, b: u16) -> u16 { a * b }",
+        // ONESHOT C3 — mask-lit / !=0 / Bool not residuals (std-fs metadata poison).
+        "fn f_and_lit(a: u32) -> u32 { a & 0o400 }",
+        "fn f_ne_zero(a: u32) -> bool { a != 0 }",
+        "fn f_mask_ne_zero(a: u32) -> bool { a & 0o400 != 0 }",
+        "fn f_bool_not(b: bool) -> bool { !b }",
+        "fn f_bool_ne(a: bool, b: bool) -> bool { a != b }",
     ];
     for (i, rust) in rust_snippets.iter().enumerate() {
         let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")

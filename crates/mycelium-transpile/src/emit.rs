@@ -139,6 +139,51 @@ fn expr_env_binary_width(e: &Expr, env: &TypeEnv) -> Option<u32> {
     expr_env_type(e, env).and_then(|t| binary_width(&t))
 }
 
+/// ONESHOT C3: whether a `!` operand is known to be Bool (so logical-not match composition is
+/// honest). Resolves via TypeEnv, Bool literals, and same-file method/call return types recorded
+/// in [`EmitCtx::local_fn_ret`]. Never guesses for an unresolved shape (VR-5) — those keep the
+/// bare `!` glyph (correct for Binary; residual for still-unknown Bool).
+fn unary_not_operand_is_bool(e: &Expr, env: &TypeEnv, self_ty: Option<&str>) -> bool {
+    if expr_env_type(e, env).as_deref() == Some("Bool") {
+        return true;
+    }
+    match e {
+        Expr::Paren(p) => unary_not_operand_is_bool(&p.expr, env, self_ty),
+        Expr::Reference(r) => unary_not_operand_is_bool(&r.expr, env, self_ty),
+        Expr::MethodCall(m) => {
+            let method = m.method.to_string();
+            if local_fn_ret_ty(&method).as_deref() == Some("Bool") {
+                return true;
+            }
+            if let Some(st) = self_ty {
+                let mangled = mangled_inherent_fn_name(st, &method);
+                if local_fn_ret_ty(&mangled).as_deref() == Some("Bool") {
+                    return true;
+                }
+            }
+            // Receiver-typed mangle (when `self` is a typed binding, not only the impl `self_ty`).
+            if let Some(recv_ty) = expr_env_type(&m.receiver, env) {
+                let mangled = mangled_inherent_fn_name(&recv_ty, &method);
+                if local_fn_ret_ty(&mangled).as_deref() == Some("Bool") {
+                    return true;
+                }
+            }
+            false
+        }
+        Expr::Call(c) => {
+            let Expr::Path(p) = c.func.as_ref() else {
+                return false;
+            };
+            if p.qself.is_some() || p.path.segments.len() != 1 {
+                return false;
+            }
+            let name = p.path.segments.last().unwrap().ident.to_string();
+            local_fn_ret_ty(&name).as_deref() == Some("Bool")
+        }
+        _ => false,
+    }
+}
+
 /// Recover the mapped field-type text (`Binary{N}` / `Binary{N}!s`) for a field access
 /// `self.<field>` or a single-arm product projection `match self { Ty(p0, …) => p0 }`, using
 /// the per-file field-*type* map (not the name-only layout — names are not `Binary{N}` text).
@@ -287,6 +332,17 @@ struct EmitCtx {
     /// representation family" (the post-Show residual on `ManualClock`'s `impl Default` →
     /// `impl Init` body).
     local_mangled: HashMap<String, Vec<Option<u32>>>,
+    /// ONESHOT C3: mapped return-type text for each local inherent / bare fn recorded above
+    /// (`"Bool"`, `"Binary{32}"`, …). Lets `!method(self)` resolve as Bool logical-not when the
+    /// callee was already emitted earlier in this file (std-fs `is_readonly` residual) — never a
+    /// guess for a name not yet recorded (VR-5).
+    local_fn_ret: HashMap<String, String>,
+    /// ONESHOT C3: in-file type names for which `fn eq_<T>` was co-emitted (derive(PartialEq)
+    /// product/enum — C2). Expression-level `==`/`!=` on those user types routes through the
+    /// co-emitted comparator (kernel `eq` is Binary/Ternary-only) instead of the glyph that
+    /// poisons as T-Op on Data types (std-fs `Metadata::is_dir` residual after the Binary !=0
+    /// close).
+    local_eq_types: HashSet<String>,
     /// DN-133 tier (ii): for each locally `use`-imported type NAME in this file (an
     /// `Item::Use` leaf's [`crate::symtab::CandidateKind::Name`]), the ordered cross-nodule
     /// symbol-table lookup key(s) ([`crate::symtab::SymbolTable::candidate_lookup_keys`]) that
@@ -355,6 +411,8 @@ pub(crate) fn with_emit_ctx<R>(
             symtab,
             pub_needed,
             local_mangled: HashMap::new(),
+            local_fn_ret: HashMap::new(),
+            local_eq_types: HashSet::new(),
             imported_type_keys,
             ident_emission_sources: HashMap::new(),
             bare_fn_names: HashSet::new(),
@@ -847,13 +905,89 @@ pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
 /// (`(name, Binary{N}|…)`); their Binary widths power ORACLE-R1 A5 call-arg lit rewrite. No-op
 /// when the context is off (`None` — direct `emit_impl` unit tests never install a context, so
 /// this degrades to always-absent, matching every OTHER `EmitCtx`-gated behavior's off-mode).
-fn record_local_mangled_assoc_fn(mangled_name: &str, param_tys: &[(String, String)]) {
+fn record_local_mangled_assoc_fn(mangled_name: &str, param_tys: &[(String, String)], ret_ty: &str) {
     let widths: Vec<Option<u32>> = param_tys.iter().map(|(_, ty)| binary_width(ty)).collect();
     EMIT_CTX.with(|c| {
         if let Some(ctx) = c.borrow_mut().as_mut() {
             ctx.local_mangled.insert(mangled_name.to_string(), widths);
+            // Return-type bookkeeping for UnOp::Not / Bool `!=` composition (ONESHOT C3).
+            // Empty/`unit`-shaped returns are still recorded honestly — consumers that need a
+            // specific type (`Bool`) match exactly; never invent a default.
+            if !ret_ty.is_empty() {
+                ctx.local_fn_ret
+                    .insert(mangled_name.to_string(), ret_ty.to_string());
+            }
         }
     });
+}
+
+/// ONESHOT C3: mapped return type of a local inherent/bare fn already recorded this file.
+/// `None` when unknown or emit context is off — never a fabricated type (VR-5).
+fn local_fn_ret_ty(name: &str) -> Option<String> {
+    EMIT_CTX.with(|c| {
+        c.borrow()
+            .as_ref()
+            .and_then(|ctx| ctx.local_fn_ret.get(name).cloned())
+    })
+}
+
+/// ONESHOT C3: record that `fn eq_<ty_name>` was co-emitted for this file (derive PartialEq).
+fn record_local_eq_type(ty_name: &str) {
+    EMIT_CTX.with(|c| {
+        if let Some(ctx) = c.borrow_mut().as_mut() {
+            ctx.local_eq_types.insert(ty_name.to_string());
+        }
+    });
+}
+
+/// ONESHOT C3: whether `fn eq_<ty_name>` is known to have been co-emitted this file.
+fn local_eq_type_known(ty_name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.local_eq_types.contains(ty_name),
+    })
+}
+
+/// ONESHOT C3: recover a **user-named** (non-builtin) type for an expression used in `==`/`!=`,
+/// so we can route through a co-emitted `eq_<T>`. Builtins (`Bool`/`Bytes`/`Binary{N}`) return
+/// `None` — those have their own arms. Never guesses (VR-5).
+fn expr_user_named_type(e: &Expr, env: &TypeEnv, self_ty: Option<&str>) -> Option<String> {
+    let is_user = |t: &str| -> bool {
+        t != "Bool"
+            && t != "Bytes"
+            && binary_width(t).is_none()
+            && signed_binary_width(t).is_none()
+            && !t.starts_with("Vec[")
+            && !t.starts_with("Option[")
+            && !t.starts_with("Result[")
+    };
+    if let Some(t) = expr_env_type(e, env) {
+        if is_user(&t) {
+            return Some(t);
+        }
+    }
+    if let Some(t) = match_field_type_text(e, self_ty) {
+        // Strip signed marker if present (user types never carry it, but be safe).
+        let bare = t.strip_suffix("!s").unwrap_or(&t);
+        if is_user(bare) {
+            return Some(bare.to_string());
+        }
+    }
+    match e {
+        Expr::Paren(p) => expr_user_named_type(&p.expr, env, self_ty),
+        Expr::Reference(r) => expr_user_named_type(&r.expr, env, self_ty),
+        // `Type::Variant` / `Type::assoc` — the head segment is the type name when this is a
+        // unit-variant path used in `kind == FileKind::File`.
+        Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 2 => {
+            let head = p.path.segments.first()?.ident.to_string();
+            if is_user(&head) && local_eq_type_known(&head) {
+                Some(head)
+            } else {
+                None
+            }
+        }
+        _ => None,
+    }
 }
 
 /// DN-133 tier (i): whether `mangled_name` was already recorded via
@@ -2716,6 +2850,9 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // Express gap-close: a bare decimal lit on one side of a Binary comparison has no
         // paradigm (Q6) and wrong width. When the other operand is known Binary{N}, rewrite
         // the lit to an equal-width BinLit zero/value so `lt`/`eq` can fire cleanly.
+        // ONESHOT C3: the same rewrite applies to bitwise `&`/`|`/`^` — a mask lit (`0o400`)
+        // paired with a known-width field is the std-fs `Permissions::owner_read` residual
+        // (`mode & 0o400 != 0`); leaving the decimal lit forces Q6/band/ne poison.
         let lit_as_bin =
             |e: &Expr, width: u32| -> Option<String> { int_lit_as_bin_literal(e, width) };
         let field_bin_w = |e: &Expr| -> Option<u32> {
@@ -2737,19 +2874,54 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             let end = rest.find('}')?;
             rest[..end].parse().ok()
         };
-        let lw = expr_env_binary_width(&b.left, self.env).or_else(|| field_bin_w(&b.left));
-        let rw = expr_env_binary_width(&b.right, self.env).or_else(|| field_bin_w(&b.right));
+        // ONESHOT C3: recover Binary{N} width through bitwise/arith chains so
+        // `(self.mode & 0o400) != 0` sees the field's width on the Ne left (field_bin_w alone
+        // only matches a bare field / match-projection, not a BitAnd of one). Width-preserving
+        // ops only — never invent a width for an unmatched shape (VR-5).
+        fn chain_bin_w(
+            e: &Expr,
+            env: &TypeEnv,
+            field_bin_w: &dyn Fn(&Expr) -> Option<u32>,
+        ) -> Option<u32> {
+            if let Some(w) = expr_env_binary_width(e, env).or_else(|| field_bin_w(e)) {
+                return Some(w);
+            }
+            match e {
+                Expr::Paren(p) => chain_bin_w(&p.expr, env, field_bin_w),
+                Expr::Reference(r) => chain_bin_w(&r.expr, env, field_bin_w),
+                Expr::Binary(inner)
+                    if matches!(
+                        &inner.op,
+                        BinOp::BitAnd(_)
+                            | BinOp::BitOr(_)
+                            | BinOp::BitXor(_)
+                            | BinOp::Shl(_)
+                            | BinOp::Shr(_)
+                            | BinOp::Add(_)
+                            | BinOp::Sub(_)
+                            | BinOp::Mul(_)
+                    ) =>
+                {
+                    chain_bin_w(&inner.left, env, field_bin_w)
+                        .or_else(|| chain_bin_w(&inner.right, env, field_bin_w))
+                }
+                _ => None,
+            }
+        }
+        let lw = chain_bin_w(&b.left, self.env, &field_bin_w);
+        let rw = chain_bin_w(&b.right, self.env, &field_bin_w);
         let lhs_raw = emit_expr(&b.left, self.self_ty, self.env)?;
         let rhs_raw = emit_expr(&b.right, self.self_ty, self.env)?;
         let lw = lw.or_else(|| width_from_myc(&lhs_raw));
         let rw = rw.or_else(|| width_from_myc(&rhs_raw));
-        // Only rewrite decimal lits on *comparison* ops — bitand/or with `0x5` must stay
-        // as glyph operands when the gate uses both_known_binary (fixture corpus).
         let is_cmp = matches!(
             &b.op,
             BinOp::Eq(_) | BinOp::Ne(_) | BinOp::Lt(_) | BinOp::Gt(_) | BinOp::Le(_) | BinOp::Ge(_)
         );
-        let lhs = if is_cmp {
+        let is_bitwise = matches!(&b.op, BinOp::BitAnd(_) | BinOp::BitOr(_) | BinOp::BitXor(_));
+        // Rewrite decimal/octal/hex int lits on comparisons AND bitwise ops (ONESHOT C3).
+        let rewrite_lits = is_cmp || is_bitwise;
+        let lhs = if rewrite_lits {
             if let Some(w) = rw {
                 lit_as_bin(&b.left, w).unwrap_or_else(|| lhs_raw.clone())
             } else {
@@ -2758,7 +2930,7 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         } else {
             lhs_raw.clone()
         };
-        let rhs = if is_cmp {
+        let rhs = if rewrite_lits {
             if let Some(w) = lw {
                 lit_as_bin(&b.right, w).unwrap_or_else(|| rhs_raw.clone())
             } else {
@@ -2816,11 +2988,22 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // `expr_env_binary_width` (only a bare identifier already in `env` can ever resolve —
         // never a guess, VR-5); an unresolved operand keeps the prior, unchanged glyph
         // emission (Declared heuristic, exactly as before this deliverable).
-        // Peer Binary known on both sides (original gate). Lit rewrite only for comparisons.
-        let lit_rewrote = is_cmp
+        // Peer Binary known on both sides (original gate). Lit rewrite for comparisons AND
+        // bitwise (ONESHOT C3 — mask-lit residual).
+        let lit_rewrote = rewrite_lits
             && ((lw.is_some() && lit_as_bin(&b.right, lw.unwrap()).is_some())
                 || (rw.is_some() && lit_as_bin(&b.left, rw.unwrap()).is_some()));
+        // One known Binary side + a rewritten equal-width lit is enough for and/or/ne composition
+        // (the rewritten lit *is* Binary{N} of that width).
         let both_known_binary = lw.is_some() && rw.is_some();
+        let binary_with_lit = lit_rewrote && (lw.is_some() || rw.is_some());
+        // ONESHOT C3: Bool-typed operands for logical `==`/`!=` (kernel `eq` is Binary/Ternary
+        // only — confirmed myc-check T-Op on `Bool == Bool`). Compose the corpus `bool_eq`/
+        // inverted shape (`lib/std/cmp.myc`), never a fabricated `bool_ne` prim.
+        let left_ty = expr_env_type(&b.left, self.env);
+        let right_ty = expr_env_type(&b.right, self.env);
+        let both_known_bool =
+            left_ty.as_deref() == Some("Bool") && right_ty.as_deref() == Some("Bool");
         // P4/P5 (DN-99 §8 ENB-6 / M-1029 / ADR-028; VERIFY-FIRST, mitigation #14 — every claim
         // below is a *measured* `myc check` result over the built `target/debug/myc-check`, not a
         // doc-derived guess, mirroring the Deliverable-1 probes above; see this crate's
@@ -2872,6 +3055,25 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             // Glyph `==`/`<` stay when both sides are already Binary idents (fixture corpus /
             // D1). Bridge to `match eq/lt {… Bool}` only when a decimal lit was rewritten to a
             // BinLit (otherwise bare `x < 0` fails Q6 ambient).
+            // ONESHOT C3: Bool `==` is NOT the Binary `eq` prim — compose corpus `bool_eq`.
+            BinOp::Eq(_) if both_known_bool => Ok(format!(
+                "match ({lhs}) {{ True => ({rhs}), False => match ({rhs}) {{ True => False, \
+                 False => True }} }}"
+            )),
+            // ONESHOT C3: user-type `==` via co-emitted `eq_<T>` (C2 PartialEq) — kernel `eq`
+            // rejects Data types (std-fs `kind == FileKind::File` residual).
+            BinOp::Eq(_)
+                if {
+                    let lt = expr_user_named_type(&b.left, self.env, self.self_ty);
+                    let rt = expr_user_named_type(&b.right, self.env, self.self_ty);
+                    matches!((lt.as_deref(), rt.as_deref()), (Some(a), Some(b)) if a == b && local_eq_type_known(a))
+                } =>
+            {
+                let ty = expr_user_named_type(&b.left, self.env, self.self_ty).unwrap();
+                Ok(format!(
+                    "(match eq_{ty}({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
+                ))
+            }
             BinOp::Eq(_) if lit_rewrote => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
@@ -2883,15 +3085,35 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 "(match lt({lhs}, {rhs}) {{ 0b1 => True, _ => False }})"
             )),
             BinOp::Lt(_) => Ok(format!("{lhs} < {rhs}")),
-            BinOp::Ne(_) if both_known_binary || use_signed_order => Ok(format!(
-                "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
+            // ONESHOT C3: `!=` composes from `eq` whenever we have two known Binary sides OR a
+            // Binary+rewritten-lit pair (the metadata `mode & mask != 0` residual — previously
+            // only `both_known_binary` fired, so a known Binary vs `0` fell through to the
+            // glyph → unknown prim `ne`). Bool `!=` composes the inverted `bool_eq` shape.
+            BinOp::Ne(_) if both_known_bool => Ok(format!(
+                "match ({lhs}) {{ True => match ({rhs}) {{ True => False, False => True }}, \
+                 False => ({rhs}) }}"
             )),
+            BinOp::Ne(_)
+                if {
+                    let lt = expr_user_named_type(&b.left, self.env, self.self_ty);
+                    let rt = expr_user_named_type(&b.right, self.env, self.self_ty);
+                    matches!((lt.as_deref(), rt.as_deref()), (Some(a), Some(b)) if a == b && local_eq_type_known(a))
+                } =>
+            {
+                let ty = expr_user_named_type(&b.left, self.env, self.self_ty).unwrap();
+                Ok(format!(
+                    "(match eq_{ty}({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
+                ))
+            }
+            BinOp::Ne(_) if both_known_binary || binary_with_lit || use_signed_order => Ok(
+                format!("(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"),
+            ),
             BinOp::Ne(_) => Ok(format!("{lhs} != {rhs}")),
             BinOp::Gt(_) if use_signed_order => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt_s({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
             )),
-            BinOp::Gt(_) if both_known_binary => Ok(format!(
+            BinOp::Gt(_) if both_known_binary || binary_with_lit => Ok(format!(
                 "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => match lt({lhs}, {rhs}) {{ 0b1 \
                  => False, _ => True }} }})"
             )),
@@ -2913,9 +3135,15 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
             BinOp::Or(_) => Ok(format!(
                 "match ({lhs}) {{ True => True, False => ({rhs}) }}"
             )),
-            BinOp::BitAnd(_) if both_known_binary => Ok(format!("and({lhs}, {rhs})")),
+            // ONESHOT C3: bitwise `&`/`|` also fire when one side is a rewritten equal-width
+            // mask lit (std-fs `mode & 0o400`).
+            BinOp::BitAnd(_) if both_known_binary || binary_with_lit => {
+                Ok(format!("and({lhs}, {rhs})"))
+            }
             BinOp::BitAnd(_) => Ok(format!("{lhs} & {rhs}")),
-            BinOp::BitOr(_) if both_known_binary => Ok(format!("or({lhs}, {rhs})")),
+            BinOp::BitOr(_) if both_known_binary || binary_with_lit => {
+                Ok(format!("or({lhs}, {rhs})"))
+            }
             BinOp::BitOr(_) => Ok(format!("{lhs} | {rhs}")),
             // `^` already desugars to the correct prim name (`"xor"`, parse.rs:2384) — no
             // rewrite needed; confirmed `myc check`-clean as a bare glyph.
@@ -2982,6 +3210,16 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                 Ok(format!("neg_s({operand})"))
             }
             syn::UnOp::Neg(_) => Ok(format!("-{operand}")),
+            // ONESHOT C3 — Rust `!` on Bool is *logical* not; the glyph desugars to word `"not"`
+            // (parse.rs Bang → "not"), which is the Binary bitwise prim (`bit.not`) — so `!b` on
+            // Bool fails T-Op `` `not` does not accept argument types [Bool] `` (std-fs
+            // `Permissions::is_readonly` residual). There is no ambient `bool_not` prim; the
+            // corpus defines it per-nodule as a total match (`lib/std/core.myc` `bool_not`).
+            // Compose that match when the operand is known Bool (env / method-return bookkeeping);
+            // keep the bare glyph for known Binary (already myc-check-clean) or unresolved.
+            syn::UnOp::Not(_) if unary_not_operand_is_bool(&u.expr, self.env, self.self_ty) => Ok(
+                format!("match ({operand}) {{ True => False, False => True }}"),
+            ),
             syn::UnOp::Not(_) => Ok(format!("!{operand}")),
             _ => Err(GapReason::new(
                 Category::Other,
@@ -3108,17 +3346,38 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         }
         // M-1037 — `.ne(other)` is `PartialEq::ne`; bare `ne(recv, other)` fabricates the same
         // non-prim `lib/std/cmp.myc` surface that `!=` already avoids (see `visit_binary`'s
-        // composed-`eq` arm). When both operands resolve to a known `Binary{N}`, emit that
-        // faithful composition; otherwise gap never-silently (VR-5/G2).
+        // composed-`eq` arm). When both operands resolve to a known `Binary{N}` (or Binary +
+        // equal-width lit — ONESHOT C3), emit that faithful composition; Bool uses the inverted
+        // `bool_eq` match. Otherwise gap never-silently (VR-5/G2).
         if method_name == "ne" && m.args.len() == 1 {
-            let both_known_binary = expr_env_binary_width(&m.receiver, self.env).is_some()
-                && expr_env_binary_width(&m.args[0], self.env).is_some();
+            let recv_w = expr_env_binary_width(&m.receiver, self.env);
+            let arg_w = expr_env_binary_width(&m.args[0], self.env);
+            let both_known_binary = recv_w.is_some() && arg_w.is_some();
             let both_known_signed_binary = expr_env_signed_binary_width(&m.receiver, self.env)
                 .is_some()
                 && expr_env_signed_binary_width(&m.args[0], self.env).is_some();
-            if both_known_binary || both_known_signed_binary {
-                let lhs = emit_expr(&m.receiver, self.self_ty, self.env)?;
-                let rhs = emit_expr(&m.args[0], self.self_ty, self.env)?;
+            let both_bool = expr_env_type(&m.receiver, self.env).as_deref() == Some("Bool")
+                && expr_env_type(&m.args[0], self.env).as_deref() == Some("Bool");
+            let arg_as_bin = recv_w.and_then(|w| int_lit_as_bin_literal(&m.args[0], w));
+            let recv_as_bin = arg_w.and_then(|w| int_lit_as_bin_literal(&m.receiver, w));
+            let lit_ok = arg_as_bin.is_some() || recv_as_bin.is_some();
+            if both_bool || both_known_binary || both_known_signed_binary || lit_ok {
+                let lhs = if let Some(bin) = recv_as_bin {
+                    bin
+                } else {
+                    emit_expr(&m.receiver, self.self_ty, self.env)?
+                };
+                let rhs = if let Some(bin) = arg_as_bin {
+                    bin
+                } else {
+                    emit_expr(&m.args[0], self.self_ty, self.env)?
+                };
+                if both_bool {
+                    return Ok(format!(
+                        "match ({lhs}) {{ True => match ({rhs}) {{ True => False, False => True }}, \
+                         False => ({rhs}) }}"
+                    ));
+                }
                 return Ok(format!(
                     "(match eq({lhs}, {rhs}) {{ 0b1 => False, _ => True }})"
                 ));
@@ -4695,7 +4954,15 @@ fn lower_struct_derives(
                         name: &name,
                     };
                     match (handler.emit)(&ctx) {
-                        derives::DeriveOutcome::Composed(myc) => impls.push(myc),
+                        derives::DeriveOutcome::Composed(myc) => {
+                            // ONESHOT C3: PartialEq composes `fn eq_<T>` — record so expression-
+                            // level `==`/`!=` on this user type can call it (kernel `eq` is
+                            // Binary/Ternary-only).
+                            if name == "PartialEq" {
+                                record_local_eq_type(ty_name);
+                            }
+                            impls.push(myc);
+                        }
                         derives::DeriveOutcome::Satisfied(note) => sub_gaps.push(note),
                         derives::DeriveOutcome::Gap(g) => sub_gaps.push(g),
                     }
@@ -4941,7 +5208,11 @@ fn lower_enum_derives(
                         ));
                     } else {
                         match derives::eq::compose_enum(ty_name, &specs) {
-                            Ok(myc) => impls.push(myc),
+                            Ok(myc) => {
+                                // ONESHOT C3: same bookkeeping as product PartialEq.
+                                record_local_eq_type(ty_name);
+                                impls.push(myc);
+                            }
                             Err(g) => sub_gaps.push(g),
                         }
                     }
@@ -5802,7 +6073,7 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                          myc-check is not file-poisoned by `unknown trait Widen` \
                                          (express gap-close 2026-07-16)."
                                     ));
-                                    record_local_mangled_assoc_fn(&mangled, &sig.params);
+                                    record_local_mangled_assoc_fn(&mangled, &sig.params, &sig.ret);
                                     record_bare_fn_name(&mangled);
                                     mangled
                                 } else if trait_name.is_none() {
@@ -5820,14 +6091,18 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                                              DN-140 length-prefix mangle, M-664).",
                                             self_ty_text, f.sig.ident,
                                         ));
-                                        record_local_mangled_assoc_fn(&mangled, &sig.params);
+                                        record_local_mangled_assoc_fn(
+                                            &mangled,
+                                            &sig.params,
+                                            &sig.ret,
+                                        );
                                         record_bare_fn_name(&mangled);
                                         mangled
                                     } else {
                                         // Bare un-mangled inherent method — still record param
                                         // widths under the bare name so same-file calls can
                                         // rewrite lit args (ORACLE-R1 A5).
-                                        record_local_mangled_assoc_fn(&bare, &sig.params);
+                                        record_local_mangled_assoc_fn(&bare, &sig.params, &sig.ret);
                                         record_bare_fn_name(&bare);
                                         bare
                                     }
