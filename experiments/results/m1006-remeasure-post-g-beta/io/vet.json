@@ -1,0 +1,103 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-beta/io/error.myc",
+      "source_file": "crates/mycelium-std-io/src/error.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 19,
+      "emitted_items": 7
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-beta/io/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-beta/io/io.myc",
+      "source_file": "crates/mycelium-std-io/src/io.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 13,
+      "emitted_items": 7
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-beta/io/lib.myc",
+      "source_file": "crates/mycelium-std-io/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 4,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-beta/io/serialize.myc",
+      "source_file": "crates/mycelium-std-io/src/serialize.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 17,
+      "emitted_items": 2
+    }
+  ],
+  "total_non_test_items": 59,
+  "total_emitted_items": 24,
+  "total_checked_clean_items": 24,
+  "class_counts": {
+    "Clean": 5
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.io.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.io",
+        "file": "io.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.serialize",
+        "file": "serialize.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 24
+}

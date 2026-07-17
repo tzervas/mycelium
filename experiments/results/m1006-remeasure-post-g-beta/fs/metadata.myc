@@ -1,0 +1,96 @@
+// nodule: std.fs.metadata
+// `Metadata`, `FileKind`, `Permissions` — read-only filesystem metadata values (C4/ADR-003).
+//
+// Metadata is a **value snapshot**, not an identity: two equal-bytes files may have different
+// `mtime`s, but they are the same Mycelium value. Metadata is not part of path identity (ADR-003).
+//
+// Timestamps are carried as **opaque** OS metadata (`u64` since-epoch): `fs` does not interpret
+// them into monotonic/wall distinctions — that typed distinction belongs to `std.time` (M-529).
+// Carrying an opaque `u64` is the honest narrowing: it preserves the value without overclaiming
+// that `fs` understands its clock semantics (VR-5).
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C2/C4.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.metadata;
+
+// The kind of filesystem entry.
+pub type FileKind = File | Directory | Symlink | Other;
+
+impl Show[FileKind] for FileKind {
+  fn render(x: FileKind) => Bytes =
+    match x { File => "File", Directory => "Directory", Symlink => "Symlink", Other => "Other" };
+};
+
+fn eq_FileKind(a: FileKind, b: FileKind) => Binary{1} =
+  match a { File => match b { File => 0b1, _ => 0b0 }, Directory => match b { Directory => 0b1, _ => 0b0 }, Symlink => match b { Symlink => 0b1, _ => 0b0 }, Other => match b { Other => 0b1, _ => 0b0 } };
+
+// Read/write/execute permission bits for owner, group, and others.
+//
+// Represented as a plain value; no implicit behavior. Stored as the Unix permission bits
+// (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should
+// interpret raw bits (C3: no opaque bit patterns).
+pub type Permissions = Permissions(Binary{32});
+
+impl Show[Permissions] for Permissions {
+  fn render(x: Permissions) => Bytes =
+    match x { Permissions(p0) => bytes_concat(bytes_concat("Permissions(", render(width_cast(p0, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000))), ")") };
+};
+
+fn eq_Permissions(a: Permissions, b: Permissions) => Binary{1} =
+    match a { Permissions(p0) => match b { Permissions(q0) => eq(p0, q0) } };
+
+fn hash_Permissions(a: Permissions) => Bytes =
+    match a { Permissions(p0) => hash_blake3(bytes_concat("Permissions", hash_blake3(bin_to_bytes(p0)))) };
+
+impl Permissions {
+  // Construct from raw Unix mode bits.
+  // Declared: renamed `impl Permissions { fn from_mode }` -> `_11Permissions9from_mode` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _11Permissions9from_mode(mode: Binary{32}) => Permissions = Permissions(mode);
+  // The raw mode bits (preserved for tooling; not the primary interface — C3).
+  fn raw_mode(self: Permissions) => Binary{32} = (match self { Permissions(p0) => p0 });
+  // Whether the owner has read permission.
+  fn owner_read(self: Permissions) => Bool = (match eq(and((match self { Permissions(p0) => p0 }), 0b0000_0000_0000_0000_0000_0001_0000_0000), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });
+  // Whether the owner has write permission.
+  fn owner_write(self: Permissions) => Bool = (match eq(and((match self { Permissions(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_1000_0000), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });
+  // Whether the owner has execute permission.
+  fn owner_execute(self: Permissions) => Bool = (match eq(and((match self { Permissions(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0100_0000), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });
+  // Whether the group has read permission.
+  fn group_read(self: Permissions) => Bool = (match eq(and((match self { Permissions(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0010_0000), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });
+  // Whether others have read permission.
+  fn others_read(self: Permissions) => Bool = (match eq(and((match self { Permissions(p0) => p0 }), 0b0000_0000_0000_0000_0000_0000_0000_0100), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });
+  // Whether this entry is read-only for the owner (write bit not set).
+  fn is_readonly(self: Permissions) => Bool = match (owner_write(self)) { True => False, False => True };
+};
+
+// A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).
+//
+// `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.
+// A path's identity is its content, not its metadata. `stat`/`exists` return this as a value
+// snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec
+// §7-Q4).
+//
+// Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is
+// `std.time` (M-529), not `fs` (spec §2).
+pub type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
+
+impl Show[Metadata] for Metadata {
+  fn render(x: Metadata) => Bytes =
+    match x { Metadata(p0, p1, p2, p3) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("Metadata(", render(p0)), ", "), render(p1)), ", "), render(p2)), ", "), render(p3)), ")") };
+};
+
+fn eq_Metadata(a: Metadata, b: Metadata) => Binary{1} =
+    match a { Metadata(p0, p1, p2, p3) => match b { Metadata(q0, q1, q2, q3) => and(and(and(eq_FileKind(p0, q0), eq(p1, q1)), eq_Permissions(p2, q2)), eq(p3, q3)) } };
+
+impl Metadata {
+  // Construct a metadata value directly (used by the in-memory substrate).
+  // Declared: renamed `impl Metadata { fn new }` -> `_8Metadata3new` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _8Metadata3new(kind: FileKind, size: Binary{64}, permissions: Permissions, mtime_secs: Binary{64}) => Metadata = Metadata(kind, size, permissions, mtime_secs);
+  // Whether this entry is a regular file.
+  fn is_file(self: Metadata) => Bool = (match eq_FileKind((match self { Metadata(p0, _, _, _) => p0 }), File) { 0b1 => True, _ => False });
+  // Whether this entry is a directory.
+  fn is_dir(self: Metadata) => Bool = (match eq_FileKind((match self { Metadata(p0, _, _, _) => p0 }), Directory) { 0b1 => True, _ => False });
+  // Whether this entry is a symbolic link.
+  fn is_symlink(self: Metadata) => Bool = (match eq_FileKind((match self { Metadata(p0, _, _, _) => p0 }), Symlink) { 0b1 => True, _ => False });
+};

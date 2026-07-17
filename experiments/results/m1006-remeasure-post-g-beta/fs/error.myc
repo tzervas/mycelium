@@ -1,0 +1,68 @@
+// nodule: std.fs.error
+// `FsErr` — the explicit, traceable filesystem error type (C1/G2).
+//
+// Every path, permission, or IO failure is an instance of this type carrying:
+// - the *path* that was attempted (so the caller can surface it), and
+// - an `ErrnoClass` (the classified OS errno — NEVER a bare raw code), and
+// - a one-line *why* (human-readable; satisfies G11 dual projection).
+//
+// **No sentinel, no silent clamp, no `0`-for-error.** Every failure is an explicit `FsErr`.
+// A use-after-consume of an affine handle is `UseAfterConsume` (LR-8), caught above the
+// OS floor and requiring no syscall.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C1/C3; RFC-0013
+// (structured diagnostic record).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.error;
+
+// The classified OS errno — never a bare raw code (C3: no opaque error codes).
+//
+// This is the RFC-0013 "errno-class" column in the diagnostic record. Each variant
+// maps a POSIX errno *class* to a typed value; the raw OS code is preserved in the
+// `Os` variant of `FsErr` for tooling, but is *never* the primary identifier.
+pub type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
+
+impl Show[ErrnoClass] for ErrnoClass {
+  fn render(x: ErrnoClass) => Bytes =
+    match x { NotFound => "NotFound", PermDenied => "PermDenied", AlreadyExists => "AlreadyExists", NotADirectory => "NotADirectory", IsADirectory => "IsADirectory", NotEmpty => "NotEmpty", DiskFull => "DiskFull", CrossDevice => "CrossDevice", WouldBlock => "WouldBlock", Interrupted => "Interrupted", Loop => "Loop", Other => "Other" };
+};
+
+fn eq_ErrnoClass(a: ErrnoClass, b: ErrnoClass) => Binary{1} =
+  match a { NotFound => match b { NotFound => 0b1, _ => 0b0 }, PermDenied => match b { PermDenied => 0b1, _ => 0b0 }, AlreadyExists => match b { AlreadyExists => 0b1, _ => 0b0 }, NotADirectory => match b { NotADirectory => 0b1, _ => 0b0 }, IsADirectory => match b { IsADirectory => 0b1, _ => 0b0 }, NotEmpty => match b { NotEmpty => 0b1, _ => 0b0 }, DiskFull => match b { DiskFull => 0b1, _ => 0b0 }, CrossDevice => match b { CrossDevice => 0b1, _ => 0b0 }, WouldBlock => match b { WouldBlock => 0b1, _ => 0b0 }, Interrupted => match b { Interrupted => 0b1, _ => 0b0 }, Loop => match b { Loop => 0b1, _ => 0b0 }, Other => match b { Other => 0b1, _ => 0b0 } };
+
+// The explicit, traceable filesystem error (RFC-0013 diagnostic record).
+//
+// Every `FsErr` carries:
+// - **`path`** — the path that was attempted (for the caller to surface; G11)
+// - **`errno_class`** — the classified errno, never a bare code (C3)
+// - **`why`** — a human-readable one-liner explaining the refusal (G11)
+//
+// For `UseAfterConsume` the `path` is the handle's original path (if known) and the
+// errno_class is absent (the violation is caught above the OS floor — no syscall ran).
+//
+// # C1 — never-silent
+// A caller cannot reach an `FsErr` that is empty, zeroed, or opaque. Every variant
+// names the failing operation and the cause. The `Os` variant preserves the raw
+// errno for tooling (the `myc-sec` `wild`-audit), but it is never the *primary*
+// identifier that a caller pattern-matches on.
+pub type FsErr = NotFound(Bytes, Bytes) | PermDenied(Bytes, Bytes) | AlreadyExists(Bytes, Bytes) | NotADirectory(Bytes, Bytes) | IsADirectory(Bytes, Bytes) | NotEmpty(Bytes, Bytes) | DiskFull(Bytes, Bytes) | CrossDevice(Bytes, Bytes, Bytes) | WouldBlock(Bytes, Bytes) | Interrupted(Bytes, Bytes) | Loop(Bytes, Bytes) | UseAfterConsume(Bytes, Bytes) | InvalidOptions(Bytes, Bytes) | Os(Bytes, ErrnoClass, Binary{32}, Bytes);
+
+impl Show[FsErr] for FsErr {
+  fn render(x: FsErr) => Bytes =
+    match x { NotFound(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("NotFound(", render(p0)), ", "), render(p1)), ")"), PermDenied(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("PermDenied(", render(p0)), ", "), render(p1)), ")"), AlreadyExists(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("AlreadyExists(", render(p0)), ", "), render(p1)), ")"), NotADirectory(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("NotADirectory(", render(p0)), ", "), render(p1)), ")"), IsADirectory(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("IsADirectory(", render(p0)), ", "), render(p1)), ")"), NotEmpty(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("NotEmpty(", render(p0)), ", "), render(p1)), ")"), DiskFull(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("DiskFull(", render(p0)), ", "), render(p1)), ")"), CrossDevice(p0, p1, p2) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("CrossDevice(", render(p0)), ", "), render(p1)), ", "), render(p2)), ")"), WouldBlock(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("WouldBlock(", render(p0)), ", "), render(p1)), ")"), Interrupted(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("Interrupted(", render(p0)), ", "), render(p1)), ")"), Loop(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("Loop(", render(p0)), ", "), render(p1)), ")"), UseAfterConsume(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("UseAfterConsume(", render(p0)), ", "), render(p1)), ")"), InvalidOptions(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("InvalidOptions(", render(p0)), ", "), render(p1)), ")"), Os(p0, p1, p2, p3) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("Os(", render(p0)), ", "), render(p1)), ", "), render(width_cast(p2, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000))), ", "), render(p3)), ")") };
+};
+
+fn eq_FsErr(a: FsErr, b: FsErr) => Binary{1} =
+  match a { NotFound(p0, p1) => match b { NotFound(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, PermDenied(p0, p1) => match b { PermDenied(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, AlreadyExists(p0, p1) => match b { AlreadyExists(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, NotADirectory(p0, p1) => match b { NotADirectory(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, IsADirectory(p0, p1) => match b { IsADirectory(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, NotEmpty(p0, p1) => match b { NotEmpty(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, DiskFull(p0, p1) => match b { DiskFull(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, CrossDevice(p0, p1, p2) => match b { CrossDevice(q0, q1, q2) => and(and(bytes_eq(p0, q0), bytes_eq(p1, q1)), bytes_eq(p2, q2)), _ => 0b0 }, WouldBlock(p0, p1) => match b { WouldBlock(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, Interrupted(p0, p1) => match b { Interrupted(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, Loop(p0, p1) => match b { Loop(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, UseAfterConsume(p0, p1) => match b { UseAfterConsume(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, InvalidOptions(p0, p1) => match b { InvalidOptions(q0, q1) => and(bytes_eq(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, Os(p0, p1, p2, p3) => match b { Os(q0, q1, q2, q3) => and(and(and(bytes_eq(p0, q0), eq_ErrnoClass(p1, q1)), eq(p2, q2)), bytes_eq(p3, q3)), _ => 0b0 } };
+
+impl FsErr {
+  // The path that was attempted, if applicable.
+  //
+  // Returns the primary path for single-path errors. For `CrossDevice`, returns the
+  // `from` path. For `UseAfterConsume`, returns the handle's original path.
+  fn path(self: FsErr) => Bytes = match self { NotFound(path, _) | PermDenied(path, _) | AlreadyExists(path, _) | NotADirectory(path, _) | IsADirectory(path, _) | NotEmpty(path, _) | DiskFull(path, _) | WouldBlock(path, _) | Interrupted(path, _) | Loop(path, _) | UseAfterConsume(path, _) | InvalidOptions(path, _) | Os(path, _, _, _) => path, CrossDevice(from, _, _) => from };
+  // The human-readable why-string (G11 dual projection).
+  fn why(self: FsErr) => Bytes = match self { NotFound(_, why) | PermDenied(_, why) | AlreadyExists(_, why) | NotADirectory(_, why) | IsADirectory(_, why) | NotEmpty(_, why) | DiskFull(_, why) | CrossDevice(_, _, why) | WouldBlock(_, why) | Interrupted(_, why) | Loop(_, why) | UseAfterConsume(_, why) | InvalidOptions(_, why) | Os(_, _, _, why) => why };
+};

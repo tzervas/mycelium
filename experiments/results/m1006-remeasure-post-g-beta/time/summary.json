@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "total_items": 38,
+      "non_test_items": 37,
+      "emitted": 17,
+      "gaps": 81,
+      "expressible_pct": 45.94594594594595,
+      "category_counts": {
+        "AssocConst": 3,
+        "DeriveAttr": 22,
+        "DeriveSatisfied": 15,
+        "Impl": 3,
+        "Import": 1,
+        "InnerAttr": 1,
+        "MacroInvocation": 1,
+        "MultiStmtBody": 3,
+        "NamedFieldDrop": 7,
+        "Other": 22,
+        "Struct": 1,
+        "TestItem": 1,
+        "Trait": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 38,
+    "non_test_items": 37,
+    "emitted": 17,
+    "gaps": 81,
+    "expressible_pct": 45.94594594594595,
+    "category_counts": {
+      "AssocConst": 3,
+      "DeriveAttr": 22,
+      "DeriveSatisfied": 15,
+      "Impl": 3,
+      "Import": 1,
+      "InnerAttr": 1,
+      "MacroInvocation": 1,
+      "MultiStmtBody": 3,
+      "NamedFieldDrop": 7,
+      "Other": 22,
+      "Struct": 1,
+      "TestItem": 1,
+      "Trait": 1
+    }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-time",
+      "target_phylum": "std.time"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.time",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-time/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
+  }
+}
