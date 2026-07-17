@@ -4982,3 +4982,164 @@ fn source_sink_named_field_structs_emit_not_unknown_type_poison() {
         let _ = std::fs::remove_dir_all(&dir);
     }
 }
+
+// ---- G-α Rank-1 / L2-A: ambient Result / Option co-emit ---------------------------------------
+
+/// Free-fn returning `Result[…]` co-emits `type Result[A, E] = Ok(A) | Err(E);` once (with EXPLAIN
+/// citing lib/std/result.myc) so myc-check never sees `unknown type Result` (std-io read_all poison).
+#[test]
+fn ambient_result_co_emit_on_result_return() {
+    let rust = r#"
+        pub fn read_all(flag: u8) -> Result<u8, u8> {
+            Ok(flag)
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "io.rs", "std.io.io")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "co-emit:Result"),
+        "expected co-emit:Result; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "read_all"),
+        "expected read_all emitted; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type Result[A, E] = Ok(A) | Err(E);"),
+        "missing ambient Result type shape (lib/std/result.myc):\n{myc}"
+    );
+    assert!(
+        myc.contains("lib/std/result.myc") || myc.contains("ambient Result"),
+        "EXPLAIN must cite ambient Result / lib/std/result.myc:\n{myc}"
+    );
+    // Exactly one type Result definition line (never double-emit). Count line-starts only so an
+    // EXPLAIN citation cannot false-double the tally.
+    let type_result_lines = myc
+        .lines()
+        .filter(|l| l.trim_start().starts_with("type Result[A, E] = Ok(A) | Err(E);"))
+        .count();
+    assert_eq!(
+        type_result_lines, 1,
+        "Result ambient must appear once as a type item:\n{myc}"
+    );
+    // Combinators must NOT be fabricated as ambient.
+    assert!(
+        !myc.contains("fn is_ok[") && !myc.contains("fn map[A, B, E]"),
+        "must not fabricate Result combinators as ambient:\n{myc}"
+    );
+    // Co-emit precedes the free-fn.
+    let t_pos = myc
+        .find("type Result[A, E] = Ok(A) | Err(E);")
+        .expect("Result type position");
+    let fn_pos = myc.find("fn read_all").expect("read_all position");
+    assert!(
+        t_pos < fn_pos,
+        "ambient Result must precede read_all:\n{myc}"
+    );
+
+    if let Some(bin) = super::vet::find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-g-alpha-result-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("io.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "io.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "read_all + ambient Result must not file-poison with unknown type Result; \
+             myc=\n{myc}\ndiagnostic={:?}",
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+/// Option-only surface co-emits Option ambient, not Result.
+#[test]
+fn ambient_option_co_emit_on_option_return() {
+    let rust = r#"
+        pub fn maybe(flag: u8) -> Option<u8> {
+            Some(flag)
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "opt.rs", "std.opt")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "co-emit:Option"),
+        "expected co-emit:Option; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "co-emit:Result"),
+        "must not co-emit Result when only Option is mentioned; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("type Option[A] = Some(A) | None;"),
+        "missing ambient Option type shape (lib/std/option.myc):\n{myc}"
+    );
+    assert!(
+        !myc.contains("type Result[A, E] = Ok(A) | Err(E);"),
+        "must not ambient-emit Result when unused:\n{myc}"
+    );
+}
+
+/// No Result/Option in surface ⇒ no ambient co-emit.
+#[test]
+fn ambient_result_option_skipped_when_unused() {
+    let rust = r#"
+        pub fn id(x: u8) -> u8 { x }
+    "#;
+    let (myc, report) = transpile_source(rust, "id.rs", "std.id")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+    assert!(
+        !report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("co-emit:Result") || n.starts_with("co-emit:Option")),
+        "no ambient Result/Option when unused; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("type Result[A, E] = Ok(A) | Err(E);")
+            && !myc.contains("type Option[A] = Some(A) | None;"),
+        "must not inject ambient types when unused:\n{myc}"
+    );
+}
+
+/// In-file `type Result[…]` definition (via a Rust enum named Result) must not double-define.
+/// When the body already defines Result, ambient co-emit is skipped.
+#[test]
+fn ambient_result_skips_when_already_defined() {
+    // Force a body that both defines Result-like surface and mentions Result[…] — the ambient
+    // gate keys off `type Result[` already present in the assembled body.
+    // Direct unit test of the pure preamble helper (emit path for a real enum named Result would
+    // also define `type Result = …` without type args, which body_defines_type_head also catches).
+    let body_with_def = "type Result[A, E] = Ok(A) | Err(E);\n\nfn f() => Result[Binary{8}, Binary{8}] = Ok(0b8'0);";
+    let preamble = crate::emit::ambient_result_option_preamble(body_with_def);
+    assert!(
+        preamble.is_empty(),
+        "must not re-co-emit Result when already defined; got {preamble:?}"
+    );
+    let body_needs = "fn f() => Result[Binary{8}, Binary{8}] = Ok(0b8'0);";
+    let preamble2 = crate::emit::ambient_result_option_preamble(body_needs);
+    assert_eq!(
+        preamble2.len(),
+        1,
+        "must co-emit Result when mentioned and undefined; got {preamble2:?}"
+    );
+    assert_eq!(preamble2[0].0, "Result");
+}

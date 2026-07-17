@@ -766,6 +766,64 @@ pub(crate) fn drain_lattice_co_emits() -> Vec<(String, String)> {
     out
 }
 
+// ---- G-α Rank-1: ambient Result / Option co-emit (oracle self-containment) ---------------------
+//
+// myc-check seeds Bool/Unit unconditionally and Vec conditionally (`CONDITIONAL_PRELUDE_TYPE_NAMES`);
+// **Result and Option are not ambient.** Emission already maps Rust `Result<A,E>` / `Option<A>` to
+// surface `Result[A, E]` / `Option[A]`, so free-fns like std-io `read_all => Result[Vec[…], IoError]`
+// file-poison with `unknown type Result` under the live oracle. Live-oracle tests historically
+// injected the same type shape `lib/std/result.myc` / `lib/std/option.myc` declare. Co-emit that
+// **type shape only** (never combinators — VR-5: no fabricated `map`/`and_then`/…) once per file
+// when the assembled body mentions the type head and does not already define it (G2/EXPLAIN).
+
+/// True when `body` already carries a top-level `type {name}[…]` / `type {name} =` definition
+/// (including a prior ambient co-emit or a batch type co-include).
+fn body_defines_type_head(body: &str, name: &str) -> bool {
+    // Match the surface forms this transpiler and `lib/std/{result,option}.myc` emit:
+    //   `type Result[A, E] = …`  /  `type Option[A] = …`  /  unit-sum `type Foo = A | B`
+    body.contains(&format!("type {name}[")) || body.contains(&format!("type {name} ="))
+}
+
+/// True when `body` mentions the generic type head `{name}[…]` (the only form emission produces
+/// for Result/Option). Avoids bare-word false positives in prose comments that name the concept.
+fn body_mentions_type_head(body: &str, name: &str) -> bool {
+    body.contains(&format!("{name}["))
+}
+
+/// G-α Rank-1 / L2-A: if the assembled body mentions `Result[…]` / `Option[…]` and does not already
+/// define those type heads, return ordered `(emitted_name, myc_chunk)` pairs for a one-shot ambient
+/// co-emit. Shape is **byte-identical** to `lib/std/result.myc` / `lib/std/option.myc` type lines;
+/// combinators are intentionally omitted (Declared ambient for oracle self-containment — never a
+/// silent stdlib substitute). Pure over body text — no emit-ctx mutation.
+pub(crate) fn ambient_result_option_preamble(body: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    if body_mentions_type_head(body, "Result") && !body_defines_type_head(body, "Result") {
+        out.push((
+            "Result".to_string(),
+            // EXPLAIN deliberately does NOT embed the full `type Result[…] = …` spelling (that
+            // would make naive substring "once" checks / future define-gates double-count).
+            "// Declared: ambient Result type co-emit — oracle self-containment (G-α Rank-1 / \
+             L2-A). Type shape cites lib/std/result.myc (Ok/Err sum); combinators are NOT \
+             fabricated (VR-5/G2). Checker does not seed Result as prelude (unlike Bool/Unit \
+             unconditional, Vec conditional).\n\
+             type Result[A, E] = Ok(A) | Err(E);"
+                .to_string(),
+        ));
+    }
+    if body_mentions_type_head(body, "Option") && !body_defines_type_head(body, "Option") {
+        out.push((
+            "Option".to_string(),
+            "// Declared: ambient Option type co-emit — oracle self-containment (G-α Rank-1 / \
+             L2-A). Type shape cites lib/std/option.myc (Some/None sum); combinators are NOT \
+             fabricated (VR-5/G2). Checker does not seed Option as prelude (unlike Bool/Unit \
+             unconditional, Vec conditional).\n\
+             type Option[A] = Some(A) | None;"
+                .to_string(),
+        ));
+    }
+    out
+}
+
 /// Re-export for call-site resolution (DN-140 §7).
 pub(crate) use crate::reserved::mangled_inherent_fn_name;
 
