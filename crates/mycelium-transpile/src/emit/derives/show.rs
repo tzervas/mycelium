@@ -61,17 +61,20 @@ fn leaf_show_expr(v: &str, ft: &str) -> Option<String> {
 /// at all, so multiple DIFFERENT `Vec[ELEM]` fields (or the SAME `ELEM` on a second field) compose
 /// side-by-side with zero collision risk — mirrors [`super::eq`]/[`super::hash`]'s own identical,
 /// already-disclosed "plain fn, not a trait impl" deviation, for the analogous reason.
-/// **Disclosed residual (mirrors `eq.rs`'s own identical one):** if TWO DIFFERENT top-level structs
-/// in the SAME transpiled file each need `show_vec_<SAME mangled elem>`, both would compose the
-/// IDENTICAL fn text — a real `myc-check` duplicate-function refusal this row cannot deduplicate
-/// without cross-struct driver state (out of this leaf's scope, DN-136 §7's driver-untouched
-/// invariant; `lower_struct_derives` calls a row's `emit` once per struct with no cross-call state).
-fn vec_show_aux(mangled: &str, elem_ft: &str) -> String {
+/// Cross-struct dedup of `show_vec_<mangled>` rides [`crate::emit::claim_bare_fn_name`] (per-file
+/// `EmitCtx::bare_fn_names`) — L2-C residual: after `Substrate`/`Sink` both emit, two identical
+/// `show_vec_Binary_8_` bodies file-poisoned myc-check with `duplicate function`. First claim
+/// emits the aux; later claims only call the already-emitted name (G2/VR-5).
+fn vec_show_aux(mangled: &str, elem_ft: &str) -> Option<String> {
+    let fn_name = format!("show_vec_{mangled}");
+    if !crate::emit::claim_bare_fn_name(&fn_name) {
+        return None;
+    }
     let elem_expr = leaf_show_expr("h", elem_ft).expect("eligibility already checked by caller");
-    format!(
-        "fn show_vec_{mangled}(xs: Vec[{elem_ft}]) => Bytes =\n  match xs {{ Nil => \"Nil\", Cons(h, t) => \
-         bytes_concat(\"Cons(\", bytes_concat({elem_expr}, bytes_concat(\", \", bytes_concat(show_vec_{mangled}(t), \")\")))) }};"
-    )
+    Some(format!(
+        "fn {fn_name}(xs: Vec[{elem_ft}]) => Bytes =\n  match xs {{ Nil => \"Nil\", Cons(h, t) => \
+         bytes_concat(\"Cons(\", bytes_concat({elem_expr}, bytes_concat(\", \", bytes_concat({fn_name}(t), \")\")))) }};"
+    ))
 }
 
 /// Left-fold `parts` into a single `bytes_concat(...)` chain — every step stays `Bytes`-typed,
@@ -163,8 +166,10 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     let vars: Vec<String> = (0..field_types.len()).map(|i| format!("p{i}")).collect();
     let mut out = String::new();
     for (mangled, elem_ft) in &vec_aux {
-        out.push_str(&vec_show_aux(mangled, elem_ft));
-        out.push_str("\n\n");
+        if let Some(aux) = vec_show_aux(mangled, elem_ft) {
+            out.push_str(&aux);
+            out.push_str("\n\n");
+        }
     }
     out.push_str(&format!(
         "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x {{ {ty_name}({pats}) => {body} }};\n}};",
@@ -258,8 +263,10 @@ pub(crate) fn compose_enum(
     }
     let mut out = String::new();
     for (mangled, elem_ft) in &vec_aux {
-        out.push_str(&vec_show_aux(mangled, elem_ft));
-        out.push_str("\n\n");
+        if let Some(aux) = vec_show_aux(mangled, elem_ft) {
+            out.push_str(&aux);
+            out.push_str("\n\n");
+        }
     }
     out.push_str(&format!(
         "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x \
