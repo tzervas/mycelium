@@ -24,6 +24,13 @@
       ]
     ]
   },
+  "binary_not_keeps_glyph": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}) => Binary{16} = !a;\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
   "bitand_known_binary_emits_and_call": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}, b: Binary{16}) => Binary{16} = and(a, b);\n",
     "emitted_items": [
@@ -45,15 +52,22 @@
     ],
     "gaps": []
   },
-  "bitand_known_binary_with_suffixed_literal_keeps_glyph": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}) => Binary{16} = a & 5;\n",
+  "bitand_known_binary_with_suffixed_literal_emits_and_binlit": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}) => Binary{16} = and(a, 0b0000_0000_0000_0101);\n",
     "emitted_items": [
       "f"
     ],
     "gaps": []
   },
-  "bitand_known_binary_with_unsuffixed_literal_keeps_glyph": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}) => Binary{16} = a & 5;\n",
+  "bitand_known_binary_with_unsuffixed_literal_emits_and_binlit": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}) => Binary{16} = and(a, 0b0000_0000_0000_0101);\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "bitand_ne_zero_mask_composes_clean": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}) => Bool = (match eq(and(a, 0b0000_0000_0000_0000_0000_0001_0000_0000), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });\n",
     "emitted_items": [
       "f"
     ],
@@ -75,6 +89,20 @@
   },
   "bitxor_known_binary_stays_glyph": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}, b: Binary{16}) => Binary{16} = a ^ b;\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "bool_ne_composes_match": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Bool, b: Bool) => Bool = match (a) { True => match (b) { True => False, False => True }, False => (b) };\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "bool_not_composes_match_invert": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(b: Bool) => Bool = match (b) { True => False, False => True };\n",
     "emitted_items": [
       "f"
     ],
@@ -294,6 +322,14 @@
         "Flag"
       ]
     ]
+  },
+  "enum_eq_uses_co_emitted_eq_fn": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype K = A | B;\n\nfn eq_K(a: K, b: K) => Binary{1} =\n  match a { A => match b { A => 0b1, _ => 0b0 }, B => match b { B => 0b1, _ => 0b0 } };\n\nimpl K {\n  fn is_a(self: K) => Bool = (match eq_K(self, A) { 0b1 => True, _ => False });\n};\n",
+    "emitted_items": [
+      "K",
+      "impl K"
+    ],
+    "gaps": []
   },
   "eq_lt_known_binary_stay_glyphs": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}, b: Binary{16}) => Bool = a == b;\n",
@@ -603,6 +639,13 @@
   },
   "ne_known_binary_composes_from_eq": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{16}, b: Binary{16}) => Bool = (match eq(a, b) { 0b1 => False, _ => True });\n",
+    "emitted_items": [
+      "f"
+    ],
+    "gaps": []
+  },
+  "ne_known_binary_vs_zero_composes_from_eq": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\nfn f(a: Binary{32}) => Bool = (match eq(a, 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True });\n",
     "emitted_items": [
       "f"
     ],
