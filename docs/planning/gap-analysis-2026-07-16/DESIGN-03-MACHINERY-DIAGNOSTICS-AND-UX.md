@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Status** | **Draft** design package — not Accepted · not implement |
-| **Pack** | 3 of 3 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [02 Tags & containment](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) |
+| **Pack** | 3 of 4 · with [01](./DESIGN-01-SWAPS-AND-POLICY.md) · [02](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) · [04 language-internal retention](./DESIGN-04-LEDGER-RETENTION-AND-OFFLOAD.md) |
 | **Honesty** | Design positions `Declared` until ratified |
 | **Sources distilled** | Agent C · E · F · RFC-0005 · RFC-0013 · DN-04 · RFC-0034 §7 · packs 01–02 |
 

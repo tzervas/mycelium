@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Status** | **Draft** design package — not Accepted · not implement |
-| **Pack** | 2 of 3 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [03 Machinery, diagnostics & UX](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) |
+| **Pack** | 2 of 4 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [03 Machinery, diagnostics & UX](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) |
 | **Honesty** | Design positions `Declared` until ratified |
 | **Sources distilled** | Former Draft DN-141 · Agent D · companion 02/04 · RFC-0018 · RFC-0034 · ADR-032 · Agent F envelope |
 | **Status discipline** | Remains **Draft** (DN-141 body successor in this pack — **not** Accepted) |
@@ -185,3 +185,5 @@ Exact cores stay on dual-path inputs.
 |---|---|
 | 2026-07-17 | Distill former DN-141 Draft + Agent D into pack 02 |
 | 2026-07-17 | Integrate: isolation EXPLAIN = first-fault instance; §5.1–§5.2 grade/meet/seal diagnostic surfaces; Draft discipline restated |
+
+- Pack [04](./DESIGN-04-LEDGER-RETENTION-AND-OFFLOAD.md) — language/runtime internal ledger retention (not app logs)

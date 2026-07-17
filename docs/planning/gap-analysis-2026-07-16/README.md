@@ -3,25 +3,27 @@
 | Field | Value |
 |---|---|
 | **Status** | **Design pack active** — implement waves **paused** for design quality; ONESHOT prep remains prior implement program (Epic R / one-shot claim still **HOLD**) |
-| **Active design phase** | **Three docs only** — `DESIGN-01` · `DESIGN-02` · `DESIGN-03` (below) |
+| **Active design phase** | **Four docs** — `DESIGN-01` · `02` · `03` · `04` (below) |
 | **Active implement handoff** | **`PROGRAM-HANDOFF-ONESHOT.md`** (resume L0↔L1 after council capture + workstream re-rank) |
 | **Prior handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (history; not the active spawn packet) |
 | **Framework** | Repo-root **`maint-guide.md`** (L0→L1→L2; Phase 0–3; PM close-out) |
-| **Model floor** | Implement agents: `grok-composer-2.5-fast`. L0 may use `grok-4.5`. Design capture complete in three-doc pack |
+| **Model floor** | Implement agents: `grok-composer-2.5-fast`. L0 may use `grok-4.5`. Design capture complete in four-doc pack |
 | **Goal** | (1) **Now:** review distilled ergonomics design (swaps/policy, tags/containment, diagnostics/UX). (2) **After steer:** re-rank waves and resume honest whole-repo transpile prep — **not** one-shot claim until DoD + release gate |
 
-## Design pack (maintainer review — these three only)
+## Design pack (maintainer review — these four only)
 
 | Doc | Topic |
 |-----|--------|
-| [`DESIGN-01-SWAPS-AND-POLICY.md`](./DESIGN-01-SWAPS-AND-POLICY.md) | Swaps + **policy streamline** (catalog, default, resolve-and-record) |
+| [`DESIGN-01-SWAPS-AND-POLICY.md`](./DESIGN-01-SWAPS-AND-POLICY.md) | Swaps + **policy streamline** |
 | [`DESIGN-02-TAGS-META-AND-CONTAINMENT.md`](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) | Tags/Meta + **honesty-poison containment** |
 | [`DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md`](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) | AX ranks + **first-fault diagnostics** + broader UX |
+| [`DESIGN-04-LEDGER-RETENTION-AND-OFFLOAD.md`](./DESIGN-04-LEDGER-RETENTION-AND-OFFLOAD.md) | **Language/runtime internal** cert/Meta/trace retention (not app logs) |
 
-**Reading order:** start with **03** (§2 map + §8 steering board), then 01/02 as needed.
+**Reading order:** **03** (map + steers) → **01/02** as needed → **04** for long-run **language-internal** retention.
 
-Exactly **three** files. Prior agent annexes (A–F) and Draft DN-141 were distilled into this pack and
-removed. All **Draft** — not Accepted. Mermaid diagrams for mental models.
+Design pack is **four** files (01–04). Prior agent annexes and Draft DN-141 were distilled into 01–03.
+**04** is language/runtime memory only — app/ops log pipelines are out of scope. All **Draft** — not
+Accepted. Mermaid diagrams included.
 
 ## Other structure (program management)
 
