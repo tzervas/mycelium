@@ -12,6 +12,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): L0 vs spawned-agent model policy (2026-07-16)
+
+`maint-guide.md` + `PROGRAM-HANDOFF-ONESHOT.md`: **L0** parent session = `grok-4.5`; **all**
+spawned agents (L1 all · L2 · PR reviews · explore/plan/security) = `grok-composer-2.5-fast` —
+never spawn on `grok-4.5`. L1 floor is **all**, not majority.
+
 ### docs(pm): lock standing model floor (`grok-composer-2.5-fast`) (2026-07-16)
 
 `maint-guide.md` Role lattice + `PROGRAM-HANDOFF-ONESHOT.md`: PR reviews (all) · L2 (all) · L1
