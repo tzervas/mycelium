@@ -6,7 +6,6 @@
 | **Pack** | 3 of 3 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [02 Tags & containment](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) |
 | **Honesty** | Design positions `Declared` until ratified |
 | **Sources distilled** | Agent C · E · F · RFC-0005 · RFC-0013 · DN-04 · RFC-0034 §7 · packs 01–02 |
-| **Diagnostics annex** | [AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) (site catalog deep dive) |
 
 ## 1. Why this document exists
 
@@ -131,8 +130,9 @@ flowchart LR
 **Non-sites:** every arithmetic/field access; pure Exact success in `fast` (optional crumb only);
 intermediate meets inside an already-quarantined bag (package at export).
 
-Isolation EXPLAIN fields (pack 02 §5.1) are a **field-set** of this envelope for isolation
-`site_kind`s — one bus, many sites. Full Localize-1 rationale: Agent F annex.
+Isolation EXPLAIN fields (pack 02) are a **field-set** of this envelope for isolation
+`site_kind`s — one bus, many sites. Site catalog above is the complete Localize-1 attachment list
+(no separate annex file).
 
 ### 3.4 Compile-time vs runtime
 
@@ -326,7 +326,7 @@ Answer these to unlock re-rank + implement resume:
 1. This pack §2 map · §8 board
 2. [DESIGN-01](./DESIGN-01-SWAPS-AND-POLICY.md) if steers touch swaps/policy streamline
 3. [DESIGN-02](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) if steers touch grades/isolation
-4. [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) annex for full site catalog / OQs
+4. This pack §3 for full site catalog / first-fault OQs
 5. Return here for ranks + waves
 
 ## Changelog (this pack)

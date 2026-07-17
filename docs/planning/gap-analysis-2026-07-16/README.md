@@ -14,16 +14,14 @@
 
 | Doc | Topic |
 |-----|--------|
-| [`DESIGN-01-SWAPS-AND-POLICY.md`](./DESIGN-01-SWAPS-AND-POLICY.md) | Swaps + **policy streamline** (catalog, default, resolve-and-record) as ★ primary |
-| [`DESIGN-02-TAGS-META-AND-CONTAINMENT.md`](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) | Tags/Meta + **honesty-poison containment** + grade/meet/seal diagnostic surfaces |
-| [`DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md`](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) | AX ranks + **first-fault diagnostics (Localize-1)** + broader UX Rank-1 spine |
-| [`AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md`](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) | **Annex** — full first-fault site catalog (deep dive under pack 03) |
+| [`DESIGN-01-SWAPS-AND-POLICY.md`](./DESIGN-01-SWAPS-AND-POLICY.md) | Swaps + **policy streamline** (catalog, default, resolve-and-record) |
+| [`DESIGN-02-TAGS-META-AND-CONTAINMENT.md`](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) | Tags/Meta + **honesty-poison containment** |
+| [`DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md`](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) | AX ranks + **first-fault diagnostics** + broader UX |
 
-**Reading order:** start with **03** (§2 map + §8 steering board), then 01/02 as needed; open
-Agent F when implementing emitters.
+**Reading order:** start with **03** (§2 map + §8 steering board), then 01/02 as needed.
 
-Distilled from prior council agents A–F and former Draft DN-141 (removed as separate DN file;
-body lives in pack 02). All **Draft** — not Accepted. Mermaid diagrams included for mental models.
+Exactly **three** files. Prior agent annexes (A–F) and Draft DN-141 were distilled into this pack and
+removed. All **Draft** — not Accepted. Mermaid diagrams for mental models.
 
 ## Other structure (program management)
 

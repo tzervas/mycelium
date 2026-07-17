@@ -105,7 +105,7 @@ failure + first-fault event — never Exact success.
 
 ### 4.3 Localize swap failures (part of package DoD)
 
-Attachment points for diagnostics (schema in pack 03 / annex Agent F). Each refuse emits a
+Attachment points for diagnostics (schema in pack 03 §3). Each refuse emits a
 **first-fault** record with source span + why — authors must not dig the tree for “which swap?”.
 
 | site_kind | Trigger |
@@ -117,7 +117,7 @@ Attachment points for diagnostics (schema in pack 03 / annex Agent F). Each refu
 | `regime_type_lie` | Checker: total type over partial regime |
 | `missing_conversion` | Cross-paradigm without written `swap` |
 
-Deep site catalog + envelope: [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md).
+Deep site catalog + envelope: [DESIGN-03 §3](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md).
 
 ## 5. Ranked options (summary)
 
@@ -148,11 +148,11 @@ Deep site catalog + envelope: [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-202
 
 - Pack [02](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) — grades, meet, seals
 - Pack [03](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) — AX ranks, emitters, UX backlog
-- Annex [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) — full first-fault site catalog
+- Annex [DESIGN-03 §3](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) — full first-fault site catalog
 
 ## Changelog (this pack)
 
 | When | Note |
 |---|---|
 | 2026-07-17 | Distill from Agent A into three-doc pack |
-| 2026-07-17 | Integrate: policy streamline elevated as ★ primary; resolve-and-record DoD; A-emit site table; Agent F annex |
+| 2026-07-17 | Integrate: policy streamline elevated as ★ primary; resolve-and-record DoD; A-emit site table; |
