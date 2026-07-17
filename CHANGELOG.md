@@ -12,19 +12,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### docs(design): council integrate — poison containment + isolation UX (2026-07-17)
+### docs(design): three-doc pack — swaps · tags/containment · diagnostics/UX (2026-07-17)
 
-Design-only clean rewrite (no product code; DN-141 stays **Draft**). Council pillars now include
-honesty-poison containment and broader UX/DX: Agents A–E, isolation core in DN-141 body, AX-stack
-containment ranks (X4–X7+). Mechanisms stay `Declared` until Accepted and differential-witnessed
-(VR-5).
-
-### docs(design): swaps · tags council + DN-141 Draft (2026-07-17)
-
-Design-only land (no product code; no status promotion). Gap-analysis active design phase:
-`DESIGN-COUNCIL-SWAPS-TAGS-2026-07-17.md`, Agent A swaps ergonomics, Agent C AX-stack synthesis,
-and **DN-141 Draft** (tagging / Meta / lattice UX). Implement waves remain paused for design
-quality; mechanisms stay `Declared` until Accepted and differential-witnessed (VR-5).
+Design-only. Replaces sprawled council agents A–F + former Draft DN-141 file with **three**
+distilled packages under `docs/planning/gap-analysis-2026-07-16/`: `DESIGN-01` (swaps + policy
+streamline), `DESIGN-02` (tags/Meta + honesty-poison containment), `DESIGN-03` (AX ranks +
+first-fault diagnostic emitters + broader UX). Mermaid diagrams; Draft only (not Accepted).
+Implement waves remain paused for design quality (VR-5).
 
 ### docs(pm): L0 vs spawned-agent model policy (2026-07-16)
 

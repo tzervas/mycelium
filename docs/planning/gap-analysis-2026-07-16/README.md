@@ -2,37 +2,40 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Design council active** (swaps · tags · honesty-poison containment · UX/DX) — implement waves **paused** for design quality; ONESHOT prep remains the prior implement program (Epic R / one-shot claim still **HOLD**) |
-| **Active design phase** | **`DESIGN-COUNCIL-SWAPS-TAGS-2026-07-17.md`** — research/design only (not implement); Agents A–E deliverables below |
+| **Status** | **Design pack active** — implement waves **paused** for design quality; ONESHOT prep remains prior implement program (Epic R / one-shot claim still **HOLD**) |
+| **Active design phase** | **Three docs only** — `DESIGN-01` · `DESIGN-02` · `DESIGN-03` (below) |
 | **Active implement handoff** | **`PROGRAM-HANDOFF-ONESHOT.md`** (resume L0↔L1 after council capture + workstream re-rank) |
-| **Prior handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (still valid history; not the active spawn packet) |
+| **Prior handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (history; not the active spawn packet) |
 | **Framework** | Repo-root **`maint-guide.md`** (L0→L1→L2; Phase 0–3; PM close-out) |
-| **Tree tip** | land against current `origin/dev`; baseline `M1006-baseline-oneshot-2026-07-16.md`; post-B remeasure `M1006-remeasure-post-B1B2-2026-07-16.md` |
-| **Model floor** | `grok-composer-2.5-fast` for implement agents; design council agents may be higher-effort (record actual) |
-| **Goal** | (1) **Now:** ergonomic design for swaps + required tagging + **honesty-poison containment** + broader UX/DX without VR-5/G2 compromise. (2) **After capture:** resume prep for honest whole-repo transpile; **not** one-shot claim until DoD + release gate |
-| **Updates** | language-completeness-gap-inventory, DN-136 phase2 worklist, DN-99, zero-hand-port-delta-ledger, DN-34 §8 |
+| **Model floor** | Implement agents: `grok-composer-2.5-fast`. L0 may use `grok-4.5`. Design capture complete in three-doc pack |
+| **Goal** | (1) **Now:** review distilled ergonomics design (swaps/policy, tags/containment, diagnostics/UX). (2) **After steer:** re-rank waves and resume honest whole-repo transpile prep — **not** one-shot claim until DoD + release gate |
 
-## Structure (program management)
+## Design pack (maintainer review — these three only)
+
+| Doc | Topic |
+|-----|--------|
+| [`DESIGN-01-SWAPS-AND-POLICY.md`](./DESIGN-01-SWAPS-AND-POLICY.md) | Swaps + **policy streamline** (catalog, default, resolve-and-record) |
+| [`DESIGN-02-TAGS-META-AND-CONTAINMENT.md`](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) | Tags/Meta + **honesty-poison containment** |
+| [`DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md`](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) | AX ranks + **first-fault diagnostics** + broader UX |
+
+**Reading order:** start with **03** (§2 map + §8 steering board), then 01/02 as needed.
+
+Distilled from prior council agents A–F and former Draft DN-141 (removed as separate files). All **Draft** — not Accepted. Mermaid diagrams included for mental models.
+
+## Other structure (program management)
 
 | Doc | Role |
 |-----|------|
-| **`DESIGN-COUNCIL-SWAPS-TAGS-2026-07-17.md`** | **Active design phase** — council brief (swaps · Meta/lattice tagging · poison containment · UX/DX · deterministic machinery) |
-| **`AGENT-A-SWAPS-ERGONOMICS-2026-07-17.md`** | Agent A — swaps authoring/management/typing + poison × cert binding (Draft) |
-| **`docs/notes/DN-141-Tagging-Meta-Honesty-Lattice-UX.md`** | Agent B — tagging / Meta / lattice UX + **isolation core slice** as **DN-141 Draft** (not Accepted) |
-| **`AGENT-D-HONESTY-POISON-CONTAINMENT-2026-07-17.md`** | Agent D — honesty-poison threat model + isolation catalog (Draft) |
-| **`AGENT-E-UX-DX-BACKLOG-2026-07-17.md`** | Agent E — broader UX/DX investigation backlog beyond pure swaps/tags (Draft) |
-| **`AGENT-C-AX-STACK-SYNTHESIS-2026-07-17.md`** | Agent C — cross-cutting AX-stack synthesis incl. containment IDs (Draft) |
-| **`PROGRAM-HANDOFF-ONESHOT.md`** | Implement handoff (resume after council) — one-shot prep DoD, Epic B/C/D |
-| `PROGRAM-HANDOFF.md` | ORACLE-R1 residual close-out packet (A1–A5 done, CI witness, Epic R HOLD) |
-| `M1006-baseline-oneshot-2026-07-16.md` | **Post-A5 Empirical baseline** (default-5 + std-fs/io) |
-| `M1006-remeasure-post-B1B2-2026-07-16.md` | **Post B1+B2 Empirical remeasure** (unions flat 19.5%/17.0%; residual rank) |
-| `WAVE-L0-ORCHESTRATION-2026-07-16.md` | L0 wave map (Epic A complete; B/C/R next) |
+| **`PROGRAM-HANDOFF-ONESHOT.md`** | Implement handoff (resume after council) |
+| `PROGRAM-HANDOFF.md` | ORACLE-R1 residual close-out (history) |
+| `M1006-baseline-oneshot-2026-07-16.md` | Post-A5 Empirical baseline |
+| `M1006-remeasure-post-B1B2-2026-07-16.md` | Post B1+B2 remeasure |
+| `M1006-remeasure-post-C3C4-2026-07-16.md` | Post C3+C4 remeasure |
+| `WAVE-L0-ORCHESTRATION-2026-07-16.md` | L0 wave map |
 | `PARTITION.md` | epic scopes → crate ownership |
-| `WAVE1-PRIORITY.md` / `WAVE-EXPRESSIBILITY-NEXT.md` | critical path backlog |
-| `leaves/<crate>.md` | per-crate leaf report (one agent each) |
+| `WAVE-EXPRESSIBILITY-NEXT.md` | critical path backlog |
+| `leaves/<crate>.md` | per-crate leaf reports |
 | `SYNTHESIS.md` / `SYNTHESIS-G2.md` | orch integration after G1/G2 |
-| `M1006-remeasure-*.md` | earlier Empirical remeasures (pre-/mid-ORACLE-R1) |
-| `EXPRESS-ORACLE-BLOCKERS-2026-07-16.md` | technical residual notes |
 
 ## Prior assessments (read, do not rewrite)
 
