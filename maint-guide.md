@@ -28,8 +28,16 @@ project requirements, deliverables, acceptance criteria, and success metrics.
 | **L1** | Epic agent | Re-decompose; spawn L2; self-review L2 PRs; write epic handoff notes; FLAG shared files | Prefer not implement product code (tiny pins OK after L2 stall); protected-branch writes |
 | **L2** | Leaf implementer (`isolation: worktree`) | Own disjoint paths; tests + emit/docs; open PR → parent tier; report SHA/PR/FLAGs | Shared files (`CHANGELOG`, `issues.yaml`, `Doc-Index`, `api-index`); merge to protected trunks |
 
-**Model floor (this program):** L1 and L2 prefer **`grok-composer-2.5-fast`**. If the runtime only
-offers another model, **record the actual model in the handoff** (never-silent).
+**Model floor (standing assignment — lock unless L0 re-ratifies):**
+
+| Slot | Model | Strength |
+|------|-------|----------|
+| **PR reviews (all)** | `grok-composer-2.5-fast` | required floor |
+| **L2 implementers (all)** | `grok-composer-2.5-fast` | required floor |
+| **L1 (majority; prefer all)** | `grok-composer-2.5-fast` | prefer all; majority is the minimum |
+
+If the runtime cannot offer `grok-composer-2.5-fast`, **record the actual model** in the handoff
+packet / leaf report (never-silent — G2). Do not silently substitute a different model.
 
 **Handoff rule:** every L0↔L1 and L1↔L2 transition leaves a **durable doc** on disc (this guide’s
 [Handoff packet](#handoff-packet-template) or the wave’s `PROGRAM-HANDOFF.md`). Branches hold code;
