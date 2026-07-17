@@ -1,0 +1,82 @@
+name: Design discussion
+description: Structured Mycelium design/research discussion (uses docs/templates/DISCUSSION.md shape)
+title: "[design] "
+labels: ["type:design"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Follow the full template in [`docs/templates/DISCUSSION.md`](../blob/dev/docs/templates/DISCUSSION.md).
+        Claims stay **Declared** until captured in a Draft DN/RFC/ADR.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind
+      options:
+        - design
+        - research
+        - process
+        - product
+        - other
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - explore (no decision)
+        - steer (need choices)
+        - ratify (ready for Draft DN/RFC/ADR)
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (what is true now)
+      description: Link corpus (RFC/ADR/DN/DESIGN-0N). Tag Exact/Proven/Empirical/Declared.
+      placeholder: Background, checked basis, out of scope…
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / opportunity
+      description: User-visible pain or system risk; who hurts; what “done” feels like.
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Non-negotiables (gates)
+      description: G2, VR-5, S1, append-only, etc. — with citations.
+      value: |
+        | Gate | Citation | Implication |
+        |---|---|---|
+        | Never-silent | G2 | |
+        | No tag upgrade without basis | VR-5 | |
+        | No silent/auto swap | S1 | |
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options (include status quo)
+      description: Ranked options with pros/cons. Recommendation + adversarial note.
+    validations:
+      required: true
+  - type: textarea
+    id: questions
+    attributes:
+      label: Open questions for maintainer
+      description: Prefer few-way steers.
+    validations:
+      required: true
+  - type: textarea
+    id: capture
+    attributes:
+      label: Capture vehicle
+      description: Which Draft DN/RFC/ADR (or none) will hold the outcome?
+      placeholder: e.g. extend DESIGN-01 · new DN · none (explore only)
+    validations:
+      required: true

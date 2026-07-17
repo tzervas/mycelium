@@ -11,6 +11,10 @@ Mycelium is in the **design phase**: the corpus in `docs/` is the product right 
 - **`docs/adr/`** — Architecture Decision Records. See `docs/adr/README.md` for the index + process. (ADR-001…009 live in the Foundation §8; ADR-010+ are standalone files here.)
 - **`docs/notes/`** — design notes / tradeoff studies (e.g., DN-01) that *feed* a decision without being normative themselves.
 - **`research/`** — the evidence base: records of the two research passes, with source lists.
+- **Discussions** — for design/research threads (maintainer + agents), use the structured template
+  [`docs/templates/DISCUSSION.md`](docs/templates/DISCUSSION.md) (GitHub form:
+  [`.github/DISCUSSION_TEMPLATE/design.yml`](.github/DISCUSSION_TEMPLATE/design.yml)). A discussion is
+  not an Accepted ADR/RFC/DN — capture outcomes into Draft corpus artifacts.
 
 ---
 

@@ -12,6 +12,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(brand+process): discussion template + brand badge (2026-07-17)
+
+Add `docs/templates/DISCUSSION.md` and GitHub Discussion form
+`.github/DISCUSSION_TEMPLATE/design.yml`. Land brand kit under `docs/assets/brand/`
+(primary focus `mycelium-primary.jpg` from image-27; badge/hero/social derivatives + variants).
+Wire badge + hero into README.
+
 ### docs(design): DESIGN-04 language/runtime ledger retention (2026-07-17)
 
 Draft pack 04: inventory and retention model for **Mycelium-internal** perpetual surfaces

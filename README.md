@@ -1,5 +1,13 @@
 # Mycelium
 
+<p align="center">
+  <img src="docs/assets/brand/mycelium-badge-256.png" alt="Mycelium" width="128" height="128" />
+</p>
+
+<p align="center">
+  <img src="docs/assets/brand/mycelium-hero.jpg" alt="Mycelium branding" width="280" />
+</p>
+
 > A **fast, memory-safe, ergonomic** multi-paradigm language that treats **traditional binary**,
 > **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA /
 > hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are
@@ -69,6 +77,9 @@ in-progress piece.
   [`docs/Glossary.md`](docs/Glossary.md)
 - [Contributing conventions & provenance](docs/guide/contributing-and-provenance.md) — the short
   version; full process in [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [Discussion template](docs/templates/DISCUSSION.md) — structured design/research discussion shape
+  (GitHub form: [`.github/DISCUSSION_TEMPLATE/design.yml`](.github/DISCUSSION_TEMPLATE/design.yml))
+- [Brand assets](docs/assets/brand/README.md) — logo badge + primary art
 
 Other key entry points: [`docs/Mycelium_Project_Foundation.md`](docs/Mycelium_Project_Foundation.md)
 (the charter), [`docs/Doc-Index.md`](docs/Doc-Index.md) (the whole-corpus map),
