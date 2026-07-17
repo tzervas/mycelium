@@ -1,11 +1,7 @@
 # Mycelium
 
 <p align="center">
-  <img src="docs/assets/brand/mycelium-badge-256.png" alt="Mycelium" width="128" height="128" />
-</p>
-
-<p align="center">
-  <img src="docs/assets/brand/mycelium-hero.jpg" alt="Mycelium branding" width="280" />
+  <img src="docs/assets/brand/mycelium-badge-256.png" alt="Mycelium" width="160" height="160" />
 </p>
 
 > A **fast, memory-safe, ergonomic** multi-paradigm language that treats **traditional binary**,
