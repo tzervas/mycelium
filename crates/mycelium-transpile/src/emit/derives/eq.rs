@@ -248,6 +248,15 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
 /// equality, G2). Live-oracle shape confirmed against unit + payload enums (std-fs
 /// `Fallibility`/`FileKind` residual; `Binary{1}` return matches the product-struct row).
 ///
+/// **ONESHOT C4 — single-variant residual:** a sum with exactly one constructor has no other
+/// tag for `b` to take, so an inner `_ => 0b0` arm is **unreachable** and the real `myc-check`
+/// refuses the whole file (`this arm is unreachable — earlier arms already cover it`, W7).
+/// Empirically that file-poisoned `std-rand`'s single-variant `RngAlgo = Xoshiro256PlusPlus`
+/// after C2 co-emit (oracle checked_fraction 17.6% → 0%). For `|variants| == 1`:
+/// - **unit:** emit the fieldless-struct form `= 0b1` (one inhabitant ⇒ always equal);
+/// - **payload:** emit the nested match **without** a wildcard (the sole constructor is already
+///   exhaustive). Multi-variant enums keep the `_ => 0b0` tag-mismatch arm (reachable).
+///
 /// **Why this exists outside [`compose`]:** product structs are a single constructor; sum types
 /// need a per-variant outer match. DN-128 scoped enum derives second; this is that second half,
 /// driven from `emit_enum` (not the struct-only [`DeriveHandler`] table — the table's
@@ -316,14 +325,32 @@ pub(crate) fn compose_enum(
             }
         }
     }
+    // ONESHOT C4: single-variant unit enums are one-inhabitant types — equality is trivially
+    // true (same shape as fieldless product structs). Emitting a match with `_ => 0b0` poisons
+    // myc-check (unreachable arm, W7).
+    if variants.len() == 1 && variants[0].field_types.is_empty() {
+        let mut out = String::new();
+        // no vec_aux possible on a unit variant
+        out.push_str(&format!(
+            "fn {fname}(a: {ty_name}, b: {ty_name}) => Binary{{1}} =\n    0b1;"
+        ));
+        return Ok(out);
+    }
+    // ONESHOT C4: a single-variant *payload* enum still needs a field-binding match, but the
+    // inner wildcard is unreachable (only one constructor). Multi-variant keeps `_ => 0b0`.
+    let single_variant = variants.len() == 1;
     let mut arms: Vec<String> = Vec::with_capacity(variants.len());
     for v in variants {
         let n = v.field_types.len();
         if n == 0 {
-            arms.push(format!(
-                "{} => match b {{ {} => 0b1, _ => 0b0 }}",
-                v.name, v.name
-            ));
+            if single_variant {
+                arms.push(format!("{} => match b {{ {} => 0b1 }}", v.name, v.name));
+            } else {
+                arms.push(format!(
+                    "{} => match b {{ {} => 0b1, _ => 0b0 }}",
+                    v.name, v.name
+                ));
+            }
             continue;
         }
         let vars_a: Vec<String> = (0..n).map(|i| format!("p{i}")).collect();
@@ -338,12 +365,21 @@ pub(crate) fn compose_enum(
             })
             .collect();
         let body = and_chain(&parts);
-        arms.push(format!(
-            "{vn}({pa}) => match b {{ {vn}({pb}) => {body}, _ => 0b0 }}",
-            vn = v.name,
-            pa = vars_a.join(", "),
-            pb = vars_b.join(", "),
-        ));
+        if single_variant {
+            arms.push(format!(
+                "{vn}({pa}) => match b {{ {vn}({pb}) => {body} }}",
+                vn = v.name,
+                pa = vars_a.join(", "),
+                pb = vars_b.join(", "),
+            ));
+        } else {
+            arms.push(format!(
+                "{vn}({pa}) => match b {{ {vn}({pb}) => {body}, _ => 0b0 }}",
+                vn = v.name,
+                pa = vars_a.join(", "),
+                pb = vars_b.join(", "),
+            ));
+        }
     }
     let mut out = String::new();
     for (mangled, elem_ft) in &vec_aux {
