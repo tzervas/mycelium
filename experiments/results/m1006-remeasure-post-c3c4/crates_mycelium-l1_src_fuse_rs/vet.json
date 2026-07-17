@@ -1,0 +1,21 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_fuse_rs/fuse.myc",
+      "source_file": "crates/mycelium-l1/src/fuse.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 12,
+      "emitted_items": 0
+    }
+  ],
+  "total_non_test_items": 12,
+  "total_emitted_items": 0,
+  "total_checked_clean_items": 0,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": null,
+  "total_checked_clean_items_phylum": 0
+}

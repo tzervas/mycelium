@@ -1,0 +1,171 @@
+// nodule: std.cmp
+// `std.cmp` / `convert` — ordering, equality, and non-representation value conversions (M-532).
+//
+// # Summary
+//
+// Provides the ordinary ordering, equality, and value-conversion surface every program needs:
+// `eq`/`ord` traits, derived helpers (`min`, `max`, `clamp`, sort keys), and value conversions
+// between scalar/value types — **same representation paradigm, value re-typed within it**.
+//
+// The honesty crux is structural (RFC-0016 §4.4):
+// - **Lossy / narrowing conversion is an explicit fallible `Result`, never a silent narrowing or
+//   truncation** (C1/G2) — `i32 → i8` that does not fit is `Err`, not a wrapped or clamped byte.
+// - Lossless widening (`i8 → i32`, `BF16 → F32`) is **total** — the domain is a subset of the
+//   codomain by construction, so no error arm exists.
+// - `clamp` with inverted bounds is `Err(ClampError::InvertedBounds)`, never a silent swap of
+//   `lo`/`hi`.
+//
+// # Module boundary
+//
+// A **representation change** (binary↔ternary, `F32→BF16`, Dense↔VSA) is `std.swap` (M-516) —
+// certificate-carrying and visible (RFC-0002), **not** a `convert`. This module does **not** cross
+// `Repr` paradigms and emits **no** swap certificate. The one resolved boundary placement
+// (README §5, "Ratification dispositions"): the lossless reverse `BF16 → F32` widening lives
+// **here** — no certificate needed, no paradigm crossing.
+//
+// # Guarantee matrix (RFC-0016 §4.5)
+//
+// Encoded as data in [`GUARANTEE_MATRIX`] and asserted in the test suite — never prose-only.
+//
+// # Contract conformance (RFC-0016 §4.1 C1–C6)
+//
+// - **C1 never-silent:** every fallible op returns `Result`; no sentinel, no clamp.
+// - **C2 honest tag:** every op is `Exact` (no accuracy semantics; C2 → "an op with no accuracy
+//   semantics is simply Exact"); the honesty load is in the fallibility column, not a
+//   probabilistic tag (VR-5).
+// - **C3 no black boxes / EXPLAIN:** narrowing rows are EXPLAIN-able — `NarrowError` is a
+//   reified, inspectable diagnostic carrying the rejected value and the target bounds.
+// - **C4 value-semantic (ADR-003):** all ops are pure functions of their inputs; conversions
+//   return new values, leaving inputs untouched.
+// - **C5 above the kernel (KC-3):** Ring 2 consumer; introduces no trusted code, no `unsafe`,
+//   no FFI, produces no certificate.
+// - **C6 declared, bounded effects:** every op is effect-free (`none`).
+//
+// Design spec: `docs/spec/stdlib/cmp.md`.
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 2, Tier B):** Comparison ops are representation-aware where applicable:
+// a cross-representation comparison (`Binary` vs `Ternary` value) requires an explicit swap
+// (via `std.swap`) before comparison — this module does not cross `Repr` paradigms. The lossless
+// `BF16 → F32` widening here emits no certificate because it is not a paradigm crossing; all
+// other narrowing conversions are explicit fallible ops.
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/cmp.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
+// It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/cmp.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.cmp;
+
+// The result of a comparison — Less, Equal, or Greater.
+//
+// A value-semantic equivalent of `std::cmp::Ordering`, defined here so the cmp module is
+// self-contained.
+type Ordering = Less | Equal | Greater;
+
+impl Show[Ordering] for Ordering {
+  fn render(x: Ordering) => Bytes =
+    match x { Less => "Less", Equal => "Equal", Greater => "Greater" };
+};
+
+fn eq_Ordering(a: Ordering, b: Ordering) => Binary{1} =
+  match a { Less => match b { Less => 0b1, _ => 0b0 }, Equal => match b { Equal => 0b1, _ => 0b0 }, Greater => match b { Greater => 0b1, _ => 0b0 } };
+
+impl Ordering {
+  // Reverse the ordering: `Less ↔ Greater`, `Equal ↔ Equal`.
+  fn reverse(self: Ordering) => Ordering = match self { Less => Greater, Equal => Equal, Greater => Less };
+};
+
+// The explicit error set for a narrowing conversion (spec §3 / §4).
+//
+// **EXPLAIN-able (C3):** every variant carries the reified, inspectable diagnostic — the rejected
+// value and (for `OutOfRange`) the target's representable bounds. A narrowing rejection is never
+// an opaque error code; the caller has everything needed to understand *why*.
+type NarrowError = OutOfRange(Bytes, Bytes, Bytes) | NotRepresentable(Bytes);
+
+impl Show[NarrowError] for NarrowError {
+  fn render(x: NarrowError) => Bytes =
+    match x { OutOfRange(p0, p1, p2) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("OutOfRange(", render(p0)), ", "), render(p1)), ", "), render(p2)), ")"), NotRepresentable(p0) => bytes_concat(bytes_concat("NotRepresentable(", render(p0)), ")") };
+};
+
+fn eq_NarrowError(a: NarrowError, b: NarrowError) => Binary{1} =
+  match a { OutOfRange(p0, p1, p2) => match b { OutOfRange(q0, q1, q2) => and(and(bytes_eq(p0, q0), bytes_eq(p1, q1)), bytes_eq(p2, q2)), _ => 0b0 }, NotRepresentable(p0) => match b { NotRepresentable(q0) => bytes_eq(p0, q0), _ => 0b0 } };
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _39Binary_u7B_8_u7D__to_Binary_u7B_16_u7D_5widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_39Binary_u7B_8_u7D__to_Binary_u7B_32_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _39Binary_u7B_8_u7D__to_Binary_u7B_32_u7D_5widen(self: Binary{8}) => Binary{32} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_39Binary_u7B_8_u7D__to_Binary_u7B_64_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _39Binary_u7B_8_u7D__to_Binary_u7B_64_u7D_5widen(self: Binary{8}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_40Binary_u7B_8_u7D__to_Binary_u7B_128_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _40Binary_u7B_8_u7D__to_Binary_u7B_128_u7D_5widen(self: Binary{8}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_40Binary_u7B_16_u7D__to_Binary_u7B_32_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _40Binary_u7B_16_u7D__to_Binary_u7B_32_u7D_5widen(self: Binary{16}) => Binary{32} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_40Binary_u7B_16_u7D__to_Binary_u7B_64_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _40Binary_u7B_16_u7D__to_Binary_u7B_64_u7D_5widen(self: Binary{16}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_41Binary_u7B_16_u7D__to_Binary_u7B_128_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _41Binary_u7B_16_u7D__to_Binary_u7B_128_u7D_5widen(self: Binary{16}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_40Binary_u7B_32_u7D__to_Binary_u7B_64_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _40Binary_u7B_32_u7D__to_Binary_u7B_64_u7D_5widen(self: Binary{32}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_41Binary_u7B_32_u7D__to_Binary_u7B_128_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _41Binary_u7B_32_u7D__to_Binary_u7B_128_u7D_5widen(self: Binary{32}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+// Declared: Widen free-fn emit `_41Binary_u7B_64_u7D__to_Binary_u7B_128_u7D_5widen` (no ambient trait Widen — DN-34 §8.8; width_cast body DN-41) so myc-check is not file-poisoned by `unknown trait Widen` (express gap-close 2026-07-16).
+fn _41Binary_u7B_64_u7D__to_Binary_u7B_128_u7D_5widen(self: Binary{64}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+
+// A BF16 value stored as its bit pattern in a `u16`.
+//
+// BF16 = 1-bit sign + 8-bit exponent + 7-bit mantissa (the upper 16 bits of an f32 bit pattern).
+// Every BF16 value is exactly representable as an f32 (zero-fill the lower 16 mantissa bits).
+// This is a lossless widening — no certificate required, no paradigm change (same floating-point
+// value model, same exponent range; only mantissa precision is extended).
+//
+// Ratified placement: `cmp`/`convert` owns the lossless `BF16 → F32` widening
+// (README §5 "Ratification dispositions"); `swap` keeps only the certified/lossy `F32 → BF16`.
+type Bf16Bits = Bf16Bits(Binary{16});
+
+impl Show[Bf16Bits] for Bf16Bits {
+  fn render(x: Bf16Bits) => Bytes =
+    match x { Bf16Bits(p0) => bytes_concat(bytes_concat("Bf16Bits(", render(width_cast(p0, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000))), ")") };
+};
+
+fn eq_Bf16Bits(a: Bf16Bits, b: Bf16Bits) => Binary{1} =
+    match a { Bf16Bits(p0) => match b { Bf16Bits(q0) => eq(p0, q0) } };
+
+fn hash_Bf16Bits(a: Bf16Bits) => Bytes =
+    match a { Bf16Bits(p0) => hash_blake3(bytes_concat("Bf16Bits", hash_blake3(bin_to_bytes(p0)))) };
