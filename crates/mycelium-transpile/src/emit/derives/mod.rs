@@ -21,11 +21,13 @@
 use crate::gap::GapReason;
 
 mod clone_copy;
-mod eq;
+/// Public to the emit crate so `emit_enum` can call [`eq::compose_enum`] (ONESHOT C2).
+pub(crate) mod eq;
 mod hash;
 mod init;
 mod ord;
-mod show;
+/// Public to the emit crate so `emit_enum` can call [`show::compose_enum`] (ONESHOT C2).
+pub(crate) mod show;
 
 /// Everything a derive row's `emit` needs — the pre-refactor inline arms' closed-over locals,
 /// reified as one struct (DN-136 §2's row shape, adapted to this axis's per-row inputs).
@@ -37,6 +39,16 @@ pub struct DeriveCtx<'a> {
     /// this to interpolate the fired name into its message, byte-identically to the pre-refactor
     /// `"Clone" | "Copy" => { ... "derive({name}) is a satisfied no-op ..." }` arm.
     pub name: &'a str,
+}
+
+/// One enum variant's shape for sum-type derive composition (ONESHOT C2 / DN-128 §2 enum half).
+/// `name` is the already-`valid_ident`-rewritten constructor spelling (e.g. `Exact_kw`);
+/// `field_types` is empty for a unit variant, otherwise the mapped Mycelium field types in
+/// positional order (named-field variants already flattened by `emit_enum`).
+#[derive(Debug, Clone, Copy)]
+pub struct EnumVariantSpec<'a> {
+    pub name: &'a str,
+    pub field_types: &'a [String],
 }
 
 /// A derive row's outcome — the three states [`crate::emit::lower_struct_derives`] (the driver)
