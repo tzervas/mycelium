@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use super::{
     field_derive_kind, is_seeded_scalar_width, mangle_ty, scalar_binary_width, vec_element,
-    zero_bin_literal, DeriveCtx, DeriveHandler, DeriveOutcome, FieldDeriveKind,
+    zero_bin_literal, DeriveCtx, DeriveHandler, DeriveOutcome, EnumVariantSpec, FieldDeriveKind,
 };
 use crate::gap::{Category, GapReason};
 
@@ -169,6 +169,102 @@ fn compose(ty_name: &str, field_types: &[String]) -> Result<String, GapReason> {
     out.push_str(&format!(
         "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x {{ {ty_name}({pats}) => {body} }};\n}};",
         pats = vars.join(", ")
+    ));
+    Ok(out)
+}
+
+/// **ONESHOT C2 / DN-128 §2 enum half** — structural `Show` over a sum type.
+///
+/// Composes `impl Show[T] for T { fn render(x: T) => Bytes = match x { … }; }`. Unit variants
+/// render as their constructor name string (`"Total"`, `"Exact_kw"`, … — the already-rewritten
+/// surface spelling). Payload variants fold `"V(" + render(fields) + ")"` via the same
+/// [`leaf_show_expr`] routing product structs use. Co-required with [`super::eq::compose_enum`]:
+/// a parent struct's `derive(Debug)` over an enum field emits `render(field)`, which needs this
+/// instance or the whole file stays myc-check-poisoned after `eq_*` alone lands (VR-5: eq without
+/// Show is half a residual close).
+pub(crate) fn compose_enum(
+    ty_name: &str,
+    variants: &[EnumVariantSpec<'_>],
+) -> Result<String, GapReason> {
+    if variants.is_empty() {
+        return Err(GapReason::new(
+            Category::DeriveAttr,
+            format!(
+                "enum `{ty_name}` derive(Debug): empty enum — no structural render is defined \
+                 over a zero-variant sum (G2)"
+            ),
+        ));
+    }
+    let mut vec_aux: BTreeMap<String, String> = BTreeMap::new();
+    let mut arms: Vec<String> = Vec::with_capacity(variants.len());
+    for (vi, v) in variants.iter().enumerate() {
+        if v.field_types.is_empty() {
+            arms.push(format!("{} => \"{}\"", v.name, v.name));
+            continue;
+        }
+        let mut exprs: Vec<String> = Vec::with_capacity(v.field_types.len());
+        for (fi, ft) in v.field_types.iter().enumerate() {
+            let pv = format!("p{fi}");
+            let expr = if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+                let elem = vec_element(ft).expect("VecOf implies vec_element(ft).is_some()");
+                leaf_show_expr("_unused", elem).map(|_| {
+                    vec_aux
+                        .entry(mangle_ty(elem))
+                        .or_insert_with(|| elem.to_owned());
+                    format!("show_vec_{}({pv})", mangle_ty(elem))
+                })
+            } else {
+                leaf_show_expr(&pv, ft)
+            };
+            let Some(expr) = expr else {
+                let why = if field_derive_kind(ft) == FieldDeriveKind::VecOf {
+                    format!(
+                        "a `Vec` field whose element type `{}` has no `Show` route of its own \
+                         (DN-138 WU-4 depth-1 scope)",
+                        vec_element(ft).unwrap_or(ft)
+                    )
+                } else {
+                    "a primitive repr (or `Seq`/tuple/other bracketed shape) with no ambient \
+                     `Show` instance in this file"
+                        .to_owned()
+                };
+                return Err(GapReason::new(
+                    Category::DeriveAttr,
+                    format!(
+                        "enum `{ty_name}` derive(Debug): variant {vi} (`{}`) field {fi} has type \
+                         `{ft}`, {why} — the whole derive is left an honest gap rather than a \
+                         partial/fabricated render (G2)",
+                        v.name
+                    ),
+                ));
+            };
+            exprs.push(expr);
+        }
+        let mut parts = vec![format!("\"{}(\"", v.name)];
+        for (i, expr) in exprs.iter().enumerate() {
+            if i > 0 {
+                parts.push("\", \"".to_string());
+            }
+            parts.push(expr.clone());
+        }
+        parts.push("\")\"".to_string());
+        let body = bytes_concat_chain(&parts);
+        let pats: Vec<String> = (0..v.field_types.len()).map(|i| format!("p{i}")).collect();
+        arms.push(format!(
+            "{vn}({pats}) => {body}",
+            vn = v.name,
+            pats = pats.join(", "),
+        ));
+    }
+    let mut out = String::new();
+    for (mangled, elem_ft) in &vec_aux {
+        out.push_str(&vec_show_aux(mangled, elem_ft));
+        out.push_str("\n\n");
+    }
+    out.push_str(&format!(
+        "impl Show[{ty_name}] for {ty_name} {{\n  fn render(x: {ty_name}) => Bytes =\n    match x \
+         {{ {} }};\n}};",
+        arms.join(", ")
     ));
     Ok(out)
 }
