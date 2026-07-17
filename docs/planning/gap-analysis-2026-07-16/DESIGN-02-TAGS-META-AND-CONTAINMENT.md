@@ -5,9 +5,12 @@
 | **Status** | **Draft** design package — not Accepted · not implement |
 | **Pack** | 2 of 3 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [03 Machinery, diagnostics & UX](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) |
 | **Honesty** | Design positions `Declared` until ratified |
-| **Sources distilled** | Former Draft DN-141 · Agent D · companion 02/04 · RFC-0018 · RFC-0034 · ADR-032 |
+| **Sources distilled** | Former Draft DN-141 · Agent D · companion 02/04 · RFC-0018 · RFC-0034 · ADR-032 · Agent F envelope |
+| **Status discipline** | Remains **Draft** (DN-141 body successor in this pack — **not** Accepted) |
 
-> Content integrates former Draft DN-141 and Agent D. Ratify later as DN-141/142 or RFCs as steered.
+> Content integrates former Draft DN-141 and Agent D. Ratify later as DN-141 rewrite / DN-142 or
+> RFCs as steered. Isolation EXPLAIN packages are **first-fault emitter instances** (pack 03 bus /
+> Agent F annex) — not a parallel diagnostics invent.
 
 ## 1. Why this document exists
 
@@ -83,10 +86,44 @@ requires a **seal** (or explicit weak export). Never `as Exact`.
 | **R5 Meet refuse at export / Exact demand / certified consumer** without seal | Table-driven allow/refuse |
 | **R6 Remint only if** total Exact-decidable predicate **or** Swap cert **or** basis-carrying strengthen | Else type error |
 | **R7 Mode floor** | `fast` cannot display unearned Emp/Proven as checked |
-| **R8 Isolation EXPLAIN** | Every dynamic boundary decision generates a package (pack 03 bus) |
+| **R8 Isolation EXPLAIN** | Every dynamic boundary decision generates a package that is an instance of the pack 03 **first-fault envelope** (not a second bus) |
 
 When pure dual-path is impossible (e.g. statistical models): consumer must **accept** weak grade **and**
 receive EXPLAIN; if consumer demands `@ Exact` → **error**, not theater.
+
+### 5.1 Isolation EXPLAIN package (minimum) — first-fault instance
+
+When isolation is dynamic, generate:
+
+| Field | Meaning |
+|---|---|
+| `boundary_kind` | `airlock` · `firewall` · `quarantine` · `meet_refuse` · `swap_check` |
+| `input_grade` / `demand_grade` | lattice points at the boundary |
+| `decision` | `pass_remint` · `pass_weak` · `refuse` · `fallback` |
+| `basis_ref` | predicate id, Swap cert hash, trial method, or empty on refuse |
+| `policy_used` / `cert_mode` | Meta fields |
+| `where` / `event_id` | span + stable fault id (pack 03 envelope) |
+| `never_silent` | always true for refuse/fallback |
+
+Symptoms downstream set `parent_event` / `child_cause` to this first refuse. Consumption tiers:
+lean · normal · audit (gen≠consumption; RFC-0034 §7).
+
+### 5.2 Diagnostic surfaces for grade · meet · seal
+
+Authors/tools answer **where / how / why** without reading the whole program. Map to pack 03
+`site_kind` (payloads stay lattice-native):
+
+| Surface | When it fires | site_kind | Instant localization |
+|---|---|---|---|
+| **Grade provenance** | EXPLAIN / hover “why this grade?” | grade provenance (not always refuse) | meet tree root + first weak leaf |
+| **Meet decide** | Meet of two+ grades | `grade_meet` · `meet_boundary` | operands; rule id; allow/refuse |
+| **Boundary refuse** | Export / certified demand / Exact partition | `meet_boundary` | demand vs input |
+| **Seal attempt** | Airlock remint pass/fail | `seal_remint` | predicate; remint grade; empty basis on laundry refuse |
+| **Annotation error** | Illegal strengthen / cast-upgrade | `grade_annotation` | written token; required Swap/seal/basis |
+| **Mode × grade firewall** | Certified demand over fast-floored claim | `mode_firewall` | mode cell + grades (not a grade rewrite) |
+
+**Generation ≠ consumption:** lean stubs on refuse/downgrade; audit DAGs pull/opt-in. Do not emit
+on every successful Exact structural op in `fast`.
 
 ## 6. Recommended package (Draft)
 
@@ -140,3 +177,11 @@ Exact cores stay on dual-path inputs.
 
 - Pack [01](./DESIGN-01-SWAPS-AND-POLICY.md) — Swap cert failures feed the same isolation story
 - Pack [03](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) — first-fault emitters, full AX rank, UX backlog
+- Annex [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) — shared envelope + site catalog
+
+## Changelog (this pack)
+
+| When | Note |
+|---|---|
+| 2026-07-17 | Distill former DN-141 Draft + Agent D into pack 02 |
+| 2026-07-17 | Integrate: isolation EXPLAIN = first-fault instance; §5.1–§5.2 grade/meet/seal diagnostic surfaces; Draft discipline restated |
