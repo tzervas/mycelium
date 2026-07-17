@@ -12,6 +12,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(design): DESIGN-04 language/runtime ledger retention (2026-07-17)
+
+Draft pack 04: inventory and retention model for **Mycelium-internal** perpetual surfaces
+(certificates, EXPLAIN gen storage, Meta, first-fault rings). App/ops log offload explicitly out
+of scope. Complements DESIGN-01–03.
+
 ### docs(design): keep design pack at three docs only (2026-07-17)
 
 Remove leftover `AGENT-F` annex; first-fault site catalog lives entirely in
