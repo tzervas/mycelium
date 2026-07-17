@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Active implement program** (L0 program) |
+| **Status** | **Active implement program** — Phase **G** pilot gate closed (`Empirical`); Phase **A** archive verified; Phase **D** extract in flight |
 | **Honesty** | Gates `Declared` until measured; pilot numbers `Empirical` |
 | **Framework** | `maint-guide.md` · L0 = hard planning · agents = `grok-composer-2.5-fast` |
 | **Base** | monorepo `tzervas/mycelium` trunks `dev`/`integration`/`main` |
@@ -111,3 +111,5 @@ Ground: DN-88 · DN-27 · ADR-022 · ADR-036/038 dogfooding · ADR-045 window.
 |---|---|
 | 2026-07-17 | Program opened; Phase G active; README points here as active implement program |
 | 2026-07-17 | **D1 draft map** (prep only — Phase D still gated on G→A): [`COMPONENT-REPO-MAP-DRAFT.md`](./COMPONENT-REPO-MAP-DRAFT.md). Declared operational map; does not claim DN-88 §3 met; no repos created |
+| 2026-07-17 | **Phase G (pilot) residual close:** G-α #1695–#1698 (Result ambient + Import free-fn + remeasure); G-β #1700 (no-fabricate method-call) + #1701 remeasure. **G1:** default-5 + std-fs/io **file Clean**; all-7 `checked_fraction` **28.7%** (`Empirical`, tip `4acd3a20`/`1cd6a1c4`). Residual Macro/M-875 **design-gated** (G-δ). **Not** one-shot / not 100% line-green / not DN-88 §3 (VR-5/G2). G2 pilot remeasure table landed; full 17-target ladder still deferred. |
+| 2026-07-17 | **Phase A archive verified:** monorepo `main` tip **`aad96b7a425710db5e91094d4fc2ca21a129e41a`**. Annotated tag **`archive/main-pre-component-transpile-2026-07-17`** (object `9e477cf6…`). Recoverable branch **`archive-main-pre-component-transpile-2026-07-17`** (slash form blocked: existing `refs/heads/archive` file ref). Never force-delete without maintainer. |
