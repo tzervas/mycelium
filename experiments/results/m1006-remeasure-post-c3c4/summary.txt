@@ -1,0 +1,61 @@
+M-1006 remeasure post C3+C4 @ 167f0bf2
+Empirical: mycelium-transpile --vet + real myc-check
+Tip: 167f0bf2f35482cf635371c84869ab3643699fb2
+Includes C2 #1665 + C3 #1667 + C4 #1670 + model policy #1671 on origin/dev
+Session also captured post-C3-only snapshot @ ed80e850 before C4 merge (see planning note)
+
+=== crates_mycelium-l1_src_eval_rs ===
+mycelium-transpile: 42 top-level item(s) (42 non-test) — 9 emitted, 40 gap(s) recorded, 21.4% expressible -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_eval_rs/eval.myc, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_eval_rs/eval.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 21.4% (9/42 items myc-check-clean, file-gated) vs expressible_fraction 21.4% (9/42 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_eval_rs/vet.json
+vet.json: non_test=42 emitted=9 checked=9 class_counts={'Clean': 1}
+
+=== crates_mycelium-l1_src_fuse_rs ===
+mycelium-transpile: 12 top-level item(s) (12 non-test) — 0 emitted, 13 gap(s) recorded, 0.0% expressible -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_fuse_rs/fuse.myc, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_fuse_rs/fuse.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 0.0% (0/12 items myc-check-clean, file-gated) vs expressible_fraction 0.0% (0/12 items emitted); 0/0 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_fuse_rs/vet.json
+vet.json: non_test=12 emitted=0 checked=0 class_counts={'Clean': 1}
+
+=== crates_mycelium-std-time_src ===
+mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 38 top-level item(s) (37 non-test), 17 emitted, 66 gap(s), 45.9% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-time_src/summary.json, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-time_src/REMAP.md, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-time_src/union.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 45.9% (17/37 items myc-check-clean, file-gated) vs expressible_fraction 45.9% (17/37 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-time_src/vet.json
+mycelium-transpile: --vet --phylum: checked_fraction_phylum 45.9% (17/37 items, same denominator) vs checked_fraction (oracle) 45.9% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+vet.json: non_test=37 emitted=17 checked=17 class_counts={'Clean': 1}
+
+=== crates_mycelium-std-rand_src ===
+mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 35 top-level item(s) (34 non-test), 6 emitted, 34 gap(s), 17.6% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-rand_src/summary.json, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-rand_src/REMAP.md, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-rand_src/union.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 17.6% (6/34 items myc-check-clean, file-gated) vs expressible_fraction 17.6% (6/34 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-rand_src/vet.json
+mycelium-transpile: --vet --phylum: checked_fraction_phylum 17.6% (6/34 items, same denominator) vs checked_fraction (oracle) 17.6% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+vet.json: non_test=34 emitted=6 checked=6 class_counts={'Clean': 1}
+
+=== crates_mycelium-std-cmp_src ===
+mycelium-transpile: batch over 1 file(s) (0 failed to parse) — 112 top-level item(s) (111 non-test), 14 emitted, 104 gap(s), 12.6% expressible, 1 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-cmp_src/summary.json, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-cmp_src/REMAP.md, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-cmp_src/union.gap.json
+mycelium-transpile: --vet over 1 file(s) — checked_fraction 12.6% (14/111 items myc-check-clean, file-gated) vs expressible_fraction 12.6% (14/111 items emitted); 1/1 file(s) with emissions fully clean [Clean=1] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-cmp_src/vet.json
+mycelium-transpile: --vet --phylum: checked_fraction_phylum 12.6% (14/111 items, same denominator) vs checked_fraction (oracle) 12.6% -- Δ_basis = +0.0pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+vet.json: non_test=111 emitted=14 checked=14 class_counts={'Clean': 1}
+
+=== crates_mycelium-std-fs_src ===
+mycelium-transpile: batch over 7 file(s) (0 failed to parse) — 60 top-level item(s) (47 non-test), 28 emitted, 92 gap(s), 59.6% expressible, 7 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/summary.json, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/REMAP.md, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/union.gap.json
+mycelium-transpile: --vet over 7 file(s) — checked_fraction 38.3% (18/47 items myc-check-clean, file-gated) vs expressible_fraction 59.6% (28/47 items emitted); 5/7 file(s) with emissions fully clean [CheckError=2 Clean=5] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/vet.json
+mycelium-transpile: --vet --phylum: checked_fraction_phylum 59.6% (28/47 items, same denominator) vs checked_fraction (oracle) 38.3% -- Δ_basis = +21.3pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: true)
+vet.json: non_test=47 emitted=28 checked=18 class_counts={'CheckError': 2, 'Clean': 5}
+  poison: crates/mycelium-std-fs/src/lib.rs: check-error: check error in `std.fs.<use>`: `use std.fs.error.ErrnoClass`: no such name `std.fs.error.ErrnoClass` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
+  poison: crates/mycelium-std-fs/src/substrate.rs: check-error: check error in `std.fs.substrate.<use>`: `use std.fs.error.FsErr`: no such name `std.fs.error.FsErr` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
+
+=== crates_mycelium-std-io_src ===
+mycelium-transpile: batch over 5 file(s) (0 failed to parse) — 68 top-level item(s) (59 non-test), 20 emitted, 74 gap(s), 33.9% expressible, 5 nodule(s) recorded in the remap manifest -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-io_src/summary.json, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-io_src/REMAP.md, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-io_src/union.gap.json
+mycelium-transpile: --vet over 5 file(s) — checked_fraction 20.3% (12/59 items myc-check-clean, file-gated) vs expressible_fraction 33.9% (20/59 items emitted); 2/5 file(s) with emissions fully clean [CheckError=3 Clean=2] -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-io_src/vet.json
+mycelium-transpile: --vet --phylum: checked_fraction_phylum 23.7% (14/59 items, same denominator) vs checked_fraction (oracle) 20.3% -- Δ_basis = +3.4pp (a basis CORRECTION -- recovered false-fails, NOT lever progress, DN-124 §4; phylum ok: false)
+vet.json: non_test=59 emitted=20 checked=12 class_counts={'CheckError': 3, 'Clean': 2}
+  poison: crates/mycelium-std-io/src/io.rs: check-error: check error in `std.io.io.<use>`: `use std.io.error.IoError`: no such name `std.io.error.IoError` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
+  poison: crates/mycelium-std-io/src/lib.rs: check-error: check error in `std.io.<use>`: `use std.io.error.ByteCount`: no such name `std.io.error.ByteCount` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
+  poison: crates/mycelium-std-io/src/serialize.rs: check-error: check error in `std.io.serialize.<use>`: `use std.io.error.ByteOffset`: no such name `std.io.error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
+  phylum_poison: std.io.io/io.myc: site=read_all msg=unknown type `Source`
+  phylum_poison: std.io/lib.myc: site=read_all msg=unknown type `Source`
+
+UNION default-5: checked 46/236 = 19.5%; expressible 46/236 = 19.5%
+UNION all-7:     checked 76/342 = 22.2%; expressible 94/342 = 27.5%
+DELTA vs post-B1B2 (788574ab): default-5 checked 19.5%→19.5% (0.0pp); all-7 checked 17.0%→22.2% (+5.2pp)
+DELTA vs post-C3-only (ed80e850, session mid-flight): default-5 13.1%→19.5% (+6.4pp via C4); all-7 17.8%→22.2% (+4.4pp)
+C3 claim check: std-fs oracle 38.3% CONFIRMED; phylum Δ_basis +21.3pp CONFIRMED (Import single-file residual)
+C4 claim check: std-rand 17.6% Clean CONFIRMED; eval 21.4% Clean CONFIRMED
+GAP_CATEGORY_COUNTS: {'DeriveSatisfied': 85, 'MacroInvocation': 64, 'DeriveAttr': 60, 'Other': 59, 'Impl': 57, 'NamedFieldDrop': 41, 'Import': 38, 'MultiStmtBody': 26, 'TestItem': 15, 'Struct': 13, 'GenericBound': 13, 'ModuleDecl': 10, 'Trait': 7, 'InnerAttr': 5, 'MacroDef': 5, 'PayloadVariant': 4, 'AssocConst': 3, 'Closure': 2, 'ReservedWord': 1}
+DONE
