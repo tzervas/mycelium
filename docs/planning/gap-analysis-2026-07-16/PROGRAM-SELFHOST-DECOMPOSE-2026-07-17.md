@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Active implement program** — Phase **G** pilot gate closed (`Empirical`); Phase **A** archive verified; Phase **D** extract in flight |
+| **Status** | **Phase G→A→D→T→R seed complete** (operational); monorepo remains active trunk; DN-88 production bar **not** claimed |
 | **Honesty** | Gates `Declared` until measured; pilot numbers `Empirical` |
 | **Framework** | `maint-guide.md` · L0 = hard planning · agents = `grok-composer-2.5-fast` |
 | **Base** | monorepo `tzervas/mycelium` trunks `dev`/`integration`/`main` |
