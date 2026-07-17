@@ -3,9 +3,9 @@
 | Field | Value |
 |-------|--------|
 | **Repo scope** | **`tzervas/mycelium` only** — no other repos, no DN-88 component split until one-shot prep gate |
-| **Framework** | `maint-guide.md` · L0→L1→L2 · **model floor** below |
-| **Model floor** | **PR reviews (all)** · **L2 implementers (all)** · **L1 (majority; prefer all):** `grok-composer-2.5-fast`. If runtime cannot offer it, **record actual model** in handoff (never-silent) |
-| **L0** | PM/orchestrator only — no product self-implement |
+| **Framework** | `maint-guide.md` · L0→L1→L2 · **model policy** below |
+| **Model policy** | **L0** (parent session) = `grok-4.5` (hard thinking). **ALL spawned agents** (L1 all · L2 all · PR reviews · explore/plan/security/etc.) = `grok-composer-2.5-fast` — **never** spawn on `grok-4.5`. Record actual model if runtime cannot offer the assigned one (never-silent) |
+| **L0** | PM/orchestrator only — no product self-implement; model `grok-4.5` in parent session only |
 | **Goal** | Language + transpiler **fully prepared** for hands-off whole-repo transpile (gap-profiler honesty preserved: never fabricate). Prep for later component-repo decomposition — **decomposition itself is out of this program** |
 | **Headline metric** | **`checked_fraction`** (live `myc-check`) over pilots → port surface → whole corpus ladder (M-1006). `expressible_fraction` secondary |
 | **Honesty** | VR-5/G2: gap + EXPLAIN over silent wrong; one-shot **claim** only when gate below is met |
@@ -95,9 +95,9 @@ See `M1006-baseline-oneshot-2026-07-16.md` for expanded std-fs/std-io + residual
 ## Process
 
 - Inject `maint-guide.md` + this handoff into every L1 prompt
-- **Model floor:** PR reviews + L2 all + L1 (prefer all) = `grok-composer-2.5-fast`; record actual model if runtime cannot offer it
+- **Model policy:** L0 parent = `grok-4.5`; **all** spawned (L1 all · L2 all · PR reviews · explore/plan/security) = `grok-composer-2.5-fast` — never spawn on `grok-4.5`; record actual if runtime cannot offer assigned model
 - L2: worktree, one leaf, PR→`dev`, no merge
-- L0: review, merge, promote, GHA
+- L0: review, merge, promote, GHA (parent session on `grok-4.5`)
 - Mycelium-only paths under `/root/git/isolated/mycelium`
 
 ## Prior handoff (superseded as *active* program pointer)
@@ -114,3 +114,4 @@ See `M1006-baseline-oneshot-2026-07-16.md` for expanded std-fs/std-io + residual
 | 2026-07-16 | **#1660** B2 M-1037 conversion residual; **#1661** PM B1 close-out; **#1663** B3 M-1006 remeasure post B1+B2 — unions flat **19.5% / 17.0%** vs baseline-oneshot; residual rank for next implement leaves (no one-shot claim) |
 | 2026-07-16 | **#1665** C2 enum `eq_*`/Show + Bool short-circuit; **#1667** C3 Binary `!=` / Bool not / metadata residual (metadata **100% Clean**; std-fs union **+10.6pp** Empirical) |
 | 2026-07-16 | **Model floor locked** in `maint-guide.md` + this handoff: PR reviews / L2 all / L1 prefer-all = `grok-composer-2.5-fast`; never-silent actual-model record if runtime cannot offer it; tips `dev` `ca8bc623` / `main` `aad96b7a` / `integration` `856bda37` |
+| 2026-07-16 | **Model policy L0 vs agents:** L0 parent session = `grok-4.5`; **all** spawned agents (L1 all, not majority · L2 · PR reviews · explore/plan/security) = `grok-composer-2.5-fast` — **never** spawn on `grok-4.5` |
