@@ -2,13 +2,22 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Design pack active** — implement waves **paused** for design quality; ONESHOT prep remains prior implement program (Epic R / one-shot claim still **HOLD**) |
-| **Active design phase** | **Four docs** — `DESIGN-01` · `02` · `03` · `04` (below) |
-| **Active implement handoff** | **`PROGRAM-HANDOFF-ONESHOT.md`** (resume L0↔L1 after council capture + workstream re-rank) |
-| **Prior handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (history; not the active spawn packet) |
+| **Status** | **Active implement program** = selfhost decompose (below). **Design pack 01–04** remains design review (Draft). Epic R / one-shot claim still **HOLD** until G-gate. |
+| **Active implement program** | **`PROGRAM-SELFHOST-DECOMPOSE-2026-07-17.md`** — phases **G → A → D → T → R** |
+| **Active design phase** | **Four docs** — `DESIGN-01` · `02` · `03` · `04` (review only; not implement blockers except G-δ) |
+| **Prior implement handoff** | `PROGRAM-HANDOFF-ONESHOT.md` (ONESHOT prep history; subsumed for new spawn briefs) |
+| **Earlier handoff** | `PROGRAM-HANDOFF.md` — ORACLE-R1 close-out + CI host-witness (history) |
 | **Framework** | Repo-root **`maint-guide.md`** (L0→L1→L2; Phase 0–3; PM close-out) |
-| **Model floor** | Implement agents: `grok-composer-2.5-fast`. L0 may use `grok-4.5`. Design capture complete in four-doc pack |
-| **Goal** | (1) **Now:** review distilled ergonomics design (swaps/policy, tags/containment, diagnostics/UX). (2) **After steer:** re-rank waves and resume honest whole-repo transpile prep — **not** one-shot claim until DoD + release gate |
+| **Model floor** | Implement agents: `grok-composer-2.5-fast`. L0 may use `grok-4.5`. |
+| **Goal** | Gap-close monorepo → archive `main` → component repos → `*-myc` transpile → umbrella re-export (self-hosted presentation). **Honesty:** no one-shot / SemVer claim until G1–G5. |
+
+## Active implement program
+
+| Doc | Role |
+|-----|------|
+| [`PROGRAM-SELFHOST-DECOMPOSE-2026-07-17.md`](./PROGRAM-SELFHOST-DECOMPOSE-2026-07-17.md) | **L0 program** — G gap-close → A archive → D decompose → T `*-myc` → R re-export; honest gates + mermaid |
+
+**Reading order for implement:** program file Phase G residual waves first; design pack only when a residual is design-gated (G-δ).
 
 ## Design pack (maintainer review — these four only)
 
@@ -29,7 +38,8 @@ Accepted. Mermaid diagrams included.
 
 | Doc | Role |
 |-----|------|
-| **`PROGRAM-HANDOFF-ONESHOT.md`** | Implement handoff (resume after council) |
+| **`PROGRAM-SELFHOST-DECOMPOSE-2026-07-17.md`** | **Active** implement program (G→A→D→T→R) |
+| `PROGRAM-HANDOFF-ONESHOT.md` | Prior implement handoff (ONESHOT prep history) |
 | `PROGRAM-HANDOFF.md` | ORACLE-R1 residual close-out (history) |
 | `M1006-baseline-oneshot-2026-07-16.md` | Post-A5 Empirical baseline |
 | `M1006-remeasure-post-B1B2-2026-07-16.md` | Post B1+B2 remeasure |
@@ -47,5 +57,6 @@ Accepted. Mermaid diagrams included.
 - `docs/notes/DN-99-Surface-Gap-Closure-Register.md`
 - `docs/planning/zero-hand-port-delta-ledger.md`
 - `docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md`
+- `docs/notes/DN-88-Component-Repo-Decomposition-And-Managerial-Re-Export-Topology.md`
 - `docs/CURRENT-STATE.md`
 - Repo-root `maint-guide.md` + `.claude/kickoffs/_doc-maintenance.md`
