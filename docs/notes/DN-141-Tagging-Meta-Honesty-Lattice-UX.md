@@ -1,30 +1,34 @@
-# Design Note DN-141 — Tagging · Meta · Transparency-Lattice UX: Deterministic Defaults Without Ceremony or Lies
+# Design Note DN-141 — Tagging · Meta · Transparency-Lattice UX · Isolation (Airlock / Firewall / Quarantine / Meet-Boundary)
 
 | Field | Value |
 |---|---|
 | **Note** | DN-141 |
-| **Status** | **Draft** (2026-07-16) — design recommendation only; **does not ratify** (house rule #3). Builds nothing. Mechanism claims stay `Declared` until build issues land and are differential-witnessed (VR-5). Owns **only** this note; `CHANGELOG.md` / `docs/Doc-Index.md` / `tools/github/issues.yaml` / `CLAUDE.md` are **FLAGGED** for the integrating parent (§10). |
-| **Decides (proposes, for ratification)** | A **layered UX stack** for the guarantee lattice + Meta + cert-mode presentation so authors are not buried in ceremony while VR-5/G2 hold: (1) **keep** RFC-0018 stage-1a modular bottom (`@` optional; unannotated = `Declared` demand/advertisement) as the *source* contract; (2) **deterministic structural inference** for body grades (already stage-1a) plus a **catalog of structural Exact / capped-at-Empirical ops** so most tags never need writing; (3) **basis-carrying strengthen syntax** (only path that may raise a grade) with auto-refusal when basis is missing; (4) **airlock sugar** as surface over `Option`/`Result` + predicate (companion pattern B, no kernel growth); (5) **generation≠consumption for *tag* EXPLAIN** (RFC-0034 §7 generalized from mode to grade provenance); (6) **tooling presentation** that separates the three trust axes (DN-126 / companion 04) so authors stop conflating grade · cert depth · typing strictness. Rejects ambient nodule-wide grade *upgrade* defaults and silent auto-`Proven`/`Empirical`. |
-| **Feeds** | RFC-0018 stage 1b (grade polymorphism — sequenced, not replaced); companion `02-guarantee-airlocks` (airlock patterns → landable surface); RFC-0034 §7 generation≠consumption (tag-EXPLAIN consumption tiers); transpiler/API-index honesty tagging discipline; suggested build items §9. |
+| **Status** | **Draft** (2026-07-16; integrated 2026-07-17) — design recommendation only; **does not ratify** (house rule #3). Builds nothing. Mechanism claims stay `Declared` until build issues land and are differential-witnessed (VR-5). Owns **only** this note; `CHANGELOG.md` / `docs/Doc-Index.md` / `tools/github/issues.yaml` / `CLAUDE.md` are **FLAGGED** for the integrating parent (§11). |
+| **Decides (proposes, for ratification)** | A **layered UX stack** for the guarantee lattice + Meta + cert-mode presentation + **honesty-poison isolation** so authors are not buried in ceremony while VR-5/G2 hold and a weak grade cannot silently poison whole applications or datasets: (1) **keep** RFC-0018 stage-1a modular bottom (`@` optional; unannotated = `Declared` demand/advertisement) as the *source* contract; (2) **deterministic structural inference** for body grades plus a **catalog of structural Exact / capped-at-Empirical ops** so most tags never need writing; (3) **basis-carrying strengthen syntax** (only path that may raise a grade without Swap/seal); (4) **isolation as a core slice** — airlock / firewall / quarantine / meet-boundary with **deterministic rules for where meet is allowed**, not folklore; (5) **airlock sugar** as surface over `Option`/`Result` + predicate (companion 02 pattern B; **no laundry**); (6) **generation≠consumption for tag + isolation EXPLAIN** (RFC-0034 §7 generalized); (7) **tooling presentation** that separates the three trust axes (DN-126 / companion 04). Rejects ambient nodule-wide grade *upgrade* defaults, silent auto-`Proven`/`Empirical`, quality-kill global floors, and greenwash remints. |
+| **Feeds** | RFC-0018 stage 1b (grade polymorphism — sequenced, not replaced); companion `02-guarantee-airlocks` (airlock patterns → landable surface); RFC-0034 §7 generation≠consumption (tag-EXPLAIN + isolation packages); council [Agent D](../planning/gap-analysis-2026-07-16/AGENT-D-HONESTY-POISON-CONTAINMENT-2026-07-17.md) threat model; Agent A swap fallibility (A-PC rules); Agent C AX-stack; suggested build items §10. |
 | **Depends on / grounds on** | **RFC-0001** (`Meta`, `GuaranteeStrength`, M-I1…M-I4, provenance); **RFC-0018** Enacted stage-1a (`crate::grade`, modular bottom, G-Weaken, G-Swap sole endorsement); **RFC-0034 / ADR-032** Enacted (`CertMode`, `gate_guarantee`, mode never-silent, gen≠consumption); **RFC-0005** (mandatory EXPLAIN of selection/mode); **ADR-011** (`BoundBasis` universal); **DN-126** Accepted (third trust axis — typing strictness); companion **02** airlocks + **04** three axes; **VR-5 / G2 / KC-3 / KISS / YAGNI**; house rule #1 (transparency lattice). |
-| **Verified-against (slot + premises)** | Free slot: highest free note id is **DN-141** (`docs/notes/` has DN-140; no DN-141; `issues.yaml` has no `corpus:DN-141`). Premises re-checked against landed code/corpus (mitigation #14): `grade.rs` modular bottom + meet (`crates/mycelium-l1/src/grade.rs`); `CertMode::gate_guarantee` (`crates/mycelium-core/src/cert_mode.rs`); `Meta::new` M-I1…M-I4 (`meta.rs`); transpiler blanket `Declared` (`mycelium-transpile/src/lib.rs`); language-reference §3 `T @ Strength`. |
-| **Date** | 2026-07-16 |
-| **Author** | design-reasoner (Design Agent B / council — tagging · Meta · lattice UX). Model floor Opus; this draft authored under council assignment. |
-| **Task** | Ergonomic improvements + **deterministic machinery** for tagging the language requires: manual metadata, typing annotations, transparency lattice, Meta/provenance, `fast`/`certified` — without burying authors in ceremony while VR-5/G2 hold. |
+| **Verified-against (slot + premises)** | Free slot: highest free note id is **DN-141** (`docs/notes/` has DN-140; no prior DN-141; `issues.yaml` has no competing `corpus:DN-141` at draft). Premises re-checked against landed code/corpus (mitigation #14): `grade.rs` modular bottom + meet (`crates/mycelium-l1/src/grade.rs`); `CertMode::gate_guarantee` (`crates/mycelium-core/src/cert_mode.rs`); `Meta::new` M-I1…M-I4 (`meta.rs`); transpiler blanket `Declared` (`mycelium-transpile/src/lib.rs`); language-reference §3 `T @ Strength`. |
+| **Date** | 2026-07-16 (Draft open); 2026-07-17 (isolation elevated to core slice in body) |
+| **Author** | design-reasoner (Design Agent B / council — tagging · Meta · lattice UX · isolation). Integrator weave with Agent D / companion 02. |
+| **Task** | Ergonomic improvements + **deterministic machinery** for tagging and **containment of honesty poison** without ceremony burial, quality kill, or greenwashing. |
 
 > **Posture (transparency rule / VR-5 / G2).** Draft design note. Tree-facts tagged `Empirical`
 > with `file:line` or corpus anchors; design proposals `Declared`. No claim is upgraded past its
-> basis. **No sycophancy:** §6 argues *against* the recommendation (ambient grade scopes and
-> "infer stronger by default" both fail VR-5 on the merits even if they would feel nicer). Status
-> stays **Draft** until maintainer ratification (§8 DoD).
+> basis. **No sycophancy:** §7 argues *against* the recommendation (ambient grade scopes,
+> "infer stronger by default," and laundry seals all fail VR-5 on the merits). Status stays
+> **Draft** until maintainer ratification (§9 DoD). **This note does not claim Accepted.**
 
 ---
 
-## §0 The question, in one line
+## §0 The questions, in two lines
 
 **How does Mycelium keep the four-point transparency lattice, full `Meta`, and tunable cert modes
 as load-bearing invariants — while making everyday authoring *not* a tax of `@ Declared` /
 `@ Exact` / basis comments on every binding — without ever silently overclaiming?**
+
+**How does a downgraded honesty rating stay isolated so it cannot poison whole applications or
+datasets — retaining Exact cores and accuracy — via deterministic walls and transparent EXPLAIN,
+never greenwash?**
 
 ---
 
@@ -41,9 +45,10 @@ Grounded inventory. Each row is a real friction surface, not a strawman.
 | P5 | **`Proven`/`Empirical` are expensive to *earn* and easy to *type*.** VR-5 forbids typing them without basis; today the *refuse* path is checker-grade demand, not guided basis attachment. Temptation: annotate `@ Proven` and hope. | certified authors | `Declared` UX gap; rule itself `Exact` (VR-5 / RFC-0018 G-Weaken) |
 | P6 | **Cert mode gates tags, but the story is easy to misread.** `CertMode::Fast` floors intended `Empirical`/`Proven` → `Declared` while leaving structural `Exact` alone. Authors may think "fast = no tags" or "fast = all Declared." | everyone | `Empirical` — `cert_mode.rs:61-84` |
 | P7 | **Transpiler / API-index / emit discipline is hand-prose `Declared`.** Every emit path documents `Declared` in module docs; co-emission of `Strength`/`GuaranteeStrength` is special-cased; lattice variant names are reserved words. High ceremony for tool authors, risk of tag drift. | toolchain | `Empirical` — `mycelium-transpile/src/{lib,emit,map,remap}.rs`; DN-140 reserved-word facet |
-| P8 | **Meet contamination has no first-class airlock.** One `Declared` leaf meets a pipeline to `Declared` (correct, intentional). Quarantine is a *pattern* (companion 02), not a stdlib/surface construct. | library + app | `Exact` meet rule; `Declared` airlock API |
-| P9 | **EXPLAIN is mandatory for selection/mode; grade provenance is second-class in DX.** Generation≠consumption exists for the inspectability signal (RFC-0034 §7); "why is this value `Declared`?" is not a first-class consumption tier. | DX / LSP | `Declared` gap vs `Exact` mode-EXPLAIN mandate |
+| P8 | **Meet contamination has no first-class isolation surface.** One `Declared` leaf meets a pipeline to `Declared` (correct, intentional). Quarantine, firewall, and meet-boundary rules are *patterns* (companion 02; Agent D), not stdlib/checker tables. | library + app | `Exact` meet rule; `Declared` isolation API |
+| P9 | **EXPLAIN is mandatory for selection/mode; grade provenance and isolation decisions are second-class in DX.** Generation≠consumption exists for the inspectability signal (RFC-0034 §7); "why is this value `Declared`?" and "why did this boundary refuse?" are not first-class consumption tiers. | DX / LSP | `Declared` gap vs `Exact` mode-EXPLAIN mandate |
 | P10 | **Documentation dual-write.** Spec matrices, tutorial `@ Declared` examples, companion airlocks, guarantee comments in Rust — same lattice restated with different ceremony levels; easy to overclaim in one surface. | maintainers | `Empirical` corpus density |
+| P11 | **Honesty poison at application/dataset scale.** A weak grade or failed swap check can cascade (meet) or be laundered; Exact cores die or lie. Containment objective is council-first-class (Agent D); lattice UX must supply the **remint and wall** surface. | app + data authors | companion 02; Agent D T1–T7 |
 
 **What is *not* pain (do not "fix"):**
 
@@ -66,7 +71,7 @@ Grounded inventory. Each row is a real friction surface, not a strawman.
 | Pure structural composition | result = meet of parts | `Empirical` — G-Let/G-Con/G-Op |
 | `wild` / FFI | floor `Declared` | `Empirical` — `grade.rs:27-28` |
 | Annotation may only weaken | G-Weaken; upgrade without basis = type error | `Exact` — RFC-0018 §3.1–3.2 |
-| `Swap` sole endorsement | grade raise only with certificate reference | `Exact` — RFC-0018 §3.3 |
+| `Swap` sole endorsement (plus seal with total predicate) | grade raise only with certificate or remint basis | `Exact` — RFC-0018 §3.3; companion 02 |
 | `fast` floors non-structural strengths | `Proven`/`Empirical` → `Declared`; `Exact` passes | `Empirical` — `gate_guarantee` |
 | Bound basis must match strength | M-I1…M-I4 in `Meta::new` | `Empirical` — `meta.rs:113-118` |
 | Resonator-class decode | basis ≤ `Empirical` (FR-C2) | `Empirical` — `recon.rs` FR-C2 |
@@ -83,6 +88,8 @@ Grounded inventory. Each row is a real friction surface, not a strawman.
 | Collapse cert mode into grade | Orthogonal axes (DN-126 §2; companion 04) |
 | Elide `Declared` flag because mode is `fast` | `Declared` is the transparent floor, not a tax to hide (RFC-0001; ADR-032) |
 | Auto-upgrade after airlock without re-mint | Meet is not endorsement; only `Swap`/checked predicate mint is |
+| Treat failed swap / `NotValidated` as Exact success | Greenwash (Agent A A-PC1…A-PC3; Agent D T3) |
+| Global Declared floor "to be safe" | Quality kill (Agent D O3) |
 
 ### §2.3 The load-bearing split (restate for UX)
 
@@ -93,21 +100,105 @@ Grounded inventory. Each row is a real friction surface, not a strawman.
   airlock / seal intent       fast gate_guarantee floor          EmpiricalFit trials
   basis attachment            M-I1…M-I4 reconciliation           Swap certificate check
   cert-mode scope             mode tag on Meta                   cert emit+check
+  quarantine / export wall    meet-boundary table                isolation EXPLAIN package
 ```
 
 **Ceremony belongs only in WRITE and EARN.** INFER must be total, local (stage-1a), and never
-stronger than justified. That is the UX objective function.
+stronger than justified. Isolation adds **deterministic walls** so meet does not become an
+uncontrolled application-wide floor.
 
 ---
 
-## §3 Options (real alternatives, not strawmen)
+## §3 Isolation core slice — airlock · firewall · quarantine · meet-boundary
+
+This section is **normative design proposal** for ratification of isolation UX. Companion 02 is
+the narrative source; Agent D is the threat model and ranked D-core package. DN-141 owns the
+**lattice/tag surface** that authors type and that EXPLAIN presents.
+
+### §3.1 Alignment with companion 02 (reject laundry)
+
+Companion 02 holds the counter-argument: documenting airlocks must not teach **Declared laundry**.
+Mitigations that this note **requires** of any landable surface:
+
+1. Remint only via **total Exact-decidable predicate**, **Swap certificate**, or **basis-carrying
+   strengthen** (M-I1…M-I4).
+2. Seal success is always **EXPLAIN-able** (basis ref present).
+3. No `as Exact` token; lint against cast-upgrade.
+4. Prefer **recertify-with-evidence** over **assert-stronger**.
+5. CI may flag seal density in certified phyla (process, not silent upgrade).
+
+If mitigations slip, **revoke airlock sugar**, keep structural catalog + tag-EXPLAIN.
+
+### §3.2 Four isolation shapes (first-class concepts)
+
+| Shape | Role | Companion 02 | Agent D rank |
+|-------|------|--------------|--------------|
+| **Airlock (seal)** | Weak in → check → remint stronger or never-silent fail | Pattern B | D2 |
+| **Firewall** | Mode/cert-depth boundary; certified refuses unchecked meet | Pattern A | D3 |
+| **Quarantine** | Module / phylum / spore / dataset sea-wall | Pattern D | D1/D5 |
+| **Meet-boundary** | Table of where lattice meet is allowed vs refused | implied cleanroom | D1 |
+
+### §3.3 Deterministic rules — where meet is allowed
+
+Meet remains the default **inside** a cleanroom cell. Isolation specifies **refuse** sites so
+poison cannot cross without a decision.
+
+| Context | Meet allowed? | On refuse / dynamic path |
+|---------|---------------|---------------------------|
+| Local pure composition (same airlock cell) | Yes (weakest-wins) | N/A |
+| Across **seal** boundary | No — only remint or explicit weak export | type/check error |
+| Into **certified** demand from weaker / unchecked basis | No unless airlock or Swap cert | refuse or `Option` |
+| Into **export** / Exact-only **dataset partition** | No for weaker leaves | partition / export reject |
+| Author writes **explicit** weak export / `meet_allow` | Yes; result is weakest | EXPLAIN records allow |
+| Swap site with partial regime / failed check | N/A — fallibility first (Agent A A3) | no Exact presentation |
+
+**Static** refuse is preferred (checker table). **Dynamic** isolation (runtime seal, partition
+check, cert `NotValidated` fallback) **must** emit the isolation EXPLAIN package (§3.5).
+
+### §3.4 Quality retention (do not kill Exact cores)
+
+- Keep critical Exact paths **separate** from Empirical/Declared leaves (companion 02 ML scenario).
+- Partition datasets: Exact structural tables beside Empirical ML tables — not one silent flat meet.
+- Seal when basis exists; do **not** force a global Declared floor.
+- `fast` display floors non-structural strengths; structural Exact still passes (`gate_guarantee`).
+
+### §3.5 Isolation EXPLAIN package (minimum)
+
+When isolation is dynamic, generate:
+
+| Field | Meaning |
+|-------|---------|
+| `boundary_kind` | `airlock` · `firewall` · `quarantine` · `meet_refuse` · `swap_check` |
+| `input_grade` / `demand_grade` | lattice points |
+| `decision` | `pass_remint` · `pass_weak` · `refuse` · `fallback` |
+| `basis_ref` | predicate id, cert hash, trial method, or empty on refuse |
+| `policy_used` / `cert_mode` | Meta fields |
+| `never_silent` | always true for refuse/fallback |
+
+Consumption tiers match §5.3 (lean / normal / audit). Shared schema with Agent D §5 and Agent E
+EXPLAIN panel backlog.
+
+### §3.6 Conceptual seal surface (not frozen grammar)
+
+```text
+// conceptual — Declared design, not frozen grammar
+// desugars to match pred(x) { true => some(remint x); false => none }
+seal[g'](x @ g, pred) -> Option[T @ g']
+```
+
+Remint allowed only under §3.1 rules. Stdlib phylum first (`std.airlock.seal`) preferred over
+new keyword (OQ-1).
+
+---
+
+## §4 Options (real alternatives, not strawmen)
 
 ### Alt 0 — Status quo + documentation only
 
 Keep stage-1a + RFC-0034 as-is; invest only in companion/tutorial/LSP copy.
 
 - **Pros:** zero surface risk; KC-3 pure.
-- **Cons:** P2/P5/P8/P9 stay; airlocks remain folklore; three-axis confusion (P3) only partially fixed by companion 04.
+- **Cons:** P2/P5/P8/P9/P11 stay; airlocks remain folklore; three-axis confusion (P3) only partially fixed by companion 04.
 - **Verdict:** necessary baseline, insufficient alone.
 
 ### Alt A — Structural-default inference catalog (extend INFER, no new WRITE)
@@ -118,15 +209,15 @@ Publish and enforce a **closed catalog** of ops whose *intrinsic* grade is struc
 Tooling auto-fills EXPLAIN "why this grade" from the catalog. Authors still write `@ g` only on
 API boundaries they care about (status quo WRITE).
 
-- **Pros:** pure INFER; VR-5-safe; reuses `gate_guarantee` + grade pass; reduces P1 ceremony *de facto* because bodies already prove stronger returns when annotated.
+- **Pros:** pure INFER; VR-5-safe; reuses `gate_guarantee` + grade pass; reduces P1 ceremony *de facto*.
 - **Cons:** does not reduce signature ceremony for libraries that *do* want `@ Exact` APIs; catalog maintenance.
 - **KC-3:** no kernel growth — table + lints.
 
 ### Alt B — "Write only to strengthen" signature sugar (invert modular bottom *display*)
 
 Keep modular bottom semantics, but DX presents unannotated as "inferred floor" and offers
-`@! Exact` / explicit strengthen-only sugar so the common mental model is "tags appear when you
-claim more," not "tags appear when you confess less."
+explicit strengthen-only sugar so the common mental model is "tags appear when you claim more,"
+not "tags appear when you confess less."
 
 - **Pros:** matches VR-5 psychology (Declared is default truth).
 - **Cons:** pure sugar over Alt 0; risk of teaching that missing tag means Exact (must not); needs careful LSP wording.
@@ -137,7 +228,7 @@ claim more," not "tags appear when you confess less."
 e.g. `// @guarantee: Exact` on nodule header so unannotated returns demand Exact.
 
 - **Pros:** low per-fn ceremony for homogeneous certified nodules.
-- **Cons:** **silent upgrade of modular bottom** for every unannotated fn — antithetical to RFC-0018 R18-Q5 and S2 ("advertised grade is exactly what the signature writes"). Cross-nodule imports become footguns. Meets contamination becomes ambient.
+- **Cons:** **silent upgrade of modular bottom** for every unannotated fn — antithetical to RFC-0018 R18-Q5 and S2. Cross-nodule imports become footguns. Meets contamination becomes ambient laundry.
 - **Verdict:** **reject** as a *default upgrade*. A *lint profile* ("this nodule's *public* API must write `@ g`") is fine; ambient *semantic* upgrade is not.
 
 ### Alt D — Basis-carrying strengthen syntax (WRITE + EARN coupled)
@@ -152,35 +243,29 @@ fn g(x: T) -> U @ Proven(thm: "bound.dense.l2", side: checked) = …
 ```
 
 Desugars to: grade demand + `Bound`/`BoundBasis` construction that `Meta::new` accepts (M-I2/M-I3).
-`fast` still floors via `gate_guarantee` (earned basis recorded, strength disclosed as Declared under fast — already the mode policy).
+`fast` still floors via `gate_guarantee`.
 
-- **Pros:** closes P5; makes VR-5 *syntactic*; pairs with M-I1…M-I4 instead of fighting them.
+- **Pros:** closes P5; makes VR-5 *syntactic*; pairs with M-I1…M-I4.
 - **Cons:** grammar work; theorem/trial registries must exist; YAGNI until certified path is dogfooded.
 - **KC-3:** surface + elaborator only if bound records already exist (they do in core).
 
-### Alt E — Airlock sugar (companion 02 → landable surface)
+### Alt E — Airlock sugar + isolation table (companion 02 + Agent D → landable surface)
 
-A stdlib or surface form:
+Land **seal/recertify** plus checker **meet-boundary / export quarantine** tables (§3).
 
-```text
-// conceptual
-seal[Exact](x, pred) -> Option[T @ Exact]   // or Result
-// desugars to match pred(x) { true => some(remint x); false => none }
-```
+- **Pros:** directly attacks P2/P8/P11; teaches cleanroom; zero new endorsement channel if remint rules hold.
+- **Cons:** laundry risk if remint hinge slips; design cost for meet-boundary table.
+- **KC-3:** sugar over `Option` + existing grade rules; tables in checker preferred to kernel nodes.
 
-- **Pros:** directly attacks P2/P8; teaches the cleanroom pattern; zero new endorsement channel if remint is only allowed when `pred` is total/Exact-decidable (or routes through `Swap` cert).
-- **Cons:** must not become a laundering API (companion 02 counter-argument); predicate totality is the soundness hinge.
-- **KC-3:** sugar over `Option` + existing grade rules — **preferred shape**.
+### Alt F — Tag + isolation EXPLAIN consumption tiers (generalize RFC-0034 §7)
 
-### Alt F — Tag-EXPLAIN consumption tiers (generalize RFC-0034 §7)
-
-Always **generate** grade provenance trace (meet tree + gate_guarantee + basis ids). **Consume**
-via DX tiers: `lean` (badge only: `Declared ⚠` / `Exact`) · `normal` (one-line why) · `audit`
-(full DAG + policy_used + cert_mode). Mode EXPLAIN stays mandatory at every tier.
+Always **generate** grade provenance trace (meet tree + gate_guarantee + basis ids) and isolation
+packages when boundaries fire. **Consume** via DX tiers: `lean` · `normal` · `audit`. Mode EXPLAIN
+stays mandatory at every tier.
 
 - **Pros:** closes P3/P9 without source ceremony; gen≠consumption already ratified for mode.
 - **Cons:** LSP/runtime work; trace schema design.
-- **KC-3:** tooling + query surface (RFC-0001 § runtime query already sketches `guarantee_of`/`meta_of`).
+- **KC-3:** tooling + query surface (RFC-0001 runtime query sketches `guarantee_of`/`meta_of`).
 
 ### Alt G — Full stage-1b grade polymorphism + cross-fn inference
 
@@ -192,122 +277,133 @@ Whole-program return-grade inference (RFC-0018 §4.7 FlowCaml-style).
 
 ---
 
-## §4 Evaluation against objective and house rules
+## §5 Evaluation against objective and house rules
 
-### §4.1 Objective function (explicit)
+### §5.1 Objective function (explicit)
 
 | Criterion | Weight | Notes |
 |---|---|---|
 | **C1 VR-5 integrity** — no silent upgrade; downgrade free | **hard gate** | any option that fails is out |
-| **C2 G2 never-silent** — mode, grade, airlock failure visible | **hard gate** | |
+| **C2 G2 never-silent** — mode, grade, airlock failure, isolation refuse visible | **hard gate** | |
+| **C2b No greenwash / no quality kill** — council N7–N8 | **hard gate** | |
 | **C3 Ceremony reduction** — fewer required `@` on happy path | high | measured as "tags written per public API" + "tags written per internal let" |
 | **C4 KC-3 / KISS / YAGNI** — no parallel lattice; reuse Meta/grade/CertMode | high | |
 | **C5 Axis clarity** — grade ≠ cert depth ≠ typing strictness | high | DN-126 / companion 04 |
-| **C6 Incremental land** — each slice valuable alone | medium | wave-friendly |
-| **C7 Dogfood / transpile honesty** — does not pressure tools to fake Proven | medium | P7 |
+| **C6 Isolation completeness** — meet-boundary + seal + EXPLAIN | high | §3; Agent D |
+| **C7 Incremental land** — each slice valuable alone | medium | wave-friendly |
+| **C8 Dogfood / transpile honesty** — does not pressure tools to fake Proven | medium | P7 |
 
-### §4.2 Scorecard (ordinal ranks; hard-gate failures marked FAIL)
+### §5.2 Scorecard (ordinal ranks; hard-gate failures marked FAIL)
 
-| Alt | C1 | C2 | C3 | C4 | C5 | C6 | C7 | Rank role |
-|---|---|---|---|---|---|---|---|---|
-| 0 docs-only | pass | pass | weak | best | partial | best | pass | baseline |
-| **A catalog** | pass | pass | med | best | helps | best | pass | **core INFER** |
-| B strengthen-display | pass* | pass | low-med | good | helps | good | pass | sugar on A |
-| C ambient upgrade | **FAIL** | risk | high | poor | confuses | med | risk | **reject** |
-| **D basis syntax** | pass | pass | med (certified path) | good | helps | staged | pass | **core EARN** |
-| **E airlock sugar** | pass† | pass | high (P8) | best | helps | good | pass | **core WRITE pattern** |
-| **F tag-EXPLAIN** | pass | pass | high (P9) | good | **best** | good | pass | **core DX** |
-| G stage-1b | pass | pass | highest long-term | heavy | ok | poor now | pass | **later** |
+| Alt | C1 | C2/C2b | C3 | C4 | C5 | C6 | C7 | C8 | Rank role |
+|---|---|---|---|---|---|---|---|---|---|
+| 0 docs-only | pass | pass | weak | best | partial | weak | best | pass | baseline |
+| **A catalog** | pass | pass | med | best | helps | partial | best | pass | **core INFER** |
+| B strengthen-display | pass* | pass | low-med | good | helps | n/a | good | pass | sugar on A |
+| C ambient upgrade | **FAIL** | risk | high | poor | confuses | **FAIL** | med | risk | **reject** |
+| **D basis syntax** | pass | pass | med (certified path) | good | helps | n/a | staged | pass | **core EARN** |
+| **E airlock + isolation table** | pass† | pass | high (P8/P11) | best | helps | **best** | good | pass | **core isolation WRITE** |
+| **F tag+isolation EXPLAIN** | pass | pass | high (P9) | good | **best** | high | good | pass | **core DX** |
+| G stage-1b | pass | pass | highest long-term | heavy | ok | partial | poor now | pass | **later** |
 
 \*B passes only if desugar ≡ modular bottom and LSP never implies Exact-by-omission.
 †E passes only if remint requires total Exact predicate or real Swap cert — not `as Exact`.
 
-### §4.3 Grounding map
+### §5.3 Grounding map
 
 | Claim in recommendation | Basis |
 |---|---|
 | Modular bottom stays | RFC-0018 R18-Q5 / `grade.rs` module note — `Exact` (corpus) |
 | fast floors Empirical/Proven | `gate_guarantee` — `Empirical` (code) |
 | Three axes orthogonal | DN-126 §2 Accepted; companion 04 — `Exact` (decision) / mechanisms `Declared` until built |
-| Airlock pattern | companion 02 — pattern `Declared`; discipline enforceable today |
+| Airlock pattern + laundry reject | companion 02 — pattern `Declared`; discipline enforceable today |
+| Isolation catalog | Agent D Draft; companion 02 A–D |
 | Gen≠consumption | RFC-0034 §7 Enacted — `Exact` (decision) |
 | Reject ambient grade upgrade | VR-5 + S2 + R18-Q5 — argument `Declared` (this note), premises `Exact` |
+| Swap fallibility binding | Agent A A-PC1…A-PC6 — `Declared` design |
 
 ---
 
-## §5 Ranked recommendation (Draft)
+## §6 Ranked recommendation (Draft)
 
-### Rank 1 — **Layered stack: A + E + F now-sequence; D when certified dogfood needs it; B as optional sugar; G later; C never**
+### Rank 1 — **Layered stack: A + F + E(isolation) now-sequence; D when certified dogfood needs it; B as optional sugar; G later; C never**
 
-**Ship as one design, land as four build slices:**
+**Ship as one design, land as independently reviewable slices:**
 
 1. **Slice A — Structural grade catalog + "why this grade" generator**
    Codify intrinsic grades for prims/std ops; feed grade EXPLAIN and API-index rows; refuse catalog
-   overclaim in CI (a prim marked Exact must not call empirical paths). *Addresses P1 de facto, P7, P10.*
+   overclaim in CI. *Addresses P1 de facto, P7, P10.*
 
-2. **Slice F — Tag-EXPLAIN consumption tiers**
-   Generalize RFC-0034 §7 from mode signal to **grade provenance + cert_mode + basis id**. Lean
-   badges in `fast` DX; audit trail on demand without re-run if generation was on. *Addresses P3, P6, P9.*
+2. **Slice F — Tag + isolation EXPLAIN consumption tiers**
+   Generalize RFC-0034 §7 from mode signal to **grade provenance + isolation package + cert_mode +
+   basis id**. Lean badges in `fast` DX; audit trail on demand. *Addresses P3, P6, P9, P11 opacity.*
 
-3. **Slice E — `std.airlock` (or sugar) seal/recertify**
-   Land companion 02 pattern B as a real, tested phylum: total predicate → `Option[T @ g']` with
-   remint rules documented; lint against bare cast-to-stronger. *Addresses P2, P8.*
+3. **Slice E — Isolation core: meet-boundary table + quarantine exports + `std.airlock` seal**
+   Land §3 as checker tables + tested phylum: total predicate → `Option[T @ g']` with remint rules
+   documented; lint against bare cast-to-stronger; certified firewall refuse weak-into-certified
+   without seal. *Addresses P2, P8, P11.* Sequencing inside E: **tables and EXPLAIN schema before
+   sugar that could look like laundry.**
 
 4. **Slice D — Basis-carrying `@ Empirical(…)` / `@ Proven(…)`**
    Only when a real consumer needs certified APIs with attached basis (not before). Bare `@ Proven`
-   becomes a hard error once D lands (stricter than today's weaken-only annotation). *Addresses P4, P5.*
+   becomes a hard error once D lands. *Addresses P4, P5.*
 
 5. **Optional B** — presentation sugar only after F exists (so omission never reads as Exact).
 
-6. **Explicit non-goals:** Alt C ambient upgrade; auto-Empirical-from-CI; collapsing axes; stage-1b
-   as a prerequisite for ergonomics.
+6. **Explicit non-goals:** Alt C ambient upgrade; auto-Empirical-from-CI; collapsing axes;
+   stage-1b as a prerequisite for ergonomics; global Declared floor; laundry seals.
 
-### §5.1 Why this wins the objective table
+### §6.1 Why this wins the objective table
 
-- **C1/C2 hard gates:** every strengthen path is either meet-safe inference, mode floor, Swap cert,
-  or predicate-remint with never-silent failure — never ambient.
+- **C1/C2/C2b hard gates:** every strengthen path is meet-safe inference, mode floor, Swap cert,
+  or predicate-remint with never-silent failure — never ambient; isolation EXPLAIN is mandatory on
+  dynamic boundaries; Exact cores stay reachable via separate paths.
 - **C3:** everyday code keeps writing **zero** tags (modular bottom); libraries write tags only at
   **exported** strengthens; airlocks replace essay comments.
 - **C4:** reuses `grade`, `Meta`, `CertMode`, `BoundBasis`, RFC-0005 EXPLAIN — no second lattice.
 - **C5:** F's presentation is *required* to show three axes as three badges, not one slider.
-- **C6:** A→F→E→D is independently shippable; each closes named pains.
-- **C7:** catalog + transpile stay `Declared` until witnessed; D does not let tools mint Proven.
+- **C6:** meet-boundary + seal + quarantine + firewall are first-class, not footnotes.
+- **C7:** A→F→E→D is independently shippable; each closes named pains.
+- **C8:** catalog + transpile stay `Declared` until witnessed; D does not let tools mint Proven.
 
-### §5.2 Author mental model (teach this)
+### §6.2 Author mental model (teach this)
 
 ```
 1. Omit @ g          → you advertise Declared (honest floor). No shame; VR-5 default.
 2. Write @ Exact     → only if the body/catalog proves Exact (checker enforces).
 3. Need stronger from weaker data → airlock (seal) or Swap with cert — never cast.
-4. @ Empirical/@ Proven → bring basis (slice D) or don't write them.
-5. @certification    → how much machinery ran; does not invent a stronger basis.
-6. loose/strict type → whether the checker refuses; independent of grade (DN-126).
+4. Weak data near Exact cores → quarantine / separate path / meet-boundary refuse — never hope.
+5. @ Empirical/@ Proven → bring basis (slice D) or don't write them.
+6. @certification    → how much machinery ran; does not invent a stronger basis.
+7. loose/strict type → whether the checker refuses; independent of grade (DN-126).
+8. Failed check / partial swap → Option/Result/fallback; never looks Exact (Agent A).
 ```
 
-### §5.3 Lattice presentation (DX contract — slice F)
+### §6.3 Lattice + isolation presentation (DX contract — slice F)
 
 | Tier | What user sees | Never hides |
 |---|---|---|
-| **lean** (`fast` default) | single badge: grade + ⚠ if Declared; mode icon only if non-default | mode if not `fast`; any Declared |
-| **normal** | one-line: `Declared ← meet(Empirical resonator, Exact width)` | basis absence |
-| **audit** | provenance DAG + `policy_used` + bound + cert_mode + wrapping_opt | nothing in Meta query surface |
+| **lean** (`fast` default) | single badge: grade + ⚠ if Declared; mode icon only if non-default; boundary-fired mark if isolation ran | mode if not `fast`; any Declared; refuse/fallback |
+| **normal** | one-line: `Declared ← meet(Empirical resonator, Exact width)` or `refuse: meet_boundary export` | basis absence; isolation decision |
+| **audit** | provenance DAG + isolation package + `policy_used` + bound + cert_mode + wrapping_opt | nothing in Meta query surface |
 
 ---
 
-## §6 Adversarial stress-test (argue against the recommendation)
+## §7 Adversarial stress-test (argue against the recommendation)
 
-### Attack 1 — "A+E+F is still three projects; Alt 0 is enough"
+### Attack 1 — "A+F+E is still three projects; Alt 0 is enough"
 
 **Concede partially:** if engineering bandwidth is zero, companion 02+04 + tutorial already reduce
-P3. **Counter:** P5/P8 are *mechanism* gaps; docs cannot refuse bare `@ Proven` or standardize
-airlocks. Rank-1 without D still beats Alt 0 on C3/C5.
+P3. **Counter:** P5/P8/P11 are *mechanism* gaps; docs cannot refuse bare `@ Proven`, standardize
+airlocks, or encode meet-boundary tables. Rank-1 without basis syntax D still beats Alt 0 on
+C3/C5/C6.
 
 ### Attack 2 — "Airlock sugar becomes Declared laundry"
 
 **Real risk** (companion 02 counter-argument). **Mitigations baked into Rank 1:** (i) remint only
 via total Exact-decidable predicate or Swap cert; (ii) seal success still EXPLAIN-able; (iii) CI
-flag on seal density in `certified` phyla; (iv) no `as Exact` token. If mitigations slip, **revoke
-E**, keep A+F.
+flag on seal density in `certified` phyla; (iv) no `as Exact` token; (v) tables land before sugar.
+If mitigations slip, **revoke E sugar**, keep A+F + meet-boundary refuse only.
 
 ### Attack 3 — "Basis syntax (D) is premature ceremony"
 
@@ -317,31 +413,37 @@ authors to decorate everything. **If** certified dogfood never needs attached ba
 
 ### Attack 4 — "Ambient nodule Exact (C) is what users will ask for"
 
-**Likely request; still reject.** It fails C1: unannotated code would advertise Exact without a
-written claim, contradicting S2 and R18-Q5. Offer instead: lint `public-api-must-annotate-grade`
-as an **opt-in profile**, which *increases* ceremony on purpose for certified libraries — honest
-tax, not silent upgrade.
+**Likely request; still reject.** It fails C1 and C2b: unannotated code would advertise Exact
+without a written claim, and ambient "clean" is laundry. Offer instead: lint
+`public-api-must-annotate-grade` as an **opt-in profile** — honest tax, not silent upgrade.
 
 ### Attack 5 — "Stage-1b (G) would erase ceremony better"
 
 **True for internal code long-term.** False as *near-term* ergonomics: whole-program inference
-delays airlocks and EXPLAIN, and does not solve basis attachment or axis confusion. Sequence G
-after A/E/F; do not block.
+delays airlocks and EXPLAIN, and does not solve basis attachment, axis confusion, or dataset
+quarantine. Sequence G after A/F/E; do not block.
 
 ### Attack 6 — "fast already removed tag cost; this DN is redundant with ADR-032"
 
 **False.** ADR-032/RFC-0034 solved *certification machinery cost* and mode disclosure. They
-explicitly kept the lattice and modular tagging. The residual pain is **author/DX ceremony and
-axis clarity**, not cert CPU. This note is the UX layer *on top of* Enacted mode machinery.
+explicitly kept the lattice and modular tagging. The residual pain is **author/DX ceremony,
+axis clarity, and poison isolation**, not cert CPU.
+
+### Attack 7 — "Meet-boundary tables will kill composition"
+
+**Risk of over-quarantine.** Mitigate: meet remains free **inside** cells; refuse is at **export,
+seal, certified demand, Exact-only partitions**. Explicit `meet_allow` / weak export stays for
+honest Declared pipelines. Quality retention (§3.4) is a DoD criterion.
 
 ### Stress-test verdict
 
-Rank-1 survives with **sequencing discipline** (A/F/E before D; C rejected; G deferred). The
-fragile joint is **E's remint rule** — treat its soundness as a hard DoD gate, not a docs footnote.
+Rank-1 survives with **sequencing discipline** (A/F before E sugar; E tables before E sugar;
+D last; C rejected; G deferred). Fragile joints: **E remint rule** and **meet-boundary default
+strictness** — treat both as hard DoD gates, not docs footnotes.
 
 ---
 
-## §7 Open questions for the maintainer
+## §8 Open questions for the maintainer
 
 | ID | Question | Default if silent |
 |---|---|---|
@@ -349,65 +451,77 @@ fragile joint is **E's remint rule** — treat its soundness as a hard DoD gate,
 | **OQ-2** | Should bare `@ Proven` / `@ Empirical` become **hard errors** once basis syntax (D) exists, or remain weaken-only annotations with separate basis fields? | hard error for bare strengthen-to-Proven/Empirical (VR-5 syntactic) |
 | **OQ-3** | Lean DX: is a visible `Declared ⚠` on **every** unannotated value too noisy under `fast`? | show on **bindings that cross a public API or meet with a stronger demand**; elide pure-local Declared in lean (signal still generated) |
 | **OQ-4** | Opt-in lint profile `public-api-must-annotate-grade` — want it for `certified` phyla by default? | yes for `certified` public exports; no for `fast` |
-| **OQ-5** | Does tag-EXPLAIN generation stay **always-on** even in `fast` (like middle-tier signal), or mode-gated? | always generate cheap meet-trace; floor *consumption* lean in `fast` (mirror RFC-0034 §7) |
-| **OQ-6** | Transpiler: should emit grow **auto** `@ Declared` on every fn return for VR-5 visibility, or keep omission (= modular bottom)? | **omit** (status quo); document equivalence; do not spray `@ Declared` (ceremony + reserved-word pressure) |
+| **OQ-5** | Does tag/isolation EXPLAIN generation stay **always-on** even in `fast` (like middle-tier signal), or mode-gated? | always generate cheap meet-trace + boundary events; floor *consumption* lean in `fast` (mirror RFC-0034 §7) |
+| **OQ-6** | Transpiler: should emit grow **auto** `@ Declared` on every fn return for VR-5 visibility, or keep omission (= modular bottom)? | **omit** (status quo); document equivalence; do not spray `@ Declared` |
 | **OQ-7** | Name bikeshed: `seal` / `airlock` / `recertify` / `remint`? | `seal` (short; companion 02); alias `recertify` in docs |
+| **OQ-8** | Meet-boundary default: free meet inside nodule + refuse at `pub`, or stricter cell model first? | free inside nodule; refuse at `pub` / certified demand / Exact partitions (Agent D OQ-1 default) |
+| **OQ-9** | Dataset/spore grade partitions: spore contract fields now, or library convention first? | library convention first; spore fields when packaging dogfood needs them |
 
 ---
 
-## §8 Definition of Done (maintainer ratification → Accepted)
+## §9 Definition of Done (maintainer ratification → Accepted)
 
 This note moves **Draft → Accepted** only when the maintainer confirms:
 
-1. **Rank-1 stack** (A+F+E, D sequenced, C rejected, G deferred) is the direction — or records a
-   superseding rank with the same C1/C2 hard gates.
-2. **OQ-1…OQ-7** are answered or explicitly deferred with owners (not silently assumed).
+1. **Rank-1 stack** (A+F+E isolation, D sequenced, C rejected, G deferred) is the direction — or
+   records a superseding rank with the same C1/C2/C2b hard gates.
+2. **OQ-1…OQ-9** are answered or explicitly deferred with owners (not silently assumed).
 3. **E remint soundness hinge** is accepted: no grade raise without total Exact predicate or Swap
    certificate (companion 02 + RFC-0018 G-Swap).
-4. **Axis orthogonality** restated: this DN does not merge grade · cert mode · typing strictness.
-5. **No code status change** is implied: Accepted ≠ Enacted; build slices remain `Declared` until
+4. **Meet-boundary determinism** is accepted: table-driven allow/refuse; dynamic paths carry
+   isolation EXPLAIN packages.
+5. **Axis orthogonality** restated: this DN does not merge grade · cert mode · typing strictness.
+6. **No greenwash / no quality-kill** restated as DoD: failed checks never present as Exact;
+   Exact cores remain reachable.
+7. **No code status change** is implied: Accepted ≠ Enacted; build slices remain `Declared` until
    landed and witnessed.
-6. Shared-file rows (§10) applied by integrating parent only.
+8. Shared-file rows (§11) applied by integrating parent only.
 
 **Enacted** (future, not this note): each slice A/F/E/D has a build issue, tests, and honest tags.
 
 ---
 
-## §9 Suggested work items (wave re-rank)
+## §10 Suggested work items (wave re-rank)
 
 | Priority | Suggested id (mint free) | Title | Slice | Depends |
 |---|---|---|---|---|
 | P0 | *(FLAG mint)* | Structural grade catalog for prims + std ops + CI overclaim guard | A | RFC-0018 stage-1a landed |
-| P0 | *(FLAG mint)* | Grade provenance EXPLAIN schema + lean/normal/audit consumption | F | RFC-0034 §7; RFC-0001 query surface |
-| P1 | *(FLAG mint)* | `std.airlock` seal/recertify + tests + lint vs cast-upgrade | E | companion 02; grade pass |
+| P0 | *(FLAG mint)* | Grade + isolation EXPLAIN schema + lean/normal/audit consumption | F | RFC-0034 §7; RFC-0001 query; Agent D §5 |
+| P0 | *(FLAG mint)* | Meet-boundary / export quarantine table + conformance fixtures | E-table | RFC-0018 meet; Agent D D1 |
+| P1 | *(FLAG mint)* | `std.airlock` seal/recertify + tests + lint vs cast-upgrade | E-seal | companion 02; grade pass; E-table |
+| P1 | *(FLAG mint)* | Certified consumer firewall (mode × grade refuse) | E-fw | RFC-0034; E-table |
 | P2 | *(FLAG mint)* | Basis-carrying `@ Empirical`/`@ Proven` surface + bare-tag refuse | D | A, bound registries, certified dogfood need |
-| P2 | *(FLAG mint)* | LSP/hover three-axis badges (grade · mode · typing) | F | DN-126; companion 04 |
+| P2 | *(FLAG mint)* | LSP/hover three-axis badges (grade · mode · typing) + boundary marks | F | DN-126; companion 04; Agent E |
 | P3 | *(FLAG mint)* | Opt-in `public-api-must-annotate-grade` lint profile | lint | OQ-4 |
+| P3 | *(FLAG mint)* | Spore/dataset grade partition fields | quarantine | Agent D D5; spore contract |
 | P3 | *(existing track)* | RFC-0018 stage 1b grade polymorphism | G | after A/F/E settle UX |
-| — | docs-only | Tutorial + language-reference cross-link to three axes + airlock | 0 | companion 02/04 |
+| — | docs-only | Tutorial + language-reference: three axes + isolation cleanroom | 0 | companion 02/04; Agent A fallibility pass |
 
 **Out of scope / do not mint from this DN:** ambient `@guarantee` semantic upgrade (Alt C);
-collapsing `fast` into loose typing; forcing `@ Declared` spray in transpile emit.
+collapsing `fast` into loose typing; forcing `@ Declared` spray in transpile emit; auto-insert
+swap or seal.
 
 ---
 
-## §10 FLAGs for integrating parent (read-only here)
+## §11 FLAGs for integrating parent (read-only here)
 
-| Artifact | Row to append (dated 2026-07-16) |
+| Artifact | Row to apply (dated 2026-07-17 for isolation weave) |
 |---|---|
-| `docs/Doc-Index.md` | DN-141 — Tagging · Meta · transparency-lattice UX (Draft) |
-| `CHANGELOG.md` | `docs(dn-141): draft lattice/Meta tagging UX stack (A+F+E, D sequenced)` |
-| `tools/github/issues.yaml` | mint P0–P2 items in §9 after free-id verify; `doc_refs: corpus:DN-141` |
+| `docs/Doc-Index.md` | DN-141 — Tagging · Meta · transparency-lattice UX · isolation (Draft) |
+| `CHANGELOG.md` | council integrate: poison containment + isolation core in DN-141 body |
+| `tools/github/issues.yaml` | mint P0–P2 items in §10 after free-id verify; `doc_refs: corpus:DN-141` |
 | `CLAUDE.md` | no house-rule change; optional Map pointer to DN-141 under transparency/UX |
-| companion | optional deep-link from `02-guarantee-airlocks` / `04-three-trust-axes` once Accepted |
+| companion | deep-link from `02-guarantee-airlocks` / `04-three-trust-axes` once Accepted |
+| council peers | Agent A A-PC rules; Agent D D-core; Agent C AX isolation ranks; Agent E EXPLAIN panel |
 
 ---
 
-## §11 Changelog (this note)
+## §12 Changelog (this note)
 
 | Date | Change |
 |---|---|
 | 2026-07-16 | **Draft** — Design Agent B council deliverable: pain inventory, safe-inference set, alts 0/A–G, Rank-1 recommendation, adversarial stress-test, OQs, DoD, work-item flags. Slot DN-141 verified free. |
+| 2026-07-17 | **Draft (integrated body)** — Honesty-poison isolation elevated from pattern footnote to **§3 core slice** (airlock / firewall / quarantine / meet-boundary, deterministic meet rules, EXPLAIN package, quality retention, laundry reject). Cross-linked Agent A/D/E and companion 02. Status remains **Draft** — not Accepted. |
 
 ---
 
@@ -417,4 +531,5 @@ collapsing `fast` into loose typing; forcing `@ Declared` spray in transpile emi
   or `Exact` as tagged inline. Nothing `Proven`.
 - **Supersedes:** nothing. **Amends:** nothing normatively until Accepted.
 - **Related:** DN-29 (Superseded deliberation) · ADR-032 / RFC-0034 (Enacted modes) · RFC-0018
-  (Enacted stage-1a) · DN-126 (Accepted typing axis) · companion 02/04 · RFC-0001/0005.
+  (Enacted stage-1a) · DN-126 (Accepted typing axis) · companion 02/04 · RFC-0001/0005 · council
+  Agents A/C/D/E under `docs/planning/gap-analysis-2026-07-16/`.
