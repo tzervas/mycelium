@@ -1,0 +1,835 @@
+{
+  "source": "crates/mycelium-std-time/src/lib.rs",
+  "emitted_items": [
+    "TimeErr",
+    "DeclaredTime",
+    "impl[T] DeclaredTime[T]",
+    "DeclaredTimeEntropy",
+    "impl[T] DeclaredTimeEntropy[T]",
+    "Duration",
+    "impl Duration",
+    "MonoInstant",
+    "impl MonoInstant",
+    "WallInstant",
+    "impl WallInstant",
+    "LogicalInstant",
+    "impl LogicalInstant",
+    "SystemClock",
+    "ManualClock",
+    "impl Init[ManualClock] for ManualClock",
+    "impl ManualClock"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 99,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_std_core :: GuaranteeStrength ;",
+      "reason": "`use mycelium_std_core::GuaranteeStrength` — `mycelium_std_core` is not a sibling module OR sibling phylum transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 103,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
+      "reason": "enum `TimeErr` variant `ClockUnavailable` named field(s) `reason` emitted positionally as `ClockUnavailable(Bytes)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "TimeErr"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 103,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
+      "reason": "enum `TimeErr` variant `NonMonotonic` named field(s) `earlier_ns, later_ns` emitted positionally as `NonMonotonic(Binary{128}, Binary{128})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped",
+      "item_name": "TimeErr"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 103,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
+      "reason": "enum `TimeErr` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "TimeErr"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 103,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).\"] # [doc = \"\"] # [doc = \" No sentinel value, no silent zero, no wrap: every failure route surfaces here.\"] # [derive (Debug , Clone , PartialEq , Eq)] pub enum TimeErr { # [doc = \" A duration or instant arithmetic operation overflowed the representable range.\"] # [doc = \"\"] # [doc = \" **Never** a wrap-around or a saturating clamp — always this error (C1/G2).\"] Overflow , # [doc = \" A MONOTONIC or WALL clock could not be read (platform unavailability, spec §7-Q3).\"] # [doc = \"\"] # [doc = \" Carries an optional human-readable reason (RFC-0013 diagnostic aid).\"] ClockUnavailable { reason : & 'static str } , # [doc = \" A WALL-clock pair difference found a *backward jump* (NTP, leap, DST).\"] # [doc = \"\"] # [doc = \" **Never** a silent zero or negative span — always this error (C1). Carries the two\"] # [doc = \" instants as opaque nanosecond values for diagnostics (RFC-0013).\"] NonMonotonic { earlier_ns : i128 , later_ns : i128 } , }",
+      "reason": "enum `TimeErr` derive(Eq): covered by co-occurring PartialEq → `fn eq_TimeErr` (product-row collision policy; DN-128 / ONESHOT C2) — not a second emission",
+      "item_name": "TimeErr"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 123,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl core :: fmt :: Display for TimeErr { fn fmt (& self , f : & mut core :: fmt :: Formatter < '_ >) -> core :: fmt :: Result { match self { TimeErr :: Overflow => write ! (f , \"time arithmetic overflow (C1 — never wrap/clamp)\") , TimeErr :: ClockUnavailable { reason } => { write ! (f , \"clock unavailable: {reason}\") } TimeErr :: NonMonotonic { earlier_ns , later_ns , } => write ! (f , \"wall-clock backward jump (non-monotonic): \\\n                 later_ns={later_ns} < earlier_ns={earlier_ns} \\\n                 (C1 — never a silent zero/negative span)\") , } } }",
+      "reason": "trait-impl of non-prelude trait `Display` — no ambient trait definition and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); gapped the whole impl so the residual cannot file-poison myc-check (G2; express gap-close 2026-07-16)",
+      "item_name": "TimeErr"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 143,
+      "col": 1,
+      "category": "MacroInvocation",
+      "rust_construct": "MacroInvocation",
+      "snippet": "mycelium_std_core :: impl_std_error ! (TimeErr) ;",
+      "reason": "item-position macro invocation — no macro system in this grammar",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 147,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! time` effect tag (RFC-0014; FLAG §7-Q5).\"] # [doc = \" It is **not** `time`-or-entropy: MONOTONIC reads are effectful ambient reads but are *not*\"] # [doc = \" civil-time entropy sources.  The inner value is accessible via [`DeclaredTime::into_inner`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTime < T > (T) ;",
+      "reason": "struct `DeclaredTime` derive(Debug): generic struct — a derived impl for a generic type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's scope (DN-128/M-1086)",
+      "item_name": "DeclaredTime"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 147,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! time` effect tag (RFC-0014; FLAG §7-Q5).\"] # [doc = \" It is **not** `time`-or-entropy: MONOTONIC reads are effectful ambient reads but are *not*\"] # [doc = \" civil-time entropy sources.  The inner value is accessible via [`DeclaredTime::into_inner`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTime < T > (T) ;",
+      "reason": "struct `DeclaredTime` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "DeclaredTime"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 147,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! time` effect tag (RFC-0014; FLAG §7-Q5).\"] # [doc = \" It is **not** `time`-or-entropy: MONOTONIC reads are effectful ambient reads but are *not*\"] # [doc = \" civil-time entropy sources.  The inner value is accessible via [`DeclaredTime::into_inner`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTime < T > (T) ;",
+      "reason": "struct `DeclaredTime` derive(PartialEq): generic struct — a derived equality fn for a generic type needs DN-130's generic-instance mechanism, out of this leaf's scope (DN-128/M-1086, DN-136 Phase-2 DERIVE-COMPLETION)",
+      "item_name": "DeclaredTime"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 147,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! time` effect tag (RFC-0014; FLAG §7-Q5).\"] # [doc = \" It is **not** `time`-or-entropy: MONOTONIC reads are effectful ambient reads but are *not*\"] # [doc = \" civil-time entropy sources.  The inner value is accessible via [`DeclaredTime::into_inner`].\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTime < T > (T) ;",
+      "reason": "struct `DeclaredTime` derive(...) names Eq not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "DeclaredTime"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 155,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl < T > DeclaredTime < T > { # [doc = \" Wrap a value produced by an effectful, time-only read.\"] pub fn new (inner : T) -> Self { DeclaredTime (inner) } # [doc = \" Unwrap to the inner value (consuming the declaration; the effect was declared at read-time).\"] pub fn into_inner (self) -> T { self . 0 } # [doc = \" Borrow the inner value without consuming the effect declaration.\"] pub fn as_inner (& self) -> & T { & self . 0 } }",
+      "reason": "impl method `into_inner` body: field projection `self.0` on `DeclaredTime[T]` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "item_name": "impl[T] DeclaredTime[T]"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 155,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl < T > DeclaredTime < T > { # [doc = \" Wrap a value produced by an effectful, time-only read.\"] pub fn new (inner : T) -> Self { DeclaredTime (inner) } # [doc = \" Unwrap to the inner value (consuming the declaration; the effect was declared at read-time).\"] pub fn into_inner (self) -> T { self . 0 } # [doc = \" Borrow the inner value without consuming the effect declaration.\"] pub fn as_inner (& self) -> & T { & self . 0 } }",
+      "reason": "impl method `as_inner` body: field projection `self.0` on `DeclaredTime[T]` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "item_name": "impl[T] DeclaredTime[T]"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 172,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! { time, entropy }` effect tag (RFC-0014;\"] # [doc = \" FLAG §7-Q5). A wall-clock read is an **entropy source** under RT3 (RFC-0008) — nondeterminism\"] # [doc = \" reified and named. A deterministic fragment (RT2) cannot call a function that returns this\"] # [doc = \" type without explicitly naming the entropy effect. The `entropy` marker must agree with\"] # [doc = \" `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTimeEntropy < T > (T) ;",
+      "reason": "struct `DeclaredTimeEntropy` derive(Debug): generic struct — a derived impl for a generic type needs DN-130's generic-trait-instance-impl mechanism, out of this leaf's scope (DN-128/M-1086)",
+      "item_name": "DeclaredTimeEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 172,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! { time, entropy }` effect tag (RFC-0014;\"] # [doc = \" FLAG §7-Q5). A wall-clock read is an **entropy source** under RT3 (RFC-0008) — nondeterminism\"] # [doc = \" reified and named. A deterministic fragment (RT2) cannot call a function that returns this\"] # [doc = \" type without explicitly naming the entropy effect. The `entropy` marker must agree with\"] # [doc = \" `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTimeEntropy < T > (T) ;",
+      "reason": "struct `DeclaredTimeEntropy` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "DeclaredTimeEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 172,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! { time, entropy }` effect tag (RFC-0014;\"] # [doc = \" FLAG §7-Q5). A wall-clock read is an **entropy source** under RT3 (RFC-0008) — nondeterminism\"] # [doc = \" reified and named. A deterministic fragment (RT2) cannot call a function that returns this\"] # [doc = \" type without explicitly naming the entropy effect. The `entropy` marker must agree with\"] # [doc = \" `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTimeEntropy < T > (T) ;",
+      "reason": "struct `DeclaredTimeEntropy` derive(PartialEq): generic struct — a derived equality fn for a generic type needs DN-130's generic-instance mechanism, out of this leaf's scope (DN-128/M-1086, DN-136 Phase-2 DERIVE-COMPLETION)",
+      "item_name": "DeclaredTimeEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 172,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).\"] # [doc = \"\"] # [doc = \" This type is the Rust-level reification of the `! { time, entropy }` effect tag (RFC-0014;\"] # [doc = \" FLAG §7-Q5). A wall-clock read is an **entropy source** under RT3 (RFC-0008) — nondeterminism\"] # [doc = \" reified and named. A deterministic fragment (RT2) cannot call a function that returns this\"] # [doc = \" type without explicitly naming the entropy effect. The `entropy` marker must agree with\"] # [doc = \" `std.rand` (M-531) when that crate lands (FLAG §7-Q5 / §8-Q3).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct DeclaredTimeEntropy < T > (T) ;",
+      "reason": "struct `DeclaredTimeEntropy` derive(...) names Eq not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "DeclaredTimeEntropy"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 182,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl < T > DeclaredTimeEntropy < T > { # [doc = \" Wrap a value produced by a wall-clock read, naming both `time` and `entropy` effects.\"] pub fn new (inner : T) -> Self { DeclaredTimeEntropy (inner) } # [doc = \" Unwrap to the inner value.\"] pub fn into_inner (self) -> T { self . 0 } # [doc = \" Borrow the inner value.\"] pub fn as_inner (& self) -> & T { & self . 0 } }",
+      "reason": "impl method `into_inner` body: field projection `self.0` on `DeclaredTimeEntropy[T]` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "item_name": "impl[T] DeclaredTimeEntropy[T]"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 182,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl < T > DeclaredTimeEntropy < T > { # [doc = \" Wrap a value produced by a wall-clock read, naming both `time` and `entropy` effects.\"] pub fn new (inner : T) -> Self { DeclaredTimeEntropy (inner) } # [doc = \" Unwrap to the inner value.\"] pub fn into_inner (self) -> T { self . 0 } # [doc = \" Borrow the inner value.\"] pub fn as_inner (& self) -> & T { & self . 0 } }",
+      "reason": "impl method `as_inner` body: field projection `self.0` on `DeclaredTimeEntropy[T]` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "item_name": "impl[T] DeclaredTimeEntropy[T]"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 201,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
+      "reason": "struct `Duration` named field(s) `nanos` emitted positionally as `Duration(Binary{128})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 201,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
+      "reason": "struct `Duration` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 201,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
+      "reason": "struct `Duration` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 201,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
+      "reason": "struct `Duration` derive(PartialOrd): field 0 has type `Binary{128}`, a scalar WIDER than the seeded `Ord3` instance's `Binary{64}` (`Binary{128}`, e.g. a `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can overflow at runtime for a real wide value, so this leaf leaves it an honest gap rather than compose a call that would `myc-check` clean but THROW at eval time (post-landing review fix, DN-138 section 6's stated scope is u8/u16/u32 only) — the whole derive is left an honest gap rather than a partial/fabricated order (G2)",
+      "item_name": "Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 201,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A signed nanosecond span (C4 / RFC-0001 value-semantic).\"] # [doc = \"\"] # [doc = \" Represented as a signed 128-bit nanosecond count — large enough to span many millennia and\"] # [doc = \" small enough to be exact at nanosecond resolution. Arithmetic is **always checked** (C1/G2):\"] # [doc = \" an operation that would overflow returns `Err(TimeErr::Overflow)`, never a wrap or clamp.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** for all pure arithmetic — the computation is exact integer\"] # [doc = \" arithmetic; fallibility is the never-silent overflow guard, not approximation.\"] # [doc = \"\"] # [doc = \" # FLAG — representation (§7-Q4)\"] # [doc = \"\"] # [doc = \" The signedness and resolution of `Duration` are open questions (spec §7-Q4): is it signed\"] # [doc = \" (allowing a negative span from `sub`) or unsigned-with-explicit-direction? This implementation\"] # [doc = \" uses a **signed `i128` nanoseconds** representation as the simplest honest choice — overflow\"] # [doc = \" is still `Err(Overflow)`, and a negative span is meaningful (e.g., a deadline that has\"] # [doc = \" passed). Disposition: defer final representation choice to spec ratification; overflow is\"] # [doc = \" `Err(Overflow)` regardless (C1 holds either way).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct Duration { # [doc = \" Signed nanosecond count. `i128` gives ≈ ±292 years at nanosecond resolution.\"] nanos : i128 , }",
+      "reason": "struct `Duration` derive(...) names Eq, Ord not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "AssocConst",
+      "rust_construct": "AssocConst",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl associated const `ZERO`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "AssocConst",
+      "rust_construct": "AssocConst",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl associated const `MIN`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "AssocConst",
+      "rust_construct": "AssocConst",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl associated const `MAX`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "dropped non-doc attribute(s) on method `from_nanos`: # [must_use]",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `from_secs` body: unsupported expression form `(secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ?`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `from_millis` body: unsupported expression form `(millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ?`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `from_micros` body: unsupported expression form `(micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ?`",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "dropped non-doc attribute(s) on method `as_nanos`: # [must_use]",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `as_secs_trunc` body: function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "dropped non-doc attribute(s) on method `is_negative`: # [must_use]",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "dropped non-doc attribute(s) on method `is_zero`: # [must_use]",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "Closure",
+      "rust_construct": "Closure",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `checked_neg` body: closure parameter `n` has no explicit type annotation — Mycelium's `lambda` parameters are always `name: Type` (grammar `lambda_expr` / `param`) and this transpiler has no type-inference pass to recover an omitted Rust closure-param type",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 224,
+      "col": 1,
+      "category": "Closure",
+      "rust_construct": "Closure",
+      "snippet": "impl Duration { # [doc = \" The zero span.\"] pub const ZERO : Duration = Duration { nanos : 0 } ; # [doc = \" The smallest representable (most-negative) span.\"] pub const MIN : Duration = Duration { nanos : i128 :: MIN } ; # [doc = \" The largest representable (most-positive) span.\"] pub const MAX : Duration = Duration { nanos : i128 :: MAX } ; # [doc = \" Construct from a nanosecond count (value-semantic constructor — always exact).\"] # [must_use] pub const fn from_nanos (nanos : i128) -> Self { Duration { nanos } } # [doc = \" Construct from whole seconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_secs (secs : i64) -> Result < Self , TimeErr > { let nanos = (secs as i128) . checked_mul (1_000_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from milliseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_millis (millis : i64) -> Result < Self , TimeErr > { let nanos = (millis as i128) . checked_mul (1_000_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" Construct from microseconds. Returns `Err(Overflow)` if out of range (C1/G2).\"] pub fn from_micros (micros : i64) -> Result < Self , TimeErr > { let nanos = (micros as i128) . checked_mul (1_000) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) } # [doc = \" The raw nanosecond count (exact, total — the canonical representation).\"] # [must_use] pub const fn as_nanos (self) -> i128 { self . nanos } # [doc = \" Truncating whole-second count (rounds toward zero).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] when the whole-second count falls outside the `i64` range. The\"] # [doc = \"   nanosecond field is `i128` (up to [`Duration::MAX`]), so the second count can exceed\"] # [doc = \"   `i64`; it is refused rather than silently truncated (C1/G2).\"] pub const fn as_secs_trunc (self) -> Result < i64 , TimeErr > { let secs = self . nanos / 1_000_000_000 ; if secs < i64 :: MIN as i128 || secs > i64 :: MAX as i128 { return Err (TimeErr :: Overflow) ; } Ok (secs as i64) } # [doc = \" Whether this span is negative.\"] # [must_use] pub const fn is_negative (self) -> bool { self . nanos < 0 } # [doc = \" Whether this span is zero.\"] # [must_use] pub const fn is_zero (self) -> bool { self . nanos == 0 } # [doc = \" Negate the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_neg` rather than `neg` to avoid ambiguity with `std::ops::Neg`\"] # [doc = \" (which cannot be implemented here because negation is fallible — C1/G2).\"] pub fn checked_neg (self) -> Result < Duration , TimeErr > { self . nanos . checked_neg () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } # [doc = \" Absolute value of the span. Returns `Err(Overflow)` for `Duration::MIN` (C1/G2).\"] # [doc = \"\"] # [doc = \" Named `checked_abs` to match the `checked_*` pattern; `i128::MIN.abs()` would overflow.\"] pub fn checked_abs (self) -> Result < Duration , TimeErr > { self . nanos . checked_abs () . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) } }",
+      "reason": "impl method `checked_abs` body: closure parameter `n` has no explicit type annotation — Mycelium's `lambda` parameters are always `name: Type` (grammar `lambda_expr` / `param`) and this transpiler has no type-inference pass to recover an omitted Rust closure-param type",
+      "item_name": "impl Duration"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 319,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
+      "reason": "struct `MonoInstant` named field(s) `nanos` emitted positionally as `MonoInstant(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 319,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
+      "reason": "struct `MonoInstant` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 319,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
+      "reason": "struct `MonoInstant` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 319,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A point on the MONOTONIC clock (never-backward, no civil meaning).\"] # [doc = \"\"] # [doc = \" Represented as an opaque nanosecond-resolution tick count from an unspecified epoch.\"] # [doc = \" The epoch is platform-defined and has no civil meaning — **only differences between two\"] # [doc = \" `MonoInstant` values are meaningful** (`diff(a, b) → Duration`).\"] # [doc = \"\"] # [doc = \" Cross-source subtraction is a **compile-time type error**: `diff(MonoInstant, WallInstant)`\"] # [doc = \" does not exist and cannot be called accidentally (the typed distinction that is \\\"structurally\"] # [doc = \" never a silent swap\\\", spec §1).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — this value is an input from outside the pure fragment, not a\"] # [doc = \" computation. A MONOTONIC clock read declares effect `time` (not `entropy`).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct MonoInstant { # [doc = \" Nanoseconds from the MONOTONIC clock's epoch (platform-defined, never civil UTC).\"] nanos : u64 , }",
+      "reason": "struct `MonoInstant` derive(...) names Eq, Ord not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 337,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
+      "reason": "dropped non-doc attribute(s) on method `from_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 337,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl MonoInstant { # [doc = \" Construct from a raw nanosecond tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_nanos (nanos : u64) -> Self { MonoInstant { nanos } } # [doc = \" The raw nanosecond tick (canonical representation — exact, total).\"] # [must_use] pub const fn as_nanos (self) -> u64 { self . nanos } }",
+      "reason": "dropped non-doc attribute(s) on method `as_nanos`: # [must_use]",
+      "item_name": "impl MonoInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 351,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
+      "reason": "struct `WallInstant` named field(s) `nanos_since_epoch` emitted positionally as `WallInstant(Binary{128})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 351,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
+      "reason": "struct `WallInstant` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 351,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
+      "reason": "struct `WallInstant` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 351,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
+      "reason": "struct `WallInstant` derive(PartialOrd): field 0 has type `Binary{128}`, a scalar WIDER than the seeded `Ord3` instance's `Binary{64}` (`Binary{128}`, e.g. a `u128`/`i128` field) -- a NARROWING `width_cast` down to 64 bits can overflow at runtime for a real wide value, so this leaf leaves it an honest gap rather than compose a call that would `myc-check` clean but THROW at eval time (post-landing review fix, DN-138 section 6's stated scope is u8/u16/u32 only) — the whole derive is left an honest gap rather than a partial/fabricated order (G2)",
+      "item_name": "WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 351,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A point on the WALL-CLOCK (civil/UTC time, an entropy source).\"] # [doc = \"\"] # [doc = \" Represented as a signed nanosecond count from the Unix epoch (UTC). This is a civil-time\"] # [doc = \" value: unlike [`MonoInstant`], its clock can step backward (NTP, leap seconds, DST), so\"] # [doc = \" `diff(WallInstant, WallInstant)` may return `Err(NonMonotonic)`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — a wall read declares `{ time, entropy }`. It is an entropy\"] # [doc = \" source in the sense of RT3 (RFC-0008): every read can differ, it is unpredictable, and it\"] # [doc = \" seeds. A deterministic-fragment (RT2) program cannot call `wall_now` silently — the return\"] # [doc = \" type is `DeclaredTimeEntropy<WallInstant>`, which carries the effect marker explicitly.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct WallInstant { # [doc = \" Nanoseconds from the Unix epoch (UTC), signed (can be negative for dates before 1970).\"] nanos_since_epoch : i128 , }",
+      "reason": "struct `WallInstant` derive(...) names Eq, Ord not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 367,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl WallInstant { # [doc = \" Construct from a signed nanosecond count since the Unix epoch (used by [`ClockSource`]).\"] # [must_use] pub const fn from_nanos_since_epoch (nanos : i128) -> Self { WallInstant { nanos_since_epoch : nanos , } } # [doc = \" The raw signed nanosecond count since the Unix epoch (exact, total).\"] # [must_use] pub const fn as_nanos_since_epoch (self) -> i128 { self . nanos_since_epoch } }",
+      "reason": "dropped non-doc attribute(s) on method `from_nanos_since_epoch`: # [must_use]",
+      "item_name": "impl WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 367,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl WallInstant { # [doc = \" Construct from a signed nanosecond count since the Unix epoch (used by [`ClockSource`]).\"] # [must_use] pub const fn from_nanos_since_epoch (nanos : i128) -> Self { WallInstant { nanos_since_epoch : nanos , } } # [doc = \" The raw signed nanosecond count since the Unix epoch (exact, total).\"] # [must_use] pub const fn as_nanos_since_epoch (self) -> i128 { self . nanos_since_epoch } }",
+      "reason": "dropped non-doc attribute(s) on method `as_nanos_since_epoch`: # [must_use]",
+      "item_name": "impl WallInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 383,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
+      "reason": "struct `LogicalInstant` named field(s) `tick` emitted positionally as `LogicalInstant(Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 383,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
+      "reason": "struct `LogicalInstant` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 383,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
+      "reason": "struct `LogicalInstant` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 383,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).\"] # [doc = \"\"] # [doc = \" The LOGICAL clock is the **only** time source legible to the deterministic fragment (RT2),\"] # [doc = \" because its value is reproducible under RT2 sequentialization: it is not real-world entropy.\"] # [doc = \" Its advancement is owned by `std.runtime`/`colony` (M-521 over RFC-0008 §4.7 / M-356) — this\"] # [doc = \" crate exposes only the **typed reading surface** (a `u64` tick supplied by the caller's\"] # [doc = \" [`ClockSource`]).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — it still declares the `time` effect (a read of runtime state,\"] # [doc = \" not a pure constant), but `time` only — not `entropy`.\"] # [doc = \"\"] # [doc = \" # FLAG — concrete API ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" The tick shape (per-colony? per-scope?), the read's exact effect classification, and the\"] # [doc = \" advancement semantics are **all deferred to M-521/M-356**. This crate provides the thin typed\"] # [doc = \" wrapper only; the orchestrator wires it to the real runtime clock when that API lands.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , PartialOrd , Ord , Hash)] pub struct LogicalInstant { # [doc = \" The deterministic monotonic tick provided by the RFC-0008 runtime (M-356).\"] tick : u64 , }",
+      "reason": "struct `LogicalInstant` derive(...) names Eq, Ord not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 405,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
+      "reason": "dropped non-doc attribute(s) on method `from_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 405,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl LogicalInstant { # [doc = \" Construct from a logical tick (used by [`ClockSource`] implementations).\"] # [must_use] pub const fn from_tick (tick : u64) -> Self { LogicalInstant { tick } } # [doc = \" The raw tick value (exact, total).\"] # [must_use] pub const fn as_tick (self) -> u64 { self . tick } }",
+      "reason": "dropped non-doc attribute(s) on method `as_tick`: # [must_use]",
+      "item_name": "impl LogicalInstant"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 421,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Add two durations. Returns `Err(Overflow)` on range exhaustion — **never** wraps (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic; fallibility is the overflow guard.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_add (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_add (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "item_name": "duration_add"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 435,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Subtract two durations (`a - b`). Returns `Err(Overflow)` on range exhaustion (C1/G2).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the result is outside the representable range.\"] pub fn duration_sub (a : Duration , b : Duration) -> Result < Duration , TimeErr > { a . nanos . checked_sub (b . nanos) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "item_name": "duration_sub"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 449,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Scale a duration by a signed integer factor. Returns `Err(Overflow)` on range exhaustion.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — exact integer arithmetic.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — the product is outside the representable range.\"] pub fn duration_scale (d : Duration , k : i64) -> Result < Duration , TimeErr > { d . nanos . checked_mul (k as i128) . map (| n | Duration { nanos : n }) . ok_or (TimeErr :: Overflow) }",
+      "reason": "field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "item_name": "duration_scale"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 463,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Compare two durations. **Guarantee tag: `Exact`**, total.\"] # [must_use] pub fn duration_cmp (a : Duration , b : Duration) -> core :: cmp :: Ordering { a . cmp (& b) }",
+      "reason": "qualified type path `core :: cmp :: Ordering` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "duration_cmp"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 469,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Convert a duration to a coarser unit (truncating), or return `Err(Overflow)` if the truncated\"] # [doc = \" value in nanoseconds overflows (narrowing-unit conversion).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** — truncating integer division is exact.\"] # [doc = \"\"] # [doc = \" `unit_nanos` must be the nanosecond count of one unit (e.g., `1_000_000_000` for seconds).\"] # [doc = \" Returns `Err(Overflow)` if `unit_nanos == 0` (degenerate) or if re-expressing the truncated\"] # [doc = \" value in nanoseconds overflows.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::Overflow`] — `unit_nanos` is zero, or the result overflows on narrowing.\"] pub fn duration_as_unit (d : Duration , unit_nanos : i128) -> Result < Duration , TimeErr > { if unit_nanos == 0 { return Err (TimeErr :: Overflow) ; } let truncated_units = d . nanos / unit_nanos ; let nanos = truncated_units . checked_mul (unit_nanos) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos }) }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "duration_as_unit"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 494,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Compute the signed duration between two MONOTONIC instants (`later − earlier`).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`**, total. Both instants are on the same MONOTONIC clock source; the\"] # [doc = \" result is always representable because `u64::MAX - u64::MIN < i128::MAX`.\"] # [doc = \"\"] # [doc = \" Cross-source differences (e.g., `MonoInstant − WallInstant`) **do not exist** as a function —\"] # [doc = \" the typed distinction is enforced at compile time (spec §1 / RFC-0016 §4.4).\"] # [must_use] pub fn mono_diff (later : MonoInstant , earlier : MonoInstant) -> Duration { let span = (later . nanos as i128) - (earlier . nanos as i128) ; Duration { nanos : span } }",
+      "reason": "cast `later . nanos as i128` — operand type unknown: `as` fidelity requires a known operand type, but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper around one) whose type this transpiler can resolve without guessing (no general expression-typing pass; VR-5)",
+      "item_name": "mono_diff"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 508,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Compute the signed duration between two WALL-CLOCK instants (`later − earlier`).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`** on success. Returns `Err(NonMonotonic)` if `later < earlier`\"] # [doc = \" (a wall-clock can step backward — NTP, leap, DST). That backward jump is **never** a silent\"] # [doc = \" zero or negative span: it is an explicit, traceable `Err` carrying both instants' nanosecond\"] # [doc = \" values for diagnostics (C1/RFC-0013).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::NonMonotonic`] — `later.nanos_since_epoch < earlier.nanos_since_epoch`.\"] # [doc = \" - [`TimeErr::Overflow`] — the difference overflows `i128` (astronomically unlikely but guarded).\"] pub fn wall_diff (later : WallInstant , earlier : WallInstant) -> Result < Duration , TimeErr > { if later . nanos_since_epoch < earlier . nanos_since_epoch { return Err (TimeErr :: NonMonotonic { earlier_ns : earlier . nanos_since_epoch , later_ns : later . nanos_since_epoch , }) ; } let span = later . nanos_since_epoch . checked_sub (earlier . nanos_since_epoch) . ok_or (TimeErr :: Overflow) ? ; Ok (Duration { nanos : span }) }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "wall_diff"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 533,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Compute the duration between two LOGICAL instants (`later − earlier`).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Exact`**, total. The LOGICAL clock is monotonic by construction (runtime-\"] # [doc = \" owned; RFC-0008 §4.7 / M-356), so this is always well-defined. The tick difference fits in\"] # [doc = \" `i128` for any pair of `u64` values.\"] # [must_use] pub fn logical_diff (later : LogicalInstant , earlier : LogicalInstant) -> Duration { let span = (later . tick as i128) - (earlier . tick as i128) ; Duration { nanos : span } }",
+      "reason": "cast `later . tick as i128` — operand type unknown: `as` fidelity requires a known operand type, but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper around one) whose type this transpiler can resolve without guessing (no general expression-typing pass; VR-5)",
+      "item_name": "logical_diff"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 546,
+      "col": 1,
+      "category": "Trait",
+      "rust_construct": "Trait",
+      "snippet": "# [doc = \" The injectable clock-source surface (C6 / RFC-0014 declared effects).\"] # [doc = \"\"] # [doc = \" All three reads declare their effect via the return type:\"] # [doc = \" - `mono_now` returns `DeclaredTime<Result<MonoInstant, TimeErr>>` — effect: `time`.\"] # [doc = \" - `wall_now` returns `DeclaredTimeEntropy<Result<WallInstant, TimeErr>>` — effect:\"] # [doc = \"   `{ time, entropy }`.\"] # [doc = \" - `logical_now` returns `DeclaredTime<LogicalInstant>` — effect: `time` (deterministic).\"] # [doc = \"\"] # [doc = \" The effect marker is on the **return type**, not a doc comment — it is inspectable and\"] # [doc = \" greppable. Production code passes [`SystemClock`]; tests pass [`ManualClock`].\"] # [doc = \"\"] # [doc = \" # FLAG — std-sys floor (§7-Q3 / M-541)\"] # [doc = \"\"] # [doc = \" The real OS clock is accessed only inside [`SystemClock`]. When M-541 lands, that\"] # [doc = \" implementation will migrate to the audited `wild` block in `std-sys`.\"] pub trait ClockSource { # [doc = \" Read the MONOTONIC clock. Declares effect `time` (not entropy).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — an ambient, nondeterministic-across-runs read.\"] # [doc = \" Returns `Err(ClockUnavailable)` if the platform MONOTONIC clock is not available.\"] fn mono_now (& self) -> DeclaredTime < Result < MonoInstant , TimeErr > > ; # [doc = \" Read the WALL-CLOCK. Declares effects `{ time, entropy }`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — an entropy source (civil time, RT3). A deterministic\"] # [doc = \" fragment (RT2) cannot use a function returning `DeclaredTimeEntropy` without explicitly\"] # [doc = \" naming the entropy effect (the structural enforcement of RT2/RT3).\"] fn wall_now (& self) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > ; # [doc = \" Read the RFC-0008 LOGICAL clock tick. Declares effect `time` only (deterministic).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — total (the counter is always readable in v0).\"] # [doc = \" The tick is provided by the runtime (M-356); this crate only reads it.\"] fn logical_now (& self) -> DeclaredTime < LogicalInstant > ; }",
+      "reason": "trait `ClockSource` method `mono_now` signature has no confirmed mapping (a trait-body `Self`/`self` has no concrete referent in this grammar; `self` parameter with no enclosing impl/trait context)",
+      "item_name": "ClockSource"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 584,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).\"] # [doc = \"\"] # [doc = \" This is not the final `std-sys` audited `wild` block; it is a usable stand-in until M-541.\"] # [doc = \" The LOGICAL clock read returns a monotonically-increasing counter seeded from the MONOTONIC\"] # [doc = \" clock's `Instant` (a placeholder; the real counter is M-356's runtime-owned tick).\"] # [doc = \"\"] # [doc = \" # FLAG — logical clock ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" `SystemClock::logical_now` returns a tick derived from the MONOTONIC clock's elapsed\"] # [doc = \" nanoseconds as a **placeholder** only. The real logical tick is M-356's deterministic counter,\"] # [doc = \" owned by `std.runtime`. When that API lands, `SystemClock::logical_now` will delegate to it.\"] # [derive (Debug , Clone , Copy , Default)] pub struct SystemClock ;",
+      "reason": "struct `SystemClock` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "SystemClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 584,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).\"] # [doc = \"\"] # [doc = \" This is not the final `std-sys` audited `wild` block; it is a usable stand-in until M-541.\"] # [doc = \" The LOGICAL clock read returns a monotonically-increasing counter seeded from the MONOTONIC\"] # [doc = \" clock's `Instant` (a placeholder; the real counter is M-356's runtime-owned tick).\"] # [doc = \"\"] # [doc = \" # FLAG — logical clock ownership (§7-Q1 / M-521 / M-356)\"] # [doc = \"\"] # [doc = \" `SystemClock::logical_now` returns a tick derived from the MONOTONIC clock's elapsed\"] # [doc = \" nanoseconds as a **placeholder** only. The real logical tick is M-356's deterministic counter,\"] # [doc = \" owned by `std.runtime`. When that API lands, `SystemClock::logical_now` will delegate to it.\"] # [derive (Debug , Clone , Copy , Default)] pub struct SystemClock ;",
+      "reason": "struct `SystemClock` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "SystemClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 598,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl ClockSource for SystemClock { fn mono_now (& self) -> DeclaredTime < Result < MonoInstant , TimeErr > > { use std :: time :: Instant ; thread_local ! { static EPOCH : Instant = Instant :: now () ; } let elapsed_ns = EPOCH . with (| epoch | { let elapsed = epoch . elapsed () ; u64 :: try_from (elapsed . as_nanos ()) . unwrap_or (u64 :: MAX) }) ; DeclaredTime :: new (Ok (MonoInstant :: from_nanos (elapsed_ns))) } fn wall_now (& self) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { use std :: time :: { SystemTime , UNIX_EPOCH } ; let result = SystemTime :: now () . duration_since (UNIX_EPOCH) . map_err (| _ | TimeErr :: ClockUnavailable { reason : \"SystemTime before UNIX_EPOCH (platform clock error)\" , }) . and_then (| d | { let nanos = i128 :: try_from (d . as_nanos ()) . map_err (| _ | TimeErr :: ClockUnavailable { reason : \"wall-clock nanoseconds since epoch exceed i128\" , }) ? ; Ok (WallInstant :: from_nanos_since_epoch (nanos)) }) ; DeclaredTimeEntropy :: new (result) } fn logical_now (& self) -> DeclaredTime < LogicalInstant > { let tick = self . mono_now () . into_inner () . map (| m | m . as_nanos ()) . unwrap_or (0) ; DeclaredTime :: new (LogicalInstant :: from_tick (tick)) } }",
+      "reason": "trait-impl of non-prelude trait `ClockSource` — no ambient trait definition and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); gapped the whole impl so the residual cannot file-poison myc-check (G2; express gap-close 2026-07-16)",
+      "item_name": "SystemClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 657,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A [`ClockSource`] with manually-settable time values — for deterministic tests.\"] # [doc = \"\"] # [doc = \" All three reads return the values set by the last `set_*` call (default: zero for each).\"] # [doc = \" The WALL-CLOCK read still returns `DeclaredTimeEntropy` — the effect marker is structural,\"] # [doc = \" not conditional on nondeterminism — but the value is deterministic, enabling pure test logic.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust\"] # [doc = \" # use mycelium_std_time::{ManualClock, ClockSource, MonoInstant, WallInstant, LogicalInstant};\"] # [doc = \" let mut clock = ManualClock::default();\"] # [doc = \" clock.set_mono(MonoInstant::from_nanos(1_000_000_000));\"] # [doc = \" clock.set_wall(WallInstant::from_nanos_since_epoch(1_717_000_000_000_000_000));\"] # [doc = \" clock.set_logical(LogicalInstant::from_tick(42));\"] # [doc = \"\"] # [doc = \" let mono = clock.mono_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(mono.as_nanos(), 1_000_000_000);\"] # [doc = \"\"] # [doc = \" let wall = clock.wall_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(wall.as_nanos_since_epoch(), 1_717_000_000_000_000_000);\"] # [doc = \"\"] # [doc = \" let logical = clock.logical_now().into_inner();\"] # [doc = \" assert_eq!(logical.as_tick(), 42);\"] # [doc = \" ```\"] # [derive (Debug , Clone)] pub struct ManualClock { mono : MonoInstant , wall : WallInstant , logical : LogicalInstant , }",
+      "reason": "struct `ManualClock` named field(s) `mono, wall, logical` emitted positionally as `ManualClock(MonoInstant, WallInstant, LogicalInstant)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 657,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A [`ClockSource`] with manually-settable time values — for deterministic tests.\"] # [doc = \"\"] # [doc = \" All three reads return the values set by the last `set_*` call (default: zero for each).\"] # [doc = \" The WALL-CLOCK read still returns `DeclaredTimeEntropy` — the effect marker is structural,\"] # [doc = \" not conditional on nondeterminism — but the value is deterministic, enabling pure test logic.\"] # [doc = \"\"] # [doc = \" # Example\"] # [doc = \"\"] # [doc = \" ```rust\"] # [doc = \" # use mycelium_std_time::{ManualClock, ClockSource, MonoInstant, WallInstant, LogicalInstant};\"] # [doc = \" let mut clock = ManualClock::default();\"] # [doc = \" clock.set_mono(MonoInstant::from_nanos(1_000_000_000));\"] # [doc = \" clock.set_wall(WallInstant::from_nanos_since_epoch(1_717_000_000_000_000_000));\"] # [doc = \" clock.set_logical(LogicalInstant::from_tick(42));\"] # [doc = \"\"] # [doc = \" let mono = clock.mono_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(mono.as_nanos(), 1_000_000_000);\"] # [doc = \"\"] # [doc = \" let wall = clock.wall_now().into_inner().unwrap();\"] # [doc = \" assert_eq!(wall.as_nanos_since_epoch(), 1_717_000_000_000_000_000);\"] # [doc = \"\"] # [doc = \" let logical = clock.logical_now().into_inner();\"] # [doc = \" assert_eq!(logical.as_tick(), 42);\"] # [doc = \" ```\"] # [derive (Debug , Clone)] pub struct ManualClock { mono : MonoInstant , wall : WallInstant , logical : LogicalInstant , }",
+      "reason": "struct `ManualClock` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 698,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ManualClock { # [doc = \" Set the MONOTONIC clock value returned by `mono_now`.\"] pub fn set_mono (& mut self , instant : MonoInstant) { self . mono = instant ; } # [doc = \" Set the WALL-CLOCK value returned by `wall_now`.\"] pub fn set_wall (& mut self , instant : WallInstant) { self . wall = instant ; } # [doc = \" Set the LOGICAL tick returned by `logical_now`.\"] pub fn set_logical (& mut self , instant : LogicalInstant) { self . logical = instant ; } # [doc = \" Advance the MONOTONIC clock by `delta_ns` nanoseconds (for tests that simulate time\"] # [doc = \" passing without an actual sleep). Saturates at `u64::MAX`.\"] pub fn advance_mono (& mut self , delta_ns : u64) { self . mono = MonoInstant :: from_nanos (self . mono . as_nanos () . saturating_add (delta_ns)) ; } # [doc = \" Advance the LOGICAL clock by one tick (for tests that simulate a runtime step).\"] pub fn step_logical (& mut self) { self . logical = LogicalInstant :: from_tick (self . logical . as_tick () . saturating_add (1)) ; } }",
+      "reason": "impl method `advance_mono` body: Rust `.saturating_add` is saturating (silent clamp) — Mycelium has no saturating prim surface; desugaring to `saturating_add(…)` would fabricate an unknown prim or lie about overflow (G2/VR-5). Gap never-silently (express gap-close 2026-07-16).",
+      "item_name": "impl ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 698,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl ManualClock { # [doc = \" Set the MONOTONIC clock value returned by `mono_now`.\"] pub fn set_mono (& mut self , instant : MonoInstant) { self . mono = instant ; } # [doc = \" Set the WALL-CLOCK value returned by `wall_now`.\"] pub fn set_wall (& mut self , instant : WallInstant) { self . wall = instant ; } # [doc = \" Set the LOGICAL tick returned by `logical_now`.\"] pub fn set_logical (& mut self , instant : LogicalInstant) { self . logical = instant ; } # [doc = \" Advance the MONOTONIC clock by `delta_ns` nanoseconds (for tests that simulate time\"] # [doc = \" passing without an actual sleep). Saturates at `u64::MAX`.\"] pub fn advance_mono (& mut self , delta_ns : u64) { self . mono = MonoInstant :: from_nanos (self . mono . as_nanos () . saturating_add (delta_ns)) ; } # [doc = \" Advance the LOGICAL clock by one tick (for tests that simulate a runtime step).\"] pub fn step_logical (& mut self) { self . logical = LogicalInstant :: from_tick (self . logical . as_tick () . saturating_add (1)) ; } }",
+      "reason": "impl method `step_logical` body: Rust `.saturating_add` is saturating (silent clamp) — Mycelium has no saturating prim surface; desugaring to `saturating_add(…)` would fabricate an unknown prim or lie about overflow (G2/VR-5). Gap never-silently (express gap-close 2026-07-16).",
+      "item_name": "impl ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 726,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl ClockSource for ManualClock { fn mono_now (& self) -> DeclaredTime < Result < MonoInstant , TimeErr > > { DeclaredTime :: new (Ok (self . mono)) } fn wall_now (& self) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { DeclaredTimeEntropy :: new (Ok (self . wall)) } fn logical_now (& self) -> DeclaredTime < LogicalInstant > { DeclaredTime :: new (self . logical) } }",
+      "reason": "trait-impl of non-prelude trait `ClockSource` — no ambient trait definition and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); gapped the whole impl so the residual cannot file-poison myc-check (G2; express gap-close 2026-07-16)",
+      "item_name": "ManualClock"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 742,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Read the MONOTONIC clock from `source`. Declares effect `time` (not entropy).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — ambient read, not a pure computation (VR-5, C2).\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn mono_now (source : & dyn ClockSource) -> DeclaredTime < Result < MonoInstant , TimeErr > > { source . mono_now () }",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
+      "item_name": "mono_now"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 753,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Read the WALL-CLOCK from `source`. Declares effects `{ time, entropy }`.\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — an entropy source (civil time, RT3 reified nondeterminism).\"] # [doc = \" Return type carries [`DeclaredTimeEntropy`] — the structural RT2/RT3 enforcement.\"] # [doc = \"\"] # [doc = \" # Errors\"] # [doc = \"\"] # [doc = \" - [`TimeErr::ClockUnavailable`] — the platform clock is unavailable.\"] pub fn wall_now (source : & dyn ClockSource) -> DeclaredTimeEntropy < Result < WallInstant , TimeErr > > { source . wall_now () }",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
+      "item_name": "wall_now"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 765,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Read the LOGICAL clock from `source`. Declares effect `time` only (deterministic).\"] # [doc = \"\"] # [doc = \" **Guarantee tag: `Declared`** — total (the counter is always readable in v0). The\"] # [doc = \" deterministic-fragment-legible time read (RFC-0008 §4.7 / M-356).\"] pub fn logical_now (source : & dyn ClockSource) -> DeclaredTime < LogicalInstant > { source . logical_now () }",
+      "reason": "unsupported Rust type form `dyn ClockSource`",
+      "item_name": "logical_now"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 775,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" One row of the `std.time` guarantee matrix (RFC-0016 §4.5 / spec §4).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct GuaranteeRow { # [doc = \" The exported operation name.\"] pub op : & 'static str , # [doc = \" The honest guarantee tag on `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`.\"] pub tag : GuaranteeStrength , # [doc = \" The explicit fallibility: `\\\"total\\\"`, or the `Result`/`Option` shape.\"] pub fallibility : & 'static str , # [doc = \" Declared effects: `\\\"none\\\"`, `\\\"time\\\"`, or `\\\"{ time, entropy }\\\"`.\"] pub effects : & 'static str , # [doc = \" Whether the op surfaces an inspectable EXPLAIN artifact.\"] pub explainable : bool , }",
+      "reason": "struct `GuaranteeRow` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
+      "item_name": "GuaranteeRow"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 790,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" The `std.time` guarantee matrix (spec §4 / RFC-0016 §4.5).\"] # [doc = \"\"] # [doc = \" **Encoding obligation** (RFC-0016 §4.5): every row is encoded here as data and asserted in\"] # [doc = \" the test suite — never prose-only.\"] # [doc = \"\"] # [doc = \" Tag justification (VR-5 — downgrade rather than overclaim):\"] # [doc = \" - **`Exact` rows** are pure integer-span computations: exact, never approximate. Fallibility\"] # [doc = \"   is the never-silent overflow guard — a result that cannot be represented is `Err(Overflow)`,\"] # [doc = \"   never a wrap or saturating clamp (C1/G2).\"] # [doc = \" - **`Declared` rows** are clock reads: inputs from outside the pure fragment. They are\"] # [doc = \"   `Declared` because the value is asserted/ambient, not computed. They never tag `Exact`,\"] # [doc = \"   `Proven`, or `Empirical` — those would be overclaims (VR-5, the crux of this module).\"] pub const GUARANTEE_MATRIX : & [GuaranteeRow] = & [GuaranteeRow { op : \"duration_add\" , tag : GuaranteeStrength :: Exact , fallibility : \"Err(Overflow) — never wrap/clamp\" , effects : \"none\" , explainable : true , } , GuaranteeRow { op : \"duration_sub\" , tag : GuaranteeStrength :: Exact , fallibility : \"Err(Overflow) — never wrap/clamp\" , effects : \"none\" , explainable : true , } , GuaranteeRow { op : \"duration_scale\" , tag : GuaranteeStrength :: Exact , fallibility : \"Err(Overflow) — never wrap/clamp\" , effects : \"none\" , explainable : true , } , GuaranteeRow { op : \"duration_cmp\" , tag : GuaranteeStrength :: Exact , fallibility : \"total\" , effects : \"none\" , explainable : false , } , GuaranteeRow { op : \"duration_as_unit\" , tag : GuaranteeStrength :: Exact , fallibility : \"Err(Overflow) on unit=0 or narrowing overflow\" , effects : \"none\" , explainable : true , } , GuaranteeRow { op : \"mono_diff\" , tag : GuaranteeStrength :: Exact , fallibility : \"total (same-source, MONOTONIC is never-backward)\" , effects : \"none\" , explainable : false , } , GuaranteeRow { op : \"wall_diff\" , tag : GuaranteeStrength :: Exact , fallibility : \"Err(NonMonotonic) on backward jump — never silent zero\" , effects : \"none\" , explainable : true , } , GuaranteeRow { op : \"logical_diff\" , tag : GuaranteeStrength :: Exact , fallibility : \"total (LOGICAL is monotonic by construction)\" , effects : \"none\" , explainable : false , } , GuaranteeRow { op : \"mono_now\" , tag : GuaranteeStrength :: Declared , fallibility : \"Err(ClockUnavailable)\" , effects : \"time\" , explainable : true , } , GuaranteeRow { op : \"wall_now\" , tag : GuaranteeStrength :: Declared , fallibility : \"Err(ClockUnavailable)\" , effects : \"{ time, entropy }\" , explainable : true , } , GuaranteeRow { op : \"logical_now\" , tag : GuaranteeStrength :: Declared , fallibility : \"total (deterministic counter, always readable in v0)\" , effects : \"time\" , explainable : true , } ,] ;",
+      "reason": "top-level `const GUARANTEE_MATRIX` — co-emit (ORACLE-R1 A4) only covers plain unsigned integer types (`u8`/`u16`/`u32`/`u64`/`u128`/`usize`); other types have no const item production and no faithful zero-arg-fn encoding (gap, never fabricate)",
+      "item_name": "GUARANTEE_MATRIX"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 893,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Assert the structural invariants of the guarantee matrix — called from tests.\"] # [doc = \"\"] # [doc = \" Discharges the RFC-0016 §4.5 obligation: \\\"encoded as data, asserted in tests, never\"] # [doc = \" prose-only.\\\" Panics with a descriptive message on any violation.\"] pub fn assert_matrix_invariants () { for row in GUARANTEE_MATRIX { assert ! (! row . op . is_empty () , \"matrix row has empty op name\") ; if matches ! (row . op , \"mono_now\" | \"wall_now\" | \"logical_now\") { assert_eq ! (row . tag , GuaranteeStrength :: Declared , \"op {}: clock reads must be Declared (VR-5, spec §4)\" , row . op) ; } if matches ! (row . op , \"duration_add\" | \"duration_sub\" | \"duration_scale\" | \"duration_cmp\" | \"duration_as_unit\" | \"mono_diff\" | \"wall_diff\" | \"logical_diff\") { assert_eq ! (row . tag , GuaranteeStrength :: Exact , \"op {}: pure arithmetic must be Exact\" , row . op) ; } if row . op == \"wall_now\" { assert ! (row . effects . contains (\"entropy\") , \"wall_now must declare entropy effect (spec §4 — the typed distinction)\") ; } if matches ! (row . op , \"mono_now\" | \"logical_now\") { assert ! (! row . effects . contains (\"entropy\") , \"op {}: must NOT declare entropy (spec §4 — typed distinction from wall)\" , row . op) ; } if row . tag == GuaranteeStrength :: Declared { assert ! (row . explainable , \"op {}: Declared rows must be explainable (C3 — no black boxes)\" , row . op) ; } } }",
+      "reason": "function has no return type (implicit `()`) — no unit value is representable in this grammar fragment",
+      "item_name": "assert_matrix_invariants"
+    },
+    {
+      "file": "crates/mycelium-std-time/src/lib.rs",
+      "line": 962,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; fn mk_clock () -> ManualClock { ManualClock :: default () } # [doc = \" The guarantee matrix is internally consistent (RFC-0016 §4.5).\"] # [test] fn guarantee_matrix_invariants_hold () { assert_matrix_invariants () ; } # [doc = \" All expected ops appear in the matrix exactly once.\"] # [test] fn matrix_contains_all_ops_exactly_once () { let expected = [\"duration_add\" , \"duration_sub\" , \"duration_scale\" , \"duration_cmp\" , \"duration_as_unit\" , \"mono_diff\" , \"wall_diff\" , \"logical_diff\" , \"mono_now\" , \"wall_now\" , \"logical_now\" ,] ; for op in & expected { let count = GUARANTEE_MATRIX . iter () . filter (| r | r . op == * op) . count () ; assert_eq ! (count , 1 , \"op '{op}' must appear exactly once in the matrix\") ; } } # [doc = \" Clock-read rows tag `Declared`; pure-arithmetic rows tag `Exact`. No overclaim.\"] # [test] fn matrix_clock_rows_are_declared_arithmetic_rows_are_exact () { let clock_ops = [\"mono_now\" , \"wall_now\" , \"logical_now\"] ; let arith_ops = [\"duration_add\" , \"duration_sub\" , \"duration_scale\" , \"duration_cmp\" , \"duration_as_unit\" , \"mono_diff\" , \"wall_diff\" , \"logical_diff\" ,] ; for row in GUARANTEE_MATRIX { if clock_ops . contains (& row . op) { assert_eq ! (row . tag , GuaranteeStrength :: Declared , \"clock op {} must be Declared (VR-5)\" , row . op) ; } if arith_ops . contains (& row . op) { assert_eq ! (row . tag , GuaranteeStrength :: Exact , \"arithmetic op {} must be Exact\" , row . op) ; } } } # [doc = \" `wall_now` is the only op that declares `entropy`; mono/logical do not.\"] # [test] fn matrix_entropy_declared_only_for_wall_now () { for row in GUARANTEE_MATRIX { if row . op == \"wall_now\" { assert ! (row . effects . contains (\"entropy\") , \"wall_now must declare entropy\") ; } else { assert ! (! row . effects . contains (\"entropy\") , \"op {} must NOT declare entropy (only wall_now does)\" , row . op) ; } } } # [doc = \" `add(a, b) == add(b, a)` (commutativity) — property test over a span of pairs.\"] # [doc = \"\"] # [doc = \" Mutation witness: change `duration_add(a, b)` to `duration_add(b, Duration::ZERO)` →\"] # [doc = \" assertion fires for non-zero `b`.\"] # [test] fn as_secs_trunc_is_exact_in_range_and_refuses_overflow () { assert_eq ! (Duration :: from_nanos (2_500_000_000) . as_secs_trunc () . unwrap () , 2) ; assert_eq ! (Duration :: from_nanos (- 2_500_000_000) . as_secs_trunc () . unwrap () , - 2) ; assert_eq ! (Duration :: ZERO . as_secs_trunc () . unwrap () , 0) ; assert_eq ! (Duration :: MAX . as_secs_trunc () , Err (TimeErr :: Overflow)) ; assert_eq ! (Duration :: MIN . as_secs_trunc () , Err (TimeErr :: Overflow)) ; } # [test] fn duration_add_is_commutative () { let cases : & [(i128 , i128)] = & [(0 , 0) , (1 , 2) , (- 1 , 2) , (1 , - 2) , (100 , - 100) , (i128 :: MAX / 2 , - (i128 :: MAX / 2)) ,] ; for & (a_ns , b_ns) in cases { let a = Duration :: from_nanos (a_ns) ; let b = Duration :: from_nanos (b_ns) ; let ab = duration_add (a , b) ; let ba = duration_add (b , a) ; assert_eq ! (ab , ba , \"add({a_ns}, {b_ns}) must be commutative; got {ab:?} vs {ba:?}\") ; } } # [doc = \" `add(a, sub(b, a)) == b` (add/sub round-trip) — property test.\"] # [test] fn duration_add_sub_round_trip () { let cases : & [(i128 , i128)] = & [(0 , 0) , (10 , 5) , (- 10 , 5) , (10 , - 5) , (1_000_000 , 999_999)] ; for & (a_ns , b_ns) in cases { let a = Duration :: from_nanos (a_ns) ; let b = Duration :: from_nanos (b_ns) ; let diff = duration_sub (b , a) . expect (\"sub should not overflow for test pairs\") ; let recovered = duration_add (a , diff) . expect (\"add should not overflow\") ; assert_eq ! (recovered , b , \"add(a, sub(b, a)) != b for a={a_ns}, b={b_ns}\") ; } } # [doc = \" `add(a, ZERO) == a` (additive identity) — property test over a sample.\"] # [test] fn duration_add_zero_identity () { let cases = [0i128 , 1 , - 1 , 1_000_000_000 , i128 :: MAX , i128 :: MIN] ; for & ns in & cases { let a = Duration :: from_nanos (ns) ; let result = duration_add (a , Duration :: ZERO) . expect (\"add ZERO should not overflow\") ; assert_eq ! (result , a , \"add(a, ZERO) != a for a={ns}\") ; } } # [doc = \" `scale(d, 0) == ZERO` (scale by zero gives zero) — property test.\"] # [test] fn duration_scale_by_zero () { let cases = [0i128 , 1 , - 1 , 1_000_000_000] ; for & ns in & cases { let d = Duration :: from_nanos (ns) ; let result = duration_scale (d , 0) . expect (\"scale by 0 should not overflow\") ; assert_eq ! (result , Duration :: ZERO , \"scale(d, 0) must be ZERO for d={ns}\") ; } } # [doc = \" `scale(d, 1) == d` (scale by one is identity) — property test.\"] # [test] fn duration_scale_by_one_identity () { let cases = [0i128 , 1 , - 1 , 1_000_000_000 , - 1_000_000_000] ; for & ns in & cases { let d = Duration :: from_nanos (ns) ; let result = duration_scale (d , 1) . expect (\"scale by 1 should not overflow\") ; assert_eq ! (result , d , \"scale(d, 1) must equal d for d={ns}\") ; } } # [doc = \" `scale(add(a, b), k) == add(scale(a, k), scale(b, k))` (distributivity over a safe range).\"] # [test] fn duration_scale_distributes_over_add () { let cases : & [(i128 , i128 , i64)] = & [(10 , 20 , 3) , (- 5 , 5 , 7) , (0 , 100 , 42)] ; for & (a_ns , b_ns , k) in cases { let a = Duration :: from_nanos (a_ns) ; let b = Duration :: from_nanos (b_ns) ; let lhs = duration_add (a , b) . and_then (| sum | duration_scale (sum , k)) . expect (\"lhs should not overflow\") ; let rhs = duration_add (duration_scale (a , k) . expect (\"scale a\") , duration_scale (b , k) . expect (\"scale b\") ,) . expect (\"rhs should not overflow\") ; assert_eq ! (lhs , rhs , \"scale distributes over add: failed for a={a_ns},b={b_ns},k={k}\") ; } } # [doc = \" Overflow on `duration_add` is `Err(Overflow)`, never a wrap (C1/G2).\"] # [doc = \"\"] # [doc = \" Mutation witness: use wrapping_add → assertion fires.\"] # [test] fn duration_add_overflow_is_explicit_never_wrap () { let result = duration_add (Duration :: MAX , Duration :: from_nanos (1)) ; assert_eq ! (result , Err (TimeErr :: Overflow) , \"MAX + 1 must be Err(Overflow), never a wrap\") ; } # [doc = \" Overflow on `duration_sub` is `Err(Overflow)`, never a wrap.\"] # [test] fn duration_sub_overflow_is_explicit_never_wrap () { let result = duration_sub (Duration :: MIN , Duration :: from_nanos (1)) ; assert_eq ! (result , Err (TimeErr :: Overflow) , \"MIN - 1 must be Err(Overflow)\") ; } # [doc = \" Overflow on `duration_scale` is `Err(Overflow)`, never a wrap.\"] # [test] fn duration_scale_overflow_is_explicit_never_wrap () { let result = duration_scale (Duration :: MAX , 2) ; assert_eq ! (result , Err (TimeErr :: Overflow) , \"MAX * 2 must be Err(Overflow)\") ; } # [doc = \" `duration_as_unit` with `unit_nanos=0` is `Err(Overflow)` (degenerate unit guard).\"] # [test] fn duration_as_unit_zero_unit_is_overflow () { let d = Duration :: from_nanos (1_000_000_000) ; let result = duration_as_unit (d , 0) ; assert_eq ! (result , Err (TimeErr :: Overflow) , \"unit_nanos=0 must be Err(Overflow)\") ; } # [doc = \" `mono_diff(a, a) == ZERO` (reflexive) — property test.\"] # [test] fn mono_diff_reflexive () { let cases = [0u64 , 1 , 1_000_000_000 , u64 :: MAX] ; for & ns in & cases { let a = MonoInstant :: from_nanos (ns) ; let d = mono_diff (a , a) ; assert_eq ! (d , Duration :: ZERO , \"mono_diff(a, a) must be ZERO for a={ns}\") ; } } # [doc = \" `mono_diff(later, earlier) + mono_diff(earlier, later) == ZERO` (anti-commutativity).\"] # [test] fn mono_diff_anti_commutative () { let cases : & [(u64 , u64)] = & [(0 , 1) , (100 , 200) , (1_000 , 5_000)] ; for & (a_ns , b_ns) in cases { let a = MonoInstant :: from_nanos (a_ns) ; let b = MonoInstant :: from_nanos (b_ns) ; let ab = mono_diff (b , a) ; let ba = mono_diff (a , b) ; let sum = duration_add (ab , ba) . expect (\"anti-commutative sum\") ; assert_eq ! (sum , Duration :: ZERO , \"diff(b,a) + diff(a,b) must be ZERO\") ; } } # [doc = \" `logical_diff(later, earlier) == mono_diff(later_as_mono, earlier_as_mono)` for the\"] # [doc = \" tick-is-ns interpretation — the property holds structurally.\"] # [test] fn logical_diff_reflexive () { let cases = [0u64 , 1 , 42 , u64 :: MAX / 2] ; for & t in & cases { let a = LogicalInstant :: from_tick (t) ; let d = logical_diff (a , a) ; assert_eq ! (d , Duration :: ZERO , \"logical_diff(a, a) must be ZERO for tick={t}\") ; } } # [doc = \" `wall_diff(a, a) == Ok(ZERO)` (reflexive — same wall instant is not non-monotonic).\"] # [test] fn wall_diff_reflexive () { let cases = [0i128 , 1 , - 1 , 1_717_000_000_000_000_000i128] ; for & ns in & cases { let a = WallInstant :: from_nanos_since_epoch (ns) ; let d = wall_diff (a , a) . expect (\"wall_diff(a, a) must be Ok\") ; assert_eq ! (d , Duration :: ZERO , \"wall_diff(a, a) must be ZERO for ns={ns}\") ; } } # [doc = \" `wall_diff(later, earlier)` with `later < earlier` is `Err(NonMonotonic)` — never\"] # [doc = \" a silent zero or negative span (C1/G2).\"] # [doc = \"\"] # [doc = \" Mutation witness: return `Ok(ZERO)` → assertion fires.\"] # [test] fn wall_diff_backward_jump_is_non_monotonic_never_silent () { let earlier = WallInstant :: from_nanos_since_epoch (100) ; let later = WallInstant :: from_nanos_since_epoch (50) ; let result = wall_diff (later , earlier) ; match result { Err (TimeErr :: NonMonotonic { earlier_ns , later_ns , }) => { assert_eq ! (earlier_ns , 100) ; assert_eq ! (later_ns , 50) ; } _ => panic ! (\"expected Err(NonMonotonic), got {result:?} — \\\n                 a backward jump must never be a silent zero\") , } } # [doc = \" `wall_diff(a, b)` where `a >= b` returns the positive span (not non-monotonic).\"] # [test] fn wall_diff_forward_jump_is_positive_span () { let earlier = WallInstant :: from_nanos_since_epoch (50) ; let later = WallInstant :: from_nanos_since_epoch (150) ; let d = wall_diff (later , earlier) . expect (\"forward diff must be Ok\") ; assert_eq ! (d . as_nanos () , 100) ; } # [doc = \" `mono_now` returns the set mono value and the result is `DeclaredTime<Ok(...)>`.\"] # [doc = \"\"] # [doc = \" Tests: typed effect marker + value round-trip.\"] # [test] fn manual_clock_mono_now_returns_declared_time () { let mut clock = mk_clock () ; clock . set_mono (MonoInstant :: from_nanos (12_345)) ; let declared = mono_now (& clock) ; let inner = declared . into_inner () . expect (\"ManualClock mono_now is always Ok\") ; assert_eq ! (inner . as_nanos () , 12_345) ; } # [doc = \" `wall_now` returns the set wall value wrapped in `DeclaredTimeEntropy` — the effect\"] # [doc = \" marker is structural, not conditional on nondeterminism (the test clock is deterministic,\"] # [doc = \" but the type still carries the effect declaration).\"] # [test] fn manual_clock_wall_now_returns_declared_time_entropy () { let mut clock = mk_clock () ; clock . set_wall (WallInstant :: from_nanos_since_epoch (999_999)) ; let declared = wall_now (& clock) ; let inner = declared . into_inner () . expect (\"ManualClock wall_now is always Ok\") ; assert_eq ! (inner . as_nanos_since_epoch () , 999_999) ; } # [doc = \" `logical_now` returns the set logical tick wrapped in `DeclaredTime`.\"] # [test] fn manual_clock_logical_now_returns_declared_time () { let mut clock = mk_clock () ; clock . set_logical (LogicalInstant :: from_tick (77)) ; let declared = logical_now (& clock) ; let inner = declared . into_inner () ; assert_eq ! (inner . as_tick () , 77) ; } # [doc = \" `advance_mono` and `step_logical` move the clock forward monotonically.\"] # [test] fn manual_clock_advance_moves_forward () { let mut clock = mk_clock () ; clock . set_mono (MonoInstant :: from_nanos (1_000)) ; clock . advance_mono (500) ; let m = clock . mono_now () . into_inner () . unwrap () ; assert_eq ! (m . as_nanos () , 1_500 , \"advance_mono should add to the current value\") ; clock . set_logical (LogicalInstant :: from_tick (10)) ; clock . step_logical () ; let l = clock . logical_now () . into_inner () ; assert_eq ! (l . as_tick () , 11 , \"step_logical should increment by 1\") ; } # [doc = \" Two reads of `mono_now` are non-decreasing on `ManualClock` without explicit advance.\"] # [test] fn manual_clock_mono_reads_are_stable_without_advance () { let clock = mk_clock () ; let t1 = clock . mono_now () . into_inner () . unwrap () ; let t2 = clock . mono_now () . into_inner () . unwrap () ; assert ! (t2 >= t1 , \"mono reads without advance must be non-decreasing\") ; } # [doc = \" Document that cross-source difference does not exist — the typed distinction is structural.\"] # [doc = \"\"] # [doc = \" There is no `diff(MonoInstant, WallInstant)` function. Attempting to write one would be\"] # [doc = \" a compile error, not a runtime check. This test documents the *spec §4* guarantee:\"] # [doc = \" \\\"cross-source: — (does not exist) / compile-time type error\\\".\"] # [test] fn cross_source_diff_is_compile_time_type_error_documented () { let m1 = MonoInstant :: from_nanos (10) ; let m2 = MonoInstant :: from_nanos (20) ; let w1 = WallInstant :: from_nanos_since_epoch (10) ; let w2 = WallInstant :: from_nanos_since_epoch (20) ; let _ = mono_diff (m2 , m1) ; let _ = wall_diff (w2 , w1) ; } # [doc = \" `from_secs` / `from_millis` / `from_micros` round-trip through `as_nanos`.\"] # [test] fn duration_constructors_round_trip () { let d = Duration :: from_secs (1) . unwrap () ; assert_eq ! (d . as_nanos () , 1_000_000_000) ; let d = Duration :: from_millis (1) . unwrap () ; assert_eq ! (d . as_nanos () , 1_000_000) ; let d = Duration :: from_micros (1) . unwrap () ; assert_eq ! (d . as_nanos () , 1_000) ; } # [doc = \" `from_secs` succeeds for `i64::MAX` because `i64::MAX * 1_000_000_000 < i128::MAX`.\"] # [doc = \" The overflow guard exists for when the input type is widened in the future; for now,\"] # [doc = \" the `i64` parameter range fits in `i128` nanos. This test documents the actual behavior.\"] # [test] fn duration_from_secs_i64_max_succeeds () { let result = Duration :: from_secs (i64 :: MAX) ; assert ! (result . is_ok () , \"from_secs(i64::MAX) must succeed: i64::MAX * 1e9 < i128::MAX\") ; assert_eq ! (result . unwrap () . as_nanos () , i64 :: MAX as i128 * 1_000_000_000) ; } # [doc = \" `duration_scale` overflow is the primary overflow path for sub-second arithmetic:\"] # [doc = \" scaling `Duration::MAX` by any factor > 1 overflows (already tested above).\"] # [doc = \" Also document that `from_secs` with a negative overflow is not reachable with `i64`.\"] # [test] fn duration_scale_max_by_two_is_overflow () { let result = duration_scale (Duration :: MAX , 2) ; assert_eq ! (result , Err (TimeErr :: Overflow) , \"Duration::MAX * 2 must be Err(Overflow) — never a silent wrap (C1/G2)\") ; } # [doc = \" The system clock reads non-decreasing mono values (non-deterministic by nature, but\"] # [doc = \" two successive reads should be non-decreasing on any sane platform).\"] # [doc = \"\"] # [doc = \" This test exercises the `SystemClock` std-sys placeholder (FLAG §7-Q3).\"] # [test] fn system_clock_mono_reads_are_non_decreasing () { let clock = SystemClock ; let t1 = clock . mono_now () . into_inner () . expect (\"SystemClock mono_now must succeed\") ; let t2 = clock . mono_now () . into_inner () . expect (\"SystemClock mono_now must succeed\") ; assert ! (t2 >= t1 , \"SystemClock mono reads must be non-decreasing: t1={t1:?}, t2={t2:?}\") ; } # [doc = \" The system clock wall read wraps the value in `DeclaredTimeEntropy`.\"] # [test] fn system_clock_wall_now_returns_declared_time_entropy () { let clock = SystemClock ; let declared = clock . wall_now () ; let inner = declared . into_inner () . expect (\"SystemClock wall_now must succeed on a sane OS\") ; assert ! (inner . as_nanos_since_epoch () > 0 , \"SystemClock wall_now must return a post-epoch timestamp\") ; } # [doc = \" `Duration::from_nanos(n).as_nanos() == n` (round-trip).\"] # [test] fn duration_from_nanos_round_trip () { let cases = [0i128 , 1 , - 1 , i128 :: MAX , i128 :: MIN] ; for & ns in & cases { let d = Duration :: from_nanos (ns) ; assert_eq ! (d . as_nanos () , ns) ; } } # [doc = \" `MonoInstant::from_nanos(n).as_nanos() == n` (round-trip).\"] # [test] fn mono_instant_from_nanos_round_trip () { let cases = [0u64 , 1 , u64 :: MAX] ; for & ns in & cases { let m = MonoInstant :: from_nanos (ns) ; assert_eq ! (m . as_nanos () , ns) ; } } # [doc = \" `WallInstant::from_nanos_since_epoch(n).as_nanos_since_epoch() == n` (round-trip).\"] # [test] fn wall_instant_from_nanos_round_trip () { let cases = [0i128 , 1 , - 1 , i128 :: MAX , i128 :: MIN] ; for & ns in & cases { let w = WallInstant :: from_nanos_since_epoch (ns) ; assert_eq ! (w . as_nanos_since_epoch () , ns) ; } } # [doc = \" `LogicalInstant::from_tick(t).as_tick() == t` (round-trip).\"] # [test] fn logical_instant_from_tick_round_trip () { let cases = [0u64 , 1 , u64 :: MAX] ; for & t in & cases { let l = LogicalInstant :: from_tick (t) ; assert_eq ! (l . as_tick () , t) ; } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 38
+}

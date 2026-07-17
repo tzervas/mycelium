@@ -1,0 +1,104 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-io_src/error.myc",
+      "source_file": "crates/mycelium-std-io/src/error.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 19,
+      "emitted_items": 7
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-io_src/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-io/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-io_src/io.myc",
+      "source_file": "crates/mycelium-std-io/src/io.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `read_all`: unknown function/constructor/prim `read_to_end`",
+      "non_test_items": 13,
+      "emitted_items": 9
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-io_src/lib.myc",
+      "source_file": "crates/mycelium-std-io/src/lib.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `read_all`: unknown function/constructor/prim `read_to_end`",
+      "non_test_items": 4,
+      "emitted_items": 4
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-io_src/serialize.myc",
+      "source_file": "crates/mycelium-std-io/src/serialize.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 17,
+      "emitted_items": 2
+    }
+  ],
+  "total_non_test_items": 59,
+  "total_emitted_items": 27,
+  "total_checked_clean_items": 14,
+  "class_counts": {
+    "CheckError": 2,
+    "Clean": 3
+  },
+  "phylum": {
+    "ran": true,
+    "ok": false,
+    "nodules": [
+      {
+        "nodule": "std.io.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.io.io",
+        "file": "io.myc",
+        "class": "CheckError",
+        "site": "read_all",
+        "on": null,
+        "message": "unknown function/constructor/prim `read_to_end`"
+      },
+      {
+        "nodule": "std.io",
+        "file": "lib.myc",
+        "class": "CheckError",
+        "site": "read_all",
+        "on": null,
+        "message": "unknown function/constructor/prim `read_to_end`"
+      },
+      {
+        "nodule": "std.io.serialize",
+        "file": "serialize.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": "unknown function/constructor/prim `read_to_end`"
+  },
+  "total_checked_clean_items_phylum": 14
+}

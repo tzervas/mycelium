@@ -1,0 +1,217 @@
+{
+  "source": "crates/mycelium-std-io/src/io.rs",
+  "emitted_items": [
+    "co-emit:Result",
+    "co-include:IoError",
+    "Budget",
+    "Substrate_kw",
+    "Source",
+    "impl Source",
+    "Sink",
+    "impl Sink",
+    "read_all"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 43,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).\"] # [doc = \"\"] # [doc = \" Passed to [`read`] to cap the allocation.  An overrun yields\"] # [doc = \" [`IoError::EffectBudget`] instead of unbounded allocation (C6).\"] # [doc = \"\"] # [doc = \" The `Unbounded` variant is available for in-memory tests where an allocation\"] # [doc = \" ceiling is not meaningful; production uses of the OS-backed substrate should\"] # [doc = \" always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Budget { # [doc = \" Read at most `n` bytes; any request beyond this yields\"] # [doc = \" [`IoError::EffectBudget`].\"] Bytes (u64) , # [doc = \" No cap — accept any number of bytes.  Use only in tests or when the\"] # [doc = \" caller has an out-of-band cap (e.g. the file system size).\"] Unbounded , }",
+      "reason": "enum `Budget` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Budget"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 43,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).\"] # [doc = \"\"] # [doc = \" Passed to [`read`] to cap the allocation.  An overrun yields\"] # [doc = \" [`IoError::EffectBudget`] instead of unbounded allocation (C6).\"] # [doc = \"\"] # [doc = \" The `Unbounded` variant is available for in-memory tests where an allocation\"] # [doc = \" ceiling is not meaningful; production uses of the OS-backed substrate should\"] # [doc = \" always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Budget { # [doc = \" Read at most `n` bytes; any request beyond this yields\"] # [doc = \" [`IoError::EffectBudget`].\"] Bytes (u64) , # [doc = \" No cap — accept any number of bytes.  Use only in tests or when the\"] # [doc = \" caller has an out-of-band cap (e.g. the file system size).\"] Unbounded , }",
+      "reason": "enum `Budget` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Budget"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 43,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).\"] # [doc = \"\"] # [doc = \" Passed to [`read`] to cap the allocation.  An overrun yields\"] # [doc = \" [`IoError::EffectBudget`] instead of unbounded allocation (C6).\"] # [doc = \"\"] # [doc = \" The `Unbounded` variant is available for in-memory tests where an allocation\"] # [doc = \" ceiling is not meaningful; production uses of the OS-backed substrate should\"] # [doc = \" always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Budget { # [doc = \" Read at most `n` bytes; any request beyond this yields\"] # [doc = \" [`IoError::EffectBudget`].\"] Bytes (u64) , # [doc = \" No cap — accept any number of bytes.  Use only in tests or when the\"] # [doc = \" caller has an out-of-band cap (e.g. the file system size).\"] Unbounded , }",
+      "reason": "enum `Budget` derive(Eq): covered by co-occurring PartialEq → `fn eq_Budget` (product-row collision policy; DN-128 / ONESHOT C2) — not a second emission",
+      "item_name": "Budget"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 63,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" The in-memory substrate: a `Vec<u8>` cursor.\"] # [doc = \"\"] # [doc = \" The `substrate` is the **underlying resource** that `Source`/`Sink` wrap.  A\"] # [doc = \" [`Source`] owns a `Substrate` by-value; once consumed (by [`read_all`] or the\"] # [doc = \" last [`read`]) it cannot be re-accessed.  This is the LR-8 affine invariant at\"] # [doc = \" the type level.\"] # [doc = \"\"] # [doc = \" # FLAG: §8-Q6 — OS-backed substrate lives in `std-sys` (M-541)\"] # [doc = \" The real-OS-backed substrate (a file descriptor, a network socket) is NOT\"] # [doc = \" here.  The `std-sys` phylum will provide a constructor like\"] # [doc = \" `Substrate::from_fd(fd: OwnedFd) -> Substrate` that slots into this type.\"] # [doc = \" Until then this in-memory substrate covers all testable semantics.\"] # [derive (Debug)] pub struct Substrate { # [doc = \" The raw bytes (in-memory backing store).\"] data : Vec < u8 > , # [doc = \" Read cursor position.\"] pos : usize , }",
+      "reason": "struct `Substrate` named field(s) `data, pos` emitted positionally as `Substrate(Vec[Binary{8}], Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Substrate_kw"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 83,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Substrate { # [doc = \" Construct a new in-memory substrate from a byte slice.\"] # [doc = \"\"] # [doc = \" This is the only constructor available in `std.io`; the OS-backed\"] # [doc = \" constructor is deferred to `std-sys` (FLAG §8-Q6).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Substrate { data : data . into () , pos : 0 , } } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . data . len () . saturating_sub (self . pos) } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`; impl method `remaining` body: Rust `.saturating_sub` is saturating (silent clamp) — Mycelium has no saturating prim surface; desugaring to `saturating_sub(…)` would fabricate an unknown prim or lie about overflow (G2/VR-5). Gap never-silently (express gap-close 2026-07-16).",
+      "item_name": "Substrate"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 105,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" An abstract byte **source**: a `Substrate` wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Source` may be read exactly once via [`read_all`] (which consumes it) or\"] # [doc = \" progressively via [`read`] (which threads the handle linearly).  A double-\"] # [doc = \" consume is a compile-time error (Rust move semantics enforce LR-8).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" The substrate backing this `Source` is visible as a field (C3 — no hidden\"] # [doc = \" resource).\"] # [derive (Debug)] pub struct Source { substrate : Substrate , }",
+      "reason": "struct `Source` named field(s) `substrate` emitted positionally as `Source(Substrate_kw)` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "dropped non-doc attribute(s) on method `new`: # [must_use]",
+      "item_name": "impl Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "impl method `from_bytes` signature: unsupported Rust type form `impl Into < Vec < u8 > >`",
+      "item_name": "impl Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "dropped non-doc attribute(s) on method `remaining`: # [must_use]",
+      "item_name": "impl Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "impl method `read_n` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "item_name": "impl Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Source { # [doc = \" Wrap a substrate as an affine `Source`.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new (substrate : Substrate) -> Self { Source { substrate } } # [doc = \" Construct a `Source` directly from an in-memory byte slice (convenience\"] # [doc = \" constructor for tests).\"] # [must_use] pub fn from_bytes (data : impl Into < Vec < u8 > >) -> Self { Source :: new (Substrate :: from_bytes (data)) } # [doc = \" How many bytes remain unread.\"] # [must_use] pub fn remaining (& self) -> usize { self . substrate . remaining () } # [doc = \" Read up to `n` bytes from the substrate (internal, non-consuming helper).\"] # [doc = \"\"] # [doc = \" Returns the bytes read and the new cursor position.\"] fn read_n (& mut self , n : usize) -> Vec < u8 > { let end = (self . substrate . pos + n) . min (self . substrate . data . len ()) ; let chunk = self . substrate . data [self . substrate . pos .. end] . to_vec () ; self . substrate . pos = end ; chunk } # [doc = \" Read all remaining bytes (internal, consuming helper).\"] fn read_to_end (& mut self) -> Vec < u8 > { let bytes = self . substrate . data [self . substrate . pos ..] . to_vec () ; self . substrate . pos = self . substrate . data . len () ; bytes } }",
+      "reason": "impl method `read_to_end` body: Rust `.to_vec()` allocates a new owned Seq (not a value-semantic identity); no verified bare-call Seq-copy prim is wired in this pipeline — gapped rather than fabricating bare `to_vec(recv)` (M-1037 residual, G2/VR-5)",
+      "item_name": "impl Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 161,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" An abstract byte **sink**: a write target wrapped in an affine handle.\"] # [doc = \"\"] # [doc = \" A `Sink` is threaded linearly through [`write()`] calls (each call consumes the\"] # [doc = \" current handle and returns the updated one).  The affine discipline means a\"] # [doc = \" written sink cannot be silently re-used; a double-write is a compile-time error.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection (C3)\"] # [doc = \" The bytes written are observable via [`Sink::into_bytes`].\"] # [derive (Debug)] pub struct Sink { buffer : Vec < u8 > , }",
+      "reason": "struct `Sink` named field(s) `buffer` emitted positionally as `Sink(Vec[Binary{8}])` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 174,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
+      "reason": "impl method `new` body: qualified/associated-function call `Vec :: new` did not resolve to a known-emitted associated fn — Mycelium calls are bare identifiers, and the only sound surface form for `Type::method(...)` is the mangled `Type__method` name the declaration side already emits for a receiver-less inherent-impl associated fn (DN-34 §8.13/8.14), referenced only when that exact declaration is PROVEN present (same-file, or a resolved M-1084 cross-nodule sibling). A primitive/std associated fn with no emitted decl (e.g. `i128::try_from`), an unresolved type, or a `self`-receiving method (excluded by construction — it stays reachable only from its own bare call site) all gap here rather than fabricate a call (G2/VR-5, DN-133)",
+      "item_name": "impl Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 174,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
+      "reason": "dropped non-doc attribute(s) on method `into_bytes`: # [must_use]",
+      "item_name": "impl Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 174,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "impl Sink { # [doc = \" Construct an empty in-memory sink.\"] # [doc = \"\"] # [doc = \" # Effects: none (construction is pure)\"] # [must_use] pub fn new () -> Self { Sink { buffer : Vec :: new () } } # [doc = \" Consume the sink and return the bytes written into it.\"] # [doc = \"\"] # [doc = \" This finalizes the sink — it cannot be written to after this call (Rust\"] # [doc = \" move semantics enforce the affine discipline).\"] # [must_use] pub fn into_bytes (self) -> Vec < u8 > { self . buffer } # [doc = \" Append `bytes` to the internal buffer (internal, non-consuming helper).\"] fn append (& mut self , bytes : & [u8]) { self . buffer . extend_from_slice (bytes) ; } }",
+      "reason": "impl method `append` body: mutating method body statement is neither a `let`, a supported `self.<field>`/`*<param>` re-assignment, nor (in tail position) the method's own return value — value-threading deliberately refuses any shape outside a flat re-assignment sequence rather than risk an unsound rebind (DN-125 §6.1, never-silent G2/VR-5)",
+      "item_name": "impl Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 198,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Default for Sink { fn default () -> Self { Sink :: new () } }",
+      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `default` body: qualified/associated-function call `Sink :: new` did not resolve to a known-emitted associated fn — Mycelium calls are bare identifiers, and the only sound surface form for `Type::method(...)` is the mangled `Type__method` name the declaration side already emits for a receiver-less inherent-impl associated fn (DN-34 §8.13/8.14), referenced only when that exact declaration is PROVEN present (same-file, or a resolved M-1084 cross-nodule sibling). A primitive/std associated fn with no emitted decl (e.g. `i128::try_from`), an unresolved type, or a `self`-receiving method (excluded by construction — it stays reachable only from its own bare call site) all gap here rather than fabricate a call (G2/VR-5, DN-133)",
+      "item_name": "Sink"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 232,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Read up to `budget` bytes from `src`, returning the bytes and the remaining\"] # [doc = \" handle (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" The caller receives the `Source` back so it may continue reading.  A call that\"] # [doc = \" returns an empty `Vec` has exhausted the source; subsequent calls will also\"] # [doc = \" return empty (they never error on a naturally-exhausted source).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes returned are exactly the bytes the substrate delivers up to the\"] # [doc = \" budget.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::EffectBudget{kind: \\\"alloc\\\"})` if `budget` would require more\"] # [doc = \"   allocation than the declared `alloc(Budget)` policy (for the in-memory\"] # [doc = \"   substrate, `Unbounded` never triggers this).\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \"\"] # [doc = \" # Effects: io + alloc(Budget) (declared, C6)\"] pub fn read (src : Source , budget : Budget) -> Result < (Vec < u8 > , Source) , IoError > { let mut src = src ; let n = match budget { Budget :: Bytes (cap) => { (cap as usize) . min (src . remaining ()) } Budget :: Unbounded => src . remaining () , } ; let chunk = src . read_n (n) ; Ok ((chunk , src)) }",
+      "reason": "cast `cap as usize` — operand type unknown: `as` fidelity requires a known operand type, but the operand is not a bare in-scope identifier (or a `(..)`/`&..` wrapper around one) whose type this transpiler can resolve without guessing (no general expression-typing pass; VR-5)",
+      "item_name": "read"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 263,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Write `bytes` to `snk`, consuming the handle and returning the updated one\"] # [doc = \" (LR-8 — linear threading).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact`\"] # [doc = \" The bytes written are exactly `bytes` — neither reordered nor approximated.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" - `Err(IoError::Refused{why})` if the substrate declines.\"] # [doc = \" - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn write (snk : Sink , bytes : & [u8]) -> Result < Sink , IoError > { let mut snk = snk ; snk . append (bytes) ; Ok (snk) }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "write"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 280,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Deserialize a `Value` directly from `src` in the given `format`, joining the\"] # [doc = \" io and serialize halves.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; composes io + deserialize; spec §4)\"] # [doc = \" The tag is the meet of `Exact` (io) and `Empirical` (deserialize) = `Empirical`.\"] # [doc = \"\"] # [doc = \" # Fallibility\"] # [doc = \" `Err(ReadValueError::Io(_))` — byte-movement failure before/during decode.\"] # [doc = \" `Err(ReadValueError::Ser(_))` — bytes read but decode failed.\"] # [doc = \"\"] # [doc = \" # Effects: io (declared, C6)\"] pub fn read_value (src : Source , format : crate :: serialize :: Format ,) -> Result < mycelium_core :: Value , crate :: error :: ReadValueError > { let bytes = read_all (src) . map_err (crate :: error :: ReadValueError :: Io) ? ; crate :: serialize :: deserialize (& bytes , format) . map_err (crate :: error :: ReadValueError :: Ser) }",
+      "reason": "qualified type path `crate :: serialize :: Format` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "read_value"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/io.rs",
+      "line": 301,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use crate :: error :: ByteCount ; # [test] fn substrate_remaining_starts_full () { let s = Substrate :: from_bytes (vec ! [1u8 , 2 , 3 , 4]) ; assert_eq ! (s . remaining () , 4) ; } # [doc = \" `read_all` returns all bytes from the source.\"] # [doc = \" Guard: returning fewer bytes makes this fail.\"] # [test] fn read_all_returns_all_bytes () { let data = vec ! [10u8 , 20 , 30 , 40 , 50] ; let src = Source :: from_bytes (data . clone ()) ; let bytes = read_all (src) . expect (\"read_all must succeed\") ; assert_eq ! (bytes , data , \"read_all must return exactly the source bytes\") ; } # [doc = \" `read_all` consumes the source exactly once — the handle is moved.\"] # [doc = \" This is a compile-time property (Rust move semantics), but we test the\"] # [doc = \" observable behavior: calling read_all twice on the *same data* via\"] # [doc = \" separate Sources both succeed independently.\"] # [doc = \" Guard: a double-consume bug (reuse without a new Source) would be a\"] # [doc = \" compile error, not reachable here.\"] # [test] fn read_all_consumed_once_semantics () { let data = vec ! [1u8 , 2 , 3] ; let src1 = Source :: from_bytes (data . clone ()) ; let src2 = Source :: from_bytes (data . clone ()) ; let r1 = read_all (src1) . expect (\"first source\") ; let r2 = read_all (src2) . expect (\"second source\") ; assert_eq ! (r1 , r2 , \"two separate sources of same data return same bytes\") ; } # [doc = \" `read_all` on an empty source returns an empty Vec (not an error).\"] # [test] fn read_all_empty_source_returns_empty () { let src = Source :: from_bytes (vec ! []) ; let bytes = read_all (src) . expect (\"empty source must succeed\") ; assert ! (bytes . is_empty () , \"empty source must yield empty bytes\") ; } # [doc = \" `read` with `Budget::Unbounded` returns all remaining bytes.\"] # [test] fn read_unbounded_returns_all () { let data = vec ! [1u8 , 2 , 3 , 4 , 5] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , src_rest) = read (src , Budget :: Unbounded) . expect (\"read must succeed\") ; assert_eq ! (chunk , data) ; assert_eq ! (src_rest . remaining () , 0 , \"source must be exhausted\") ; } # [doc = \" `read` with `Budget::Bytes(n)` reads at most `n` bytes.\"] # [doc = \" Guard: reading more than the budget makes this fail.\"] # [test] fn read_bounded_reads_at_most_budget () { let data = vec ! [1u8 , 2 , 3 , 4 , 5] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , _src_rest) = read (src , Budget :: Bytes (3)) . expect (\"read must succeed\") ; assert_eq ! (chunk , vec ! [1u8 , 2 , 3] , \"must read exactly 3 bytes\") ; } # [doc = \" `read` returns the handle for continuation — linear threading.\"] # [doc = \" Two consecutive reads cover all bytes.\"] # [test] fn read_linear_continuation () { let data = vec ! [10u8 , 20 , 30 , 40] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk1 , src) = read (src , Budget :: Bytes (2)) . expect (\"first read\") ; let (chunk2 , src) = read (src , Budget :: Bytes (2)) . expect (\"second read\") ; assert_eq ! (chunk1 , vec ! [10u8 , 20]) ; assert_eq ! (chunk2 , vec ! [30u8 , 40]) ; assert_eq ! (src . remaining () , 0 , \"fully consumed after two reads\") ; } # [doc = \" `read` when budget exceeds remaining returns only what's available (no error).\"] # [test] fn read_budget_exceeds_remaining_returns_partial () { let data = vec ! [1u8 , 2] ; let src = Source :: from_bytes (data . clone ()) ; let (chunk , src_rest) = read (src , Budget :: Bytes (100)) . expect (\"read past end\") ; assert_eq ! (chunk , data , \"must return what's available, not 100 bytes\") ; assert_eq ! (src_rest . remaining () , 0) ; } # [doc = \" `write` appends bytes to the sink and returns the updated handle.\"] # [test] fn write_appends_bytes () { let snk = Sink :: new () ; let snk = write (snk , & [1u8 , 2 , 3]) . expect (\"first write\") ; let snk = write (snk , & [4u8 , 5]) . expect (\"second write\") ; let result = snk . into_bytes () ; assert_eq ! (result , vec ! [1u8 , 2 , 3 , 4 , 5] , \"bytes must be appended in order\") ; } # [doc = \" `write` with empty bytes is a no-op (no error).\"] # [test] fn write_empty_bytes_is_noop () { let snk = Sink :: new () ; let snk = write (snk , & []) . expect (\"write empty\") ; assert ! (snk . into_bytes () . is_empty ()) ; } # [doc = \" The bytes retrieved by `read_all` are byte-for-byte equal to the bytes\"] # [doc = \" given to `Source::from_bytes` — exactness of the byte-movement guarantee.\"] # [doc = \" Guard: any transformation inside read_all makes this fail.\"] # [test] fn read_all_is_exact () { let data : Vec < u8 > = (0u8 ..= 255) . collect () ; let src = Source :: from_bytes (data . clone ()) ; let result = read_all (src) . expect (\"read_all\") ; assert_eq ! (result , data , \"byte-movement must be exact (spec §4 / Exact tag)\") ; } # [doc = \" The bytes retrieved by `write` + `into_bytes` are byte-for-byte equal to\"] # [doc = \" the bytes given to `write`.\"] # [test] fn write_is_exact () { let data : Vec < u8 > = (0u8 ..= 255) . collect () ; let snk = Sink :: new () ; let snk = write (snk , & data) . expect (\"write\") ; let result = snk . into_bytes () ; assert_eq ! (result , data , \"byte-movement must be exact (spec §4 / Exact tag)\") ; } # [doc = \" `IoError::UnexpectedEof` carries the byte count (RFC-0013 I1 / C1).\"] # [doc = \" Guard: dropping the count from the error makes this fail.\"] # [test] fn io_error_unexpected_eof_carries_count () { let e = IoError :: UnexpectedEof { read : ByteCount (7) } ; assert ! (e . to_string () . contains (\"7\") , \"error must carry the byte count (RFC-0013 I1)\") ; } # [doc = \" `read_value` round-trips a serialized value end-to-end.\"] # [doc = \" Guard: any divergence between serialize → source → read_value makes this fail.\"] # [test] fn read_value_round_trip () { use crate :: serialize :: { serialize , Format } ; use mycelium_core :: { meta :: { Meta , Provenance } , repr :: Repr , value :: { Payload , Value } , } ; let v = Value :: new (Repr :: Binary { width : 4 } , Payload :: Bits (vec ! [true , false , true , false]) , Meta :: exact (Provenance :: Root) ,) . expect (\"well-formed value\") ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let recovered = read_value (src , Format :: Wire) . expect (\"read_value round-trip\") ; assert_eq ! (v , recovered , \"read_value must recover the original value\") ; } # [doc = \" `read_value` on garbage bytes yields `Err(ReadValueError::Ser(_))` (C1).\"] # [test] fn read_value_garbage_bytes_yields_ser_error () { use crate :: serialize :: Format ; let src = Source :: from_bytes (b\"not valid json at all\" . to_vec ()) ; let err = read_value (src , Format :: Wire) . expect_err (\"must error on garbage\") ; assert ! (matches ! (err , crate :: error :: ReadValueError :: Ser (_)) , \"garbage bytes must yield a Ser error, not an Io error\") ; } # [doc = \" `Budget::Bytes(n)` is reified and comparable — the bound is not hidden (C3).\"] # [test] fn budget_is_reified () { let b = Budget :: Bytes (1024) ; assert_eq ! (b , Budget :: Bytes (1024)) ; assert_ne ! (b , Budget :: Unbounded) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 14
+}

@@ -1,0 +1,253 @@
+{
+  "source": "crates/mycelium-std-fs/src/metadata.rs",
+  "emitted_items": [
+    "FileKind",
+    "Permissions",
+    "impl Permissions",
+    "Metadata",
+    "impl Metadata"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 13,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The kind of filesystem entry.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub enum FileKind { # [doc = \" A regular file.\"] File , # [doc = \" A directory.\"] Directory , # [doc = \" A symbolic link (target not resolved; `fs` does not follow silently).\"] Symlink , # [doc = \" Some other OS-specific entry kind.\"] Other , }",
+      "reason": "enum `FileKind` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "FileKind"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 13,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The kind of filesystem entry.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub enum FileKind { # [doc = \" A regular file.\"] File , # [doc = \" A directory.\"] Directory , # [doc = \" A symbolic link (target not resolved; `fs` does not follow silently).\"] Symlink , # [doc = \" Some other OS-specific entry kind.\"] Other , }",
+      "reason": "enum `FileKind` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "FileKind"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 13,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The kind of filesystem entry.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub enum FileKind { # [doc = \" A regular file.\"] File , # [doc = \" A directory.\"] Directory , # [doc = \" A symbolic link (target not resolved; `fs` does not follow silently).\"] Symlink , # [doc = \" Some other OS-specific entry kind.\"] Other , }",
+      "reason": "enum `FileKind` derive(Eq): covered by co-occurring PartialEq → `fn eq_FileKind` (product-row collision policy; DN-128 / ONESHOT C2) — not a second emission",
+      "item_name": "FileKind"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 13,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" The kind of filesystem entry.\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub enum FileKind { # [doc = \" A regular file.\"] File , # [doc = \" A directory.\"] Directory , # [doc = \" A symbolic link (target not resolved; `fs` does not follow silently).\"] Symlink , # [doc = \" Some other OS-specific entry kind.\"] Other , }",
+      "reason": "enum `FileKind` derive(...) names Hash not in the DN-128 enum-derive set this leaf builds (Debug/PartialEq/Clone/Copy recognized; bare Eq is a satisfied co-occurrence note; Hash/PartialOrd/Ord/Default stay product-only for now) — dropped, no confirmed Mycelium surface",
+      "item_name": "FileKind"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 26,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
+      "reason": "struct `Permissions` named field(s) `mode` emitted positionally as `Permissions(Binary{32})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
+      "reason": "struct `Permissions` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
+      "reason": "struct `Permissions` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 26,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" Read/write/execute permission bits for owner, group, and others.\"] # [doc = \"\"] # [doc = \" Represented as a plain value; no implicit behavior. Stored as the Unix permission bits\"] # [doc = \" (a `u32` in `rwxrwxrwx` form) but exposed through typed accessors — no caller should\"] # [doc = \" interpret raw bits (C3: no opaque bit patterns).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq , Hash)] pub struct Permissions { # [doc = \" Raw Unix mode bits (for preservation / display). Not the primary interface.\"] mode : u32 , }",
+      "reason": "struct `Permissions` derive(...) names Eq not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `from_mode`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `raw_mode`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `owner_read`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `owner_write`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `owner_execute`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `group_read`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `others_read`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 37,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Permissions { # [doc = \" Construct from raw Unix mode bits.\"] # [must_use] pub fn from_mode (mode : u32) -> Self { Self { mode } } # [doc = \" The raw mode bits (preserved for tooling; not the primary interface — C3).\"] # [must_use] pub fn raw_mode (self) -> u32 { self . mode } # [doc = \" Whether the owner has read permission.\"] # [must_use] pub fn owner_read (self) -> bool { self . mode & 0o400 != 0 } # [doc = \" Whether the owner has write permission.\"] # [must_use] pub fn owner_write (self) -> bool { self . mode & 0o200 != 0 } # [doc = \" Whether the owner has execute permission.\"] # [must_use] pub fn owner_execute (self) -> bool { self . mode & 0o100 != 0 } # [doc = \" Whether the group has read permission.\"] # [must_use] pub fn group_read (self) -> bool { self . mode & 0o040 != 0 } # [doc = \" Whether others have read permission.\"] # [must_use] pub fn others_read (self) -> bool { self . mode & 0o004 != 0 } # [doc = \" Whether this entry is read-only for the owner (write bit not set).\"] # [must_use] pub fn is_readonly (self) -> bool { ! self . owner_write () } }",
+      "reason": "dropped non-doc attribute(s) on method `is_readonly`: # [must_use]",
+      "item_name": "impl Permissions"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 87,
+      "col": 1,
+      "category": "NamedFieldDrop",
+      "rust_construct": "NamedFieldDrop",
+      "snippet": "# [doc = \" A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).\"] # [doc = \"\"] # [doc = \" `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.\"] # [doc = \" A path's identity is its content, not its metadata. `stat`/`exists` return this as a value\"] # [doc = \" snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec\"] # [doc = \" §7-Q4).\"] # [doc = \"\"] # [doc = \" Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is\"] # [doc = \" `std.time` (M-529), not `fs` (spec §2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Metadata { # [doc = \" The kind of filesystem entry.\"] pub kind : FileKind , # [doc = \" The size in bytes (for files; 0 for directories and other kinds).\"] pub size : u64 , # [doc = \" The Unix permission bits.\"] pub permissions : Permissions , # [doc = \" Modification time as seconds since Unix epoch (opaque; see FLAG below).\"] # [doc = \"\"] # [doc = \" # FLAG (timestamp semantics)\"] # [doc = \" This is a raw `u64` seconds-since-epoch. Interpreting it as monotonic/wall/calendar is\"] # [doc = \" `std.time` (M-529). `fs` carries it opaquely (VR-5: no overclaim of clock semantics).\"] pub mtime_secs : u64 , }",
+      "reason": "struct `Metadata` named field(s) `kind, size, permissions, mtime_secs` emitted positionally as `Metadata(FileKind, Binary{64}, Permissions, Binary{64})` — Mycelium's `constructor` is positional-only (no record surface); product structure preserved, field names dropped (matches `lib/std/*.myc` hand-ports)",
+      "item_name": "Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 87,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).\"] # [doc = \"\"] # [doc = \" `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.\"] # [doc = \" A path's identity is its content, not its metadata. `stat`/`exists` return this as a value\"] # [doc = \" snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec\"] # [doc = \" §7-Q4).\"] # [doc = \"\"] # [doc = \" Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is\"] # [doc = \" `std.time` (M-529), not `fs` (spec §2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Metadata { # [doc = \" The kind of filesystem entry.\"] pub kind : FileKind , # [doc = \" The size in bytes (for files; 0 for directories and other kinds).\"] pub size : u64 , # [doc = \" The Unix permission bits.\"] pub permissions : Permissions , # [doc = \" Modification time as seconds since Unix epoch (opaque; see FLAG below).\"] # [doc = \"\"] # [doc = \" # FLAG (timestamp semantics)\"] # [doc = \" This is a raw `u64` seconds-since-epoch. Interpreting it as monotonic/wall/calendar is\"] # [doc = \" `std.time` (M-529). `fs` carries it opaquely (VR-5: no overclaim of clock semantics).\"] pub mtime_secs : u64 , }",
+      "reason": "struct `Metadata` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 87,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "# [doc = \" A read-only snapshot of filesystem entry metadata (C4 / ADR-003 — metadata is a value).\"] # [doc = \"\"] # [doc = \" `Metadata` is **not** an identity: two identical-content files may have different `mtime`s.\"] # [doc = \" A path's identity is its content, not its metadata. `stat`/`exists` return this as a value\"] # [doc = \" snapshot at the time of the call; the OS may change it immediately after (TOCTOU — see spec\"] # [doc = \" §7-Q4).\"] # [doc = \"\"] # [doc = \" Timestamps are opaque `u64` (seconds since epoch). Interpretation of wall vs monotonic is\"] # [doc = \" `std.time` (M-529), not `fs` (spec §2).\"] # [derive (Debug , Clone , PartialEq , Eq)] pub struct Metadata { # [doc = \" The kind of filesystem entry.\"] pub kind : FileKind , # [doc = \" The size in bytes (for files; 0 for directories and other kinds).\"] pub size : u64 , # [doc = \" The Unix permission bits.\"] pub permissions : Permissions , # [doc = \" Modification time as seconds since Unix epoch (opaque; see FLAG below).\"] # [doc = \"\"] # [doc = \" # FLAG (timestamp semantics)\"] # [doc = \" This is a raw `u64` seconds-since-epoch. Interpreting it as monotonic/wall/calendar is\"] # [doc = \" `std.time` (M-529). `fs` carries it opaquely (VR-5: no overclaim of clock semantics).\"] pub mtime_secs : u64 , }",
+      "reason": "struct `Metadata` derive(...) names Eq not in the DN-128 standard-derive set this leaf builds (Debug/Default/Clone/Copy/PartialEq/PartialOrd/Hash all recognized; bare Eq/Ord are deliberately NOT recognized — see emit/derives/mod.rs::TABLE's doc for why) — dropped, no confirmed Mycelium surface",
+      "item_name": "Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `new`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_file`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_dir`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 112,
+      "col": 1,
+      "category": "DeriveAttr",
+      "rust_construct": "DeriveAttr",
+      "snippet": "impl Metadata { # [doc = \" Construct a metadata value directly (used by the in-memory substrate).\"] # [must_use] pub fn new (kind : FileKind , size : u64 , permissions : Permissions , mtime_secs : u64) -> Self { Self { kind , size , permissions , mtime_secs , } } # [doc = \" Whether this entry is a regular file.\"] # [must_use] pub fn is_file (& self) -> bool { self . kind == FileKind :: File } # [doc = \" Whether this entry is a directory.\"] # [must_use] pub fn is_dir (& self) -> bool { self . kind == FileKind :: Directory } # [doc = \" Whether this entry is a symbolic link.\"] # [must_use] pub fn is_symlink (& self) -> bool { self . kind == FileKind :: Symlink } }",
+      "reason": "dropped non-doc attribute(s) on method `is_symlink`: # [must_use]",
+      "item_name": "impl Metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/metadata.rs",
+      "line": 143,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; # [doc = \" Metadata is a value: equal fields → equal Metadata (C4).\"] # [doc = \" Guard: pointer-identity equality breaks this.\"] # [test] fn metadata_equality_is_value_semantic () { let m1 = Metadata :: new (FileKind :: File , 42 , Permissions :: from_mode (0o644) , 1_000_000) ; let m2 = Metadata :: new (FileKind :: File , 42 , Permissions :: from_mode (0o644) , 1_000_000) ; assert_eq ! (m1 , m2 , \"metadata with equal fields must be equal (C4)\") ; } # [doc = \" Different mtime yields different Metadata (metadata is not filtered out of value equality).\"] # [test] fn different_mtime_means_different_metadata () { let m1 = Metadata :: new (FileKind :: File , 42 , Permissions :: from_mode (0o644) , 1_000_000) ; let m2 = Metadata :: new (FileKind :: File , 42 , Permissions :: from_mode (0o644) , 2_000_000) ; assert_ne ! (m1 , m2 , \"metadata with different mtime must differ (mtime is part of the snapshot value)\") ; } # [doc = \" Permission bit accessors are consistent with the raw mode.\"] # [test] fn permission_bits_are_consistent_with_mode () { let p = Permissions :: from_mode (0o755) ; assert ! (p . owner_read ()) ; assert ! (p . owner_write ()) ; assert ! (p . owner_execute ()) ; assert ! (p . group_read ()) ; assert ! (p . others_read ()) ; assert ! (! p . is_readonly ()) ; } # [doc = \" Read-only permission (0o444) is correctly detected.\"] # [test] fn readonly_permission_correctly_detected () { let p = Permissions :: from_mode (0o444) ; assert ! (p . is_readonly () , \"0o444 must be read-only\") ; assert ! (! p . owner_write ()) ; } # [doc = \" `is_file`, `is_dir`, `is_symlink` are mutually exclusive for the common kinds.\"] # [test] fn file_kind_accessors_are_correct () { let file_meta = Metadata :: new (FileKind :: File , 0 , Permissions :: from_mode (0o644) , 0) ; let dir_meta = Metadata :: new (FileKind :: Directory , 0 , Permissions :: from_mode (0o755) , 0) ; let sym_meta = Metadata :: new (FileKind :: Symlink , 0 , Permissions :: from_mode (0o777) , 0) ; assert ! (file_meta . is_file () && ! file_meta . is_dir () && ! file_meta . is_symlink ()) ; assert ! (! dir_meta . is_file () && dir_meta . is_dir () && ! dir_meta . is_symlink ()) ; assert ! (! sym_meta . is_file () && ! sym_meta . is_dir () && sym_meta . is_symlink ()) ; } # [doc = \" The raw mode is preserved round-trip.\"] # [test] fn raw_mode_round_trips () { for mode in [0o000u32 , 0o644 , 0o755 , 0o777 , 0o400] { let p = Permissions :: from_mode (mode) ; assert_eq ! (p . raw_mode () , mode , \"raw mode must round-trip for {mode:o}\") ; } } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 6
+}

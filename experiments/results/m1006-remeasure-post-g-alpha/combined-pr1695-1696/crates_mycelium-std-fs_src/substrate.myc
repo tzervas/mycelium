@@ -1,0 +1,51 @@
+// nodule: std.fs.substrate
+// In-memory filesystem substrate (the testable IO abstraction layer).
+//
+// This module provides the `FsBackend` trait — a minimal seam between the `fs` API and the
+// actual storage mechanism — and an `InMemoryFs` implementation that is fully testable without
+// any OS interaction.
+//
+// # Why this exists
+// The spec (§2/§7-Q1) requires the real OS syscall floor to live in a separate `std-sys`
+// phylum (RFC-0016 §8-Q6 — now RESOLVED: the `std-sys` quarantine is the maintainer's call).
+// Until `std-sys` (M-541) lands, `fs` must be testable. The solution: a `FsBackend` trait
+// that `open`/`stat`/etc. dispatch through, with an `InMemoryFs` implementation for tests and
+// an (unimplemented, flagged) `RealFs` shim for when `std-sys` lands.
+//
+// # FLAG (std-sys / Q1)
+// The real-OS syscall floor (`RealFs`) is **deferred to `std-sys` (M-541)**. This trait is the
+// seam that will wire up to it. Until M-541 lands, `RealFs` is not implemented here — any code
+// path that would need it returns `FsErr::NotFound` or is unreachable in tests. The orchestrator
+// must wire `RealFs` at integration time.
+//
+// # FLAG (io seam / Q2)
+// The byte-transfer operations (`read`, `write`, `flush`) are owned by `std.io` (M-514). In
+// this crate we define a minimal local `ByteSink`/`ByteSource` trait just enough to make the
+// in-memory substrate testable. When M-514 lands, these local traits are replaced by M-514's
+// surface and the seam is threaded through. The local traits are private and never exported.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §7-Q1/Q2; RFC-0016 §8-Q6.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.substrate;
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.fs.error) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type ErrnoClass = NotFound | PermDenied | AlreadyExists | NotADirectory | IsADirectory | NotEmpty | DiskFull | CrossDevice | WouldBlock | Interrupted | Loop | Other;
+type FsErr = NotFound(Bytes, Bytes) | PermDenied(Bytes, Bytes) | AlreadyExists(Bytes, Bytes) | NotADirectory(Bytes, Bytes) | IsADirectory(Bytes, Bytes) | NotEmpty(Bytes, Bytes) | DiskFull(Bytes, Bytes) | CrossDevice(Bytes, Bytes, Bytes) | WouldBlock(Bytes, Bytes) | Interrupted(Bytes, Bytes) | Loop(Bytes, Bytes) | UseAfterConsume(Bytes, Bytes) | InvalidOptions(Bytes, Bytes) | Os(Bytes, ErrnoClass, Binary{32}, Bytes);
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.fs.metadata) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type FileKind = File | Directory | Symlink | Other;
+type Permissions = Permissions(Binary{32});
+type Metadata = Metadata(FileKind, Binary{64}, Permissions, Binary{64});
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.fs.options) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
+
+// An open file handle in the in-memory substrate.
+pub type InMemHandle = InMemHandle(Bytes, Bool, Bool, Bool, Binary{64}, Bool);
+
+impl Show[InMemHandle] for InMemHandle {
+  fn render(x: InMemHandle) => Bytes =
+    match x { InMemHandle(p0, p1, p2, p3, p4, p5) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("InMemHandle(", render(p0)), ", "), render(p1)), ", "), render(p2)), ", "), render(p3)), ", "), render(p4)), ", "), render(p5)), ")") };
+};

@@ -1,0 +1,31 @@
+=== baseline-dev ===
+HEAD=6cdc5d1b86c90765a7d437b4111519535be1e062
+T=/root/git/isolated/mycelium-wt-g-alpha-measure/target/debug/mycelium-transpile
+--- vet crates/mycelium-l1/src/eval.rs -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-l1_src_eval_rs
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : None
+--- vet crates/mycelium-l1/src/fuse.rs -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-l1_src_fuse_rs
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : None
+--- vet crates/mycelium-std-time/src -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-std-time_src
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : dict
+--- vet crates/mycelium-std-rand/src -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-std-rand_src
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : dict
+--- vet crates/mycelium-std-cmp/src -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-std-cmp_src
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : dict
+--- vet crates/mycelium-std-fs/src -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-std-fs_src
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : dict
+--- vet crates/mycelium-std-io/src -> experiments/results/m1006-remeasure-post-g-alpha/baseline-dev/crates_mycelium-std-io_src
+exit=0
+keys ['class_counts', 'phylum', 'records', 'total_checked_clean_items', 'total_checked_clean_items_phylum', 'total_emitted_items', 'total_non_test_items']
+phylum : dict

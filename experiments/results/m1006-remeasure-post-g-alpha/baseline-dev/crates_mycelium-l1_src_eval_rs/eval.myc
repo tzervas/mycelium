@@ -1,0 +1,136 @@
+// nodule: l1.eval
+// The **L1 fuel-guarded evaluator** (RFC-0007 §4.6): a big-step environment machine mirroring
+// the M-110 reference interpreter's contract — explicit errors only, a step budget instead of a
+// termination assumption (CakeML-style clocked semantics, T3.4), and the *same* trusted
+// primitive registry and swap engine the L0 interpreter and the AOT path dispatch through, so
+// "two execution paths" can never mean "two semantics" (NFR-7).
+//
+// Programs **inside** the evaluation-complete fragment also elaborate to L0
+// ([`crate::elab::elaborate`]) and must agree with this evaluator on the observable
+// (`repr + payload + guarantee`) — the §4.6 differential obligation, validated through the M-210
+// shared checker (`tests/differential.rs`). Programs **outside** the fragment (recursion, match,
+// data values, dynamic guarantee indices) run *only* here.
+//
+// Honesty:
+// - exhausting the step budget is an explicit [`L1Error::FuelExhausted`], never a hang — and
+//   "checked total" means precisely "terminates for every sufficiently large fuel" (§4.5);
+// - a guarantee index `@ g` is checked **dynamically against `Meta`** (stage 0, RFC-0007 §4.3):
+//   asserting `@ g` on a value whose tag is weaker than `g` is an explicit
+//   [`L1Error::GuaranteeTooWeak`] — the assertion never upgrades the tag (VR-5), and a passing
+//   check leaves the value's own (possibly stronger) tag untouched;
+// - states the typechecker proves unreachable still fail as explicit [`L1Error::Stuck`] errors,
+//   never panics or defaults (S5/G2);
+// - [`Evaluator::call`] runs the recursive evaluation on a deep worker stack (256 MiB, lazily
+//   committed) via [`mycelium_stack::with_deep_stack`], so the **explicit depth budget** — not
+//   the caller's thread stack — is always what bounds a pathological input. Raising
+//   [`DEFAULT_DEPTH`] via [`Evaluator::with_depth`] is now host-stack-safe: the budget refuses
+//   cleanly well before the physical stack limit (banked guard 4; see `DEFAULT_DEPTH`). The
+//   worker stack is the transitional Rust-host adapter; the explicit budget is the portable
+//   primitive that will carry to the self-hosted Mycelium frontend (RFC-0007 §4.5/§4.6).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule l1.eval;
+
+// Declared: co-emitted guarantee-lattice type — referenced in this file but not declared here and not available via a resolved batch `use` (ORACLE-R1 A2; never silent unknown-type file poison — G2/VR-5). Variants use DN-140 `*_kw` renames for the reserved lattice keywords (Exact/Proven/Empirical/Declared).
+// Declared: renamed Exact -> Exact_kw (reserved-word collision, DN-140)
+// Declared: renamed Proven -> Proven_kw (reserved-word collision, DN-140)
+// Declared: renamed Empirical -> Empirical_kw (reserved-word collision, DN-140)
+// Declared: renamed Declared -> Declared_kw (reserved-word collision, DN-140)
+type GuaranteeStrength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;
+
+// Declared: co-emitted guarantee-lattice type — referenced in this file but not declared here and not available via a resolved batch `use` (ORACLE-R1 A2; never silent unknown-type file poison — G2/VR-5). Variants use DN-140 `*_kw` renames for the reserved lattice keywords (Exact/Proven/Empirical/Declared).
+// Declared: renamed Exact -> Exact_kw (reserved-word collision, DN-140)
+// Declared: renamed Proven -> Proven_kw (reserved-word collision, DN-140)
+// Declared: renamed Empirical -> Empirical_kw (reserved-word collision, DN-140)
+// Declared: renamed Declared -> Declared_kw (reserved-word collision, DN-140)
+type Strength = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;
+
+// Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
+// placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).
+type ForageError = NoCandidates;
+
+impl Show[ForageError] for ForageError {
+  fn render(x: ForageError) => Bytes =
+    match x { NoCandidates => "NoCandidates" };
+};
+
+fn eq_ForageError(a: ForageError, b: ForageError) => Binary{1} =
+    0b1;
+
+// The surface strength keyword's kernel lattice point.
+fn strength_of(s: Strength) => GuaranteeStrength = match s { Exact_kw => Exact_kw, Proven_kw => Proven_kw, Empirical_kw => Empirical_kw, Declared_kw => Declared_kw };
+
+// Default step budget — mirrors the reference interpreter's (M-110).
+// Declared: co-emitted private const as zero-arg fn returning a BinLit — Mycelium has no const item production (`item` covers use/default/type/trait/impl/fn/object/lower/derive only); hand-port precedent `max_expr_depth()` (ORACLE-R1 A4; G2/VR-5: value from the Rust initializer or a known workspace-floor path, never fabricated). Use sites rewrite `NAME` → `NAME()`.
+fn DEFAULT_FUEL() => Binary{64} = 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_1111_0100_0010_0100_0000; // 1000000
+
+// Default recursion-depth budget — conservative enough for an unoptimized (debug) build.
+//
+// [`Evaluator::call`] runs the recursive evaluation on a deep worker stack (256 MiB, lazily
+// committed, via [`mycelium_stack::with_deep_stack`]), so this budget is the **always-binding
+// semantic ceiling** (banked guard 4) — not a stand-in for the host stack. Deep but terminating
+// programs can safely raise it via [`Evaluator::with_depth`]; the host stack will not be the
+// limit. Default is 64 — conservative by design and unchanged. A raised budget refuses cleanly
+// once it trips; the worker stack is the transitional Rust-host adapter (see
+// [`mycelium_stack`]) and is expected to disappear when the frontend self-hosts (the budget
+// carries to the Mycelium-native clocked-computation model; RFC-0007 §4.5/§4.6).
+//
+// **Grounding (measured, not guessed).** The 256 MiB worker stack is the same one the checker
+// and elaborator use. The evaluator's `eval` frame is smaller than the checker's (~10.9 KiB):
+// it carries a `u64` fuel counter, a `u32` depth counter, a `&str` site, a `&mut Vec<…>` scope
+// pointer, and a `&Expr` — roughly 2–4 KiB in a debug build. At ~4 KiB/frame the 256 MiB
+// stack supports **~65,000** levels physically; at ~2 KiB/frame **~130,000**. The default
+// budget (64) is therefore a **~1,000× safety margin** below the physical ceiling, and raising
+// it to 4,096 (matching the checker) is safe with ample headroom. An in-process measurement
+// of the *clean-DepthExceeded* property is the regression guard; the physical ceiling estimate
+// is `Empirical` (frame size varies with the Rust optimizer and the IR structure).
+//
+// **RFC-0041 W5 (M-979): raised 64 → 4096, and the metric changed.** The evaluator is now an
+// explicit heap **work-stack CEK machine** ([`Evaluator::run_machine`]), so control recursion is
+// O(1) host stack for *any* depth — the depth budget is no longer a host-stack guard but the
+// **semantic** source-call/β ceiling on the §4.0 metric (charged once per `Expr::App` boundary via
+// the shared [`mycelium_workstack::RecursionBudget`], **not** per AST node). The default is the
+// workspace floor [`RecursionBudget::DEFAULT_DEPTH_LIMIT`] (4096), reconciling the L1 path with the
+// interp/AOT paths at one threshold + one canonical variant (§5.1). Tail calls without pending
+// post-work reuse their frame (TCO, §4.6), so a tail-recursive loop runs in bounded depth.
+// Declared: co-emitted private const as zero-arg fn returning a BinLit — Mycelium has no const item production (`item` covers use/default/type/trait/impl/fn/object/lower/derive only); hand-port precedent `max_expr_depth()` (ORACLE-R1 A4; G2/VR-5: value from the Rust initializer or a known workspace-floor path, never fabricated). Use sites rewrite `NAME` → `NAME()`.
+fn DEFAULT_DEPTH() => Binary{32} = 0b0000_0000_0000_0000_0001_0000_0000_0000; // 4096
+
+// The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as
+// a single options struct, an alternative to threading the fluent [`Evaluator::with_fuel`] /
+// [`Evaluator::with_depth`] chain. Applied via [`Evaluator::with_opts`]; the fluent setters stay.
+//
+// Only the `Copy` budget knobs live here: the *engines* (`PrimRegistry`, `Box<dyn SwapEngine>`)
+// are not part of `EvaluatorOpts` — they are not `Clone`/`Default` and stay set through
+// [`Evaluator::with_engines`], so this struct is a plain, copyable, defaultable bundle.
+type EvaluatorOpts = EvaluatorOpts(Binary{64}, Binary{32});
+
+impl Show[EvaluatorOpts] for EvaluatorOpts {
+  fn render(x: EvaluatorOpts) => Bytes =
+    match x { EvaluatorOpts(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("EvaluatorOpts(", render(p0)), ", "), render(width_cast(p1, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000))), ")") };
+};
+
+fn eq_EvaluatorOpts(a: EvaluatorOpts, b: EvaluatorOpts) => Binary{1} =
+    match a { EvaluatorOpts(p0, p1) => match b { EvaluatorOpts(q0, q1) => and(eq(p0, q0), eq(p1, q1)) } };
+
+// The defaults mirror [`Evaluator::new`] exactly — `DEFAULT_FUEL` / `DEFAULT_DEPTH` — so
+// `Evaluator::new(env).with_opts(EvaluatorOpts::default())` is a no-op (the budgets are unchanged).
+// Declared: prelude-trait remapping — foreign-trait impl of a prelude-seeded single-param trait (DN-122 Ord3 MVP and/or DN-129 Default→Init); the `[<SelfTy>]` argument below is synthesized (Rust's zero-explicit-arg `impl Trait for T` never spells it — Mycelium stage-1 has no implicit Self slot, RFC-0019 §4.1).
+impl Init[EvaluatorOpts] for EvaluatorOpts {
+  fn init() => EvaluatorOpts = EvaluatorOpts(DEFAULT_FUEL(), DEFAULT_DEPTH());
+};
+
+// One elided tail-call frame recorded by the TCO EXPLAIN trail (RFC-0041 §4.6 tco32) — the
+// per-callee identity + the running iteration count at the moment the frame was reused. Not a bare
+// count (house rule #2 in substance, not just letter): a deep tail chain that later errors yields
+// an actionable "who was looping, how many times" trace.
+type TcoElision = TcoElision(Bytes, Binary{64});
+
+impl Show[TcoElision] for TcoElision {
+  fn render(x: TcoElision) => Bytes =
+    match x { TcoElision(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("TcoElision(", render(p0)), ", "), render(p1)), ")") };
+};
+
+fn eq_TcoElision(a: TcoElision, b: TcoElision) => Binary{1} =
+    match a { TcoElision(p0, p1) => match b { TcoElision(q0, q1) => and(bytes_eq(p0, q0), eq(p1, q1)) } };
