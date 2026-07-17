@@ -131,8 +131,9 @@ flowchart LR
 **Non-sites:** every arithmetic/field access; pure Exact success in `fast` (optional crumb only);
 intermediate meets inside an already-quarantined bag (package at export).
 
-Isolation EXPLAIN fields (pack 02 §5.1) are a **field-set** of this envelope for isolation
-`site_kind`s — one bus, many sites. Full Localize-1 rationale: Agent F annex.
+Isolation EXPLAIN fields (pack 02) are a **field-set** of this envelope for isolation
+`site_kind`s — one bus, many sites. Site catalog above is the complete Localize-1 attachment list
+(no separate annex file).
 
 ### 3.4 Compile-time vs runtime
 

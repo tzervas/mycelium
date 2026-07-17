@@ -12,6 +12,11 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(design): keep design pack at three docs only (2026-07-17)
+
+Remove leftover `AGENT-F` annex; first-fault site catalog lives entirely in
+`DESIGN-03`. Maintainer-facing surface remains DESIGN-01 · 02 · 03 only (Draft).
+
 ### docs(design): integrate diagnostics emitters + policy streamline into design pack (2026-07-17)
 
 Design-only deepen of the three-doc pack: policy streamline as ★ primary (01); isolation EXPLAIN
