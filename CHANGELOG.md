@@ -12,6 +12,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): PROGRAM-SELFHOST-DECOMPOSE active implement program (2026-07-17)
+
+L0 program under `docs/planning/gap-analysis-2026-07-16/`: gap-close → archive main → component
+repos → `*-myc` transpile → umbrella re-export (phases G→A→D→T→R; honest gates). Design pack 01–04
+stays design review. No product code.
+
 ### docs(brand): undouble README logo (2026-07-17)
 
 README brand block used badge + hero of the same mark; keep a single centered badge.
