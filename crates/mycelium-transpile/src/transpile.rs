@@ -249,6 +249,27 @@ pub(crate) fn transpile_source_with_ctx(
         },
     );
 
+    // G-α Rank-1 / L2-A: ambient Result/Option type co-emit when the assembled body mentions those
+    // type heads and does not already define them. Pure over body text (no emit-ctx). Must land
+    // *before* lattice co-emits and free-fns so `Result[…]` signatures resolve under myc-check.
+    // Order after render: ambient → (lattice already prepended above) → body items.
+    {
+        let ambient = emit::ambient_result_option_preamble(&body_chunks.join("\n\n"));
+        if !ambient.is_empty() {
+            let mut preamble = Vec::with_capacity(ambient.len() + body_chunks.len());
+            let mut ambient_names = Vec::with_capacity(ambient.len());
+            for (name, myc) in ambient {
+                preamble.push(myc);
+                ambient_names.push(format!("co-emit:{name}"));
+            }
+            preamble.append(&mut body_chunks);
+            body_chunks = preamble;
+            let mut names = ambient_names;
+            names.append(&mut emitted_items);
+            emitted_items = names;
+        }
+    }
+
     let myc_text = render_nodule(nodule_path, &body_chunks, &parsed.attrs);
     let report = GapReport {
         source: file_label.to_string(),

@@ -415,25 +415,16 @@ fn inlined_combinator_forms_check_clean_against_real_toolchain() {
             "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
             report.gaps
         );
-        // A self-contained nodule needs `Result`/`Option` declared locally so `myc check` can
-        // resolve `Ok`/`Err`/`Some`/`None` with no cross-nodule import (a standalone `.myc` file
-        // has no `lib/std` search path here) — the SAME `type Result[A, E] = Ok(A) | Err(E);` /
-        // `type Option[A] = Some(A) | None;` shapes `lib/std/result.myc:10`/`lib/std/option.myc:9`
-        // declare, inserted right after the rendered nodule header.
-        let full = myc.replacen(
-            &format!("nodule {NODULE_PATH};\n\n"),
-            &format!(
-                "nodule {NODULE_PATH};\n\ntype Result[A, E] = Ok(A) | Err(E);\ntype Option[A] = \
-                 Some(A) | None;\n\n"
-            ),
-            1,
-        );
-        assert_ne!(
-            full, myc,
-            "case {i}: expected the nodule-header insertion point to be found, got:\n{myc}"
+        // G-α Rank-1 ambient co-emit: Result/Option type shapes matching lib/std/result.myc /
+        // option.myc are co-emitted when signatures mention them — no manual inject (would
+        // double-define). Combinators stay emitted via the M-1092 rewrite path, not ambient.
+        assert!(
+            myc.contains("type Result[A, E] = Ok(A) | Err(E);")
+                || myc.contains("type Option[A] = Some(A) | None;"),
+            "case {i}: expected ambient Result and/or Option co-emit, got:\n{myc}"
         );
         let path = dir.join(format!("case_{i}.myc"));
-        std::fs::write(&path, &full).expect("write case .myc");
+        std::fs::write(&path, &myc).expect("write case .myc");
 
         let checker = crate::vet::MycChecker {
             command: vec![bin.display().to_string()],
@@ -443,7 +434,7 @@ fn inlined_combinator_forms_check_clean_against_real_toolchain() {
         assert_eq!(
             rec.class,
             crate::vet::VetClass::Clean,
-            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{full}\n\
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
              diagnostic={:?}",
             rec.diagnostic
         );
