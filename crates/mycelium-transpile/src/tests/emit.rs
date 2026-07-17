@@ -4818,3 +4818,125 @@ fn const_non_decidable_initializer_still_gapped() {
             .collect::<Vec<_>>()
     );
 }
+
+// ---- L2-C: std-io Source/Sink named-field structs must emit (not M-1006 false-gap) --------------
+
+/// Minimal std-io residual shape: named-field `Substrate`/`Source`/`Sink` (fields are only
+/// `Vec<u8>` / nested in-file types / `usize`) plus a free-fn `read_all(src: Source)` that used to
+/// emit while the structs stayed gapped under a false M-1006 "Vec is a user dep" classification →
+/// `unknown type Source` file poison. After the L2-C fix, the three structs emit positionally
+/// (named fields dropped + EXPLAIN sub-gap) so the free-fn's `Source` type is declared in-file.
+#[test]
+fn source_sink_named_field_structs_emit_not_unknown_type_poison() {
+    let rust = r#"
+        pub struct Substrate {
+            data: Vec<u8>,
+            pos: usize,
+        }
+        pub struct Source {
+            substrate: Substrate,
+        }
+        pub struct Sink {
+            buffer: Vec<u8>,
+        }
+        // Identity free-fn so the signature alone is the residual class (body residuals are
+        // orthogonal). Real std-io `read_all` still has body gaps; the poison was the *type*.
+        pub fn identity_src(src: Source) -> Source {
+            src
+        }
+    "#;
+    let (myc, report) = transpile_source(rust, "io.rs", "std.io.io")
+        .unwrap_or_else(|e| panic!("transpile failed: {e}"));
+
+    // `Substrate` is a Mycelium reserved word (DN-140) → emits as `Substrate_kw`.
+    for (raw, emitted) in [
+        ("Substrate", "Substrate_kw"),
+        ("Source", "Source"),
+        ("Sink", "Sink"),
+    ] {
+        assert!(
+            report.emitted_items.iter().any(|n| n == emitted),
+            "expected `{raw}` emitted as `{emitted}` (not M-1006 false-gap); emitted={:?}\nmyc=\n{myc}",
+            report.emitted_items
+        );
+        assert!(
+            !report.gaps.iter().any(|g| {
+                g.item_name.as_deref() == Some(raw)
+                    && g.category == Category::Struct
+                    && g.reason.contains("not resolvable in-file")
+            }),
+            "`{raw}` must not be whole-item gapped under M-1006 resolvability; gaps={:?}\nmyc=\n{myc}",
+            report
+                .gaps
+                .iter()
+                .filter(|g| g.item_name.as_deref() == Some(raw))
+                .map(|g| (&g.category, &g.reason))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    // Positional emission of the product (named fields dropped — EXPLAIN via NamedFieldDrop).
+    // Substrate rewrites to Substrate_kw (reserved-word, DN-140).
+    assert!(
+        myc.contains("type Substrate_kw = Substrate_kw(Vec[Binary{8}], Binary{64});")
+            || myc.contains("type Substrate_kw = Substrate_kw("),
+        "missing Substrate_kw type emission:\n{myc}"
+    );
+    assert!(
+        myc.contains("type Source = Source(Substrate_kw);"),
+        "missing Source type emission (field type Substrate → Substrate_kw):\n{myc}"
+    );
+    assert!(
+        myc.contains("type Sink = Sink(Vec[Binary{8}]);"),
+        "missing Sink type emission:\n{myc}"
+    );
+    assert!(
+        report.emitted_items.iter().any(|n| n == "identity_src"),
+        "expected identity_src free-fn emitted with Source in signature; emitted={:?}\nmyc=\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn identity_src(src: Source)") && myc.contains("=> Source"),
+        "missing identity_src signature referencing Source:\n{myc}"
+    );
+    // Types must precede the free-fn that names them (declaration-before-use).
+    let src_ty = myc.find("type Source =").expect("Source type position");
+    let fn_pos = myc.find("fn identity_src").expect("identity_src position");
+    assert!(
+        src_ty < fn_pos,
+        "Source type must precede identity_src:\n{myc}"
+    );
+
+    // Real-oracle gate when myc-check is available: no `unknown type Source` file poison.
+    if let Some(bin) = super::vet::find_myc_check() {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-l2c-source-sink-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        ));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("io.myc");
+        std::fs::write(&path, &myc).expect("write myc");
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "io.rs", 4, 4);
+        let diag = rec.diagnostic.as_str();
+        assert!(
+            !diag.contains("unknown type `Source`")
+                && !diag.contains("unknown type Source")
+                && !diag.contains("unknown type `Sink`")
+                && !diag.contains("unknown type `Substrate`")
+                && !diag.contains("unknown type `Substrate_kw`"),
+            "Source/Sink/Substrate type emission must not file-poison with unknown type; \
+             class={:?} diagnostic={:?}\nmyc=\n{myc}",
+            rec.class,
+            rec.diagnostic
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

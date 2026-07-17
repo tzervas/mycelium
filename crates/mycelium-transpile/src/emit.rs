@@ -814,6 +814,11 @@ fn push_rewrite_doc(vi: &ValidIdent, doc: &mut Vec<String>) {
 
 /// Whether a named-field record named `name` may be emitted under the M-1006 resolvability gate.
 /// Context off (`None`) ⇒ always allowed; on ⇒ allowed iff `name` is resolvable in-file.
+///
+/// **`name` must be the Rust source ident** (e.g. `Substrate`), not a DN-140 `valid_ident`
+/// rewrite (`Substrate_kw`). [`crate::transpile::resolvable_type_names`] keys the set by source
+/// idents; checking the rewritten form false-gaps every reserved-word named-field struct even
+/// when its fields fully resolve (std-io `Substrate` — L2-C residual; G2/VR-5).
 fn named_field_emit_allowed(name: &str) -> bool {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => true,
@@ -1046,19 +1051,39 @@ fn int_lit_as_bin_literal(e: &Expr, width: u32) -> Option<String> {
 
 /// Express gap-close (2026-07-16): bare top-level fn names already used in this file's emit
 /// (inherent methods left un-mangled on first occurrence). Second use forces D4 mangling.
-fn bare_fn_name_taken(name: &str) -> bool {
+pub(crate) fn bare_fn_name_taken(name: &str) -> bool {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => false,
         Some(ctx) => ctx.bare_fn_names.contains(name),
     })
 }
 
-fn record_bare_fn_name(name: &str) {
+pub(crate) fn record_bare_fn_name(name: &str) {
     EMIT_CTX.with(|c| {
         if let Some(ctx) = c.borrow_mut().as_mut() {
             ctx.bare_fn_names.insert(name.to_string());
         }
     });
+}
+
+/// Claim a bare top-level fn name for this file's emission. Returns `true` if this is the **first**
+/// claim (caller should emit the body) and `false` if the name is already taken (caller must **not**
+/// re-emit — would file-poison myc-check with `duplicate function`). Used by derive aux helpers
+/// (`show_vec_*` / eventual `eq_vec_*`) so two structs with the same `Vec[ELEM]` field shape share
+/// one helper (std-io `Substrate`+`Sink` both need `show_vec_Binary_8_` after L2-C type emission).
+/// Context off ⇒ always `true` (single-item tests have no cross-struct collision surface).
+pub(crate) fn claim_bare_fn_name(name: &str) -> bool {
+    EMIT_CTX.with(|c| match c.borrow_mut().as_mut() {
+        None => true,
+        Some(ctx) => {
+            if ctx.bare_fn_names.contains(name) {
+                false
+            } else {
+                ctx.bare_fn_names.insert(name.to_string());
+                true
+            }
+        }
+    })
 }
 
 /// DN-133 tier (ii): resolve `mangled_name` via the M-1084 cross-nodule symbol table, using
@@ -5099,7 +5124,9 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     // wins): an enum with a named-field variant only emits when it resolves in-file — otherwise
     // emitting that variant positionally would introduce an out-of-file reference that poisons the
     // file's `myc check`, costing its clean items. An enum with no named-field variant is unaffected.
-    if has_named_variant && !named_field_emit_allowed(&enum_name) {
+    // Gate on the **Rust source ident** (not DN-140 `enum_name` rewrite) — see
+    // [`named_field_emit_allowed`].
+    if has_named_variant && !named_field_emit_allowed(&item.ident.to_string()) {
         return Err(GapReason::new(
             Category::PayloadVariant,
             format!(
@@ -5340,7 +5367,10 @@ pub fn emit_struct(item: &ItemStruct) -> Result<Emitted, GapReason> {
             // resolves in-file — otherwise the emission would introduce an out-of-file reference
             // (e.g. a sibling-crate/kernel type) that poisons the file's `myc check`, costing its
             // clean items. When gated out, keep the honest named-field refusal.
-            if !named_field_emit_allowed(&struct_name) {
+            // Gate on the **Rust source ident** (not DN-140 `struct_name` rewrite) — see
+            // [`named_field_emit_allowed`]. Reserved-word structs like std-io `Substrate` rewrite
+            // to `Substrate_kw` on emission but stay keyed as `Substrate` in the resolvable set.
+            if !named_field_emit_allowed(&item.ident.to_string()) {
                 return Err(GapReason::new(
                     Category::Struct,
                     format!(
