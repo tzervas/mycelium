@@ -2690,6 +2690,96 @@ fn self_receiving_inherent_method_is_left_unmangled() {
     );
 }
 
+// --- G-β Rank A — never-fabricate free-fn method-call when inherent not emitted ---------------
+//
+// When an inherent method body fails to emit (e.g. M-1037 residual `.to_vec()`), the declaration
+// is never recorded in `local_mangled`/`bare_fn_names`. A later free-fn call site
+// `recv.method(...)` must **gap** rather than desugar to bare `method(recv, …)` which file-poisons
+// myc-check with `unknown function/constructor/prim method` (G2/VR-5). Symmetric happy path:
+// a successfully-emitted self method remains callable as the registered free-fn desugar.
+
+/// **Poison stop (Rank A):** `Source::read_to_end` body gaps on `.to_vec()` (M-1037 residual);
+/// free fn `read_all` calls `.read_to_end()` — must gap the free fn and never emit bare
+/// `read_to_end(` that would file-poison myc-check.
+#[test]
+fn method_call_to_unemitted_inherent_gaps_never_fabricates_free_fn() {
+    let rust = "\
+pub struct Source {\n\
+    data: Vec<u8>,\n\
+    pos: usize,\n\
+}\n\
+impl Source {\n\
+    fn read_to_end(&mut self) -> Vec<u8> {\n\
+        let bytes = self.data[self.pos..].to_vec();\n\
+        self.pos = self.data.len();\n\
+        bytes\n\
+    }\n\
+}\n\
+pub fn read_all(mut src: Source) -> Vec<u8> {\n\
+    src.read_to_end()\n\
+}\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile G-β poison fixture: {e}"));
+    assert!(
+        !report.emitted_items.iter().any(|n| n == "read_all"),
+        "`read_all` must gap (callee `read_to_end` was never recorded as emitted): \
+         emitted={:?} myc:\n{myc}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("read_to_end("),
+        "emitted .myc must NEVER contain bare `read_to_end(` (G-β Rank A poison stop), got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")
+                || g.reason.contains("read_to_end")),
+        "expected a gap citing the unregistered method / body residual, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    // The method body residual itself must still be reported (never silent about why the
+    // declaration failed).
+    assert!(
+        report.gaps.iter().any(|g| g.reason.contains("to_vec")),
+        "expected the impl-body `.to_vec()` residual to surface, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+}
+
+/// **Happy path (Rank A):** a self-receiving inherent method that **does** emit (simple field
+/// projection) is registered bare; a later free fn calling `.method()` desugars to the
+/// registered free-fn name (not mangled on first claim).
+#[test]
+fn method_call_to_emitted_inherent_desugars_to_registered_free_fn() {
+    let rust = "\
+pub struct Foo {\n\
+    x: u8,\n\
+}\n\
+impl Foo {\n\
+    pub fn get(&self) -> u8 { self.x }\n\
+}\n\
+pub fn call(f: Foo) -> u8 { f.get() }\n";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile G-β happy-path fixture: {e}"));
+    assert!(
+        report.emitted_items.iter().any(|n| n == "call"),
+        "`call` must emit (registered bare `get` is a proven free-fn referent): emitted={:?} \
+         gaps={:?}",
+        report.emitted_items,
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("= get(f)") || myc.contains("= get(f);") || myc.contains("get(f)"),
+        "expected free-fn desugar `get(f)` for the registered inherent, got:\n{myc}"
+    );
+    assert!(
+        !myc.contains(&crate::reserved::mangled_inherent_fn_name("Foo", "get")),
+        "first bare self-method claim stays un-mangled at the call site too, got:\n{myc}"
+    );
+}
+
 // --- DN-133 (M-1094) — qualified/associated-function call-site emission ------------------------
 //
 // `visit_call`'s resolution-gated mangled-call arm: `Type::method(...)` emits the mangled
@@ -5018,7 +5108,10 @@ fn ambient_result_co_emit_on_result_return() {
     // EXPLAIN citation cannot false-double the tally.
     let type_result_lines = myc
         .lines()
-        .filter(|l| l.trim_start().starts_with("type Result[A, E] = Ok(A) | Err(E);"))
+        .filter(|l| {
+            l.trim_start()
+                .starts_with("type Result[A, E] = Ok(A) | Err(E);")
+        })
         .count();
     assert_eq!(
         type_result_lines, 1,

@@ -51,23 +51,34 @@ fn wired_float_classification_methods_emit_bridged_prim_calls() {
 /// NOT gated: an `.is_nan()`-named method on a receiver whose type is NOT known to be `Float`
 /// (here, an ordinary passed-through named type) must NOT trigger the bridged prim rewrite — the
 /// receiver-type gate exists precisely to prevent a coincidentally-same-named method on an
-/// unrelated type from being mistranslated (VR-5: never guess the receiver's type). Falls through
-/// to the unchanged generic `recv.method(args)` -> `method(recv, args)` desugar.
+/// unrelated type from being mistranslated (VR-5: never guess the receiver's type).
+///
+/// **G-β Rank A:** the previous "fall through to bare `is_nan(x)`" desugar fabricated an
+/// unknown prim (file-poison). Unregistered method calls now **gap** rather than emit a bare
+/// free-fn name (G2/VR-5).
 #[test]
-fn is_nan_on_unknown_receiver_type_keeps_generic_desugar() {
+fn is_nan_on_unknown_receiver_type_gaps_never_fabricates() {
     let rust = "fn f(x: Thing) -> bool { x.is_nan() }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        report.emitted_items.iter().any(|n| n == "f"),
-        "expected `f` in emitted_items, got {:?} (gaps={:?})",
-        report.emitted_items,
-        report.gaps
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "expected `f` to gap (no proven-emitted `is_nan` free-fn referent), got \
+         emitted_items={:?} myc:\n{myc}",
+        report.emitted_items
     );
     assert!(
-        myc.contains("is_nan(x)") && !myc.contains("flt_is_nan"),
-        "expected the OLD generic bare-call desugar (`is_nan(x)`), not the bridged `flt_is_nan` \
-         rewrite, since `Thing` is not a known `Float` receiver — got:\n{myc}"
+        !myc.contains("is_nan(") && !myc.contains("flt_is_nan"),
+        "must never emit bare `is_nan(` (fabricate) nor bridged `flt_is_nan` on unknown \
+         receiver — got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")),
+        "expected G-β Rank A gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
 
@@ -114,22 +125,31 @@ fn wrapping_methods_on_known_binary_are_pending_backend_gaps() {
 /// NOT gated: `.wrapping_add()` on a receiver NOT known to be a concrete `Binary{N}` (here, an
 /// unrelated passed-through type) does not fire the PENDING-BACKEND gap either — same
 /// receiver-type-gate discipline as the `is_nan` case above, applied to the `AnyBinaryWidth` gate.
+///
+/// **G-β Rank A:** bare `wrapping_add(x, y)` free-fn desugar is no longer emitted for an
+/// unregistered method — gaps instead of fabricating an unknown prim (G2/VR-5).
 #[test]
-fn wrapping_add_on_unknown_receiver_type_keeps_generic_desugar() {
+fn wrapping_add_on_unknown_receiver_type_gaps_never_fabricates() {
     let rust = "fn f(x: Thing, y: Thing) -> Thing { x.wrapping_add(y) }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        report.emitted_items.iter().any(|n| n == "f"),
-        "expected `f` in emitted_items (the generic desugar still emits SOME text), got {:?} \
-         (gaps={:?})",
-        report.emitted_items,
-        report.gaps
+        !report.emitted_items.iter().any(|n| n == "f"),
+        "expected `f` to gap (no proven-emitted `wrapping_add` free-fn referent), got \
+         emitted_items={:?} myc:\n{myc}",
+        report.emitted_items
     );
     assert!(
-        myc.contains("wrapping_add(x, y)"),
-        "expected the OLD generic bare-call desugar (`wrapping_add(x, y)`), not a PENDING-BACKEND \
-         gap, since `Thing` is not a known `Binary{{N}}` receiver — got:\n{myc}"
+        !myc.contains("wrapping_add("),
+        "must never emit bare `wrapping_add(` (fabricate) for an unregistered method — got:\n{myc}"
+    );
+    assert!(
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")),
+        "expected G-β Rank A gap reason, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
 

@@ -3625,17 +3625,51 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
         // D4 / express gap-close: if the receiver's TypeEnv type has a locally mangled
         // inherent method (always true for same-file inherent emits after 2026-07-16),
         // call the mangled name so declaration/call stay in sync.
+        //
+        // **G-β Rank A (never-fabricate free-fn method-call, 2026-07-17):** only emit the
+        // bare/mangled free-fn form when that exact name is a **proven** same-file emission
+        // ([`local_mangled_assoc_fn_known`] / [`bare_fn_name_taken`]) — the same resolution
+        // discipline DN-133 applies to qualified `Type::method` calls. Emitting an
+        // unregistered bare name (e.g. `read_to_end(src)` after `Source::read_to_end`'s body
+        // gapped on `.to_vec()`) file-poisons `myc-check` with
+        // `unknown function/constructor/prim read_to_end` and is exactly the G2/VR-5
+        // fabrication the house rules forbid. Gap the call site honestly instead (the free
+        // fn may then fail to emit rather than emit-and-poison the whole file).
+        let rust_method = method_name.clone();
         let mut method_name = resolve_surface_ident(&method_name, "method call")?;
+        let mut known_emitted = false;
         if let Some(recv_ty) = expr_env_type(&m.receiver, self.env) {
             let mangled = mangled_inherent_fn_name(&recv_ty, &method_name);
             if local_mangled_assoc_fn_known(&mangled) {
                 method_name = mangled;
+                known_emitted = true;
             }
         } else if let Some(st) = self.self_ty {
             let mangled = mangled_inherent_fn_name(st, &method_name);
             if local_mangled_assoc_fn_known(&mangled) {
                 method_name = mangled;
+                known_emitted = true;
             }
+        }
+        if !known_emitted {
+            // Bare un-mangled inherent method (first claim of a self-receiver) is recorded
+            // under its bare name — see `emit_impl`'s success path.
+            known_emitted =
+                local_mangled_assoc_fn_known(&method_name) || bare_fn_name_taken(&method_name);
+        }
+        if !known_emitted {
+            return Err(GapReason::new(
+                Category::Other,
+                format!(
+                    "method call `.{rust_method}(...)` has no proven-emitted free-fn referent in \
+                     this file (neither a D4-mangled inherent `Type__{rust_method}` nor a bare \
+                     inherent recorded by this file's left-to-right pass, nor a prim_map / \
+                     combinator row). Emitting bare `{rust_method}(recv, …)` would fabricate an \
+                     unknown prim and file-poison myc-check (G-β Rank A / G2/VR-5; residual when \
+                     the method body itself gapped — e.g. M-1037 `.to_vec()` inside \
+                     `read_to_end` — so the declaration was never registered)"
+                ),
+            ));
         }
         let recv = emit_expr(&m.receiver, self.self_ty, self.env)?;
         let mut args = vec![recv];
