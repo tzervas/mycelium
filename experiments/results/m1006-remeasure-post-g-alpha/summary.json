@@ -1,0 +1,267 @@
+{
+  "date": "2026-07-17",
+  "assigned_model": "grok-composer-2.5-fast",
+  "actual_model": "Grok 4.5 / xAI agent runtime (composer-2.5-fast unavailable)",
+  "base_tip_dev": "6cdc5d1b86c90765a7d437b4111519535be1e062",
+  "open_prs": {
+    "1695": {
+      "title": "feat(transpile): ambient Result/Option co-emit (G-\u03b1 Rank-1)",
+      "head": "f8c72895112cf1d358cd303d77070a09945122bb",
+      "branch": "claude/leaf/G-alpha-result-ambient"
+    },
+    "1696": {
+      "title": "feat(transpile): G-\u03b1 Rank-2 Import non-type free-fn co-include",
+      "head": "e3a16c42d28ff9c107609b85be658f4392939267",
+      "branch": "claude/leaf/G-alpha-import-non-type"
+    }
+  },
+  "combined_local_merge_sha": "22a7675c0d53dca0c10d1dd181a2bf1dd1c5c055",
+  "combined_note": "throwaway local merge of both OPEN PR heads onto origin/dev; NOT pushed to protected trunks",
+  "baseline_dev": {
+    "crates_mycelium-l1_src_eval_rs": {
+      "total_non_test_items": 42,
+      "total_emitted_items": 9,
+      "total_checked_clean_items": 9,
+      "total_checked_clean_items_phylum": 0,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": null,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-l1_src_fuse_rs": {
+      "total_non_test_items": 12,
+      "total_emitted_items": 0,
+      "total_checked_clean_items": 0,
+      "total_checked_clean_items_phylum": 0,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": null,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-cmp_src": {
+      "total_non_test_items": 111,
+      "total_emitted_items": 14,
+      "total_checked_clean_items": 14,
+      "total_checked_clean_items_phylum": 14,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-fs_src": {
+      "total_non_test_items": 47,
+      "total_emitted_items": 28,
+      "total_checked_clean_items": 28,
+      "total_checked_clean_items_phylum": 28,
+      "class_counts": {
+        "Clean": 7
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-io_src": {
+      "total_non_test_items": 59,
+      "total_emitted_items": 25,
+      "total_checked_clean_items": 14,
+      "total_checked_clean_items_phylum": 14,
+      "class_counts": {
+        "CheckError": 2,
+        "Clean": 3
+      },
+      "phylum_ok": false,
+      "oracle_poisons": [
+        {
+          "file": "crates/mycelium-std-io/src/io.rs",
+          "diagnostic": "check-error: check error in `read_all`: unknown type `Result`"
+        },
+        {
+          "file": "crates/mycelium-std-io/src/lib.rs",
+          "diagnostic": "check-error: check error in `std.io.<use>`: `use std.io.io.read_all`: no such name `std.io.io.read_all` in the phylum \u2014 no nodule declares it (M-662/DN-113; never a silent skip \u2014 G2)"
+        }
+      ],
+      "phylum_poisons": [
+        {
+          "nodule": "std.io.io",
+          "file": "io.myc",
+          "class": "CheckError",
+          "site": "read_all",
+          "on": null,
+          "message": "unknown type `Result`"
+        },
+        {
+          "nodule": "std.io",
+          "file": "lib.myc",
+          "class": "CheckError",
+          "site": "read_all",
+          "on": null,
+          "message": "unknown type `Result`"
+        }
+      ]
+    },
+    "crates_mycelium-std-rand_src": {
+      "total_non_test_items": 34,
+      "total_emitted_items": 6,
+      "total_checked_clean_items": 6,
+      "total_checked_clean_items_phylum": 6,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-time_src": {
+      "total_non_test_items": 37,
+      "total_emitted_items": 17,
+      "total_checked_clean_items": 17,
+      "total_checked_clean_items_phylum": 17,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    }
+  },
+  "combined_pr1695_1696": {
+    "crates_mycelium-l1_src_eval_rs": {
+      "total_non_test_items": 42,
+      "total_emitted_items": 9,
+      "total_checked_clean_items": 9,
+      "total_checked_clean_items_phylum": 0,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": null,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-l1_src_fuse_rs": {
+      "total_non_test_items": 12,
+      "total_emitted_items": 0,
+      "total_checked_clean_items": 0,
+      "total_checked_clean_items_phylum": 0,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": null,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-cmp_src": {
+      "total_non_test_items": 111,
+      "total_emitted_items": 14,
+      "total_checked_clean_items": 14,
+      "total_checked_clean_items_phylum": 14,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-fs_src": {
+      "total_non_test_items": 47,
+      "total_emitted_items": 28,
+      "total_checked_clean_items": 28,
+      "total_checked_clean_items_phylum": 28,
+      "class_counts": {
+        "Clean": 7
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-io_src": {
+      "total_non_test_items": 59,
+      "total_emitted_items": 27,
+      "total_checked_clean_items": 14,
+      "total_checked_clean_items_phylum": 14,
+      "class_counts": {
+        "CheckError": 2,
+        "Clean": 3
+      },
+      "phylum_ok": false,
+      "oracle_poisons": [
+        {
+          "file": "crates/mycelium-std-io/src/io.rs",
+          "diagnostic": "check-error: check error in `read_all`: unknown function/constructor/prim `read_to_end`"
+        },
+        {
+          "file": "crates/mycelium-std-io/src/lib.rs",
+          "diagnostic": "check-error: check error in `read_all`: unknown function/constructor/prim `read_to_end`"
+        }
+      ],
+      "phylum_poisons": [
+        {
+          "nodule": "std.io.io",
+          "file": "io.myc",
+          "class": "CheckError",
+          "site": "read_all",
+          "on": null,
+          "message": "unknown function/constructor/prim `read_to_end`"
+        },
+        {
+          "nodule": "std.io",
+          "file": "lib.myc",
+          "class": "CheckError",
+          "site": "read_all",
+          "on": null,
+          "message": "unknown function/constructor/prim `read_to_end`"
+        }
+      ]
+    },
+    "crates_mycelium-std-rand_src": {
+      "total_non_test_items": 34,
+      "total_emitted_items": 6,
+      "total_checked_clean_items": 6,
+      "total_checked_clean_items_phylum": 6,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    },
+    "crates_mycelium-std-time_src": {
+      "total_non_test_items": 37,
+      "total_emitted_items": 17,
+      "total_checked_clean_items": 17,
+      "total_checked_clean_items_phylum": 17,
+      "class_counts": {
+        "Clean": 1
+      },
+      "phylum_ok": true,
+      "oracle_poisons": [],
+      "phylum_poisons": []
+    }
+  },
+  "unions": {
+    "baseline_dev": {
+      "default5_checked": "46/236=19.5%",
+      "default5_expressible": "46/236=19.5%",
+      "all7_checked": "88/342=25.7%",
+      "all7_expressible": "99/342=28.9%"
+    },
+    "combined": {
+      "default5_checked": "46/236=19.5%",
+      "default5_expressible": "46/236=19.5%",
+      "all7_checked": "88/342=25.7%",
+      "all7_expressible": "101/342=29.5%"
+    }
+  },
+  "headline": {
+    "result_poison_closed": true,
+    "import_nontype_poison_closed": true,
+    "next_first_poison": "unknown function/constructor/prim `read_to_end` on read_all",
+    "checked_fraction_flat": true,
+    "reason_flat": "file-gated metric: io/lib still CheckError on next residual after Rank 1+2 closed"
+  }
+}

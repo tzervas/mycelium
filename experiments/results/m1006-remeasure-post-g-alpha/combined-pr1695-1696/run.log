@@ -1,0 +1,15 @@
+=== combined 22a7675c0d53dca0c10d1dd181a2bf1dd1c5c055 ===
+--- vet crates/mycelium-l1/src/eval.rs
+exit=0
+--- vet crates/mycelium-l1/src/fuse.rs
+exit=0
+--- vet crates/mycelium-std-time/src
+exit=0
+--- vet crates/mycelium-std-rand/src
+exit=0
+--- vet crates/mycelium-std-cmp/src
+exit=0
+--- vet crates/mycelium-std-fs/src
+exit=0
+--- vet crates/mycelium-std-io/src
+exit=0

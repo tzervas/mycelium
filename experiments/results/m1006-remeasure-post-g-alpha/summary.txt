@@ -1,0 +1,34 @@
+M-1006 remeasure post G-α (2026-07-17) — Empirical summary
+============================================================
+Leaf:     claude/leaf/G-alpha-measure
+Assigned: grok-composer-2.5-fast
+Actual:   Grok 4.5 (xAI agent runtime)
+Oracle:   real myc-check via MYC_CHECK_CMD
+
+Tips
+----
+baseline-dev:            origin/dev @ 6cdc5d1b86c90765a7d437b4111519535be1e062
+PR #1695 head:           f8c72895112cf1d358cd303d77070a09945122bb  (Result ambient, OPEN)
+PR #1696 head:           e3a16c42d28ff9c107609b85be658f4392939267  (Import non-type, OPEN)
+combined (local only):   22a7675c0d53dca0c10d1dd181a2bf1dd1c5c055  (NOT pushed)
+
+Unions
+------
+default-5 checked:       baseline 46/236 = 19.5%   | combined 46/236 = 19.5%   (Δ 0.0pp)
+default-5 expressible:   baseline 46/236 = 19.5%   | combined 46/236 = 19.5%
+all-7 checked:           baseline 88/342 = 25.7%   | combined 88/342 = 25.7%   (Δ 0.0pp)
+all-7 expressible:       baseline 99/342 = 28.9%   | combined 101/342 = 29.5%  (Δ +0.6pp)
+
+std-io
+------
+baseline:  checked 14/59 = 23.7%  expressible 25/59 = 42.4%  CheckError×2
+  poison io:  unknown type `Result`
+  poison lib: use std.io.io.read_all (Import non-type)
+  phylum:     ok=false  Result on read_all (both nodules)
+combined:  checked 14/59 = 23.7%  expressible 27/59 = 45.8%  CheckError×2
+  poison io:  unknown function/constructor/prim `read_to_end`
+  poison lib: unknown function/constructor/prim `read_to_end`
+  phylum:     ok=false  read_to_end on read_all (both nodules)
+
+Rank 1+2 closed as first-poison; next residual = read_to_end method/call.
+checked_fraction flat (file-gated). No one-shot / SemVer claim.

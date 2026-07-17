@@ -1,0 +1,119 @@
+// nodule: std.io.error
+// Explicit error types for `std.io` + `serialize` (C1 — never-silent; RFC-0016 §4.1).
+//
+// Every fallible operation returns a typed error carrying an RFC-0013 diagnostic
+// **locus** (byte offset / field path) — never a sentinel value or a silent partial
+// result (C1/G2). Two distinct error families:
+//
+// - [`SerError`] — (de)serialization failures: truncated input, malformed grammar,
+//   unknown tag, value-model invariant violation, budget exceeded.
+// - [`IoError`] — byte-movement failures: unexpected EOF, substrate refusal, effect
+//   budget overrun.
+//
+// Both implement [`std::error::Error`] and carry a `Display` projection that names
+// the failure locus — the G11 dual human/machine projection (RFC-0013 §4.3 / I1).
+//
+// # Design spec
+// `docs/spec/stdlib/io.md` §3/§5 (C1); RFC-0013 §4.3 (the diagnostic record); C6
+// (declared bounded effects — `BudgetExceeded`/`EffectBudget` carry the `kind`).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io.error;
+
+// A byte offset into the input: the **locus** of a serialization failure (C1 /
+// RFC-0013 I1). Named `none` (0) when the locus cannot be determined (e.g. the
+// first byte of a completely empty input).
+pub type ByteOffset = ByteOffset(Binary{64});
+
+impl Show[ByteOffset] for ByteOffset {
+  fn render(x: ByteOffset) => Bytes =
+    match x { ByteOffset(p0) => bytes_concat(bytes_concat("ByteOffset(", render(p0)), ")") };
+};
+
+fn eq_ByteOffset(a: ByteOffset, b: ByteOffset) => Binary{1} =
+    match a { ByteOffset(p0) => match b { ByteOffset(q0) => eq(p0, q0) } };
+
+// A field path into a structured value, naming *where* inside a composite the
+// failure was detected (C1/RFC-0013 I1). Encoded as a `/`-separated string of
+// field names — e.g. `"repr/width"`, `"meta/bound/delta"`.
+//
+// This is the structural analogue of [`ByteOffset`] for grammar-structured failures
+// where the byte position is less informative than the semantic path.
+pub type FieldPath = FieldPath(Bytes);
+
+impl Show[FieldPath] for FieldPath {
+  fn render(x: FieldPath) => Bytes =
+    match x { FieldPath(p0) => bytes_concat(bytes_concat("FieldPath(", render(p0)), ")") };
+};
+
+fn eq_FieldPath(a: FieldPath, b: FieldPath) => Binary{1} =
+    match a { FieldPath(p0) => match b { FieldPath(q0) => bytes_eq(p0, q0) } };
+
+impl FieldPath {
+  // Construct from a static description.
+  // Declared: renamed `impl FieldPath { fn from_static }` -> `_9FieldPath11from_static` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _9FieldPath11from_static(s: Bytes) => FieldPath = FieldPath((s));
+};
+
+// The explicit error set for (de)serialization failures (C1/RFC-0013; spec §3).
+//
+// Every variant carries a locus (byte offset or field path) so the caller can
+// surface *where* the decode failed — never a locationless "parse error" (G2/C3).
+// An overrun yields `BudgetExceeded`, never an OOM or a hang (C6/ADR-015).
+//
+// # C1 compliance
+// No variant of `SerError` is a sentinel, a clamp, or a partial-result indicator.
+// The presence of a `SerError` means the entire decode is rejected; the caller
+// never receives a partially-filled `Value`.
+pub type SerError = Truncated(ByteOffset) | Malformed(ByteOffset, Bytes) | UnknownTag(FieldPath, Bytes) | OutOfDomain(FieldPath, Bytes) | BudgetExceeded(Bytes);
+
+impl Show[SerError] for SerError {
+  fn render(x: SerError) => Bytes =
+    match x { Truncated(p0) => bytes_concat(bytes_concat("Truncated(", render(p0)), ")"), Malformed(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("Malformed(", render(p0)), ", "), render(p1)), ")"), UnknownTag(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("UnknownTag(", render(p0)), ", "), render(p1)), ")"), OutOfDomain(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("OutOfDomain(", render(p0)), ", "), render(p1)), ")"), BudgetExceeded(p0) => bytes_concat(bytes_concat("BudgetExceeded(", render(p0)), ")") };
+};
+
+fn eq_SerError(a: SerError, b: SerError) => Binary{1} =
+  match a { Truncated(p0) => match b { Truncated(q0) => eq_ByteOffset(p0, q0), _ => 0b0 }, Malformed(p0, p1) => match b { Malformed(q0, q1) => and(eq_ByteOffset(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, UnknownTag(p0, p1) => match b { UnknownTag(q0, q1) => and(eq_FieldPath(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, OutOfDomain(p0, p1) => match b { OutOfDomain(q0, q1) => and(eq_FieldPath(p0, q0), bytes_eq(p1, q1)), _ => 0b0 }, BudgetExceeded(p0) => match b { BudgetExceeded(q0) => bytes_eq(p0, q0), _ => 0b0 } };
+
+// The number of bytes successfully read before an error.
+//
+// Carried by [`IoError::UnexpectedEof`] to name *how much* was read before the
+// source was exhausted — enabling the caller to report precisely without
+// re-reading (C1/RFC-0013 I1).
+pub type ByteCount = ByteCount(Binary{64});
+
+impl Show[ByteCount] for ByteCount {
+  fn render(x: ByteCount) => Bytes =
+    match x { ByteCount(p0) => bytes_concat(bytes_concat("ByteCount(", render(p0)), ")") };
+};
+
+fn eq_ByteCount(a: ByteCount, b: ByteCount) => Binary{1} =
+    match a { ByteCount(p0) => match b { ByteCount(q0) => eq(p0, q0) } };
+
+// The explicit error set for byte-movement failures (C1/RFC-0013; spec §3).
+//
+// Every variant is a declared, inspectable failure mode — never a silent partial
+// read (C1) and never a hang or OOM (C6).
+pub type IoError = UnexpectedEof(ByteCount) | Refused(Bytes) | EffectBudget(Bytes);
+
+impl Show[IoError] for IoError {
+  fn render(x: IoError) => Bytes =
+    match x { UnexpectedEof(p0) => bytes_concat(bytes_concat("UnexpectedEof(", render(p0)), ")"), Refused(p0) => bytes_concat(bytes_concat("Refused(", render(p0)), ")"), EffectBudget(p0) => bytes_concat(bytes_concat("EffectBudget(", render(p0)), ")") };
+};
+
+fn eq_IoError(a: IoError, b: IoError) => Binary{1} =
+  match a { UnexpectedEof(p0) => match b { UnexpectedEof(q0) => eq_ByteCount(p0, q0), _ => 0b0 }, Refused(p0) => match b { Refused(q0) => bytes_eq(p0, q0), _ => 0b0 }, EffectBudget(p0) => match b { EffectBudget(q0) => bytes_eq(p0, q0), _ => 0b0 } };
+
+// A combined error from [`crate::io::read_value`]: either a byte-movement failure
+// (`Io`) or a (de)serialization failure (`Ser`). The two failure modes are kept
+// distinct so the caller can handle each class separately (C3 — no black box).
+pub type ReadValueError = Io(IoError) | Ser(SerError);
+
+impl Show[ReadValueError] for ReadValueError {
+  fn render(x: ReadValueError) => Bytes =
+    match x { Io(p0) => bytes_concat(bytes_concat("Io(", render(p0)), ")"), Ser(p0) => bytes_concat(bytes_concat("Ser(", render(p0)), ")") };
+};
+
+fn eq_ReadValueError(a: ReadValueError, b: ReadValueError) => Binary{1} =
+  match a { Io(p0) => match b { Io(q0) => eq_IoError(p0, q0), _ => 0b0 }, Ser(p0) => match b { Ser(q0) => eq_SerError(p0, q0), _ => 0b0 } };

@@ -1,0 +1,52 @@
+// nodule: std.fs.path
+// `Path` — a pure, immutable, value-semantic filesystem path (C4/ADR-003).
+//
+// A `Path` is a content-addressable, UTF-8 immutable value. Two equal paths are the same value;
+// metadata is not part of its identity (ADR-003). Path operations are **purely lexical** — they
+// involve no syscalls (no `wild`? = no) and are total (no `effects: io`).
+//
+// # FLAG (Q3 — path model + portability)
+// The spec FLAGs whether `Path` should be a `Text` newtype, a structured component list, or an
+// OS-string that may not be UTF-8 (the classic portability hazard). Non-UTF-8 paths are a
+// never-silent concern (C1): a lossy path decode must be an explicit error, not a replacement
+// char. For now `Path` is a validated UTF-8 newtype; the separator / normalization / case-fold
+// policy is conservative (no implicit normalization). This decision is **FLAGGED** — coordinate
+// with `text`/`string` (M-524) and RFC-0016 §8-Q3 before ratification.
+//
+// # Guarantee tag: `Exact`
+// `Path::new`, `join`, `parent`, `exists_in` (lexical check only) are all pure, total, and
+// deterministic — no precision dimension, no approximation (VR-5: Exact is honest here).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.path;
+
+// An immutable, content-addressable UTF-8 filesystem path (C4 / ADR-003).
+//
+// A `Path` is a **value**: two `Path`s with the same string are the same value regardless of
+// where they were constructed. Metadata (mtime, inode) is NOT part of its identity.
+//
+// # FLAG (Q3 — portability)
+// Currently backed by a `String` (UTF-8 guarantee). Non-UTF-8 OS paths are an open question
+// (spec §7-Q3 / RFC-0016 §8-Q3); a lossy decode would violate C1 — the maintainer's call.
+//
+// # PATH SEPARATOR
+// Component separator is `/`. No implicit OS-specific normalization (no `\\` on Windows).
+// This is a conservative default pending the Q3 portability decision.
+pub type Path = Path(Bytes);
+
+impl Show[Path] for Path {
+  fn render(x: Path) => Bytes =
+    match x { Path(p0) => bytes_concat(bytes_concat("Path(", render(p0)), ")") };
+};
+
+fn eq_Path(a: Path, b: Path) => Binary{1} =
+    match a { Path(p0) => match b { Path(q0) => bytes_eq(p0, q0) } };
+
+fn hash_Path(a: Path) => Bytes =
+    match a { Path(p0) => hash_blake3(bytes_concat("Path", hash_blake3(p0))) };
+
+impl Path {
+  // The path as a string slice.
+  fn as_str(self: Path) => Bytes = (match self { Path(p0) => p0 });
+};

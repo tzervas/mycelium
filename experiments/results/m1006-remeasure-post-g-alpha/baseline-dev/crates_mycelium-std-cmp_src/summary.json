@@ -1,0 +1,76 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-cmp/src/lib.rs",
+      "total_items": 112,
+      "non_test_items": 111,
+      "emitted": 14,
+      "gaps": 110,
+      "expressible_pct": 12.612612612612612,
+      "category_counts": {
+        "DeriveAttr": 3,
+        "DeriveSatisfied": 6,
+        "GenericBound": 4,
+        "Impl": 18,
+        "Import": 1,
+        "InnerAttr": 1,
+        "MacroDef": 5,
+        "MacroInvocation": 57,
+        "NamedFieldDrop": 2,
+        "Other": 5,
+        "PayloadVariant": 1,
+        "Struct": 1,
+        "TestItem": 1,
+        "Trait": 5
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 112,
+    "non_test_items": 111,
+    "emitted": 14,
+    "gaps": 110,
+    "expressible_pct": 12.612612612612612,
+    "category_counts": {
+      "DeriveAttr": 3,
+      "DeriveSatisfied": 6,
+      "GenericBound": 4,
+      "Impl": 18,
+      "Import": 1,
+      "InnerAttr": 1,
+      "MacroDef": 5,
+      "MacroInvocation": 57,
+      "NamedFieldDrop": 2,
+      "Other": 5,
+      "PayloadVariant": 1,
+      "Struct": 1,
+      "TestItem": 1,
+      "Trait": 5
+    }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-cmp",
+      "target_phylum": "std.cmp"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.cmp",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-cmp/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
+  }
+}

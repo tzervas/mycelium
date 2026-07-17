@@ -1,0 +1,171 @@
+{
+  "source": "crates/mycelium-std-io/src/lib.rs",
+  "emitted_items": [
+    "co-include:ByteCount,ByteOffset,FieldPath,IoError,ReadValueError,SerError",
+    "co-include:Format",
+    "co-include+use:read_all,Budget,Sink,Source"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 115,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod error ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 116,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod guarantee_matrix ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "guarantee_matrix"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 117,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod io ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "io"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 118,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod serialize ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "serialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 122,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] # [path = \"tests/mod.rs\"] mod unit_tests ;",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "unit_tests"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::deserialize` — `deserialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::from_json` — `from_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::serialize` — `serialize` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 132,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use serialize :: { deserialize , from_json , serialize , to_json , Format } ;",
+      "reason": "`use serialize::to_json` — `to_json` is not among sibling `serialize`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include:Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read` — `read` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include+use:read_all,Budget,Sink,Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::read_value` — `read_value` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include+use:read_all,Budget,Sink,Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::write` — `write` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include+use:read_all,Budget,Sink,Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 135,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use io :: { read , read_all , read_value , write , Budget , Sink , Source , Substrate } ;",
+      "reason": "`use io::Substrate` — `Substrate` is not among sibling `io`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "co-include+use:read_all,Budget,Sink,Source"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 138,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use guarantee_matrix :: MATRIX as GUARANTEE_MATRIX ;",
+      "reason": "`use guarantee_matrix::MATRIX as GUARANTEE_MATRIX` — a renamed cross-nodule import is out of this increment's scope (the alias would need threading through every downstream reference to `GUARANTEE_MATRIX` in this file's body); flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/lib.rs",
+      "line": 142,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; use mycelium_core :: { meta :: { Meta , Provenance } , repr :: Repr , value :: { Payload , Value } , } ; fn binary_value () -> Value { Value :: new (Repr :: Binary { width : 8 } , Payload :: Bits (vec ! [true , false , true , true , false , false , true , false]) , Meta :: exact (Provenance :: Root) ,) . expect (\"well-formed binary value\") } # [doc = \" The flat re-exports are usable without the sub-module path.\"] # [test] fn flat_re_exports_work () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let recovered = deserialize (& bytes , Format :: Wire) . expect (\"wire round-trip\") ; assert_eq ! (v , recovered) ; let text = to_json (& v) . expect (\"to_json: finite test value\") ; let recovered = from_json (& text) . expect (\"JSON round-trip\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> Source -> read_all -> deserialize.\"] # [test] fn io_and_serialize_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let raw = read_all (src) . expect (\"read_all\") ; let recovered = deserialize (& raw , Format :: Wire) . expect (\"deserialize after read_all\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> Source -> read_value.\"] # [test] fn read_value_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let src = Source :: from_bytes (bytes) ; let recovered = read_value (src , Format :: Wire) . expect (\"read_value\") ; assert_eq ! (v , recovered) ; } # [doc = \" End-to-end: serialize -> write -> Sink -> deserialize.\"] # [test] fn write_and_serialize_end_to_end () { let v = binary_value () ; let bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; let snk = Sink :: new () ; let snk = write (snk , & bytes) . expect (\"write\") ; let result = snk . into_bytes () ; let recovered = deserialize (& result , Format :: Wire) . expect (\"deserialize after write\") ; assert_eq ! (v , recovered) ; } # [doc = \" The guarantee matrix has exactly 8 rows (one per exported op; spec §4).\"] # [test] fn guarantee_matrix_has_eight_rows () { assert_eq ! (GUARANTEE_MATRIX . len () , 8 , \"spec §4 guarantees eight op rows\") ; } # [doc = \" Garbage bytes yield an explicit Err, never a silent partial value.\"] # [test] fn deserialize_never_silent_on_garbage () { let result = deserialize (b\"garbage\" , Format :: Wire) ; assert ! (result . is_err () , \"garbage input must yield Err (C1/G2)\") ; } # [doc = \" Empty bytes yield Err (C1).\"] # [test] fn deserialize_never_silent_on_empty () { assert ! (deserialize (b\"\" , Format :: Wire) . is_err () , \"empty input must yield Err (C1)\") ; } # [doc = \" `serialize` does not change the content hash of the value.\"] # [test] fn serialize_is_a_projection_not_identity () { let v = binary_value () ; let h_before = v . content_hash () ; let _bytes = serialize (& v , Format :: Wire) . expect (\"serialize: finite test value\") ; assert_eq ! (v . content_hash () , h_before , \"ADR-003: projection must not change identity\") ; } # [doc = \" `read_all` exhausts the source (returns the full byte payload).\"] # [test] fn read_all_exhausts_source () { let data = vec ! [1u8 , 2 , 3] ; let src = Source :: from_bytes (data . clone ()) ; let bytes = read_all (src) . expect (\"read_all\") ; assert_eq ! (bytes , data , \"read_all must return all source bytes\") ; } # [doc = \" Chunked `read` threads the handle linearly.\"] # [test] fn read_threads_linearly () { let src = Source :: from_bytes (vec ! [1u8 , 2 , 3 , 4 , 5 , 6]) ; let (a , src) = read (src , Budget :: Bytes (2)) . expect (\"first chunk\") ; let (b , src) = read (src , Budget :: Bytes (2)) . expect (\"second chunk\") ; let (c , _src) = read (src , Budget :: Bytes (2)) . expect (\"third chunk\") ; assert_eq ! ([a , b , c] , [vec ! [1 , 2] , vec ! [3 , 4] , vec ! [5 , 6]]) ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 10
+}

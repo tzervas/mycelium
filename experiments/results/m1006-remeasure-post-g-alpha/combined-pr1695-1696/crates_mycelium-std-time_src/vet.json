@@ -1,0 +1,35 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-g-alpha/combined-pr1695-1696/crates_mycelium-std-time_src/lib.myc",
+      "source_file": "crates/mycelium-std-time/src/lib.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 37,
+      "emitted_items": 17
+    }
+  ],
+  "total_non_test_items": 37,
+  "total_emitted_items": 17,
+  "total_checked_clean_items": 17,
+  "class_counts": {
+    "Clean": 1
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.time",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 17
+}

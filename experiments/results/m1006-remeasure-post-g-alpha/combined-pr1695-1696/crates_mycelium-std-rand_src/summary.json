@@ -1,0 +1,74 @@
+{
+  "files": [
+    {
+      "file": "crates/mycelium-std-rand/src/lib.rs",
+      "total_items": 35,
+      "non_test_items": 34,
+      "emitted": 6,
+      "gaps": 41,
+      "expressible_pct": 17.647058823529413,
+      "category_counts": {
+        "DeriveAttr": 3,
+        "DeriveSatisfied": 7,
+        "GenericBound": 4,
+        "Impl": 4,
+        "Import": 1,
+        "InnerAttr": 1,
+        "MacroInvocation": 1,
+        "MultiStmtBody": 9,
+        "NamedFieldDrop": 1,
+        "Other": 6,
+        "Struct": 2,
+        "TestItem": 1,
+        "Trait": 1
+      }
+    }
+  ],
+  "totals": {
+    "total_items": 35,
+    "non_test_items": 34,
+    "emitted": 6,
+    "gaps": 41,
+    "expressible_pct": 17.647058823529413,
+    "category_counts": {
+      "DeriveAttr": 3,
+      "DeriveSatisfied": 7,
+      "GenericBound": 4,
+      "Impl": 4,
+      "Import": 1,
+      "InnerAttr": 1,
+      "MacroInvocation": 1,
+      "MultiStmtBody": 9,
+      "NamedFieldDrop": 1,
+      "Other": 6,
+      "Struct": 2,
+      "TestItem": 1,
+      "Trait": 1
+    }
+  },
+  "remap": {
+    "phylum": {
+      "source_crate": "mycelium-std-rand",
+      "target_phylum": "std.rand"
+    },
+    "nodules": [
+      {
+        "target_nodule": "std.rand",
+        "operation": "Keep",
+        "sources": [
+          {
+            "rust_path": "crates/mycelium-std-rand/src/lib.rs",
+            "rust_span": null,
+            "moved_items": []
+          }
+        ],
+        "rationale": "structure-preserving 1:1 (DN-109 §5.3-B v0 default: every emitted nodule keeps its source file's mod-tree position, no restructuring proposed)",
+        "safety": "Safe",
+        "api_surface_changed": false,
+        "identity_neutral": true,
+        "guarantee": "Declared"
+      }
+    ],
+    "idiom_choices": []
+  }
+}

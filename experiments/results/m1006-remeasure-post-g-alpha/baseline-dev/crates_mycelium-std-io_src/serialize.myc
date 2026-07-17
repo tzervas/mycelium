@@ -1,0 +1,69 @@
+// nodule: std.io.serialize
+// Serialize / deserialize surface (spec §3 — the serialize half).
+//
+// Two format entry points ([`Format`]) over `mycelium-core`'s existing `serde`
+// implementation (M-104):
+//
+// - **`Wire`** — the self-describing `[Repr] ‖ [Meta] ‖ [payload]` binary-JSON
+//   form of RFC-0001 §4.8 (schema-travels-with-data, faithfully round-trippable
+//   including `Meta`).
+// - **`Json`** — the **one canonical JSON projection** (`fmt.to_json` delegates
+//   here — README §5 seam; spec §7-Q1 FLAGGED); the same serde grammar used in
+//   the `Wire` form, rendered as a compact UTF-8 text object.
+//
+// The round-trip property `deserialize(serialize(v, f), f) ≡ v` including `Meta`
+// is asserted as a **property test** (proptest) in the in-crate test module
+// (`src/tests/serialize.rs`).  The tag is **`Empirical`** — not `Proven` — because no
+// side-condition theorem has been checked for this implementation (VR-5 / spec §4.2 Q2).
+//
+// # Honesty stance
+// - `serialize`/`to_json` are **fallible**: they project every `Value` whose payload is
+//   JSON-representable (RFC-0001 §4.8) and **refuse** a `Value` carrying a non-finite `f64`
+//   (`NaN`/`±∞`) with `Err(SerError::OutOfDomain)`. JSON has no non-finite literal, and
+//   `serde_json` would silently emit `null` — a lossy, ambiguous encoding (`NaN` and `±∞` both
+//   collapse to `null`, breaking the round-trip and colliding identity). Refusing is never-silent
+//   (C1/G2). They borrow a `&Value` and never mutate or re-key it (C4 — projection, not identity;
+//   ADR-003).
+// - `deserialize`/`from_json` return `Err(SerError)` with a **locus** on any decode
+//   failure — never a partially-filled `Value` or a zeroed sentinel (C1/G2).
+//
+// # C5 / no new trusted code
+// This module wraps `mycelium-core`'s `serde::{Serialize, Deserialize}` for
+// `Value` (landed M-104).  It adds **no** new serialization logic of its own;
+// `serde_json` is the only dependency beyond `mycelium-core` (KC-3).
+//
+// # FLAG: §8-Q6 — no `wild`/FFI here
+// The serialize half is purely in-memory (`Vec<u8>` / `String`); it uses no OS
+// facilities.  The io half (see `io.rs`) defers its OS floor to `std-sys` (M-541).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io.serialize;
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.io.error) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type ByteOffset = ByteOffset(Binary{64});
+type FieldPath = FieldPath(Bytes);
+type SerError = Truncated(ByteOffset) | Malformed(ByteOffset, Bytes) | UnknownTag(FieldPath, Bytes) | OutOfDomain(FieldPath, Bytes) | BudgetExceeded(Bytes);
+
+// The two supported serialization formats (spec §3).
+//
+// Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖
+// [payload]`), so the round-trip property holds for each independently.  The
+// only difference is the byte representation: `Wire` is JSON-in-bytes (the
+// same substrate used for the `Value` serde form in M-104), `Json` is the
+// UTF-8 text form suitable for human/tool consumption (G11 dual projection).
+//
+// # EXPLAIN-able selection
+// A `Format` value is the reified, inspectable selection artifact (C3): the
+// choice of `Wire` vs `Json` is visible at every call site — there is no
+// ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016
+// §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).
+pub type Format = Wire | Json;
+
+impl Show[Format] for Format {
+  fn render(x: Format) => Bytes =
+    match x { Wire => "Wire", Json => "Json" };
+};
+
+fn eq_Format(a: Format, b: Format) => Binary{1} =
+  match a { Wire => match b { Wire => 0b1, _ => 0b0 }, Json => match b { Json => 0b1, _ => 0b0 } };

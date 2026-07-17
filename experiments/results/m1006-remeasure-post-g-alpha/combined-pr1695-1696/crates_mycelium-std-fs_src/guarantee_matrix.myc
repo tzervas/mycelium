@@ -1,0 +1,85 @@
+// nodule: std.fs.guarantee_matrix
+// `std.fs` guarantee matrix encoded as **data** (RFC-0016 §4.5; spec §4).
+//
+// Every exported operation has one row in [`MATRIX`]. The matrix is the load-bearing C2
+// deliverable (RFC-0016 §4.1 C2 / VR-5): guarantee tags are asserted in tests, not prose-only.
+//
+// # Guarantee tag justification (all `Exact`)
+// `fs` carries **no** accuracy/approximation/probability semantics — there is no ε, no δ, no
+// `BoundBasis` to resolve against (contrast `std.math` M-525). `Exact` is the *honest* tag here,
+// not an upgrade: there is no precision dimension to overclaim. The honesty of `fs` is borne
+// entirely by C1 (explicit fallibility) and C6 (declared effects) — not by a C2 precision tag.
+// Every op either performs its named filesystem effect and returns, or it returns an explicit
+// `FsErr` — there is **no** silently-degraded third outcome (spec §4 tag justification).
+//
+// # Fallibility column
+// Every io-effecting op can fail; path ops are total (Exact, `Option` for `parent`).
+//
+// # `wild`? column
+// Marks which ops bottom out in the audited OS syscall floor (ADR-014). Pure lexical path ops
+// and the UseAfterConsume catch do **not** hit the syscall floor. This column is the `wild`
+// inventory the spec §4 acceptance criterion demands.
+//
+// **FLAG (std-sys / Q1):** The in-memory substrate implementation here does NOT actually invoke
+// the `wild` syscall floor. The `wild?` column marks the *design intent* — which ops WILL hit
+// the floor when `std-sys` (M-541) is wired in. The column is correct for the target architecture;
+// the current implementation uses `InMemoryFs` which has no `unsafe` code.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.guarantee_matrix;
+
+// Fallibility classification for an exported op.
+pub type Fallibility = Total | OptionFallible | ResultFallible;
+
+impl Show[Fallibility] for Fallibility {
+  fn render(x: Fallibility) => Bytes =
+    match x { Total => "Total", OptionFallible => "OptionFallible", ResultFallible => "ResultFallible" };
+};
+
+fn eq_Fallibility(a: Fallibility, b: Fallibility) => Binary{1} =
+  match a { Total => match b { Total => 0b1, _ => 0b0 }, OptionFallible => match b { OptionFallible => 0b1, _ => 0b0 }, ResultFallible => match b { ResultFallible => 0b1, _ => 0b0 } };
+
+// Whether an op reaches the audited OS syscall floor.
+pub type Wild = Yes | No;
+
+impl Show[Wild] for Wild {
+  fn render(x: Wild) => Bytes =
+    match x { Yes => "Yes", No => "No" };
+};
+
+fn eq_Wild(a: Wild, b: Wild) => Binary{1} =
+  match a { Yes => match b { Yes => 0b1, _ => 0b0 }, No => match b { No => 0b1, _ => 0b0 } };
+
+// Whether an op has an EXPLAIN obligation (C3).
+pub type Explainable = Yes | NotApplicable;
+
+impl Show[Explainable] for Explainable {
+  fn render(x: Explainable) => Bytes =
+    match x { Yes => "Yes", NotApplicable => "NotApplicable" };
+};
+
+fn eq_Explainable(a: Explainable, b: Explainable) => Binary{1} =
+  match a { Yes => match b { Yes => 0b1, _ => 0b0 }, NotApplicable => match b { NotApplicable => 0b1, _ => 0b0 } };
+
+// Declared effects for an op (C6).
+pub type Effects = None | Io;
+
+impl Show[Effects] for Effects {
+  fn render(x: Effects) => Bytes =
+    match x { None => "None", Io => "Io" };
+};
+
+fn eq_Effects(a: Effects, b: Effects) => Binary{1} =
+  match a { None => match b { None => 0b1, _ => 0b0 }, Io => match b { Io => 0b1, _ => 0b0 } };
+
+// One row in the `std.fs` guarantee matrix (RFC-0016 §4.5 / spec §4).
+pub type MatrixRow = MatrixRow(Bytes, Bytes, Fallibility, Bytes, Effects, Explainable, Wild);
+
+impl Show[MatrixRow] for MatrixRow {
+  fn render(x: MatrixRow) => Bytes =
+    match x { MatrixRow(p0, p1, p2, p3, p4, p5, p6) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("MatrixRow(", render(p0)), ", "), render(p1)), ", "), render(p2)), ", "), render(p3)), ", "), render(p4)), ", "), render(p5)), ", "), render(p6)), ")") };
+};
+
+fn eq_MatrixRow(a: MatrixRow, b: MatrixRow) => Binary{1} =
+    match a { MatrixRow(p0, p1, p2, p3, p4, p5, p6) => match b { MatrixRow(q0, q1, q2, q3, q4, q5, q6) => and(and(and(and(and(and(bytes_eq(p0, q0), bytes_eq(p1, q1)), eq_Fallibility(p2, q2)), bytes_eq(p3, q3)), eq_Effects(p4, q4)), eq_Explainable(p5, q5)), eq_Wild(p6, q6)) } };
