@@ -110,3 +110,4 @@ Ground: DN-88 · DN-27 · ADR-022 · ADR-036/038 dogfooding · ADR-045 window.
 | When | Note |
 |---|---|
 | 2026-07-17 | Program opened; Phase G active; README points here as active implement program |
+| 2026-07-17 | **D1 draft map** (prep only — Phase D still gated on G→A): [`COMPONENT-REPO-MAP-DRAFT.md`](./COMPONENT-REPO-MAP-DRAFT.md). Declared operational map; does not claim DN-88 §3 met; no repos created |
