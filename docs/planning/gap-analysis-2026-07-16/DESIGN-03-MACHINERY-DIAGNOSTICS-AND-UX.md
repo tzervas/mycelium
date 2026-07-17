@@ -5,7 +5,8 @@
 | **Status** | **Draft** design package — not Accepted · not implement |
 | **Pack** | 3 of 3 · with [01 Swaps & policy](./DESIGN-01-SWAPS-AND-POLICY.md) · [02 Tags & containment](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) |
 | **Honesty** | Design positions `Declared` until ratified |
-| **Sources distilled** | Agent C · E · F mandate · RFC-0005 · RFC-0034 §7 · packs 01–02 |
+| **Sources distilled** | Agent C · E · F · RFC-0005 · RFC-0013 · DN-04 · RFC-0034 §7 · packs 01–02 |
+| **Diagnostics annex** | [AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) (site catalog deep dive) |
 
 ## 1. Why this document exists
 
@@ -14,7 +15,8 @@ Packs 01–02 define *what* must stay honest. This pack defines *how the system 
 runtime), and a **broader UX/DX backlog** that does not invent auto-swaps or greenwash.
 
 **Core UX/DX claim (maintainer):** failures that force “dig the whole tree” kill the project
-even when they are never-silent. Digging is a defect class of its own.
+even when they are never-silent. Digging is a defect class of its own (**N9 / first-fault
+localization** — non-negotiable alongside never-silent).
 
 ## 2. Package map (how the three docs fit)
 
@@ -85,22 +87,52 @@ flowchart LR
 
 | Field | Purpose |
 |---|---|
-| `site` | Source span / IR node / spore id |
-| `kind` | `swap` · `policy` · `cert` · `meet` · `seal` · `import` · `mode` · `gap` · … |
-| `decision` | refuse · seal_fail · not_validated · resolved · … |
+| `event_id` | Stable id for this fault instance |
+| `phase` | `compile` · `check` · `runtime` · `transpile` · `packaging` |
+| `site` / `where` | Source span / IR node / spore id / hypha id |
+| `site_kind` / `kind` | See §3.3a catalog |
+| `decision` | refuse · seal_fail · not_validated · resolved · fallback · remint · candidate · … |
+| `how` | registry machine code (RFC-0013 / DN-22 projection) |
+| `why` / `message` | structured reason + human one-liner |
 | `grades` | input grades + result grade (if any) |
 | `policy_ref` | hash if selection involved |
 | `cert_mode` | active mode |
-| `basis_ref` | optional link to matrix row / predicate id |
-| `message` | human one-liner |
-| `child_cause` | optional single nested first-fault (not full tree dump by default) |
+| `basis_ref` | matrix row / predicate id / cert hash, or empty |
+| `parent_event` / `child_cause` | first-fault link (symptoms cite cause; not full tree by default) |
 
 **Rules:**
 
 1. **First-fault wins** for the default UX — optional “expand children” for audit.
 2. **Generation ≥ middle tier always** (RFC-0034): signal exists even in `fast`.
-3. **Consumption** is dialable (lean CLI vs audit) — gen ≠ consumption.
+3. **Consumption** is dialable (lean CLI vs audit) — **gen ≠ consumption** (no perf death from noise).
 4. Never invent success; never upgrade grades in the diagnostic itself.
+5. Diagnostics are **additive** over explicit `Result`/`Option`/type errors (DN-04 / RFC-0013) —
+   never substitute logs for fallibility.
+6. **No third swap-policy system** — policy identity comes only from pack 01 catalog + resolve.
+
+### 3.3a Site catalog (must-emit junctions)
+
+| site_kind | Phase | Trigger | Pack home |
+|---|---|---|---|
+| `policy_resolve` | check | Catalog / `policy: default` / ambient → `PolicyRef` | 01 |
+| `legal_pair_refuse` | check | Illegal Repr pair | 01 |
+| `missing_conversion` | check | Cross-paradigm without `swap` | 01 |
+| `regime_type_lie` | check | Total type over partial regime | 01 |
+| `swap_exec` | runtime | Swap Ok/Err / out-of-range | 01 |
+| `swap_check` | runtime | Cert Validated / Refuted / NotValidated | 01 · 02 |
+| `meet_boundary` | check/runtime | Export / certified demand / Exact partition | 02 |
+| `grade_meet` | runtime | Dynamic meet of tagged values | 02 |
+| `seal_remint` | runtime | Airlock pass/fail | 02 |
+| `mode_firewall` | check | Mode × grade refuse without seal | 02 |
+| `grade_annotation` | check | Illegal strengthen | 02 |
+| `import_first_edge` | check | First bad import edge | 03 |
+| `transpile_gap` | transpile | First poison / residual | 03 |
+
+**Non-sites:** every arithmetic/field access; pure Exact success in `fast` (optional crumb only);
+intermediate meets inside an already-quarantined bag (package at export).
+
+Isolation EXPLAIN fields (pack 02 §5.1) are a **field-set** of this envelope for isolation
+`site_kind`s — one bus, many sites. Full Localize-1 rationale: Agent F annex.
 
 ### 3.4 Compile-time vs runtime
 
@@ -111,14 +143,23 @@ flowchart LR
 | **Runtime** | Event on refuse / NotValidated / seal fail / mode cross | Span + policy hash + mode in one record |
 | **LSP** | Hover shows EXPLAIN + first-fault; code actions = **candidates only** | No auto-insert swap/seal |
 
-### 3.5 Ranked options for the bus
+### 3.5 Consumption tiers (gen ≠ consumption)
+
+| Tier | Shows | Default when |
+|---|---|---|
+| **lean** | site_kind · where · decision · code | `fast` CLI |
+| **normal** | + why · key inputs · basis_ref short | refuse paths; interactive |
+| **audit** | full envelope + meet DAG / cert / policy expand | certified / `myc explain` |
+
+### 3.6 Ranked options for the bus
 
 | Rank | Option | Notes |
 |---:|---|---|
-| **1** | Shared first-fault schema + attach at junctions in §3.2 | **Recommend** |
-| **2** | Unify under existing EXPLAIN product (RFC-0005) with severity channel | Prefer extend over new kernel |
-| **3** | Rich distributed tracing (OpenTelemetry-shaped) | Later; must map to first-fault |
-| **REJECT** | Log spam without structure · hide Declared to look clean · auto-fix by inserting swaps | |
+| **★ 1 Localize-1** | Shared first-fault schema + site catalog §3.3a + tiered EXPLAIN | **Recommend** |
+| **2** | Unify under existing EXPLAIN product (RFC-0005) with severity channel | Prefer extend over new kernel (still Localize-1 schema) |
+| **3** | Domain silo enrichment only (GapReason strings) | Interim; absorb into Localize-1 |
+| **4** | Rich distributed tracing (OpenTelemetry-shaped) | Later; must map to first-fault |
+| **REJECT** | Always-on full spans as default · log spam without structure · hide Declared · auto-fix by inserting swaps | |
 
 ## 4. Unified AX ranks (land order)
 
@@ -172,29 +213,41 @@ flowchart TB
 
 | Bundle | Contents | Intent |
 |---|---|---|
-| **AX-core** | X1–X5 + X15 | Usable honesty + localizable failures |
+| **AX-core** | X1–X5 + X15 | Usable honesty + localizable failures (policy streamline + first-fault) |
 | **AX-iso** | X6–X7 | Containment surface |
 | **AX-sugar** | X8–X10 | Ceremony cut after gates |
-| **AX-tools** | X11–X14 | Parallel from day one |
+| **AX-tools** | X11–X14 | Parallel presentation; **consumes** X15 bus |
+
+**X1 naming:** treat as **policy streamline** (catalog · create · apply · resolve-and-record ·
+EXPLAIN) — not “legal matrix only.” **X15** is the diagnostic bus; isolation EXPLAIN (X5) and
+policy resolve share its envelope.
 
 ## 5. Broader UX/DX backlog (beyond swaps/tags)
 
 Prefer **tooling presentation of existing truth** before new language forms.
 
-| Pri | Item | Kind |
-|---|---|---|
-| **P0** | Transpile worklist: `// src:` breadcrumbs, closest-to-clean, first poison | tooling |
-| **P0** | Phylum dual-report as default vet story | measurement UX |
-| **P0** | Always print active `CertMode` on check/run | CLI |
-| **P0** | Three-axis labels (grade · mode · typing) everywhere diagnostics appear | presentation |
-| **P1** | `reveal` / expand ambient+policy+mode | sugar transparency |
-| **P1** | Result/Option match ergonomics (DN-135 track) | language |
-| **P1** | Thin `myc` facade over existing bins | CLI |
-| **P2** | Progressive path: tutorial → companion → certified cores | docs |
-| **P2** | Lexicon “card” for hypha/colony/swap/Meta | docs |
-| **P3** | Full type-aware LSP beyond candidates | tooling |
+### 5.1 Rank-1 diagnostics spine (fold Agent F into presentation)
 
-**Refuse:** auto-insert swaps; ambient Exact; hide Declared; one “trust” slider.
+Agent E Rank-1 tooling **consumes** the X15 / Localize-1 bus — it does not invent a parallel
+schema. Ship presentation over the envelope:
+
+| Pri | Item | Kind | Bus role |
+|---|---|---|---|
+| **P0** | Transpile worklist: `// src:` breadcrumbs, closest-to-clean, first poison | tooling | emits/consumes `transpile_gap` |
+| **P0** | Phylum dual-report as default vet story | measurement UX | honest refuse class |
+| **P0** | Always print active `CertMode` on check/run | CLI | mode field always present |
+| **P0** | Three-axis labels (grade · mode · typing) everywhere diagnostics appear | presentation | prevents axis collapse |
+| **P0** | Lean first-fault one-liner on every refuse (where · site_kind · decision) | CLI/LSP | **primary N9 surface** |
+| **P1** | Unified EXPLAIN panel (lean/normal/audit over envelope) | tooling | hosts isolation + policy + grade |
+| **P1** | `reveal` / expand ambient+policy+mode | sugar transparency | expand, never invent |
+| **P1** | Result/Option match ergonomics (DN-135 track) | language | fewer false digs in ports |
+| **P1** | Thin `myc` facade over existing bins (`explain`, `check`) | CLI | one door to first-fault |
+| **P2** | Progressive path: tutorial → companion → certified cores | docs | teach walls + emitters |
+| **P2** | Lexicon “card” for hypha/colony/swap/Meta | docs | |
+| **P3** | Full type-aware LSP beyond candidates | tooling | |
+
+**Refuse:** auto-insert swaps; ambient Exact; hide Declared; one “trust” slider; pretty reports
+that invent Proven metrics.
 
 ## 6. Shared non-negotiables (pack-wide)
 
@@ -203,10 +256,10 @@ Prefer **tooling presentation of existing truth** before new language forms.
 | N1 | Never-silent (G2) |
 | N2 | No guarantee upgrade without basis (VR-5) |
 | N3 | No silent / auto `swap` (S1) |
-| N4 | Policy identity recorded when selection runs |
+| N4 | Policy identity recorded when selection runs (streamline ≠ omit) |
 | N5 | Contamination stops at walls — no laundry, no quality kill |
-| N6 | First-fault localization for hard junctions (this pack) |
-| N7 | Gen ≥ middle; consumption dialable |
+| N6 / **N9** | **First-fault localization** for hard junctions — where/how/why without tree dig |
+| N7 | Gen ≥ middle; consumption dialable (no ambient audit flood) |
 | N8 | Deterministic tables before sugar |
 
 ## 7. Contamination & diagnostics stress probes
@@ -271,6 +324,14 @@ Answer these to unlock re-rank + implement resume:
 ## 11. Reading order
 
 1. This pack §2 map · §8 board
-2. [DESIGN-01](./DESIGN-01-SWAPS-AND-POLICY.md) if steers touch swaps/policy
+2. [DESIGN-01](./DESIGN-01-SWAPS-AND-POLICY.md) if steers touch swaps/policy streamline
 3. [DESIGN-02](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) if steers touch grades/isolation
-4. Return here for ranks + waves
+4. [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) annex for full site catalog / OQs
+5. Return here for ranks + waves
+
+## Changelog (this pack)
+
+| When | Note |
+|---|---|
+| 2026-07-17 | Distill Agents C/E/F into pack 03 |
+| 2026-07-17 | Integrate: Localize-1 site catalog §3.3a; gen≠consumption tiers; Rank-1 diagnostics spine folds F; X1=policy streamline + X15 bus; N9 explicit |

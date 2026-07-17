@@ -12,6 +12,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(design): integrate diagnostics emitters + policy streamline into design pack (2026-07-17)
+
+Design-only deepen of the three-doc pack: policy streamline as ★ primary (01); isolation EXPLAIN
+as first-fault instance + grade/meet/seal surfaces (02); Localize-1 site catalog + Rank-1
+diagnostics spine (03); Agent F annex. DN-141 body successor stays **Draft**. No product code.
+
 ### docs(design): three-doc pack — swaps · tags/containment · diagnostics/UX (2026-07-17)
 
 Design-only. Replaces sprawled council agents A–F + former Draft DN-141 file with **three**
