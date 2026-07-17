@@ -62,24 +62,22 @@
 //! sibling's full [`NoduleSymbols::nodule_path`] for **both** same-crate and cross-crate batch
 //! hits — never a guessed rename, never a bare name, never a silent short form (VR-5/G2).
 //!
-//! **ONESHOT L2-B residual (Empirical, post-B1/#1659 + C3; re-verified on `dev`).** Path **form**
-//! is closed. What remains is **oracle visibility**, not resolution shape:
-//! - Batch resolve + full-path emit of `use std.fs.error.FsErr` (etc.) is **correct** for a real
-//!   multi-nodule phylum (`myc check --phylum` Clean; DN-124 dual-report attributes the recovery).
-//! - Single-file `myc check` (oracle / phylum-of-one) still refuses that same line with
-//!   `no such name … in the phylum` because the sibling nodule that **declares** the name is not
-//!   co-present — a counterfactual context no real build uses (DN-124 §1.1). Live std-fs pilot
-//!   after C3: oracle `checked_fraction` **38.3%** (18/47) vs phylum **59.6%** (28/47),
-//!   `Δ_basis ≈ +21.3pp` (basis correction, not lever progress — DN-124 §4). First oracle
-//!   Import poisons: `lib.myc` → `use std.fs.error.ErrnoClass`; `substrate.myc` →
-//!   `use std.fs.error.FsErr` (error nodule itself is Clean and emits both names).
-//! - **Cannot raise oracle `checked_fraction` from symtab/batch alone without either** (a) **emit
-//!   co-include** of the sibling type surface into the consumer file (L2-C / `emit.rs` owned —
-//!   dual-define under phylum is a collision hazard unless carefully staged), or (b) changing
-//!   the oracle co-check basis (vet import-closure / DN-124 P-A for the per-file path — outside
-//!   this leaf's ownership). Fabricating checked items or silently dropping resolved uses is
-//!   forbidden (G2/VR-5; DN-124 dual-report already honest). Residual is therefore **EXPLAIN**
-//!   + dual-report, not a silent "fix" of the metric.
+//! **ONESHOT L2-B phase-2 (Empirical, post-B1/#1659):** Path **form** is closed (full nodule
+//! path; never short-form collapse). The residual is **oracle visibility**: a correctly resolved
+//! `use std.fs.error.FsErr` is phylum-Clean when siblings co-exist, but single-file oracle
+//! (phylum-of-one) refuses `no such name … in the phylum`.
+//!
+//! **Phase-2 lever (this leaf):** when a resolved leaf is a **type** the sibling baseline
+//! actually emitted (`pub type` / `type` line captured in [`NoduleSymbols::type_defs`]), emit a
+//! **Declared co-include** of that type (plus transitive type-deps found in the same batch's
+//! type surface) into the consumer instead of a phylum-of-one-refusing `use`. EXPLAIN comment
+//! names the home nodule path (M-1084 full path preserved as provenance — never silent, never
+//! short-form collapse). Non-type resolved leaves still emit full-path `use` (fn/const surface
+//! not co-included here). Dual-define under phylum is home-qualified per nodule (consumer local
+//! vs sibling home) — Empirical clean on std-fs pilot; not a language import identity claim.
+//!
+//! Residual FLAG if a resolved name has **no** type_def (fn-only sibling surface): full-path
+//! `use` remains, oracle may still false-fail (DN-124 dual-report).
 
 use std::collections::{HashMap, HashSet};
 use syn::UseTree;
@@ -245,11 +243,46 @@ fn flatten(
 #[derive(Debug, Clone)]
 pub(crate) struct NoduleSymbols {
     /// The Mycelium nodule path this file transpiles to (`transpile::derive_nodule_path`'s output)
-    /// — the qualifier a resolved `use` is emitted against (`use <nodule_path>.<Item>;`).
+    /// — the qualifier a resolved `use` is emitted against (`use <nodule_path>.<Item>;`), and the
+    /// provenance string on an L2-B type co-include EXPLAIN comment.
     pub nodule_path: String,
     /// Every top-level item name this batch's baseline pass actually **emitted** for this file
     /// (`GapReport::emitted_items`) — the only names a cross-nodule `use` may ever resolve to.
     pub emitted: HashSet<String>,
+    /// L2-B: bare type name → full single-line `type`/`pub type` emission from the sibling's
+    /// baseline `.myc` ([`extract_type_defs`]). Empty when the sibling emitted no type items.
+    /// Only names also present in [`Self::emitted`] are stored (never a gapped/unemitted type).
+    pub type_defs: HashMap<String, String>,
+}
+
+/// Extract single-line `type Name = …;` / `pub type Name = …;` definitions from baseline `.myc`
+/// text (L2-B co-include surface). Multi-line type bodies are **not** captured (Declared residual —
+/// today's emitter writes sum/product types on one line; a multi-line form would fall back to
+/// full-path `use` and remain oracle-false-fail until the extractor widens — G2, never guessed).
+pub(crate) fn extract_type_defs(myc: &str) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    for line in myc.lines() {
+        let trimmed = line.trim();
+        let rest = if let Some(r) = trimmed.strip_prefix("pub type ") {
+            r
+        } else if let Some(r) = trimmed.strip_prefix("type ") {
+            r
+        } else {
+            continue;
+        };
+        // `Name = …;` — name is the first whitespace-delimited token before `=`.
+        let Some(eq) = rest.find('=') else {
+            continue;
+        };
+        let name = rest[..eq].trim();
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            continue;
+        }
+        // Prefer the first definition if a name repeats (should not happen in one nodule).
+        out.entry(name.to_string())
+            .or_insert_with(|| trimmed.to_string());
+    }
+    out
 }
 
 /// The batch-wide cross-nodule symbol table: a lookup key -> that sibling's [`NoduleSymbols`]. The
@@ -280,7 +313,13 @@ impl SymbolTable {
     /// were ever actually violated. `debug_assert!` catches a real collision in dev/test builds
     /// (never-silent, VR-5) without paying a release-build cost for a check whose triggering case
     /// is currently unobserved in this crate's own test corpus.
-    pub fn insert(&mut self, module_key: String, nodule_path: String, emitted: HashSet<String>) {
+    pub fn insert(
+        &mut self,
+        module_key: String,
+        nodule_path: String,
+        emitted: HashSet<String>,
+        type_defs: HashMap<String, String>,
+    ) {
         debug_assert!(
             !self.modules.contains_key(&module_key),
             "SymbolTable::insert: module_key {module_key:?} already present (nodule_path \
@@ -289,11 +328,17 @@ impl SymbolTable {
              violates the struct doc's uniqueness invariant; investigate the colliding files' \
              derived crate-identity + module path rather than silently proceeding (G2)."
         );
+        // Only retain type_defs for names that actually emitted (never a gapped/unemitted type).
+        let type_defs: HashMap<String, String> = type_defs
+            .into_iter()
+            .filter(|(n, _)| emitted.contains(n))
+            .collect();
         self.modules.insert(
             module_key,
             NoduleSymbols {
                 nodule_path,
                 emitted,
+                type_defs,
             },
         );
     }
@@ -307,6 +352,114 @@ impl SymbolTable {
             .get(module_key)
             .filter(|m| m.emitted.contains(name))
             .map(|m| m.nodule_path.as_str())
+    }
+
+    /// L2-B: the baseline `type`/`pub type` line for `name` in `module_key`, when that sibling
+    /// emitted a type of that name. `None` when the module misses, the name was not emitted, or
+    /// the emission was not a single-line type def (fn / other surface — falls back to full-path
+    /// `use`).
+    pub fn type_def(&self, module_key: &str, name: &str) -> Option<&str> {
+        self.modules
+            .get(module_key)
+            .and_then(|m| m.type_defs.get(name))
+            .map(String::as_str)
+    }
+
+    /// L2-B: for seed `(module_key, name)` pairs that resolved in this batch, collect the
+    /// co-include set — each seed's **module-keyed** type def (never a bare-name first-wins
+    /// across crates — two crates can both emit `Foo`) plus transitive type deps preferred from
+    /// the same home nodule, then any other batch module. Returns `(home_nodule_path, def_line)`
+    /// in dependency-before-user order. Seeds without a type_def are omitted.
+    pub fn type_def_closure(&self, seeds: &[(String, String)]) -> Vec<(String, String)> {
+        if seeds.is_empty() {
+            return Vec::new();
+        }
+        // name -> (home, def) for the chosen definition of that bare name.
+        let mut chosen: HashMap<String, (String, String)> = HashMap::new();
+        for (module_key, name) in seeds {
+            let Some(m) = self.modules.get(module_key.as_str()) else {
+                continue;
+            };
+            let Some(def) = m.type_defs.get(name) else {
+                continue;
+            };
+            chosen.insert(name.clone(), (m.nodule_path.clone(), def.clone()));
+        }
+        if chosen.is_empty() {
+            return Vec::new();
+        }
+        // Transitive deps: prefer same-home nodule, else any module that defines the name.
+        let mut changed = true;
+        while changed {
+            changed = false;
+            let snapshot: Vec<(String, String)> = chosen
+                .iter()
+                .map(|(n, (h, d))| (n.clone(), format!("{h}\0{d}")))
+                .collect();
+            for (n, home_and_def) in snapshot {
+                let Some((home, def)) = home_and_def.split_once('\0') else {
+                    continue;
+                };
+                let _ = n;
+                for dep in type_names_referenced_in_def_line(def) {
+                    if chosen.contains_key(&dep) {
+                        continue;
+                    }
+                    // Prefer a type_def from a module with the same home nodule path as the parent.
+                    let mut found: Option<(String, String)> = None;
+                    for m in self.modules.values() {
+                        if let Some(d) = m.type_defs.get(&dep) {
+                            if m.nodule_path == home {
+                                found = Some((m.nodule_path.clone(), d.clone()));
+                                break;
+                            }
+                            if found.is_none() {
+                                found = Some((m.nodule_path.clone(), d.clone()));
+                            }
+                        }
+                    }
+                    if let Some((h, d)) = found {
+                        chosen.insert(dep, (h, d));
+                        changed = true;
+                    }
+                }
+            }
+        }
+        // Topological-ish order.
+        let needed: HashSet<String> = chosen.keys().cloned().collect();
+        let mut order: Vec<String> = Vec::new();
+        let mut placed: HashSet<String> = HashSet::new();
+        let mut guard = 0;
+        while placed.len() < needed.len() && guard < needed.len() + 1 {
+            guard += 1;
+            let mut progress = false;
+            let mut candidates: Vec<String> = needed.difference(&placed).cloned().collect();
+            candidates.sort();
+            for n in candidates {
+                let Some((_, def)) = chosen.get(&n) else {
+                    continue;
+                };
+                let deps_ready = type_names_referenced_in_def_line(def)
+                    .into_iter()
+                    .filter(|d| needed.contains(d))
+                    .all(|d| placed.contains(&d));
+                if deps_ready {
+                    order.push(n.clone());
+                    placed.insert(n);
+                    progress = true;
+                }
+            }
+            if !progress {
+                let mut rest: Vec<String> = needed.difference(&placed).cloned().collect();
+                rest.sort();
+                order.extend(rest);
+                break;
+            }
+        }
+        order
+            .into_iter()
+            .filter_map(|n| chosen.get(&n).cloned())
+            .collect()
     }
 
     /// Is `module_key` a batch sibling at all (regardless of whether a particular name resolves in
@@ -397,4 +550,42 @@ impl SymbolTable {
     ) -> String {
         resolved_nodule_path.to_string()
     }
+}
+
+/// Identifiers on a type-def RHS (excluding the defined name). Crude token scan — sufficient
+/// for the emitter's single-line sum/product forms; not a full Mycelium parser (Declared).
+/// Callers filter against known type_defs in the table.
+fn type_names_referenced_in_def_line(def_line: &str) -> Vec<String> {
+    let defined = def_line
+        .trim()
+        .strip_prefix("pub type ")
+        .or_else(|| def_line.trim().strip_prefix("type "))
+        .and_then(|r| r.split('=').next())
+        .map(str::trim)
+        .unwrap_or("");
+    let mut found = Vec::new();
+    let mut cur = String::new();
+    let flush = |cur: &mut String, found: &mut Vec<String>| {
+        if !cur.is_empty() {
+            if cur != defined
+                && cur.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+                && !found.iter().any(|x| x == cur)
+            {
+                // Heuristic: type names are UpperCamel (ErrnoClass, FsErr); skip lowercase
+                // keywords/prims (type, pub) and Binary-like width tokens are still Upper — but
+                // Binary is a prim, not a batch type_def, so the table lookup filters it out.
+                found.push(cur.clone());
+            }
+            cur.clear();
+        }
+    };
+    for ch in def_line.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            cur.push(ch);
+        } else {
+            flush(&mut cur, &mut found);
+        }
+    }
+    flush(&mut cur, &mut found);
+    found
 }

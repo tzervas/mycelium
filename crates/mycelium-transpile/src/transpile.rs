@@ -730,12 +730,11 @@ fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
 /// behavior — a single flagged gap, nothing emitted (byte-identical for every existing single-file
 /// caller).
 ///
-/// **ONESHOT L2-B / DN-124 residual (never silent):** a leaf that **does** resolve is emitted as
-/// full-path `use <nodule>.<Item>;` (B1/#1659). That line is **phylum-clean** when siblings are
-/// co-present, and **oracle-false-fails** under single-file `myc check` (phylum-of-one has no
-/// sibling export table). Raising the oracle metric requires emit co-include or a vet-basis
-/// change — not a symtab miss. See `symtab.rs` module docs (L2-B residual) and the EXPLAIN
-/// comment prepended to resolved-use emission below.
+/// **ONESHOT L2-B phase-2 / DN-124:** a leaf that **does** resolve and has a sibling baseline
+/// **type** def is **co-included** into the consumer (Declared local surface + EXPLAIN naming the
+/// full home nodule path — M-1084 provenance, never short-form collapse) so single-file oracle
+/// can check clean. A resolved leaf **without** a type def (fn/other) still emits full-path
+/// `use <nodule>.<Item>;` (B1/#1659; may oracle-false-fail — dual-report). See `symtab.rs`.
 fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
     let Some(candidates) = symtab::use_candidates(&u.tree, ctx.module) else {
         // A tree with no module-path segment at all (a bare `use Item;` naming nothing), or a
@@ -753,7 +752,10 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
         ));
     };
 
-    let mut emitted_lines = Vec::new();
+    let mut use_lines = Vec::new();
+    // (module_key, name) — module-keyed so two crates both exporting `Foo` do not first-wins collide.
+    let mut co_include_seeds: Vec<(String, String)> = Vec::new();
+    let mut co_include_homes: Vec<String> = Vec::new();
     let mut resolved_names = Vec::new();
     let mut leaf_gaps = Vec::new();
     for c in &candidates {
@@ -766,25 +768,40 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                 });
                 match hit {
                     Some((key, nodule_path)) => {
-                        let prefix =
-                            SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
-                        // DN-124 / L2-B: resolved cross-nodule uses are correct for phylum builds
-                        // and dual-reported; oracle (phylum-of-one) will refuse the name until the
-                        // sibling nodule is co-present or co-included — never a silent skip (G2).
-                        if emitted_lines.is_empty() {
-                            emitted_lines.push(
-                                "// EXPLAIN (DN-124): batch-resolved cross-nodule `use` — phylum \
-                                 mode sees the sibling export; single-file oracle (phylum-of-one) \
-                                 refuses the name until sibling co-include (emit residual) or \
-                                 multi-nodule co-check. Not a silent skip (G2/VR-5)."
-                                    .to_string(),
-                            );
+                        // Already local to this file — skip re-import / re-co-include (G2: no
+                        // duplicate type poison).
+                        if emit::name_already_available(name) {
+                            resolved_names.push(name.clone());
+                            continue;
                         }
-                        emitted_lines.push(format!("use {prefix}.{name};"));
-                        resolved_names.push(name.clone());
-                        // ORACLE-R1 A2: a successfully resolved import makes the name available
-                        // so lattice co-emit will not redeclare it (duplicate type = check poison).
-                        emit::record_imported_name(name);
+                        if emit::cross_nodule_has_type_def(key, name) {
+                            // L2-B: co-include type surface (oracle self-containment).
+                            if !co_include_seeds.iter().any(|(k, n)| k == key && n == name) {
+                                co_include_seeds.push(((*key).clone(), name.clone()));
+                            }
+                            if !co_include_homes.iter().any(|h| h == &nodule_path) {
+                                co_include_homes.push(nodule_path.clone());
+                            }
+                            resolved_names.push(name.clone());
+                            emit::record_imported_name(name);
+                        } else {
+                            // Non-type sibling surface (fn/…): full-path use (B1 form).
+                            let prefix =
+                                SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
+                            if use_lines.is_empty() {
+                                use_lines.push(
+                                    "// EXPLAIN (DN-124): batch-resolved cross-nodule `use` of a \
+                                     non-type item — phylum mode sees the sibling export; \
+                                     single-file oracle (phylum-of-one) may refuse until multi-nodule \
+                                     co-check. Type imports co-include instead (L2-B). Not a silent \
+                                     skip (G2/VR-5)."
+                                        .to_string(),
+                                );
+                            }
+                            use_lines.push(format!("use {prefix}.{name};"));
+                            resolved_names.push(name.clone());
+                            emit::record_imported_name(name);
+                        }
                     }
                     None => leaf_gaps.push(GapReason::new(
                         Category::Import,
@@ -834,10 +851,72 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
         }
     }
 
+    // Materialize co-includes (transitive type deps) before any remaining use lines.
+    let mut emitted_lines: Vec<String> = Vec::new();
+    if !co_include_seeds.is_empty() {
+        let closure = emit::cross_nodule_type_def_closure(&co_include_seeds);
+        if !closure.is_empty() {
+            let homes = if co_include_homes.is_empty() {
+                "(batch sibling)".to_string()
+            } else {
+                co_include_homes.join(", ")
+            };
+            emitted_lines.push(format!(
+                "// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface \
+                 (homes: {homes}) so single-file oracle is self-contained — not a language \
+                 `use` identity, not a short-form path collapse (M-1084 full path retained as \
+                 provenance). Transitive type deps in the same batch are co-included. G2/VR-5."
+            ));
+            for (_home, def_line) in &closure {
+                // Strip a leading `pub ` so co-includes stay file-private (consumer is not
+                // re-exporting the sibling's pub surface).
+                let local = def_line.strip_prefix("pub ").unwrap_or(def_line.as_str());
+                // Record each co-included type name so a later use item does not re-emit.
+                if let Some(n) = local
+                    .strip_prefix("type ")
+                    .and_then(|r| r.split('=').next())
+                    .map(str::trim)
+                {
+                    if !emit::name_already_available(n) {
+                        emit::record_imported_name(n);
+                    }
+                }
+                emitted_lines.push(local.to_string());
+            }
+        } else {
+            // Seeds claimed a type_def at resolve time but closure is empty — never silent:
+            // fall back to full-path use for those seeds (FLAG residual path).
+            for (_key, name) in &co_include_seeds {
+                leaf_gaps.push(GapReason::new(
+                    Category::Import,
+                    format!(
+                        "`{name}` resolved as a type seed but no type_def_closure entry was \
+                         produced — internal residual; flagged, not guessed (VR-5/G2)"
+                    ),
+                ));
+            }
+        }
+    }
+    let had_use_emit = use_lines.iter().any(|l| l.starts_with("use "));
+    emitted_lines.extend(use_lines);
+
     if emitted_lines.is_empty() {
         // Nothing resolved: fold every leaf's precise reason into one gap covering the whole item
         // (mirrors the self/super-headed early-return above — a wholly-unresolved `use` is still a
         // single, never-silent gap, not a vacuous "emission" of zero lines).
+        // Exception: every leaf was already-available (resolved_names non-empty, zero lines) —
+        // treat as a no-op emission so the item is not a false Import gap.
+        if !resolved_names.is_empty() {
+            return Outcome::Emitted(Emitted {
+                name: format!("use:{}", resolved_names.join(",")),
+                myc: format!(
+                    "// EXPLAIN (L2-B): resolved import(s) {} already available in this file — \
+                     no re-emit (G2).",
+                    resolved_names.join(", ")
+                ),
+                sub_gaps: leaf_gaps,
+            });
+        }
         let joined = leaf_gaps
             .into_iter()
             .map(|g| g.reason)
@@ -845,8 +924,15 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
             .join("; ");
         Outcome::Gap(GapReason::new(Category::Import, joined))
     } else {
+        let item_name = if co_include_seeds.is_empty() {
+            format!("use:{}", resolved_names.join(","))
+        } else if had_use_emit {
+            format!("co-include+use:{}", resolved_names.join(","))
+        } else {
+            format!("co-include:{}", resolved_names.join(","))
+        };
         Outcome::Emitted(Emitted {
-            name: format!("use:{}", resolved_names.join(",")),
+            name: item_name,
             myc: emitted_lines.join("\n"),
             sub_gaps: leaf_gaps,
         })
