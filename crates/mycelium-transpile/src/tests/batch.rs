@@ -742,8 +742,10 @@ fn self_and_super_relative_use_resolve_within_one_crate() {
         .find(|r| r.path.ends_with("foo/mod.rs"))
         .expect("foo/mod.rs result present");
     assert!(
-        foo_mod.myc.contains(".Thing;") && !foo_mod.myc.lines().any(|l| l.trim() == "use Thing;"),
-        "self::bar::Thing must resolve to a qualified use, never a bare `use Thing;`; got:\n{}",
+        foo_mod.myc.contains("use mycrate.foo.bar.Thing;")
+            && !foo_mod.myc.lines().any(|l| l.trim() == "use Thing;"),
+        "self::bar::Thing must resolve to full-nodule-path `use mycrate.foo.bar.Thing;` \
+         (M-1084 net-close), never bare; got:\n{}",
         foo_mod.myc
     );
 
@@ -752,9 +754,10 @@ fn self_and_super_relative_use_resolve_within_one_crate() {
         .find(|r| r.path.ends_with("mono/mod.rs"))
         .expect("mono/mod.rs result present");
     assert!(
-        mono_mod.myc.contains(".Width;") && !mono_mod.myc.lines().any(|l| l.trim() == "use Width;"),
-        "super::checkty::Width must resolve (super:: goes up to the crate root, back down to \
-         checkty) to a qualified use, never a bare `use Width;`; got:\n{}",
+        mono_mod.myc.contains("use mycrate.checkty.Width;")
+            && !mono_mod.myc.lines().any(|l| l.trim() == "use Width;"),
+        "super::checkty::Width must resolve to full-nodule-path `use mycrate.checkty.Width;` \
+         (M-1084 net-close), never bare; got:\n{}",
         mono_mod.myc
     );
 
@@ -864,10 +867,11 @@ fn same_crate_submodule_shadows_a_same_named_sibling_phylum() {
     assert!(
         a.myc.lines().any(|l| {
             let t = l.trim();
-            t == "use crate_b.Foo;" || t.contains("a.crate_b.Foo")
+            // Full nodule path (M-1084 net-close): kernel keys exports as `a.crate_b.Foo`.
+            t == "use a.crate_b.Foo;" || t.contains("a.crate_b.Foo")
         }),
-        "expected the SAME-CRATE submodule interpretation to win (intra-phylum `use crate_b.Foo;` \
-         per DN-113/M-662, or legacy full path), not the sibling phylum's crate-b.Foo; got:\n{}",
+        "expected the SAME-CRATE submodule interpretation to win as full-path \
+         `use a.crate_b.Foo;` (kernel export key), not the sibling phylum's crate-b.Foo; got:\n{}",
         a.myc
     );
     assert!(
@@ -1042,9 +1046,10 @@ fn same_named_bare_submodule_across_two_crates_does_not_cross_contaminate_symbol
     assert!(
         a.myc.lines().any(|l| {
             let t = l.trim();
-            t == "use rng.Thing;" || t.contains("crate.a.rng.Thing") || t.contains("a.rng.Thing")
+            // Full nodule path (M-1084 net-close) — short `use rng.Thing;` is checker-rejected.
+            t.contains("crate.a.rng.Thing") || t.contains("a.rng.Thing")
         }),
-        "crate-a's use must resolve to crate-a's OWN rng.rs (intra-phylum `use rng.Thing;`); got:\n{}",
+        "crate-a's use must resolve to crate-a's OWN rng.rs as full nodule path; got:\n{}",
         a.myc
     );
     assert!(
@@ -1056,9 +1061,9 @@ fn same_named_bare_submodule_across_two_crates_does_not_cross_contaminate_symbol
     assert!(
         b.myc.lines().any(|l| {
             let t = l.trim();
-            t == "use rng.Thing;" || t.contains("crate.b.rng.Thing") || t.contains("b.rng.Thing")
+            t.contains("crate.b.rng.Thing") || t.contains("b.rng.Thing")
         }),
-        "crate-b's use must resolve to crate-b's OWN rng.rs (intra-phylum `use rng.Thing;`); got:\n{}",
+        "crate-b's use must resolve to crate-b's OWN rng.rs as full nodule path; got:\n{}",
         b.myc
     );
     assert!(
@@ -1144,4 +1149,66 @@ proptest! {
             prop_assert!(!leaf.myc.lines().any(|l| l.trim() == "use Marker;"));
         }
     }
+}
+
+/// M-1084 net-close: under a real `mycelium-*/src` layout the emitted `use` keeps the **full**
+/// derived nodule path (`std.fs.error.FsErr`), matching kernel export keys — never the PR #1635
+/// crate-root-stripped short form (`error.FsErr`) that `myc check --phylum` refuses.
+#[test]
+fn m1084_full_nodule_path_use_emit_under_mycelium_crate_layout() {
+    let tmp = TempDir::new("m1084-full-path");
+    tmp.write(
+        "mycelium-std-fs/src/error.rs",
+        "pub struct FsErr(u8);\nfn helper(x: bool) -> bool { x }",
+    );
+    tmp.write(
+        "mycelium-std-fs/src/substrate.rs",
+        "use crate::error::FsErr;\nfn sub_helper(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let sub = results
+        .iter()
+        .find(|r| r.path.ends_with("substrate.rs"))
+        .expect("substrate.rs present");
+    assert!(
+        sub.myc.contains("use std.fs.error.FsErr;"),
+        "expected full-path `use std.fs.error.FsErr;` (kernel export key); got:\n{}",
+        sub.myc
+    );
+    assert!(
+        !sub.myc.lines().any(|l| l.trim() == "use error.FsErr;"),
+        "must never emit crate-root-stripped short form (checker-rejected); got:\n{}",
+        sub.myc
+    );
+
+    // Live phylum-mode differential when myc-check is built — full path Clean.
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "m1084 full-path live myc-check skipped — set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`"
+        );
+        return;
+    };
+    let out = TempDir::new("m1084-full-path-vet");
+    for r in &results {
+        let name = r.path.file_stem().and_then(|s| s.to_str()).unwrap_or("x");
+        fs::write(out.path().join(format!("{name}.myc")), &r.myc).expect("write myc");
+    }
+    let status = std::process::Command::new(&bin)
+        .arg("--phylum")
+        .arg(out.path())
+        .arg("--json")
+        .output()
+        .expect("spawn myc-check");
+    let stdout = String::from_utf8_lossy(&status.stdout);
+    assert!(
+        status.status.success() || stdout.contains("\"ok\":true"),
+        "phylum check of full-path imports must Clean; status={:?} out={stdout} err={}",
+        status.status,
+        String::from_utf8_lossy(&status.stderr)
+    );
 }

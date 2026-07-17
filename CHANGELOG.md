@@ -12,6 +12,53 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(transpile): M-1084 Import full-path use emit (#1659) (2026-07-16)
+
+ONESHOT Epic B1. Product on `dev` via PR **#1659** (`ec10a0ef`); this entry is the PM/tracker
+close-out (CHANGELOG + issues.yaml + handoff done table).
+
+- **Root cause (Empirical):** kernel `resolve_imports` keys exports as **full**
+  `nodule.path` + item (`l1.checkty.Width`, `std.fs.error.FsErr`). Live `myc check --phylum`
+  accepts full paths and refuses crate-root-stripped short forms (`use checkty.Width` /
+  `use error.FsErr` → CheckError). PR #1635's same-crate strip inverted that basis.
+- **`SymbolTable::use_emit_qualifier`** is identity on the resolved sibling `nodule_path` for
+  same-crate and same-batch cross-crate hits (never fabricate; no silent short-form collapse).
+- **Measured:** std-fs Import residual **5** (honest externals/gapped siblings); std-io residual
+  **14** with **13** resolved full-path use leaves; synthetic full-path Clean vs strip CheckError.
+- **Tracker residual (VR-5):** emit form fixed; **full 768-item phylum `checked_fraction`
+  re-baseline is still pending under M-1006** — M-1084 stays **in-progress** until that remeasure
+  (not a silent full net-close claim).
+
+### docs(pm): ONESHOT B1 close-out — #1657–#1659 (2026-07-16)
+
+Tracker honesty for the first ONESHOT product/design batch (no one-shot claim):
+
+- **#1659** — M-1084 full-path use emit (product; see entry above).
+- **#1658** — ONESHOT handoff + M-1006 post-A5 baseline remeasure
+  (`PROGRAM-HANDOFF-ONESHOT.md`, `M1006-baseline-oneshot-2026-07-16.md`,
+  `experiments/results/m1006-baseline-oneshot/`).
+- **#1657** — M-875 expand-first design draft
+  (`M875-expand-first-design-DRAFT.md`); status stays **needs-design** (no implement until
+  Accepted).
+
+### docs(pm): ONESHOT handoff + M-1006 post-A5 baseline remeasure (2026-07-16)
+
+PR **#1658** → `dev`.
+
+- **`PROGRAM-HANDOFF-ONESHOT.md`** — active one-shot prep program (DoD, Epic B/C/D, mycelium-only).
+- **`M1006-baseline-oneshot-2026-07-16.md`** + `experiments/results/m1006-baseline-oneshot/` — Empirical
+  default-5 union **checked 19.5%** (46/236, all Clean) post A4/A5; std-fs/io expansion; ranked residual
+  classes. **No** one-shot claim (VR-5).
+
+### docs(m-875): expand-first design draft (#1657) (2026-07-16)
+
+PR **#1657** → `dev`. Design-only close-out for M-875 (ONESHOT B5).
+
+- **`M875-expand-first-design-DRAFT.md`** — Draft under gap-analysis planning path (defers
+  mechanism ratification to Accepted DN-100; fills pipeline integration, env, sequencing vs
+  M-1084/M-1037, implement-issue DoD).
+- Tracker: M-875 stays **needs-design** — **no implement** until Accepted (house rule #3).
+
 ### docs(pm): maint-guide OS + ORACLE-R1 A1–A5 program handoff (2026-07-16)
 
 PM / docs close-out for the residual oracle wave (code already on the working tier via
