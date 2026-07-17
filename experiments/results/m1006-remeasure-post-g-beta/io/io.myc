@@ -1,0 +1,135 @@
+// nodule: std.io.io
+// Byte-movement surface: abstract `Source`/`Sink` with **affine single-consumption**
+// (LR-8; spec §3 — the io half).
+//
+// # The single-consumption guarantee (LR-8)
+//
+// A `Source` is an **affine handle** (RFC-0006 §Q5): it wraps the underlying
+// substrate and moves it exactly once.
+//
+// - [`read_all`] takes `Source` **by-move** and does **not** return it: the handle
+//   is consumed exactly once.  A double-consume is a **compile-time type error**,
+//   not a runtime check.
+// - [`read`] (chunked) returns the handle so a caller may continue reading; the same
+//   handle is threaded linearly through every call.
+// - [`write()`] similarly returns the `Sink` so the caller may continue writing.
+//
+// The affine type enforces that a substrate cannot be silently re-read after
+// exhaustion (LR-8 / spec §1/§3 / the module's honesty crux).
+//
+// # In-memory substrate
+//
+// The OS I/O floor is **FLAGGED** (spec §7-Q4 / §8-Q6) and deferred to `std-sys`
+// (M-541).  This module ships a fully testable **in-memory substrate** (`Bytes`
+// cursor) so the abstraction and the affine type are complete and the tests pass
+// without OS facilities.  A `std-sys` crate will implement the real-OS-backed
+// `Source`/`Sink` that wraps this module's types.
+//
+// # Declared effects (C6)
+//
+// Every io op declares **`io`** as its declared effect (`#[doc = "Effects: io"]`).
+// The serialize ops are pure; they declare `none`.  Chunked `read` additionally
+// allocates a buffer (`alloc(Budget)`, as stated in the matrix).
+//
+// # FLAG: no OS I/O here
+// This module contains **no** `wild`/FFI and no `std::fs`/`std::net` usage (ADR-014
+// / LR-9 / spec §7-Q4).  The `std-sys` phylum (M-541) will supply OS-backed
+// constructors that produce a `Source`/`Sink` over a file descriptor or network
+// socket; `std.io` only defines the abstract surface.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io.io;
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.io.error) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type ByteCount = ByteCount(Binary{64});
+type IoError = UnexpectedEof(ByteCount) | Refused(Bytes) | EffectBudget(Bytes);
+
+// A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).
+//
+// Passed to [`read`] to cap the allocation.  An overrun yields
+// [`IoError::EffectBudget`] instead of unbounded allocation (C6).
+//
+// The `Unbounded` variant is available for in-memory tests where an allocation
+// ceiling is not meaningful; production uses of the OS-backed substrate should
+// always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).
+// Declared: renamed Bytes -> Bytes_kw (reserved-word collision, DN-140)
+pub type Budget = Bytes_kw(Binary{64}) | Unbounded;
+
+impl Show[Budget] for Budget {
+  fn render(x: Budget) => Bytes =
+    match x { Bytes_kw(p0) => bytes_concat(bytes_concat("Bytes_kw(", render(p0)), ")"), Unbounded => "Unbounded" };
+};
+
+fn eq_Budget(a: Budget, b: Budget) => Binary{1} =
+  match a { Bytes_kw(p0) => match b { Bytes_kw(q0) => eq(p0, q0), _ => 0b0 }, Unbounded => match b { Unbounded => 0b1, _ => 0b0 } };
+
+// The in-memory substrate: a `Vec<u8>` cursor.
+//
+// The `substrate` is the **underlying resource** that `Source`/`Sink` wrap.  A
+// [`Source`] owns a `Substrate` by-value; once consumed (by [`read_all`] or the
+// last [`read`]) it cannot be re-accessed.  This is the LR-8 affine invariant at
+// the type level.
+//
+// # FLAG: §8-Q6 — OS-backed substrate lives in `std-sys` (M-541)
+// The real-OS-backed substrate (a file descriptor, a network socket) is NOT
+// here.  The `std-sys` phylum will provide a constructor like
+// `Substrate::from_fd(fd: OwnedFd) -> Substrate` that slots into this type.
+// Until then this in-memory substrate covers all testable semantics.
+// Declared: renamed Substrate -> Substrate_kw (reserved-word collision, DN-140)
+type Substrate_kw = Substrate_kw(Vec[Binary{8}], Binary{64});
+
+fn show_vec_Binary_8_(xs: Vec[Binary{8}]) => Bytes =
+  match xs { Nil => "Nil", Cons(h, t) => bytes_concat("Cons(", bytes_concat(render(width_cast(h, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)), bytes_concat(", ", bytes_concat(show_vec_Binary_8_(t), ")")))) };
+
+impl Show[Substrate_kw] for Substrate_kw {
+  fn render(x: Substrate_kw) => Bytes =
+    match x { Substrate_kw(p0, p1) => bytes_concat(bytes_concat(bytes_concat(bytes_concat("Substrate_kw(", show_vec_Binary_8_(p0)), ", "), render(p1)), ")") };
+};
+
+// An abstract byte **source**: a `Substrate` wrapped in an affine handle.
+//
+// A `Source` may be read exactly once via [`read_all`] (which consumes it) or
+// progressively via [`read`] (which threads the handle linearly).  A double-
+// consume is a compile-time error (Rust move semantics enforce LR-8).
+//
+// # EXPLAIN-able selection
+// The substrate backing this `Source` is visible as a field (C3 — no hidden
+// resource).
+pub type Source = Source(Substrate_kw);
+
+impl Show[Source] for Source {
+  fn render(x: Source) => Bytes =
+    match x { Source(p0) => bytes_concat(bytes_concat("Source(", render(p0)), ")") };
+};
+
+impl Source {
+  // Wrap a substrate as an affine `Source`.
+  //
+  // # Effects: none (construction is pure)
+  // Declared: renamed `impl Source { fn new }` -> `_6Source3new` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _6Source3new(substrate: Substrate_kw) => Source = Source(substrate);
+};
+
+// An abstract byte **sink**: a write target wrapped in an affine handle.
+//
+// A `Sink` is threaded linearly through [`write()`] calls (each call consumes the
+// current handle and returns the updated one).  The affine discipline means a
+// written sink cannot be silently re-used; a double-write is a compile-time error.
+//
+// # EXPLAIN-able selection (C3)
+// The bytes written are observable via [`Sink::into_bytes`].
+pub type Sink = Sink(Vec[Binary{8}]);
+
+impl Show[Sink] for Sink {
+  fn render(x: Sink) => Bytes =
+    match x { Sink(p0) => bytes_concat(bytes_concat("Sink(", show_vec_Binary_8_(p0)), ")") };
+};
+
+impl Sink {
+  // Consume the sink and return the bytes written into it.
+  //
+  // This finalizes the sink — it cannot be written to after this call (Rust
+  // move semantics enforce the affine discipline).
+  fn into_bytes(self: Sink) => Vec[Binary{8}] = (match self { Sink(p0) => p0 });
+};

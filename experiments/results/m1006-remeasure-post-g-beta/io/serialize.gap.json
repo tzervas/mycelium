@@ -1,0 +1,190 @@
+{
+  "source": "crates/mycelium-std-io/src/serialize.rs",
+  "emitted_items": [
+    "co-include:ByteOffset,FieldPath,SerError",
+    "Format"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 38,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: value :: Payload ;",
+      "reason": "`use mycelium_core.value::Payload` — `mycelium_core.value` is not a sibling module OR sibling phylum transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 39,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use mycelium_core :: Value ;",
+      "reason": "`use mycelium_core::Value` — `mycelium_core` is not a sibling module OR sibling phylum transpiled in this same batch (an external crate, `std`, or simply out of this batch's target set). Flagged, not guessed (VR-5/G2)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 45,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The two supported serialization formats (spec §3).\"] # [doc = \"\"] # [doc = \" Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖\"] # [doc = \" [payload]`), so the round-trip property holds for each independently.  The\"] # [doc = \" only difference is the byte representation: `Wire` is JSON-in-bytes (the\"] # [doc = \" same substrate used for the `Value` serde form in M-104), `Json` is the\"] # [doc = \" UTF-8 text form suitable for human/tool consumption (G11 dual projection).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" A `Format` value is the reified, inspectable selection artifact (C3): the\"] # [doc = \" choice of `Wire` vs `Json` is visible at every call site — there is no\"] # [doc = \" ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016\"] # [doc = \" §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Format { # [doc = \" The self-describing `[Repr] ‖ [Meta] ‖ [payload]` binary-JSON form\"] # [doc = \" (RFC-0001 §4.8).  The byte representation is a compact JSON object\"] # [doc = \" encoded as UTF-8 bytes (not a distinct binary encoding — see FLAG §8-Q6\"] # [doc = \" for a future binary wire form; the grammar is identical to `Json` but\"] # [doc = \" the container is `Vec<u8>`).\"] Wire , # [doc = \" The **one canonical JSON projection** — compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this format (README §5 seam):\"] # [doc = \" one projection, two entry points.  The round-trip property is\"] # [doc = \" established here and shared — not duplicated.  (Delegation is FLAGGED\"] # [doc = \" §7-Q1 pending maintainer sign-off.)\"] Json , }",
+      "reason": "enum `Format` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 45,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The two supported serialization formats (spec §3).\"] # [doc = \"\"] # [doc = \" Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖\"] # [doc = \" [payload]`), so the round-trip property holds for each independently.  The\"] # [doc = \" only difference is the byte representation: `Wire` is JSON-in-bytes (the\"] # [doc = \" same substrate used for the `Value` serde form in M-104), `Json` is the\"] # [doc = \" UTF-8 text form suitable for human/tool consumption (G11 dual projection).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" A `Format` value is the reified, inspectable selection artifact (C3): the\"] # [doc = \" choice of `Wire` vs `Json` is visible at every call site — there is no\"] # [doc = \" ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016\"] # [doc = \" §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Format { # [doc = \" The self-describing `[Repr] ‖ [Meta] ‖ [payload]` binary-JSON form\"] # [doc = \" (RFC-0001 §4.8).  The byte representation is a compact JSON object\"] # [doc = \" encoded as UTF-8 bytes (not a distinct binary encoding — see FLAG §8-Q6\"] # [doc = \" for a future binary wire form; the grammar is identical to `Json` but\"] # [doc = \" the container is `Vec<u8>`).\"] Wire , # [doc = \" The **one canonical JSON projection** — compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this format (README §5 seam):\"] # [doc = \" one projection, two entry points.  The round-trip property is\"] # [doc = \" established here and shared — not duplicated.  (Delegation is FLAGGED\"] # [doc = \" §7-Q1 pending maintainer sign-off.)\"] Json , }",
+      "reason": "enum `Format` derive(Copy) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+      "item_name": "Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 45,
+      "col": 1,
+      "category": "DeriveSatisfied",
+      "rust_construct": "DeriveSatisfied",
+      "snippet": "# [doc = \" The two supported serialization formats (spec §3).\"] # [doc = \"\"] # [doc = \" Both formats share the same self-describing grammar (`[Repr] ‖ [Meta] ‖\"] # [doc = \" [payload]`), so the round-trip property holds for each independently.  The\"] # [doc = \" only difference is the byte representation: `Wire` is JSON-in-bytes (the\"] # [doc = \" same substrate used for the `Value` serde form in M-104), `Json` is the\"] # [doc = \" UTF-8 text form suitable for human/tool consumption (G11 dual projection).\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able selection\"] # [doc = \" A `Format` value is the reified, inspectable selection artifact (C3): the\"] # [doc = \" choice of `Wire` vs `Json` is visible at every call site — there is no\"] # [doc = \" ambient default that silently changes the wire form (spec §7-Q5 / RFC-0016\"] # [doc = \" §8-Q3 tension A; required-explicit until the per-ring ergonomics pass M-540).\"] # [derive (Debug , Clone , Copy , PartialEq , Eq)] pub enum Format { # [doc = \" The self-describing `[Repr] ‖ [Meta] ‖ [payload]` binary-JSON form\"] # [doc = \" (RFC-0001 §4.8).  The byte representation is a compact JSON object\"] # [doc = \" encoded as UTF-8 bytes (not a distinct binary encoding — see FLAG §8-Q6\"] # [doc = \" for a future binary wire form; the grammar is identical to `Json` but\"] # [doc = \" the container is `Vec<u8>`).\"] Wire , # [doc = \" The **one canonical JSON projection** — compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this format (README §5 seam):\"] # [doc = \" one projection, two entry points.  The round-trip property is\"] # [doc = \" established here and shared — not duplicated.  (Delegation is FLAGGED\"] # [doc = \" §7-Q1 pending maintainer sign-off.)\"] Json , }",
+      "reason": "enum `Format` derive(Eq): covered by co-occurring PartialEq → `fn eq_Format` (product-row collision policy; DN-128 / ONESHOT C2) — not a second emission",
+      "item_name": "Format"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 77,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) in a `Dense`/`Vsa` payload has no faithful\"] # [doc = \" JSON representation (`serde_json` would silently emit `null`), so it is refused here.\"] # [doc = \"\"] # [doc = \" Returns `Err(SerError::OutOfDomain)` naming the payload index of the first non-finite scalar;\"] # [doc = \" `Ok(())` when every scalar is finite (or the payload has no `f64`).\"] fn check_json_representable (v : & Value) -> Result < () , SerError > { let scalars : & [f64] = match v . payload () { Payload :: Scalars (s) | Payload :: Hypervector (s) => s , Payload :: Bits (_) | Payload :: Trits (_) => return Ok (()) , Payload :: Seq (elems) => { for e in elems { check_json_representable (e) ? ; } return Ok (()) ; } Payload :: Bytes (_) => return Ok (()) , Payload :: Float (_) => return Ok (()) , } ; if let Some (pos) = scalars . iter () . position (| x | ! x . is_finite ()) { return Err (SerError :: OutOfDomain { path : FieldPath :: from_static (\"payload\") , why : format ! (\"non-finite f64 at payload index {pos} has no JSON representation \\\n                 (serde_json would silently emit null, losing NaN/±∞ and colliding identity); \\\n                 refused — never-silent (C1/G2)\") , }) ; } Ok (()) }",
+      "reason": "`let` binding uses an unsupported pattern (only simple `let x = e;` is supported)",
+      "item_name": "check_json_representable"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 116,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Project `v` to the wire/JSON byte form for the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" A faithful projection: every JSON-representable `Value` has a wire/JSON form (RFC-0001 §4.8).\"] # [doc = \" `serialize` borrows `v` immutably; it never mutates or re-keys the value, so the content hash\"] # [doc = \" is unchanged (C4/ADR-003).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" A `Value` carrying a non-finite `f64` (`NaN`/`±∞`) is refused — JSON cannot represent it and\"] # [doc = \" `serde_json` would silently emit `null` (a lossy, identity-colliding encoding). Never-silent\"] # [doc = \" (C1/G2). Every other well-formed `Value` serializes (M-104's `serde` impl is total over the\"] # [doc = \" finite domain).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure computation over the in-memory value; no IO.\"] # [doc = \"\"] # [doc = \" # EXPLAIN-able: n/a\"] # [doc = \" A faithful projection has no hidden selection or approximation (spec §4/C3).\"] pub fn serialize (v : & Value , format : Format) -> Result < Vec < u8 > , SerError > { check_json_representable (v) ? ; let bytes = match format { Format :: Wire | Format :: Json => { serde_json :: to_vec (v) . expect (\"Value serialization is total over finite Values (M-104)\") } } ; Ok (bytes) }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "serialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 148,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Recover a `Value` from `bytes` serialized in the given `format`.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip property; spec §4.2)\"] # [doc = \" `deserialize(serialize(v, f), f) ≡ v` holds over a generated property-test\"] # [doc = \" corpus (asserted in `#[cfg(test)]`).  The tag is **`Empirical`** — not\"] # [doc = \" `Proven` — because no injectivity/totality theorem over the closed grammar\"] # [doc = \" has been checked here (VR-5 / spec §7-Q2).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \" Any of the five failure modes below; the error carries the **byte offset or\"] # [doc = \" field path** of the failure (RFC-0013 I1):\"] # [doc = \"\"] # [doc = \" - `Truncated{at}` — input ended before a complete value was decoded.\"] # [doc = \" - `Malformed{at, why}` — bytes do not parse (grammar violation).\"] # [doc = \" - `UnknownTag{path, tag}` — unrecognized `Repr`/ctor/`Meta` tag.\"] # [doc = \" - `OutOfDomain{path, why}` — field decodes but violates a value-model\"] # [doc = \"   invariant (e.g. payload length ≠ repr width).\"] # [doc = \" - `BudgetExceeded{kind}` — a declared decode budget overrun (ADR-015).\"] # [doc = \"\"] # [doc = \" **No partially-filled `Value` is ever returned** (C1/G2).\"] # [doc = \"\"] # [doc = \" # Effects: none\"] # [doc = \" Pure over the byte input; no IO.\"] pub fn deserialize (bytes : & [u8] , _format : Format) -> Result < Value , SerError > { serde_json :: from_slice :: < Value > (bytes) . map_err (| e | map_serde_error (e , bytes)) }",
+      "reason": "method call `.map_err(...)` has no proven-emitted free-fn referent in this file (neither a D4-mangled inherent `Type__map_err` nor a bare inherent recorded by this file's left-to-right pass, nor a prim_map / combinator row). Emitting bare `map_err(recv, …)` would fabricate an unknown prim and file-poison myc-check (G-β Rank A / G2/VR-5; residual when the method body itself gapped — e.g. M-1037 `.to_vec()` inside `read_to_end` — so the declaration was never registered)",
+      "item_name": "deserialize"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 181,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" The **one canonical JSON projection**: project `v` to compact UTF-8 JSON text.\"] # [doc = \"\"] # [doc = \" `fmt.to_json` (M-533) **delegates** to this function (README §5 seam; spec\"] # [doc = \" §7-Q1 FLAGGED pending maintainer sign-off).  The round-trip property\"] # [doc = \" `from_json(to_json(v)) ≡ v` is established here once and not duplicated.\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Exact` (when `Ok`)\"] # [doc = \" Faithful projection (identical to `serialize(v, Format::Json)` as `String`).\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError::OutOfDomain)`\"] # [doc = \" Refuses a `Value` carrying a non-finite `f64` (same domain as [`serialize`]) — JSON cannot\"] # [doc = \" represent it and `serde_json` would silently emit `null` (C1/G2). Total over the finite domain.\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn to_json (v : & Value) -> Result < String , SerError > { check_json_representable (v) ? ; Ok (serde_json :: to_string (v) . expect (\"to_json is total over finite Values (M-104; non-finite excluded above)\")) }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "to_json"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 201,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Recover a `Value` from canonical JSON text.\"] # [doc = \"\"] # [doc = \" `from_json(to_json(v)) ≡ v` (the round-trip property, `Empirical`).\"] # [doc = \"\"] # [doc = \" # Guarantee tag: `Empirical` (round-trip; spec §4.2)\"] # [doc = \"\"] # [doc = \" # Fallibility: `Err(SerError)` with a locus (C1 — never-silent)\"] # [doc = \"\"] # [doc = \" # Effects: none\"] pub fn from_json (text : & str) -> Result < Value , SerError > { serde_json :: from_str :: < Value > (text) . map_err (| e | map_serde_error_str (e , text)) }",
+      "reason": "method call `.map_err(...)` has no proven-emitted free-fn referent in this file (neither a D4-mangled inherent `Type__map_err` nor a bare inherent recorded by this file's left-to-right pass, nor a prim_map / combinator row). Emitting bare `map_err(recv, …)` would fabricate an unknown prim and file-poison myc-check (G-β Rank A / G2/VR-5; residual when the method body itself gapped — e.g. M-1037 `.to_vec()` inside `read_to_end` — so the declaration was never registered)",
+      "item_name": "from_json"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 216,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Map a `serde_json::Error` (from `from_slice`) to a typed [`SerError`] with\"] # [doc = \" the best available locus information.\"] # [doc = \"\"] # [doc = \" `serde_json::Error` exposes `line()` and `column()` (1-based); we convert to\"] # [doc = \" a byte-offset approximation using the line/column and the raw input (best-effort\"] # [doc = \" — a precise byte offset would require a byte-counting deserializer, which is\"] # [doc = \" deferred to a future codec improvement; this is the honest `Empirical` floor).\"] fn map_serde_error (e : serde_json :: Error , input : & [u8]) -> SerError { let byte_offset = ByteOffset (approx_byte_offset (input , e . line () , e . column ())) ; let msg = e . to_string () ; if is_truncated_error_msg (& msg , input) { SerError :: Truncated { at : byte_offset } } else if is_unknown_tag_error (& msg) { SerError :: UnknownTag { path : FieldPath :: from_static (\"repr\") , tag : extract_unknown_tag (& msg) , } } else if is_domain_error (& msg) { SerError :: OutOfDomain { path : classify_path_from_message (& msg) , why : msg , } } else { SerError :: Malformed { at : byte_offset , why : msg , } } }",
+      "reason": "qualified type path `serde_json :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "map_serde_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 258,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Compute an approximate byte offset from a 1-based `(line, column)` pair and\"] # [doc = \" the raw input bytes.  Returns `input.len()` if the line/column is out of range\"] # [doc = \" (e.g. for truncated inputs where serde_json reports line 1/col 1 on empty).\"] fn approx_byte_offset (input : & [u8] , line : usize , col : usize) -> u64 { if input . is_empty () || line == 0 { return input . len () as u64 ; } let mut current_line = 1usize ; let mut line_start = 0usize ; for (i , & b) in input . iter () . enumerate () { if current_line == line { let col_offset = col . saturating_sub (1) ; return (line_start + col_offset) . min (input . len ()) as u64 ; } if b == b'\\n' { current_line += 1 ; line_start = i + 1 ; } } input . len () as u64 }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "approx_byte_offset"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 282,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Same as [`map_serde_error`] but for string input (locus is a byte offset into\"] # [doc = \" the UTF-8 string bytes).\"] fn map_serde_error_str (e : serde_json :: Error , input : & str) -> SerError { map_serde_error (e , input . as_bytes ()) }",
+      "reason": "qualified type path `serde_json :: Error` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5)",
+      "item_name": "map_serde_error_str"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 288,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect truncated/EOF errors: the input ended before a complete value was read.\"] fn is_truncated_error_msg (msg : & str , input : & [u8]) -> bool { let lower = msg . to_lowercase () ; input . is_empty () || lower . contains (\"eof\") || lower . contains (\"unexpected end\") }",
+      "reason": "method call `.to_lowercase(...)` has no proven-emitted free-fn referent in this file (neither a D4-mangled inherent `Type__to_lowercase` nor a bare inherent recorded by this file's left-to-right pass, nor a prim_map / combinator row). Emitting bare `to_lowercase(recv, …)` would fabricate an unknown prim and file-poison myc-check (G-β Rank A / G2/VR-5; residual when the method body itself gapped — e.g. M-1037 `.to_vec()` inside `read_to_end` — so the declaration was never registered)",
+      "item_name": "is_truncated_error_msg"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 296,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect domain errors: a field decoded successfully but violates a value-model\"] # [doc = \" invariant (reported by `Value::new` → `serde::de::Error::custom`).\"] fn is_domain_error (msg : & str) -> bool { msg . contains (\"payload\") || msg . contains (\"repr\") || msg . contains (\"guarantee\") || msg . contains (\"bound\") || msg . contains (\"invariant\") || msg . contains (\"well-formed\") || msg . contains (\"width\") }",
+      "reason": "Rust `.contains()` has no verified bare-call kernel prim mapping in this pipeline; desugaring to `contains(recv, …)` would fabricate an unknown prim — gapped never-silently (M-1037, G2/VR-5)",
+      "item_name": "is_domain_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 309,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Detect unknown-tag errors: an unrecognized `Repr`/ctor/`Meta` discriminant.\"] fn is_unknown_tag_error (msg : & str) -> bool { msg . contains (\"unknown variant\") || msg . contains (\"unknown field\") || msg . contains (\"expected one of\") }",
+      "reason": "Rust `.contains()` has no verified bare-call kernel prim mapping in this pipeline; desugaring to `contains(recv, …)` would fabricate an unknown prim — gapped never-silently (M-1037, G2/VR-5)",
+      "item_name": "is_unknown_tag_error"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 316,
+      "col": 1,
+      "category": "MultiStmtBody",
+      "rust_construct": "MultiStmtBody",
+      "snippet": "# [doc = \" Extract the unknown tag string from a `serde_json` \\\"unknown variant X\\\" message.\"] fn extract_unknown_tag (msg : & str) -> String { if let Some (start) = msg . find ('`') { if let Some (end) = msg [start + 1 ..] . find ('`') { return msg [start + 1 .. start + 1 + end] . to_owned () ; } } msg . to_owned () }",
+      "reason": "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+      "item_name": "extract_unknown_tag"
+    },
+    {
+      "file": "crates/mycelium-std-io/src/serialize.rs",
+      "line": 327,
+      "col": 1,
+      "category": "Other",
+      "rust_construct": "Other",
+      "snippet": "# [doc = \" Infer a field path from the error message (best-effort; see C3).\"] fn classify_path_from_message (msg : & str) -> FieldPath { if msg . contains (\"payload\") { FieldPath :: from_static (\"payload\") } else if msg . contains (\"bound\") { FieldPath :: from_static (\"meta/bound\") } else if msg . contains (\"repr\") || msg . contains (\"width\") { FieldPath :: from_static (\"repr\") } else { FieldPath :: from_static (\"<unknown>\") } }",
+      "reason": "Rust `.contains()` has no verified bare-call kernel prim mapping in this pipeline; desugaring to `contains(recv, …)` would fabricate an unknown prim — gapped never-silently (M-1037, G2/VR-5)",
+      "item_name": "classify_path_from_message"
+    }
+  ],
+  "total_top_level_items": 17
+}

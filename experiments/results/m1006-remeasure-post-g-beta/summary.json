@@ -1,0 +1,121 @@
+{
+  "date": "2026-07-17",
+  "actual_model": "Grok 4.5 / xAI agent runtime (composer-2.5-fast not used)",
+  "measure_tip": "4acd3a20d9272660e11fcc8b3dceec1c163f0c48",
+  "measure_tip_note": "origin/dev tip; includes #1700 G-beta (96839724) and #1699 D1; ancestors of G-alpha #1695+#1696",
+  "comparison_anchor": {
+    "label": "post-G-alpha combined #1695+#1696",
+    "all7_checked": "88/342=25.7%",
+    "all7_expressible": "101/342=29.5%",
+    "doc": "docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-G-alpha-2026-07-17.md"
+  },
+  "targets": {
+    "eval": {
+      "total_non_test_items": 42,
+      "total_emitted_items": 9,
+      "total_checked_clean_items": 9,
+      "checked_fraction": 0.214,
+      "expressible_fraction": 0.214,
+      "class_counts": { "Clean": 1 },
+      "phylum_ok": null,
+      "oracle_poisons": []
+    },
+    "fuse": {
+      "total_non_test_items": 12,
+      "total_emitted_items": 0,
+      "total_checked_clean_items": 0,
+      "checked_fraction": 0.0,
+      "expressible_fraction": 0.0,
+      "class_counts": { "Clean": 1 },
+      "phylum_ok": null,
+      "oracle_poisons": []
+    },
+    "time": {
+      "total_non_test_items": 37,
+      "total_emitted_items": 17,
+      "total_checked_clean_items": 17,
+      "checked_fraction": 0.459,
+      "expressible_fraction": 0.459,
+      "class_counts": { "Clean": 1 },
+      "phylum_ok": true,
+      "oracle_poisons": []
+    },
+    "rand": {
+      "total_non_test_items": 34,
+      "total_emitted_items": 6,
+      "total_checked_clean_items": 6,
+      "checked_fraction": 0.176,
+      "expressible_fraction": 0.176,
+      "class_counts": { "Clean": 1 },
+      "phylum_ok": true,
+      "oracle_poisons": []
+    },
+    "cmp": {
+      "total_non_test_items": 111,
+      "total_emitted_items": 14,
+      "total_checked_clean_items": 14,
+      "checked_fraction": 0.126,
+      "expressible_fraction": 0.126,
+      "class_counts": { "Clean": 1 },
+      "phylum_ok": true,
+      "oracle_poisons": []
+    },
+    "fs": {
+      "total_non_test_items": 47,
+      "total_emitted_items": 28,
+      "total_checked_clean_items": 28,
+      "checked_fraction": 0.596,
+      "expressible_fraction": 0.596,
+      "class_counts": { "Clean": 7 },
+      "phylum_ok": true,
+      "oracle_poisons": []
+    },
+    "io": {
+      "total_non_test_items": 59,
+      "total_emitted_items": 24,
+      "total_checked_clean_items": 24,
+      "checked_fraction": 0.407,
+      "expressible_fraction": 0.407,
+      "class_counts": { "Clean": 5 },
+      "phylum_ok": true,
+      "oracle_poisons": []
+    }
+  },
+  "unions": {
+    "default5_checked": "46/236=19.5%",
+    "default5_expressible": "46/236=19.5%",
+    "all7_checked": "98/342=28.7%",
+    "all7_expressible": "98/342=28.7%"
+  },
+  "delta_vs_post_g_alpha_combined": {
+    "default5_checked_pp": 0.0,
+    "all7_checked_pp": 3.0,
+    "all7_expressible_pp": -0.8,
+    "std_io_checked_pp": 17.0,
+    "std_io_expressible_pp": -5.1,
+    "std_io_file_class": "CheckError×2 → Clean×5",
+    "check_error_files": "2 → 0"
+  },
+  "gap_category_tallies_top": {
+    "DeriveSatisfied": 85,
+    "Other": 68,
+    "MacroInvocation": 64,
+    "DeriveAttr": 62,
+    "Impl": 55,
+    "NamedFieldDrop": 44,
+    "Import": 37,
+    "MultiStmtBody": 26,
+    "total_records": 514
+  },
+  "headline": {
+    "read_to_end_first_poison_closed": true,
+    "std_io_clean": true,
+    "zero_check_error_on_pilot_set": true,
+    "g1_pilot_gate": "PASS",
+    "g1_note": "default pilot + std-fs/io file Clean; residual EXPLAIN+ranked; no closable unknown first-poisons without design gates",
+    "next_residual_rank_1_implement_heat": "MacroInvocation (M-875 design-gated) or Rank-A method cascade (ok_or high-count)",
+    "next_residual_rank_1_measure": "full M-1006 ladder (G2)",
+    "one_shot_claim": false,
+    "guarantee_tags": "fractions Empirical; ranking Declared"
+  }
+}

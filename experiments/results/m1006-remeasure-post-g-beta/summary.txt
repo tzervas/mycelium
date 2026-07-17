@@ -1,0 +1,33 @@
+M-1006 remeasure post G-β — Empirical summary
+Date: 2026-07-17
+Tip: 4acd3a20d9272660e11fcc8b3dceec1c163f0c48 (origin/dev; #1700 G-β + #1699 D1)
+Model actual: Grok 4.5 / xAI agent runtime
+Oracle: real myc-check via MYC_CHECK_CMD
+
+Per-target (non-test / checked / checked% / emitted / expressible% / class):
+  eval   42  9  21.4%   9  21.4%  Clean
+  fuse   12  0   0.0%   0   0.0%  Clean (no emission)
+  time   37 17  45.9%  17  45.9%  Clean  phylum_ok=true
+  rand   34  6  17.6%   6  17.6%  Clean  phylum_ok=true
+  cmp   111 14  12.6%  14  12.6%  Clean  phylum_ok=true
+  fs     47 28  59.6%  28  59.6%  Clean×7 phylum_ok=true
+  io     59 24  40.7%  24  40.7%  Clean×5 phylum_ok=true
+
+Unions:
+  default-5 checked 46/236 = 19.5%  (flat vs post-G-α)
+  all-7     checked 98/342 = 28.7%  (+3.0pp vs post-G-α 25.7%)
+  all-7  expressible 98/342 = 28.7%  (−0.8pp vs post-G-α 29.5%)
+
+std-io delta vs post-G-α combined:
+  checked 23.7% → 40.7% (+17.0pp); expressible 45.8% → 40.7% (−5.1pp)
+  file class CheckError×2 → Clean×5; first poison read_to_end → none
+
+G1 gate (pilot): PASS — default pilot + std-fs/io file Clean;
+  residual EXPLAIN+ranked; zero unknown first-poisons on this set.
+
+Next residual rank 1 (Declared on Empirical heat):
+  implement heat: MacroInvocation (M-875 design-gated) or Rank-A method cascade (ok_or)
+  measure: full M-1006 ladder (G2)
+
+No one-shot claim. No SemVer claim. Tags: fractions Empirical; ranking Declared.
+Write-up: docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-G-beta-2026-07-17.md

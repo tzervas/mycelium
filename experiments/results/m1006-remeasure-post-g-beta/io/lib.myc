@@ -1,0 +1,133 @@
+// nodule: std.io
+// `std.io` + `serialize` — single-consumption IO + canonical serialization (M-514).
+//
+// Two coupled surfaces over Mycelium's content-addressed value model:
+//
+// **serialize** — project a [`mycelium_core::Value`] to/from a byte or text form:
+// - [`serialize::serialize`] / [`serialize::deserialize`] over the RFC-0001 §4.8
+//   self-describing wire form (`[Repr descriptor] ‖ [Meta] ‖ [payload]`,
+//   schema-travels-with-data, faithfully round-trippable including `Meta`).
+// - [`serialize::to_json`] / [`serialize::from_json`] — the **one canonical JSON
+//   projection** that `fmt.to_json` (M-533) delegates to (README §5 seam; FLAGGED
+//   §7-Q1 pending maintainer sign-off).
+//
+// **io** — move bytes over an abstract source/sink:
+// - [`io::read_all`] / [`io::read`] / [`io::write`] over [`io::Source`] /
+//   [`io::Sink`] — affine handles consumed **exactly once** (LR-8 / RFC-0006 §Q5).
+//   Single-consumption is a **type-level invariant** (Rust move semantics), not a
+//   runtime convention.
+// - [`io::read_value`] — the bridge joining io + serialize: deserialize a `Value`
+//   directly from a `Source`.
+//
+// # Honesty crux (twofold, structural)
+//
+// 1. **Round-trip** — `deserialize(serialize(v, f), f) ≡ v` including `Meta` is a
+//    **checked property** (proptest corpus; `Empirical` tag — not `Proven`, no
+//    checked theorem; VR-5 / spec §7-Q2).
+// 2. **Never-silent** — a truncated, malformed, or decode-failed input is an
+//    **explicit, located** error (`SerError` / `IoError` carrying a byte offset /
+//    field path — RFC-0013 I1); **no op returns a partially-filled `Value`** (C1/G2).
+//
+// # Serialization is a projection, not identity (ADR-003 / C4)
+// `serialize`/`to_json` borrow their `&Value` immutably.  The content hash is
+// unchanged by serialization.  The round-trip recovers a value with the **same
+// content-id**; the projection is not a re-keying.
+//
+// # Single-consumption (LR-8)
+// `read_all` takes [`io::Source`] **by-move** and does not return it — the affine
+// handle is consumed exactly once.  A double-consume is a **compile-time error**, not
+// a runtime check.  Chunked `read` threads the handle linearly; `write` threads
+// [`io::Sink`] linearly.
+//
+// # Declared effects (C6 / RFC-0014 §4.5)
+// - io ops declare the **`io`** effect; chunked `read` additionally declares
+//   `alloc(Budget)`.
+// - serialize/JSON ops are **pure** (`effects: none`).
+//
+// # In-memory substrate + OS I/O floor (FLAGGED §7-Q4 / §8-Q6)
+// The OS I/O floor is deferred to `std-sys` (M-541). This module ships a fully
+// testable **in-memory substrate** ([`io::Substrate`] backed by `Vec<u8>`) that
+// exercises the affine abstraction without OS facilities. The `std-sys` phylum will
+// provide OS-backed constructors for file descriptors and sockets.
+//
+// # No new trusted code (KC-3 / C5)
+// This crate wraps `mycelium-core`'s `serde::{Serialize, Deserialize}` for `Value`
+// (landed M-104). No new trusted serialization logic; no `unsafe`.
+//
+// # Guarantee matrix
+// Eight rows — one per exported op — in [`guarantee_matrix::MATRIX`] (RFC-0016 §4.5).
+// Asserted in tests.
+//
+// # Design spec
+// `docs/spec/stdlib/io.md` (M-514, #155); contract: RFC-0016 §4.1 (C1–C6).
+//
+// # Open questions (FLAGs from spec §7)
+//
+// - **(Q1) One canonical JSON — `fmt.to_json` delegation.** `to_json`/`from_json` are
+//   proposed as the canonical JSON projection that `fmt` (M-533) delegates to.  Needs
+//   maintainer sign-off (spec §7-Q1 / RFC-0016 §8-Q1).
+//
+// - **(Q2) Which round-trip reaches `Proven`.** The `Empirical` tag is the honest
+//   maximum for this implementation.  A `Proven` tag would require a checked
+//   injectivity/totality theorem over the closed `Repr`/`Meta` grammar (VR-5;
+//   spec §7-Q2).
+//
+// - **(Q3) The io ↔ fs build-on seam.** `fs` (M-528) *builds on* this module's
+//   `Source`/`Sink`; the exact path→substrate constructor surface is co-design with
+//   M-528 (spec §7-Q3).
+//
+// - **(Q4) The `wild`/FFI floor for the io half.** Byte movement over a real OS
+//   source/sink requires OS facilities → `wild`/FFI (ADR-014). Deferred to `std-sys`
+//   (M-541; spec §7-Q4 / RFC-0016 §8-Q6).
+//
+// - **(Q5) Format / Budget ergonomics at the call site.** Both `Format` and `Budget`
+//   are required-explicit until the per-ring ergonomics pass (M-540; spec §7-Q5 /
+//   RFC-0016 §8-Q3 tension A).
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 2, Tier B):** I/O is representation-opaque at the byte level —
+// `Source`/`Sink` move raw bytes without interpreting `Repr`. Callers own the encoding
+// choice; the `Format` parameter to serialize ops is always explicit (never inferred from
+// context). The serialized form carries the `Repr` descriptor as part of its wire schema
+// (RFC-0001 §4.8 "schema-travels-with-data"), so no silent re-encoding occurs on round-trip.
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/io.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io;
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.io.error) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type ByteCount = ByteCount(Binary{64});
+type ByteOffset = ByteOffset(Binary{64});
+type FieldPath = FieldPath(Bytes);
+type IoError = UnexpectedEof(ByteCount) | Refused(Bytes) | EffectBudget(Bytes);
+type SerError = Truncated(ByteOffset) | Malformed(ByteOffset, Bytes) | UnknownTag(FieldPath, Bytes) | OutOfDomain(FieldPath, Bytes) | BudgetExceeded(Bytes);
+type ReadValueError = Io(IoError) | Ser(SerError);
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.io.serialize) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type Format = Wire | Json;
+
+// EXPLAIN (L2-B/DN-124): Declared co-include of batch-sibling type surface (homes: std.io.io) so single-file oracle is self-contained — not a language `use` identity, not a short-form path collapse (M-1084 full path retained as provenance). Transitive type deps in the same batch are co-included. G2/VR-5.
+type Budget = Bytes_kw(Binary{64}) | Unbounded;
+type Sink = Sink(Vec[Binary{8}]);
+type Substrate_kw = Substrate_kw(Vec[Binary{8}], Binary{64});
+type Source = Source(Substrate_kw);
