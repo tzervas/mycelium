@@ -10,7 +10,7 @@
 
 > Content integrates former Draft DN-141 and Agent D. Ratify later as DN-141 rewrite / DN-142 or
 > RFCs as steered. Isolation EXPLAIN packages are **first-fault emitter instances** (pack 03 bus /
-> Agent F annex) — not a parallel diagnostics invent.
+>  — not a parallel diagnostics invent.
 
 ## 1. Why this document exists
 
@@ -177,7 +177,7 @@ Exact cores stay on dual-path inputs.
 
 - Pack [01](./DESIGN-01-SWAPS-AND-POLICY.md) — Swap cert failures feed the same isolation story
 - Pack [03](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) — first-fault emitters, full AX rank, UX backlog
-- Annex [AGENT-F](./AGENT-F-DIAGNOSTICS-TRACE-EMITTERS-2026-07-17.md) — shared envelope + site catalog
+- Annex [DESIGN-03 §3](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) — shared envelope + site catalog
 
 ## Changelog (this pack)
 
