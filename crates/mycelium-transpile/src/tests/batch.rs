@@ -1330,3 +1330,111 @@ fn l2b_resolved_type_co_include_oracle_and_phylum_clean() {
         String::from_utf8_lossy(&phylum.stderr)
     );
 }
+
+/// G-α Rank-2 / L2-B Import non-type: batch-resolved **free-fn** imports co-include sibling
+/// free-fn surface (plus type deps on the fn line) so single-file oracle no longer false-fails
+/// with `no such name …read_all` from a phylum-of-one `use`.
+///
+/// Pins: (1) EXPLAIN (G-α L2-B/DN-124) with full home path; (2) `fn read_all` co-include, never
+/// `use std.io.io.read_all`; (3) type co-include of `Source` when referenced; (4) optional live
+/// oracle when body is self-contained (this fixture uses a trivial body).
+#[test]
+fn g_alpha_resolved_free_fn_co_include() {
+    let tmp = TempDir::new("g-alpha-fn-coinclude");
+    tmp.write(
+        "mycelium-std-io/src/io.rs",
+        "pub struct Source(u8);\npub fn read_all(src: Source) -> Source { src }\n",
+    );
+    tmp.write(
+        "mycelium-std-io/src/lib.rs",
+        "use crate::io::{read_all, Source};\nfn consumer(s: Source) -> Source { read_all(s) }\n",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let lib = results
+        .iter()
+        .find(|r| r.path.ends_with("lib.rs"))
+        .expect("lib.rs present");
+    assert!(
+        lib.myc.contains("fn read_all") && lib.myc.contains("EXPLAIN (G-α L2-B"),
+        "batch must co-include sibling free-fn with G-α EXPLAIN; got:\n{}",
+        lib.myc
+    );
+    assert!(
+        lib.myc.contains("std.io.io"),
+        "EXPLAIN must name full home nodule path (M-1084 provenance); got:\n{}",
+        lib.myc
+    );
+    assert!(
+        !lib.myc.lines().any(|l| {
+            let t = l.trim();
+            t == "use std.io.io.read_all;" || t.starts_with("use ") && t.contains("read_all")
+        }),
+        "must not emit full-path use for extractable free-fn; got:\n{}",
+        lib.myc
+    );
+    assert!(
+        lib.myc.contains("type Source") || lib.myc.contains("Source"),
+        "type dep Source should appear (co-include or local); got:\n{}",
+        lib.myc
+    );
+    assert!(
+        lib.report
+            .emitted_items
+            .iter()
+            .any(|n| n.contains("read_all") && n.contains("co-include")),
+        "expected emitted co-include:…read_all item, got {:?}",
+        lib.report.emitted_items
+    );
+
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "g-alpha free-fn co-include live myc-check skipped — set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`"
+        );
+        return;
+    };
+
+    let out = TempDir::new("g-alpha-fn-coinclude-vet");
+    let mut lib_myc_path = None;
+    for r in &results {
+        let name = r.path.file_stem().and_then(|s| s.to_str()).unwrap_or("x");
+        let path = out.path().join(format!("{name}.myc"));
+        fs::write(&path, &r.myc).expect("write myc");
+        if r.path.ends_with("lib.rs") {
+            lib_myc_path = Some(path);
+        }
+    }
+    let lib_myc = lib_myc_path.expect("lib.myc written");
+
+    let oracle = std::process::Command::new(&bin)
+        .arg(&lib_myc)
+        .output()
+        .expect("spawn myc-check oracle");
+    let oracle_out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&oracle.stdout),
+        String::from_utf8_lossy(&oracle.stderr)
+    );
+    assert!(
+        oracle.status.success(),
+        "oracle must Clean a free-fn co-include (G-α Rank-2); got fail out={oracle_out}"
+    );
+
+    let phylum = std::process::Command::new(&bin)
+        .arg("--phylum")
+        .arg(out.path())
+        .arg("--json")
+        .output()
+        .expect("spawn myc-check --phylum");
+    let phylum_out = String::from_utf8_lossy(&phylum.stdout);
+    assert!(
+        phylum.status.success() || phylum_out.contains("\"ok\":true"),
+        "phylum must Clean co-included free-fn imports; status={:?} out={phylum_out} err={}",
+        phylum.status,
+        String::from_utf8_lossy(&phylum.stderr)
+    );
+}

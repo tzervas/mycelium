@@ -67,17 +67,21 @@
 //! `use std.fs.error.FsErr` is phylum-Clean when siblings co-exist, but single-file oracle
 //! (phylum-of-one) refuses `no such name … in the phylum`.
 //!
-//! **Phase-2 lever (this leaf):** when a resolved leaf is a **type** the sibling baseline
-//! actually emitted (`pub type` / `type` line captured in [`NoduleSymbols::type_defs`]), emit a
-//! **Declared co-include** of that type (plus transitive type-deps found in the same batch's
-//! type surface) into the consumer instead of a phylum-of-one-refusing `use`. EXPLAIN comment
+//! **Phase-2 lever (type, ONESHOT L2-B):** when a resolved leaf is a **type** the sibling
+//! baseline actually emitted (`pub type` / `type` line captured in [`NoduleSymbols::type_defs`]),
+//! emit a **Declared co-include** of that type (plus transitive type-deps found in the same
+//! batch's type surface) into the consumer instead of a phylum-of-one-refusing `use`. EXPLAIN
 //! names the home nodule path (M-1084 full path preserved as provenance — never silent, never
-//! short-form collapse). Non-type resolved leaves still emit full-path `use` (fn/const surface
-//! not co-included here). Dual-define under phylum is home-qualified per nodule (consumer local
+//! short-form collapse). Dual-define under phylum is home-qualified per nodule (consumer local
 //! vs sibling home) — Empirical clean on std-fs pilot; not a language import identity claim.
 //!
-//! Residual FLAG if a resolved name has **no** type_def (fn-only sibling surface): full-path
-//! `use` remains, oracle may still false-fail (DN-124 dual-report).
+//! **G-α Rank-2 / L2-B Import non-type:** when a resolved leaf is a **free-fn** the sibling
+//! baseline actually emitted as a single-line `fn`/`pub fn` ([`NoduleSymbols::fn_defs`] via
+//! [`extract_fn_defs`]), co-include that fn surface the same way (Declared + EXPLAIN home path),
+//! and pull any batch-sibling **type** names referenced on the fn line into the type co-include
+//! set first. Multi-line / non-fn residual (const, mangled multi-line body, etc.) still falls
+//! back to full-path `use` with the DN-124 EXPLAIN (oracle may false-fail — dual-report); never a
+//! silent skip (G2/VR-5).
 
 use std::collections::{HashMap, HashSet};
 use syn::UseTree;
@@ -253,6 +257,10 @@ pub(crate) struct NoduleSymbols {
     /// baseline `.myc` ([`extract_type_defs`]). Empty when the sibling emitted no type items.
     /// Only names also present in [`Self::emitted`] are stored (never a gapped/unemitted type).
     pub type_defs: HashMap<String, String>,
+    /// G-α L2-B non-type: bare free-fn name → full single-line `fn`/`pub fn` emission from the
+    /// sibling's baseline `.myc` ([`extract_fn_defs`]). Empty when the sibling emitted no free-fns
+    /// (or only multi-line forms). Only names also present in [`Self::emitted`] are stored.
+    pub fn_defs: HashMap<String, String>,
 }
 
 /// Extract single-line `type Name = …;` / `pub type Name = …;` definitions from baseline `.myc`
@@ -279,6 +287,44 @@ pub(crate) fn extract_type_defs(myc: &str) -> HashMap<String, String> {
             continue;
         }
         // Prefer the first definition if a name repeats (should not happen in one nodule).
+        out.entry(name.to_string())
+            .or_insert_with(|| trimmed.to_string());
+    }
+    out
+}
+
+/// Extract single-line free-fn definitions from baseline `.myc` (G-α L2-B non-type co-include
+/// surface). Matches `fn name(…) => … = …;` / `pub fn name(…) => … = …;` (and the type-param form
+/// `fn name[T](…) => …`). Multi-line fn bodies are **not** captured (Declared residual — today's
+/// emitter writes free-fns on one line after any leading `//` doc lines; a multi-line form falls
+/// back to full-path `use` — G2, never guessed). Does **not** capture trait/`impl` method
+/// signatures that lack a body `=`.
+pub(crate) fn extract_fn_defs(myc: &str) -> HashMap<String, String> {
+    let mut out = HashMap::new();
+    for line in myc.lines() {
+        let trimmed = line.trim();
+        // Skip pure comments / empty.
+        if trimmed.is_empty() || trimmed.starts_with("//") {
+            continue;
+        }
+        let rest = if let Some(r) = trimmed.strip_prefix("pub fn ") {
+            r
+        } else if let Some(r) = trimmed.strip_prefix("fn ") {
+            r
+        } else {
+            continue;
+        };
+        // Require a complete single-line def: has `=>` and ends with `;`.
+        if !rest.contains("=>") || !trimmed.ends_with(';') {
+            continue;
+        }
+        // Name is the identifier before `(` or `[` (type params).
+        let name_end = rest.find(['(', '[']).unwrap_or(rest.len());
+        let name = rest[..name_end].trim();
+        if name.is_empty() || !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            continue;
+        }
+        // Prefer first def if a name repeats (should not happen in one nodule).
         out.entry(name.to_string())
             .or_insert_with(|| trimmed.to_string());
     }
@@ -319,6 +365,7 @@ impl SymbolTable {
         nodule_path: String,
         emitted: HashSet<String>,
         type_defs: HashMap<String, String>,
+        fn_defs: HashMap<String, String>,
     ) {
         debug_assert!(
             !self.modules.contains_key(&module_key),
@@ -328,8 +375,12 @@ impl SymbolTable {
              violates the struct doc's uniqueness invariant; investigate the colliding files' \
              derived crate-identity + module path rather than silently proceeding (G2)."
         );
-        // Only retain type_defs for names that actually emitted (never a gapped/unemitted type).
+        // Only retain defs for names that actually emitted (never a gapped/unemitted item).
         let type_defs: HashMap<String, String> = type_defs
+            .into_iter()
+            .filter(|(n, _)| emitted.contains(n))
+            .collect();
+        let fn_defs: HashMap<String, String> = fn_defs
             .into_iter()
             .filter(|(n, _)| emitted.contains(n))
             .collect();
@@ -339,6 +390,7 @@ impl SymbolTable {
                 nodule_path,
                 emitted,
                 type_defs,
+                fn_defs,
             },
         );
     }
@@ -356,13 +408,40 @@ impl SymbolTable {
 
     /// L2-B: the baseline `type`/`pub type` line for `name` in `module_key`, when that sibling
     /// emitted a type of that name. `None` when the module misses, the name was not emitted, or
-    /// the emission was not a single-line type def (fn / other surface — falls back to full-path
-    /// `use`).
+    /// the emission was not a single-line type def (fn / other surface — falls back to free-fn
+    /// co-include or full-path `use`).
     pub fn type_def(&self, module_key: &str, name: &str) -> Option<&str> {
         self.modules
             .get(module_key)
             .and_then(|m| m.type_defs.get(name))
             .map(String::as_str)
+    }
+
+    /// G-α L2-B non-type: the baseline single-line `fn`/`pub fn` line for `name` in `module_key`,
+    /// when that sibling emitted a free-fn of that name. `None` when missing / not emitted / not a
+    /// single-line free-fn (falls back to full-path `use` with DN-124 EXPLAIN).
+    pub fn fn_def(&self, module_key: &str, name: &str) -> Option<&str> {
+        self.modules
+            .get(module_key)
+            .and_then(|m| m.fn_defs.get(name))
+            .map(String::as_str)
+    }
+
+    /// G-α L2-B non-type: for seed `(module_key, name)` free-fn pairs, return
+    /// `(home_nodule_path, def_line)` in seed order (stable, never bare-name first-wins across
+    /// modules). Seeds without a fn_def are omitted (caller gaps them honestly).
+    pub fn fn_def_lines(&self, seeds: &[(String, String)]) -> Vec<(String, String)> {
+        let mut out = Vec::new();
+        for (module_key, name) in seeds {
+            let Some(m) = self.modules.get(module_key.as_str()) else {
+                continue;
+            };
+            let Some(def) = m.fn_defs.get(name) else {
+                continue;
+            };
+            out.push((m.nodule_path.clone(), def.clone()));
+        }
+        out
     }
 
     /// L2-B: for seed `(module_key, name)` pairs that resolved in this batch, collect the
@@ -552,6 +631,38 @@ impl SymbolTable {
     }
 }
 
+/// UpperCamel identifiers on a surface line (type def, free-fn sig/body). Crude token scan —
+/// sufficient for the emitter's single-line forms; not a full Mycelium parser (Declared).
+/// Callers filter against known type_defs in the table. `exclude` drops the defined type name
+/// (or free-fn name when it happens to be UpperCamel).
+pub(crate) fn upper_camel_names_in_line(line: &str, exclude: &str) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut cur = String::new();
+    let flush = |cur: &mut String, found: &mut Vec<String>| {
+        if !cur.is_empty() {
+            if cur != exclude
+                && cur.chars().next().is_some_and(|c| c.is_ascii_uppercase())
+                && !found.iter().any(|x| x == cur)
+            {
+                // Heuristic: type names are UpperCamel (ErrnoClass, FsErr, Source); skip
+                // lowercase keywords. Binary-like width tokens are still Upper — Binary is a
+                // prim, not a batch type_def, so the table lookup filters it out.
+                found.push(cur.clone());
+            }
+            cur.clear();
+        }
+    };
+    for ch in line.chars() {
+        if ch.is_ascii_alphanumeric() || ch == '_' {
+            cur.push(ch);
+        } else {
+            flush(&mut cur, &mut found);
+        }
+    }
+    flush(&mut cur, &mut found);
+    found
+}
+
 /// Identifiers on a type-def RHS (excluding the defined name). Crude token scan — sufficient
 /// for the emitter's single-line sum/product forms; not a full Mycelium parser (Declared).
 /// Callers filter against known type_defs in the table.
@@ -563,29 +674,5 @@ fn type_names_referenced_in_def_line(def_line: &str) -> Vec<String> {
         .and_then(|r| r.split('=').next())
         .map(str::trim)
         .unwrap_or("");
-    let mut found = Vec::new();
-    let mut cur = String::new();
-    let flush = |cur: &mut String, found: &mut Vec<String>| {
-        if !cur.is_empty() {
-            if cur != defined
-                && cur.chars().next().is_some_and(|c| c.is_ascii_uppercase())
-                && !found.iter().any(|x| x == cur)
-            {
-                // Heuristic: type names are UpperCamel (ErrnoClass, FsErr); skip lowercase
-                // keywords/prims (type, pub) and Binary-like width tokens are still Upper — but
-                // Binary is a prim, not a batch type_def, so the table lookup filters it out.
-                found.push(cur.clone());
-            }
-            cur.clear();
-        }
-    };
-    for ch in def_line.chars() {
-        if ch.is_ascii_alphanumeric() || ch == '_' {
-            cur.push(ch);
-        } else {
-            flush(&mut cur, &mut found);
-        }
-    }
-    flush(&mut cur, &mut found);
-    found
+    upper_camel_names_in_line(def_line, defined)
 }

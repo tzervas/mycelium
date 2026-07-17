@@ -262,10 +262,11 @@ pub struct FileResult {
 /// path (`transpile::derive_crate_ident`), so files from different crates never collide on a bare
 /// (unqualified) key.
 ///
-/// **ONESHOT L2-B phase-2:** baseline `.myc` type lines are indexed into the symbol table
-/// ([`symtab::extract_type_defs`]) so the final pass can **co-include** sibling type surface into
-/// consumers (oracle self-containment) instead of only emitting phylum-of-one-refusing `use`s.
-/// See `symtab.rs` module docs + `transpile::dispatch_use`.
+/// **ONESHOT L2-B phase-2 + G-α Rank-2:** baseline `.myc` type and free-fn lines are indexed into
+/// the symbol table ([`symtab::extract_type_defs`] / [`symtab::extract_fn_defs`]) so the final pass
+/// can **co-include** sibling type/fn surface into consumers (oracle self-containment) instead of
+/// only emitting phylum-of-one-refusing `use`s. See `symtab.rs` module docs +
+/// `transpile::dispatch_use`.
 pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, String)>) {
     let mut pass1: Vec<(PathBuf, String, GapReport)> = Vec::with_capacity(files.len());
     let mut failures = Vec::new();
@@ -308,7 +309,7 @@ pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, Str
 /// derivable from its path (`transpile::derive_crate_ident` — every genuine repo path under a
 /// crate's `src/`), else the bare intra-crate module key unchanged from pre-M-1084 behavior (a
 /// `src`-ancestor-less path, e.g. this crate's own temp-dir test fixtures — never spuriously
-/// qualified). Type defs for L2-B co-include are extracted from the baseline `.myc` text.
+/// qualified). Type + free-fn defs for L2-B co-include are extracted from the baseline `.myc` text.
 fn build_symbol_table(pass1: &[(PathBuf, String, GapReport)]) -> SymbolTable {
     let mut table = SymbolTable::new();
     for (path, myc, report) in pass1 {
@@ -316,11 +317,12 @@ fn build_symbol_table(pass1: &[(PathBuf, String, GapReport)]) -> SymbolTable {
         let nodule_path = derive_nodule_path(path);
         let emitted: HashSet<String> = report.emitted_items.iter().cloned().collect();
         let type_defs = symtab::extract_type_defs(myc);
+        let fn_defs = symtab::extract_fn_defs(myc);
         let key = match derive_crate_ident(path) {
             Some(crate_ident) => SymbolTable::qualify_key(&crate_ident, &module_key),
             None => module_key,
         };
-        table.insert(key, nodule_path, emitted, type_defs);
+        table.insert(key, nodule_path, emitted, type_defs, fn_defs);
     }
     table
 }

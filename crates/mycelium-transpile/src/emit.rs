@@ -969,12 +969,36 @@ pub(crate) fn cross_nodule_has_type_def(module_key: &str, name: &str) -> bool {
     })
 }
 
+/// G-α L2-B non-type: does `module_key` have a baseline single-line free-fn def for `name`?
+pub(crate) fn cross_nodule_has_fn_def(module_key: &str, name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.symtab.fn_def(module_key, name).is_some(),
+    })
+}
+
+/// G-α L2-B non-type: baseline free-fn line for `name` in `module_key`, when present.
+pub(crate) fn cross_nodule_fn_def(module_key: &str, name: &str) -> Option<String> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => None,
+        Some(ctx) => ctx.symtab.fn_def(module_key, name).map(str::to_owned),
+    })
+}
+
 /// L2-B: transitive type-def co-include set for seed `(module_key, name)` pairs.
 /// Empty when the context is off or no seed has a type def in the table.
 pub(crate) fn cross_nodule_type_def_closure(seeds: &[(String, String)]) -> Vec<(String, String)> {
     EMIT_CTX.with(|c| match &*c.borrow() {
         None => Vec::new(),
         Some(ctx) => ctx.symtab.type_def_closure(seeds),
+    })
+}
+
+/// G-α L2-B non-type: free-fn co-include lines for seed `(module_key, name)` pairs.
+pub(crate) fn cross_nodule_fn_def_lines(seeds: &[(String, String)]) -> Vec<(String, String)> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => Vec::new(),
+        Some(ctx) => ctx.symtab.fn_def_lines(seeds),
     })
 }
 
