@@ -3700,6 +3700,48 @@ fn derive_eq_unit_enum_composes() {
     );
 }
 
+/// ONESHOT C4 — single-variant unit enum must NOT emit an unreachable `_ => 0b0` arm
+/// (std-rand `RngAlgo = Xoshiro256PlusPlus` file-poison after C2; myc-check W7).
+#[test]
+fn derive_eq_single_variant_unit_enum_is_trivially_true() {
+    let (myc, report) = transpile_source(
+        "#[derive(PartialEq, Eq, Debug)]\nenum RngAlgo { Xoshiro256PlusPlus }",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "RngAlgo"),
+        "expected RngAlgo emitted, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn eq_RngAlgo(a: RngAlgo, b: RngAlgo) => Binary{1} =\n    0b1;"),
+        "single-variant unit enum eq must be trivially-true (no unreachable `_`), got:\n{myc}"
+    );
+    assert!(
+        !myc.contains("_ => 0b0"),
+        "must not emit unreachable wildcard arm for single-variant enum, got:\n{myc}"
+    );
+}
+
+/// ONESHOT C4 — single-variant *payload* enum: field-binding match without a wildcard.
+#[test]
+fn derive_eq_single_variant_payload_enum_no_wildcard() {
+    let (myc, _report) = transpile_source(
+        "#[derive(PartialEq, Eq)]\nenum BoxU8 { V(u8) }",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        myc.contains("fn eq_BoxU8(a: BoxU8, b: BoxU8) => Binary{1} =")
+            && myc.contains("V(p0) => match b { V(q0) => eq(p0, q0) }")
+            && !myc.contains("_ => 0b0"),
+        "single-variant payload eq must bind fields without `_ => 0b0`, got:\n{myc}"
+    );
+}
+
 /// ONESHOT C2 — unit-enum `derive(Debug)` co-emits `impl Show[T]` so parent struct Show over
 /// enum fields does not poison after eq lands.
 #[test]
