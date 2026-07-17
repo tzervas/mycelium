@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Status** | **Draft** design package — not Accepted · not implement |
-| **Pack** | 1 of 3 · with [02 Tags & containment](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) · [03 Machinery, diagnostics & UX](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) |
+| **Pack** | 1 of 4 · with [02 Tags & containment](./DESIGN-02-TAGS-META-AND-CONTAINMENT.md) · [03 Machinery, diagnostics & UX](./DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md) |
 | **Honesty** | Design positions `Declared` until ratified |
 | **Sources distilled** | Agent A · council · `stdlib/swap.md` Q2 · RFC-0001/0002 · DN-29 · Agent F sites |
 | **Primary package** | **Policy create + apply streamline** (catalog · default · resolve-and-record · EXPLAIN) — maintainer-elevated, not a buried sub-bullet |
@@ -156,3 +156,5 @@ Deep site catalog + envelope: [DESIGN-03 §3](./DESIGN-03-MACHINERY-DIAGNOSTICS-
 |---|---|
 | 2026-07-17 | Distill from Agent A into three-doc pack |
 | 2026-07-17 | Integrate: policy streamline elevated as ★ primary; resolve-and-record DoD; A-emit site table; |
+
+- Pack [04](./DESIGN-04-LEDGER-RETENTION-AND-OFFLOAD.md) — language/runtime internal ledger retention (not app logs)
