@@ -185,19 +185,6 @@
       ]
     ]
   },
-  "derive_attr_sub_gap": {
-    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Foo = A | B;\n",
-    "emitted_items": [
-      "Foo"
-    ],
-    "gaps": [
-      [
-        "DeriveAttr",
-        "dropped non-doc attribute(s) on enum `Foo`: # [derive (Debug , Clone)]",
-        "Foo"
-      ]
-    ]
-  },
   "derive_clone_copy_satisfied_no_op": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Flag = Flag(Bool);\n",
     "emitted_items": [
@@ -268,6 +255,32 @@
       "OsEntropy"
     ],
     "gaps": []
+  },
+  "derive_enum_debug_clone_composes_show": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Foo = A | B;\n\nimpl Show[Foo] for Foo {\n  fn render(x: Foo) => Bytes =\n    match x { A => \"A\", B => \"B\" };\n};\n",
+    "emitted_items": [
+      "Foo"
+    ],
+    "gaps": [
+      [
+        "DeriveSatisfied",
+        "enum `Foo` derive(Clone) is a satisfied no-op under Mycelium's value semantics (ADR-003 — every value already copies structurally; DN-128 §6.1) — not emitted as an impl, not a gap",
+        "Foo"
+      ]
+    ]
+  },
+  "derive_enum_hash_still_gaps": {
+    "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Foo = A | B;\n",
+    "emitted_items": [
+      "Foo"
+    ],
+    "gaps": [
+      [
+        "DeriveAttr",
+        "enum `Foo` derive(...) names Hash not in the DN-128 enum-derive set this leaf builds (Debug/PartialEq/Clone/Copy recognized; bare Eq is a satisfied co-occurrence note; Hash/PartialOrd/Ord/Default stay product-only for now) — dropped, no confirmed Mycelium surface",
+        "Foo"
+      ]
+    ]
   },
   "derive_unrecognized_name_gaps": {
     "myc": "// nodule: fixture\n// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n// unvalidated — no Mycelium parser/typechecker confirms this output; see the\n// accompanying .gap.json for every construct this pass could not express.\nnodule fixture;\n\ntype Flag = Flag(Bool);\n",

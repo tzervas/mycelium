@@ -465,11 +465,20 @@ fn cases() -> Vec<Case> {
                 category: Category::PayloadVariant,
             },
         },
-        // `#[derive(..)]` (any non-doc attribute) is dropped but recorded — the item is still
-        // emitted (structural mapping doesn't need the derive), with a DeriveAttr sub-gap.
+        // ONESHOT C2 — enum `#[derive(Debug, Clone)]` lowers Debug→Show + Clone satisfied no-op
+        // (no longer a bulk DeriveAttr drop). The type still emits; Clone is DeriveSatisfied.
         Case {
-            name: "derive_attr_sub_gap",
+            name: "derive_enum_debug_clone_composes_show",
             rust: "#[derive(Debug, Clone)]\nenum Foo { A, B }",
+            expect: Expect::Emitted {
+                item: "Foo",
+                contains: "impl Show[Foo] for Foo {\n  fn render(x: Foo) => Bytes =\n    match x { A => \"A\", B => \"B\" };\n};",
+            },
+        },
+        // Hash on an enum is still unrecognized (product-only for this leaf) — DeriveAttr sub-gap.
+        Case {
+            name: "derive_enum_hash_still_gaps",
+            rust: "#[derive(Hash)]\nenum Foo { A, B }",
             expect: Expect::EmittedAndGapped {
                 item: "Foo",
                 contains: "type Foo = A | B;",
@@ -3541,6 +3550,26 @@ fn derive_forms_check_clean_against_real_toolchain() {
              #[derive(Debug, Default, PartialEq)]\nstruct WithVecOfUser(Vec<Elem>);",
             "WithVecOfUser",
         ),
+        // ONESHOT C2 -- unit enum PartialEq + Debug (std-fs Fallibility/FileKind residual).
+        (
+            "#[derive(Debug, Clone, Copy, PartialEq, Eq)]\nenum Fallibility { Total, OptionFallible, ResultFallible }",
+            "Fallibility",
+        ),
+        // ONESHOT C2 -- reserved-keyword unit variants (Exact -> Exact_kw) + parent struct eq.
+        (
+            "#[derive(Debug, Clone, Copy, PartialEq, Eq)]\nenum GuaranteeTag { Exact, Proven, Empirical, Declared }\n\
+             #[derive(Debug, PartialEq, Eq)]\nstruct MatrixRow(String, GuaranteeTag);",
+            "MatrixRow",
+        ),
+        // ONESHOT C2 -- Bool logical or (std-fs OpenOptions::wants_write residual).
+        (
+            "fn wants_write(a: bool, b: bool) -> bool { a || b }",
+            "wants_write",
+        ),
+        (
+            "fn wants_both(a: bool, b: bool) -> bool { a && b }",
+            "wants_both",
+        ),
         // DN-138 WU-4 / ORACLE-R1 A5 -- a `u128` field is WIDER than the seeded `Binary{64}`
         // instance: `PartialEq` (width-generic `eq` prim), `Default` (literal zero at own width),
         // and `Debug` (Declared opaque `"<Binary{128}>"` placeholder — never a narrowing
@@ -3585,6 +3614,102 @@ fn derive_forms_check_clean_against_real_toolchain() {
 // (fixture-corpus text assertions here; the live-oracle half rides the `rust_snippets` cases
 // added to `derive_forms_check_clean_against_real_toolchain` above).
 // ---------------------------------------------------------------------------------------------
+
+/// ONESHOT C2 — unit-enum `derive(PartialEq)` co-emits `fn eq_<Enum>` so nested struct eq can
+/// resolve (the `eq_Fallibility` / `eq_FileKind` / `eq_GuaranteeTag` residual).
+#[test]
+fn derive_eq_unit_enum_composes() {
+    let (myc, report) = transpile_source(
+        "#[derive(PartialEq, Eq)]\nenum Fallibility { Total, OptionFallible, ResultFallible }",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        report.emitted_items.iter().any(|n| n == "Fallibility"),
+        "expected Fallibility in emitted_items, got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        myc.contains("fn eq_Fallibility(a: Fallibility, b: Fallibility) => Binary{1} =")
+            && myc.contains("Total => match b { Total => 0b1, _ => 0b0 }")
+            && myc.contains("OptionFallible => match b { OptionFallible => 0b1, _ => 0b0 }")
+            && myc.contains("ResultFallible => match b { ResultFallible => 0b1, _ => 0b0 }"),
+        "expected structural unit-enum eq arms, got:\n{myc}"
+    );
+    // Exactly one eq_Fallibility (Eq must not double-emit).
+    assert_eq!(
+        myc.matches("fn eq_Fallibility").count(),
+        1,
+        "expected exactly one eq_Fallibility, got:\n{myc}"
+    );
+}
+
+/// ONESHOT C2 — unit-enum `derive(Debug)` co-emits `impl Show[T]` so parent struct Show over
+/// enum fields does not poison after eq lands.
+#[test]
+fn derive_debug_unit_enum_composes_show() {
+    let (myc, report) = transpile_source(
+        "#[derive(Debug)]\nenum FileKind { File, Directory, Symlink, Other }",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(report.emitted_items.iter().any(|n| n == "FileKind"));
+    assert!(
+        myc.contains("impl Show[FileKind] for FileKind {")
+            && myc.contains("File => \"File\"")
+            && myc.contains("Directory => \"Directory\""),
+        "expected unit-enum Show arms, got:\n{myc}"
+    );
+}
+
+/// ONESHOT C2 — nested enum field: struct PartialEq calls `eq_<Enum>` that the enum's own
+/// PartialEq co-emits in the same file.
+#[test]
+fn derive_eq_enum_nested_in_struct_same_file() {
+    let (myc, _report) = transpile_source(
+        "#[derive(PartialEq, Eq)]\nenum FileKind { File, Directory }\n\
+         #[derive(PartialEq, Eq)]\nstruct Metadata(FileKind, u64);",
+        "f.rs",
+        "f",
+    )
+    .expect("parses/transpiles");
+    assert!(
+        myc.contains("fn eq_FileKind(") && myc.contains("fn eq_Metadata("),
+        "expected both enum and struct eq helpers, got:\n{myc}"
+    );
+    assert!(
+        myc.contains("eq_FileKind(p0, q0)"),
+        "struct eq must call nested eq_FileKind, got:\n{myc}"
+    );
+}
+
+/// ONESHOT C2 — Rust `||`/`&&` emit total Bool match folds (not Binary `or`/`and` prims).
+#[test]
+fn bool_logical_or_and_emit_match_not_bit_prim() {
+    let (or_myc, _) =
+        transpile_source("fn f(a: bool, b: bool) -> bool { a || b }", "f.rs", "f").expect("parses");
+    assert!(
+        or_myc.contains("match (a) { True => True, False => (b) }")
+            || or_myc.contains("match (a) { True => True, False => (b)}"),
+        "expected Bool-or match fold, got:\n{or_myc}"
+    );
+    assert!(
+        !or_myc.contains("||") && !or_myc.contains(" or("),
+        "must not emit || glyph or bit-or call, got:\n{or_myc}"
+    );
+    let (and_myc, _) =
+        transpile_source("fn f(a: bool, b: bool) -> bool { a && b }", "f.rs", "f").expect("parses");
+    assert!(
+        and_myc.contains("match (a) { True => (b), False => False }"),
+        "expected Bool-and match fold, got:\n{and_myc}"
+    );
+    assert!(
+        !and_myc.contains("&&"),
+        "must not emit && glyph, got:\n{and_myc}"
+    );
+}
 
 /// Fieldless `derive(PartialEq)` composes the trivially-true `fn eq_T` — mirrors the fieldless
 /// `Debug`/`Default` fixture-corpus cases' shape (`cases()` above), pinned directly here since

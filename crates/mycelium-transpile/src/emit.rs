@@ -998,12 +998,12 @@ pub fn non_doc_attrs(attrs: &[Attribute]) -> Vec<String> {
         .collect()
 }
 
-/// [`non_doc_attrs`] narrowed to exclude `#[derive(...)]` as well (DN-128/M-1086) — used only by
-/// [`emit_struct`], whose derive list is classified/lowered separately (see the "DN-128 std-derive
-/// lowering library" section below) rather than bulk-dropped. Every OTHER non-doc attribute on a
-/// struct (`#[repr(C)]`, an unrecognized macro attribute, …) still falls through to the same
-/// unconditional-drop `Category::DeriveAttr` sub-gap `non_doc_attrs` backs everywhere else
-/// (`enum`/`fn`/impl-method sites, unchanged by this leaf).
+/// [`non_doc_attrs`] narrowed to exclude `#[derive(...)]` as well (DN-128/M-1086) — used by
+/// [`emit_struct`] and [`emit_enum`], whose derive lists are classified/lowered separately (see
+/// the "DN-128 std-derive lowering library" section below; ONESHOT C2 enum half) rather than
+/// bulk-dropped. Every OTHER non-doc attribute (`#[repr(C)]`, an unrecognized macro attribute, …)
+/// still falls through to the same unconditional-drop `Category::DeriveAttr` sub-gap
+/// `non_doc_attrs` backs at fn/impl-method sites.
 fn non_doc_non_derive_attrs(attrs: &[Attribute]) -> Vec<String> {
     attrs
         .iter()
@@ -2896,8 +2896,23 @@ impl crate::visit::ExprVisitor for EmitVisitor<'_> {
                  => False, _ => True }} }})"
             )),
             BinOp::Gt(_) => Ok(format!("{lhs} > {rhs}")),
-            BinOp::And(_) => Ok(format!("{lhs} && {rhs}")),
-            BinOp::Or(_) => Ok(format!("{lhs} || {rhs}")),
+            // ONESHOT C2 — Rust `&&`/`||` are *logical* Bool connectives. The glyphs desugar
+            // (parse.rs AmpAmp/PipePipe) to the words `"and"`/`"or"`, which are the Binary
+            // bitwise prims (`bit.and`/`bit.or`, checkty prim_kernel_name) — so a bare `a || b`
+            // on Bool fails `myc check` with T-Op
+            // `` `or` does not accept argument types [Bool, Bool] `` (std-fs `OpenOptions::wants_write`
+            // residual). There is no ambient `bool_or`/`bool_and` prim (lib/compiler redeclares
+            // them per-nodule as match folds). Emit the same total match shape the corpus uses
+            // (`lib/std/content.myc`, `lib/compiler/parse.myc`) — always, because Rust `&&`/`||`
+            // are never Binary bitwise (`&`/`|` are). Short-circuit is not modelled (value-
+            // semantics total evaluation; matches the corpus helpers — Declared vs Rust's
+            // short-circuit, disclosed).
+            BinOp::And(_) => Ok(format!(
+                "match ({lhs}) {{ True => ({rhs}), False => False }}"
+            )),
+            BinOp::Or(_) => Ok(format!(
+                "match ({lhs}) {{ True => True, False => ({rhs}) }}"
+            )),
             BinOp::BitAnd(_) if both_known_binary => Ok(format!("and({lhs}, {rhs})")),
             BinOp::BitAnd(_) => Ok(format!("{lhs} & {rhs}")),
             BinOp::BitOr(_) if both_known_binary => Ok(format!("or({lhs}, {rhs})")),
@@ -4705,6 +4720,13 @@ fn lower_struct_derives(
 }
 
 /// `enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).
+///
+/// **ONESHOT C2 (DN-128 §2 enum half):** after the type declaration, lower recognized
+/// `#[derive(...)]` names the same way product structs do — `PartialEq` → `fn eq_<T>`
+/// ([`derives::eq::compose_enum`]), `Debug` → `impl Show[T]` ([`derives::show::compose_enum`]),
+/// `Clone`/`Copy` → satisfied no-op notes. This closes the residual where a parent struct's
+/// derived `eq_MatrixRow` called `eq_Fallibility` / `eq_FileKind` / `eq_GuaranteeTag` that never
+/// existed because enum derives were bulk-dropped as `DeriveAttr` sub-gaps.
 pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     let enum_vi = valid_ident(&item.ident.to_string());
     register_ident_emission(&enum_vi, "enum type name")?;
@@ -4717,18 +4739,24 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
     // to such an enum *after* mapping (below), so an unmappable field still surfaces its own precise
     // reason first (an honest gap profile: "String field" is a repr gap, not a resolution gap).
     let mut has_named_variant = false;
-    let non_doc = non_doc_attrs(&item.attrs);
-    if !non_doc.is_empty() {
+    // Non-derive non-doc attrs still bulk-drop (e.g. `#[repr(...)]`); derive attrs are handled
+    // by [`lower_enum_derives`] after the type text is composed — never silently. Uses the same
+    // filter [`emit_struct`] already uses (DN-128) so derive lists are not double-reported.
+    let non_derive_non_doc = non_doc_non_derive_attrs(&item.attrs);
+    if !non_derive_non_doc.is_empty() {
         sub_gaps.push(GapReason::new(
             Category::DeriveAttr,
             format!(
-                "dropped non-doc attribute(s) on enum `{}`: {}",
+                "dropped non-doc non-derive attribute(s) on enum `{}`: {}",
                 item.ident,
-                non_doc.join(" ")
+                non_derive_non_doc.join(" ")
             ),
         ));
     }
     let mut ctors = Vec::with_capacity(item.variants.len());
+    // Parallel to `ctors`: rewritten variant name + mapped payload field types (for derive
+    // composition). Unit variants carry an empty field list.
+    let mut variant_shapes: Vec<(String, Vec<String>)> = Vec::with_capacity(item.variants.len());
     for v in &item.variants {
         let variant_vi = valid_ident(&v.ident.to_string());
         register_ident_emission(&variant_vi, "enum variant/constructor")?;
@@ -4745,7 +4773,10 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
             ));
         }
         match &v.fields {
-            Fields::Unit => ctors.push(variant_name),
+            Fields::Unit => {
+                variant_shapes.push((variant_name.clone(), Vec::new()));
+                ctors.push(variant_name);
+            }
             Fields::Unnamed(fields) => {
                 let mut tys = Vec::with_capacity(fields.unnamed.len());
                 for f in &fields.unnamed {
@@ -4762,6 +4793,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                     tys.push(mapped);
                 }
                 ctors.push(format!("{variant_name}({})", tys.join(", ")));
+                variant_shapes.push((variant_name, tys));
             }
             Fields::Named(fields) => {
                 // Named-field variant `Ctor { a: T, b: U }` -> positional `Ctor(T, U)` (grammar
@@ -4792,6 +4824,7 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
                     ),
                 ));
                 ctors.push(format!("{variant_name}({})", tys.join(", ")));
+                variant_shapes.push((variant_name, tys));
             }
         }
     }
@@ -4831,11 +4864,146 @@ pub fn emit_enum(item: &ItemEnum) -> Result<Emitted, GapReason> {
         params_text,
         ctors.join(" | ")
     ));
+    let (derive_impls, derive_gaps) = lower_enum_derives(
+        &enum_name,
+        &item.attrs,
+        &variant_shapes,
+        !type_params.is_empty(),
+    );
+    for imp in derive_impls {
+        myc.push_str("\n\n");
+        myc.push_str(&imp);
+    }
+    sub_gaps.extend(derive_gaps);
     Ok(Emitted {
         name: enum_name,
         myc,
         sub_gaps,
     })
+}
+
+/// ONESHOT C2 — classify + lower an enum's `#[derive(...)]` list against the sum-type half of
+/// the DN-128 standard-derive set (`PartialEq` → [`derives::eq::compose_enum`], `Debug` →
+/// [`derives::show::compose_enum`], `Clone`/`Copy` → satisfied no-op). Mirrors
+/// [`lower_struct_derives`]'s orchestration for products: every derive name is either composed,
+/// noted as satisfied, or recorded as a sub-gap (G2 — never silently dropped). Bare `Eq` is
+/// deliberately NOT recognized (same collision reason as the product row — co-occurs with
+/// `PartialEq`). `Hash`/`PartialOrd`/`Ord`/`Default` stay unrecognized on enums for this leaf
+/// (product-only rows for those; FLAG residual).
+fn lower_enum_derives(
+    ty_name: &str,
+    attrs: &[Attribute],
+    variant_shapes: &[(String, Vec<String>)],
+    is_generic: bool,
+) -> (Vec<String>, Vec<GapReason>) {
+    let mut impls = Vec::new();
+    let mut sub_gaps = Vec::new();
+    let mut unrecognized = Vec::new();
+
+    // Rebuild EnumVariantSpec views once (lifetime over variant_shapes).
+    let specs: Vec<derives::EnumVariantSpec<'_>> = variant_shapes
+        .iter()
+        .map(|(name, fields)| derives::EnumVariantSpec {
+            name: name.as_str(),
+            field_types: fields.as_slice(),
+        })
+        .collect();
+
+    for attr in attrs {
+        if !attr.path().is_ident("derive") {
+            continue;
+        }
+        let Ok(list) = attr.parse_args_with(
+            syn::punctuated::Punctuated::<syn::Path, syn::Token![,]>::parse_terminated,
+        ) else {
+            sub_gaps.push(GapReason::new(
+                Category::DeriveAttr,
+                format!(
+                    "dropped derive attribute on enum `{ty_name}` (argument list did not parse \
+                     as a plain trait-path list): {}",
+                    tokens_to_string(attr)
+                ),
+            ));
+            continue;
+        };
+        for path in list {
+            let name = tokens_to_string(&path);
+            match name.as_str() {
+                "PartialEq" => {
+                    if is_generic {
+                        sub_gaps.push(GapReason::new(
+                            Category::DeriveAttr,
+                            format!(
+                                "enum `{ty_name}` derive(PartialEq): generic enum — a derived \
+                                 equality fn for a generic type needs DN-130's generic-instance \
+                                 mechanism, out of this leaf's scope (ONESHOT C2 / DN-128 enum half)"
+                            ),
+                        ));
+                    } else {
+                        match derives::eq::compose_enum(ty_name, &specs) {
+                            Ok(myc) => impls.push(myc),
+                            Err(g) => sub_gaps.push(g),
+                        }
+                    }
+                }
+                "Debug" => {
+                    if is_generic {
+                        sub_gaps.push(GapReason::new(
+                            Category::DeriveAttr,
+                            format!(
+                                "enum `{ty_name}` derive(Debug): generic enum — a derived Show \
+                                 impl for a generic type needs DN-130's generic-trait-instance \
+                                 mechanism, out of this leaf's scope (ONESHOT C2 / DN-128 enum half)"
+                            ),
+                        ));
+                    } else {
+                        match derives::show::compose_enum(ty_name, &specs) {
+                            Ok(myc) => impls.push(myc),
+                            Err(g) => sub_gaps.push(g),
+                        }
+                    }
+                }
+                "Clone" | "Copy" => {
+                    sub_gaps.push(GapReason::new(
+                        Category::DeriveSatisfied,
+                        format!(
+                            "enum `{ty_name}` derive({name}) is a satisfied no-op under \
+                             Mycelium's value semantics (ADR-003 — every value already copies \
+                             structurally; DN-128 §6.1) — not emitted as an impl, not a gap"
+                        ),
+                    ));
+                }
+                // Bare Eq co-occurs with PartialEq; recognizing it would double-emit eq_* (same
+                // collision the product row documents). Silently skip is wrong (G2) — record as
+                // satisfied-via-PartialEq note rather than an unrecognized gap that looks like
+                // "we forgot Eq".
+                "Eq" => {
+                    sub_gaps.push(GapReason::new(
+                        Category::DeriveSatisfied,
+                        format!(
+                            "enum `{ty_name}` derive(Eq): covered by co-occurring PartialEq → \
+                             `fn eq_{ty_name}` (product-row collision policy; DN-128 / ONESHOT C2) \
+                             — not a second emission"
+                        ),
+                    ));
+                }
+                _ => unrecognized.push(name),
+            }
+        }
+    }
+    if !unrecognized.is_empty() {
+        sub_gaps.push(GapReason::new(
+            Category::DeriveAttr,
+            format!(
+                "enum `{ty_name}` derive(...) names {} not in the DN-128 enum-derive set this \
+                 leaf builds (Debug/PartialEq/Clone/Copy recognized; bare Eq is a satisfied \
+                 co-occurrence note; Hash/PartialOrd/Ord/Default stay product-only for now) — \
+                 dropped, no confirmed Mycelium surface",
+                unrecognized.join(", ")
+            ),
+        ));
+    }
+    (impls, sub_gaps)
 }
 
 /// `struct` -> a single-constructor `type_item`. Unit, all-positional (`Fields::Unnamed`), and
