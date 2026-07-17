@@ -729,6 +729,13 @@ fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
 /// misses):** every leaf fails to resolve, so this degenerates to exactly the pre-gap-close-2
 /// behavior — a single flagged gap, nothing emitted (byte-identical for every existing single-file
 /// caller).
+///
+/// **ONESHOT L2-B / DN-124 residual (never silent):** a leaf that **does** resolve is emitted as
+/// full-path `use <nodule>.<Item>;` (B1/#1659). That line is **phylum-clean** when siblings are
+/// co-present, and **oracle-false-fails** under single-file `myc check` (phylum-of-one has no
+/// sibling export table). Raising the oracle metric requires emit co-include or a vet-basis
+/// change — not a symtab miss. See `symtab.rs` module docs (L2-B residual) and the EXPLAIN
+/// comment prepended to resolved-use emission below.
 fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
     let Some(candidates) = symtab::use_candidates(&u.tree, ctx.module) else {
         // A tree with no module-path segment at all (a bare `use Item;` naming nothing), or a
@@ -761,6 +768,18 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                     Some((key, nodule_path)) => {
                         let prefix =
                             SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
+                        // DN-124 / L2-B: resolved cross-nodule uses are correct for phylum builds
+                        // and dual-reported; oracle (phylum-of-one) will refuse the name until the
+                        // sibling nodule is co-present or co-included — never a silent skip (G2).
+                        if emitted_lines.is_empty() {
+                            emitted_lines.push(
+                                "// EXPLAIN (DN-124): batch-resolved cross-nodule `use` — phylum \
+                                 mode sees the sibling export; single-file oracle (phylum-of-one) \
+                                 refuses the name until sibling co-include (emit residual) or \
+                                 multi-nodule co-check. Not a silent skip (G2/VR-5)."
+                                    .to_string(),
+                            );
+                        }
                         emitted_lines.push(format!("use {prefix}.{name};"));
                         resolved_names.push(name.clone());
                         // ORACLE-R1 A2: a successfully resolved import makes the name available

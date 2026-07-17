@@ -61,6 +61,25 @@
 //! 59→57 shape, recreated by the wrong emit form). Net-close is identity emit of the resolved
 //! sibling's full [`NoduleSymbols::nodule_path`] for **both** same-crate and cross-crate batch
 //! hits — never a guessed rename, never a bare name, never a silent short form (VR-5/G2).
+//!
+//! **ONESHOT L2-B residual (Empirical, post-B1/#1659 + C3; re-verified on `dev`).** Path **form**
+//! is closed. What remains is **oracle visibility**, not resolution shape:
+//! - Batch resolve + full-path emit of `use std.fs.error.FsErr` (etc.) is **correct** for a real
+//!   multi-nodule phylum (`myc check --phylum` Clean; DN-124 dual-report attributes the recovery).
+//! - Single-file `myc check` (oracle / phylum-of-one) still refuses that same line with
+//!   `no such name … in the phylum` because the sibling nodule that **declares** the name is not
+//!   co-present — a counterfactual context no real build uses (DN-124 §1.1). Live std-fs pilot
+//!   after C3: oracle `checked_fraction` **38.3%** (18/47) vs phylum **59.6%** (28/47),
+//!   `Δ_basis ≈ +21.3pp` (basis correction, not lever progress — DN-124 §4). First oracle
+//!   Import poisons: `lib.myc` → `use std.fs.error.ErrnoClass`; `substrate.myc` →
+//!   `use std.fs.error.FsErr` (error nodule itself is Clean and emits both names).
+//! - **Cannot raise oracle `checked_fraction` from symtab/batch alone without either** (a) **emit
+//!   co-include** of the sibling type surface into the consumer file (L2-C / `emit.rs` owned —
+//!   dual-define under phylum is a collision hazard unless carefully staged), or (b) changing
+//!   the oracle co-check basis (vet import-closure / DN-124 P-A for the per-file path — outside
+//!   this leaf's ownership). Fabricating checked items or silently dropping resolved uses is
+//!   forbidden (G2/VR-5; DN-124 dual-report already honest). Residual is therefore **EXPLAIN**
+//!   + dual-report, not a silent "fix" of the metric.
 
 use std::collections::{HashMap, HashSet};
 use syn::UseTree;

@@ -1212,3 +1212,114 @@ fn m1084_full_nodule_path_use_emit_under_mycelium_crate_layout() {
         String::from_utf8_lossy(&status.stderr)
     );
 }
+
+/// ONESHOT L2-B residual (DN-124): batch **resolves** sibling exports and emits full-path `use`,
+/// which is **phylum-Clean** — but single-file oracle (phylum-of-one) still **CheckError**s with
+/// `no such name … in the phylum` because the declaring sibling nodule is not co-present.
+///
+/// This is a **basis** residual (oracle under-counts correctly-emitted cross-nodule uses), **not**
+/// a path-shape bug (B1/#1659 closed that) and **not** a silent skip. Raising oracle
+/// `checked_fraction` needs emit co-include of sibling type surface (L2-C) or a vet co-check
+/// change — not a symtab miss. Dual-report already attributes `Δ_basis` honestly.
+///
+/// Pins: (1) EXPLAIN comment on resolved uses; (2) full-path emit; (3) oracle refuses; (4) phylum
+/// accepts. Skips the live myc-check legs when the binary is absent (never fails).
+#[test]
+fn l2b_resolved_cross_nodule_use_oracle_false_fails_phylum_cleans() {
+    let tmp = TempDir::new("l2b-oracle-residual");
+    tmp.write(
+        "mycelium-std-fs/src/error.rs",
+        "pub struct FsErr(u8);\nfn helper(x: bool) -> bool { x }",
+    );
+    tmp.write(
+        "mycelium-std-fs/src/substrate.rs",
+        "use crate::error::FsErr;\nfn sub_helper(x: bool) -> bool { x }",
+    );
+
+    let files = discover_rs_files(tmp.path()).expect("discover succeeds");
+    let (results, failures) = transpile_batch(&files);
+    assert!(failures.is_empty(), "unexpected failures: {failures:?}");
+
+    let sub = results
+        .iter()
+        .find(|r| r.path.ends_with("substrate.rs"))
+        .expect("substrate.rs present");
+    assert!(
+        sub.myc.contains("use std.fs.error.FsErr;"),
+        "batch must resolve sibling export to full-path use; got:\n{}",
+        sub.myc
+    );
+    assert!(
+        sub.myc.contains("EXPLAIN (DN-124)") && sub.myc.contains("phylum-of-one"),
+        "resolved cross-nodule use must carry the never-silent DN-124/L2-B EXPLAIN residual; \
+         got:\n{}",
+        sub.myc
+    );
+    // Mutant-witness: dropping the use emit would pass a silent "no residual" claim.
+    assert!(
+        sub.report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("use:") && n.contains("FsErr")),
+        "expected emitted use:FsErr item, got {:?}",
+        sub.report.emitted_items
+    );
+
+    let Some(bin) = super::vet::find_myc_check() else {
+        eprintln!(
+            "l2b residual live myc-check skipped — set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`"
+        );
+        return;
+    };
+
+    let out = TempDir::new("l2b-oracle-residual-vet");
+    let mut sub_myc_path = None;
+    for r in &results {
+        let name = r.path.file_stem().and_then(|s| s.to_str()).unwrap_or("x");
+        let path = out.path().join(format!("{name}.myc"));
+        fs::write(&path, &r.myc).expect("write myc");
+        if r.path.ends_with("substrate.rs") {
+            sub_myc_path = Some(path);
+        }
+    }
+    let sub_myc = sub_myc_path.expect("substrate.myc written");
+
+    // Oracle (single-file / phylum-of-one): must refuse the cross-nodule name — residual, not
+    // success. Mutant-witness: co-including FsErr into substrate.myc would make this Clean and
+    // incorrectly claim the residual closed without emit co-include.
+    let oracle = std::process::Command::new(&bin)
+        .arg(&sub_myc)
+        .output()
+        .expect("spawn myc-check oracle");
+    let oracle_out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&oracle.stdout),
+        String::from_utf8_lossy(&oracle.stderr)
+    );
+    assert!(
+        !oracle.status.success(),
+        "oracle must false-fail a correctly batch-resolved cross-nodule use (DN-124 residual); \
+         got success with out={oracle_out}"
+    );
+    assert!(
+        oracle_out.contains("no such name") || oracle_out.contains("check-error"),
+        "oracle diagnostic must name the unresolved import; got: {oracle_out}"
+    );
+
+    // Phylum co-check of the same batch output: recovers (basis correction, not lever progress).
+    let phylum = std::process::Command::new(&bin)
+        .arg("--phylum")
+        .arg(out.path())
+        .arg("--json")
+        .output()
+        .expect("spawn myc-check --phylum");
+    let phylum_out = String::from_utf8_lossy(&phylum.stdout);
+    assert!(
+        phylum.status.success() || phylum_out.contains("\"ok\":true"),
+        "phylum must Clean the same full-path imports oracle refuses; status={:?} out={phylum_out} \
+         err={}",
+        phylum.status,
+        String::from_utf8_lossy(&phylum.stderr)
+    );
+}

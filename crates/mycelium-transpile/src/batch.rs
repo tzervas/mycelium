@@ -261,6 +261,14 @@ pub struct FileResult {
 /// for cross-phylum resolution — every file's own crate identity is derived from ITS OWN real repo
 /// path (`transpile::derive_crate_ident`), so files from different crates never collide on a bare
 /// (unqualified) key.
+///
+/// **ONESHOT L2-B residual (not fixed here — FLAG):** when a consumer resolves `use` against a
+/// sibling's emitted surface, the final-pass `.myc` is **phylum-correct** but still **oracle-
+/// false-fails** under single-file `myc check` (sibling export not in the phylum-of-one). That is
+/// DN-124 §1.1's measurement basis, dual-reported by the vet harness — not a batch resolve miss.
+/// Closing the oracle gap needs emit co-include of sibling exports (outside this module; L2-C) or
+/// a vet co-check change. Do **not** "fix" by fabricating clean items or silently dropping
+/// resolved uses (G2/VR-5). See `symtab.rs` module docs.
 pub fn transpile_batch(files: &[PathBuf]) -> (Vec<FileResult>, Vec<(PathBuf, String)>) {
     let mut pass1: Vec<(PathBuf, GapReport)> = Vec::with_capacity(files.len());
     let mut failures = Vec::new();
