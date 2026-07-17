@@ -1892,29 +1892,17 @@ fn struct_variant_construction_forms_check_clean_against_real_toolchain() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-/// The #72 co-poison fix, UPDATED (M-1100 residual, `to_owned` follow-on leaf): a Rust
-/// ownership/identity-conversion no-op method (`.to_owned()`, `.clone()`, `.to_string()`,
-/// `.into()`, …) with no Mycelium free-function/prim referent must never be desugared to a
-/// fabricated bare call (`myc check`: `unknown function/constructor/prim <name>`) — G2/VR-5. That
-/// invariant is unchanged. What changed (this leaf): `crate::prim_map::TABLE` now carries an
-/// `AnyBuiltinScalar`-gated identity row for `to_owned` (mirroring `clone`'s row, PR #1552) — sound
-/// because Rust's orphan rule forecloses any downstream `impl ToOwned` for a foreign
-/// builtin/primitive receiver type (`bool`/`u8..u128`/.../`String`/`str`). So a `.to_owned()` call
-/// on a receiver KNOWN to be such a builtin (a bare identifier whose mapped type resolves, e.g.
-/// `&str`/`String` -> `Bytes`) now emits as identity, not a gap; a `.to_owned()` call on any
-/// receiver that does NOT resolve to a known builtin scalar (a user-named type, or an unresolved
-/// expression like a string literal or a nested call) still gaps exactly as before — the
-/// fabrication-avoidance invariant this test exists to pin is unaffected for those cases. Verified
-/// against the real oracle in the vet loop: without the original gap, emitting the string-literal
-/// `match` (M-1035) in `checkty::vsa_kernel_model_id` — whose arms are `"MAP-I".to_owned()` — used
-/// to poison the whole file's file-gated `checked_fraction`; that literal-receiver arm still gaps
-/// today (a string literal is not a bare-identifier receiver `crate::emit::expr_env_type` can
-/// resolve), so the whole-fn-gaps invariant for that real corpus shape is unchanged.
+/// The #72 co-poison fix, UPDATED (M-1037 residual): a Rust ownership/identity-conversion method
+/// must never desugar to a fabricated bare call (`unknown function/constructor/prim <name>`) —
+/// G2/VR-5. Mapped rows (`to_owned`/`clone`/`to_string`(Bytes)/accessors) emit identity when
+/// their receiver gate matches; residuals (`into`/`to_vec`/non-Bytes `to_string`/user types) gap
+/// with EXPLAIN. **M-1037 residual:** `expr_env_type` types string/bool/char literals, so
+/// `"a".to_owned()` is now sound identity (fixed Rust type `&'static str` → `Bytes`) — the
+/// prior whole-fn gap for the string-literal match arm body is closed without fabricating.
 #[test]
 fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
-    // A bare `.to_owned()` on a `&str` (maps to the builtin scalar `Bytes`) is now sound identity
-    // (this leaf) — it must emit cleanly as the receiver unchanged, never a fabricated
-    // `to_owned(...)` call, and never gap.
+    // A bare `.to_owned()` on a `&str` (maps to the builtin scalar `Bytes`) is sound identity —
+    // emit the receiver unchanged, never a fabricated `to_owned(...)` call.
     let rust = "fn f(s: &str) -> String { s.to_owned() }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
@@ -1934,25 +1922,23 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
         "expected the identity passthrough `(s)`, got:\n{myc}"
     );
 
-    // The real `checkty::vsa_kernel_model_id` shape: a string-literal `match` (now emittable per
-    // M-1035) whose arm bodies are `.to_owned()` — the literal-receiver arm (`"A" =>
-    // "a".to_owned()`) has an unresolved receiver (`crate::emit::expr_env_type` only resolves a
-    // bare identifier or a paren/reference wrapper around one, never a literal), so it still gaps,
-    // and the whole fn therefore still gaps cleanly — unaffected by the bare-identifier identity
-    // fix on the other arm (`s.to_owned()`).
+    // M-1037 residual: string-literal match arms with `.to_owned()` bodies — both arms now
+    // identity-emit (literal typed as Bytes; bare `s` as Bytes). Must emit the whole fn, never
+    // fabricate `to_owned(`.
     let real =
         "fn m(s: &str) -> String { match s { \"A\" => \"a\".to_owned(), _ => s.to_owned() } }";
     let (myc2, report2) = transpile_source(real, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
-        !report2.emitted_items.iter().any(|n| n == "m"),
-        "the `\"a\".to_owned()` literal-receiver arm is unresolved and must still gap the whole \
-         fn (no fabricated emission), got {:?}",
-        report2.emitted_items
+        report2.emitted_items.iter().any(|n| n == "m"),
+        "string-literal `.to_owned()` arm bodies must identity-emit the whole fn (M-1037 residual), \
+         got emitted_items={:?} gaps={:?}",
+        report2.emitted_items,
+        report2.gaps
     );
     assert!(
         !myc2.contains("to_owned("),
-        "no fabricated `to_owned(...)` may leak even inside a now-emittable string-match, got:\n{myc2}"
+        "no fabricated `to_owned(...)` may leak even inside a string-match, got:\n{myc2}"
     );
 
     // M-1037: `.deref()` on a bare `&str` identifier (`Bytes`) is sound identity — must emit, not gap.
@@ -1999,7 +1985,8 @@ fn conversion_noop_method_gaps_never_fabricates_unknown_prim() {
 }
 
 /// M-1037 — generalized never-fabricates pin: mapped conversion/accessor methods and explicit
-/// unmapped methods (`ne`/`fetch_add`/`contains`) must not leak fabricated bare-call surface.
+/// unmapped methods (`ne`/`fetch_add`/`contains`/`into`/`to_vec`) must not leak fabricated bare-call
+/// surface.
 #[test]
 fn conversion_and_unmapped_methods_never_fabricate_unknown_prim() {
     for (rust, forbidden_call) in [
@@ -2011,6 +1998,10 @@ fn conversion_and_unmapped_methods_never_fabricate_unknown_prim() {
             "fn has(s: String, c: char) -> bool { s.contains(c) }",
             "contains(",
         ),
+        // M-1037 residual: into / to_vec / non-Bytes to_string never fabricate.
+        ("fn i(s: &str) -> String { s.into() }", "into("),
+        ("fn v(x: &[u8]) -> Vec<u8> { x.to_vec() }", "to_vec("),
+        ("fn t(x: u64) -> String { x.to_string() }", "to_string("),
     ] {
         let (myc, _report) = transpile_source(rust, "fixture.rs", "fixture")
             .unwrap_or_else(|e| panic!("failed `{rust}`: {e}"));
