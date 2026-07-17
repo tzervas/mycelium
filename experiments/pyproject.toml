@@ -21,7 +21,7 @@ dev = [
 # harnesses.  Core tests and the numpy path work without these.
 # Usage: uv sync --group gpu
 gpu = [
-    "torch>=2.3",
+    "torch>=2.13.0",
     "matplotlib>=3.9",
 ]
 
