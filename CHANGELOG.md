@@ -12,6 +12,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(design): swaps · tags council + DN-141 Draft (2026-07-17)
+
+Design-only land (no product code; no status promotion). Gap-analysis active design phase:
+`DESIGN-COUNCIL-SWAPS-TAGS-2026-07-17.md`, Agent A swaps ergonomics, Agent C AX-stack synthesis,
+and **DN-141 Draft** (tagging / Meta / lattice UX). Implement waves remain paused for design
+quality; mechanisms stay `Declared` until Accepted and differential-witnessed (VR-5).
+
 ### docs(pm): L0 vs spawned-agent model policy (2026-07-16)
 
 `maint-guide.md` + `PROGRAM-HANDOFF-ONESHOT.md`: **L0** parent session = `grok-4.5`; **all**
