@@ -7,7 +7,8 @@
 //! the batch-mode test corpus.
 
 use crate::symtab::{
-    extract_type_defs, use_candidates, CandidateKind, HeadKind, SymbolTable, UseCandidate,
+    extract_fn_defs, extract_type_defs, use_candidates, CandidateKind, HeadKind, SymbolTable,
+    UseCandidate,
 };
 
 fn candidates_of(src: &str, current_module: &[String]) -> Option<Vec<UseCandidate>> {
@@ -240,6 +241,7 @@ fn symbol_table_resolve_requires_both_module_and_emitted_name() {
             .into_iter()
             .collect(),
         std::collections::HashMap::new(),
+        std::collections::HashMap::new(),
     );
 
     assert_eq!(table.resolve("checkty", "Width"), Some("l1.checkty"));
@@ -388,6 +390,7 @@ fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity_in_root_file() {
         "a.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
         std::collections::HashMap::new(),
+        std::collections::HashMap::new(),
     );
     // A DIFFERENT phylum, coincidentally also named `sibling` (crate identifier), exporting the
     // SAME item name at its crate root.
@@ -395,6 +398,7 @@ fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity_in_root_file() {
         "sibling".to_string(),
         "b.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
         std::collections::HashMap::new(),
     );
 
@@ -425,11 +429,13 @@ fn resolve_goes_cross_phylum_only_from_non_root_file_even_with_a_same_crate_subm
         "a.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
         std::collections::HashMap::new(),
+        std::collections::HashMap::new(),
     );
     table.insert(
         "sibling".to_string(),
         "b.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
         std::collections::HashMap::new(),
     );
 
@@ -515,6 +521,75 @@ fn helper(x: Bool) => Bool = x;
     );
 }
 
+/// G-α L2-B non-type: free-fn extract mirrors type extract (single-line only).
+#[test]
+fn extract_fn_defs_picks_single_line_fn_and_pub_fn() {
+    let myc = "\
+nodule std.io.io;
+pub type Source = Source(Binary{8});
+// doc comment should not block the next line
+pub fn read_all(src: Source) => Result[Vec[Binary{8}], IoError] = Ok(src);
+fn helper(x: Bool) => Bool = x;
+fn incomplete(x: Bool) => Bool
+";
+    let defs = extract_fn_defs(myc);
+    assert_eq!(
+        defs.len(),
+        2,
+        "incomplete multi-line must be skipped; got {defs:?}"
+    );
+    assert!(
+        defs["read_all"].starts_with("pub fn read_all"),
+        "{:?}",
+        defs["read_all"]
+    );
+    assert!(
+        defs["helper"].starts_with("fn helper"),
+        "{:?}",
+        defs["helper"]
+    );
+    assert!(
+        !defs.contains_key("Source"),
+        "types must not be captured as fns"
+    );
+}
+
+#[test]
+fn fn_def_lookup_is_module_keyed_and_emitted_filtered() {
+    let mut table = SymbolTable::new();
+    let mut fns = std::collections::HashMap::new();
+    fns.insert(
+        "read_all".to_string(),
+        "pub fn read_all(src: Source) => Unit = unit;".to_string(),
+    );
+    fns.insert(
+        "gapped_fn".to_string(),
+        "fn gapped_fn() => Unit = unit;".to_string(),
+    );
+    table.insert(
+        "io".to_string(),
+        "std.io.io".to_string(),
+        ["read_all".to_string()].into_iter().collect(), // gapped_fn not emitted
+        std::collections::HashMap::new(),
+        fns,
+    );
+    assert_eq!(
+        table
+            .fn_def("io", "read_all")
+            .map(|s| s.starts_with("pub fn")),
+        Some(true)
+    );
+    assert_eq!(
+        table.fn_def("io", "gapped_fn"),
+        None,
+        "never surface a non-emitted free-fn"
+    );
+    assert_eq!(table.fn_def("missing", "read_all"), None);
+    let lines = table.fn_def_lines(&[("io".to_string(), "read_all".to_string())]);
+    assert_eq!(lines.len(), 1);
+    assert_eq!(lines[0].0, "std.io.io");
+}
+
 #[test]
 fn type_def_closure_is_module_keyed_not_bare_name_first_wins() {
     let mut table = SymbolTable::new();
@@ -525,6 +600,7 @@ fn type_def_closure_is_module_keyed_not_bare_name_first_wins() {
         [("Foo".to_string(), "type Foo = Foo(Binary{8});".to_string())]
             .into_iter()
             .collect(),
+        std::collections::HashMap::new(),
     );
     table.insert(
         "crate_b".to_string(),
@@ -533,6 +609,7 @@ fn type_def_closure_is_module_keyed_not_bare_name_first_wins() {
         [("Foo".to_string(), "type Foo = Foo(Binary{16});".to_string())]
             .into_iter()
             .collect(),
+        std::collections::HashMap::new(),
     );
     // Seed from crate_b only — must get Binary{16}, never crate_a's Binary{8}.
     let closure = table.type_def_closure(&[("crate_b".to_string(), "Foo".to_string())]);
@@ -564,6 +641,7 @@ fn type_def_closure_pulls_transitive_deps_from_same_home() {
             .into_iter()
             .collect(),
         defs,
+        std::collections::HashMap::new(),
     );
     let closure = table.type_def_closure(&[("error".to_string(), "FsErr".to_string())]);
     let names: Vec<&str> = closure

@@ -730,11 +730,13 @@ fn dispatch_item(item: &Item, use_ctx: &UseCtx) -> Outcome {
 /// behavior — a single flagged gap, nothing emitted (byte-identical for every existing single-file
 /// caller).
 ///
-/// **ONESHOT L2-B phase-2 / DN-124:** a leaf that **does** resolve and has a sibling baseline
-/// **type** def is **co-included** into the consumer (Declared local surface + EXPLAIN naming the
-/// full home nodule path — M-1084 provenance, never short-form collapse) so single-file oracle
-/// can check clean. A resolved leaf **without** a type def (fn/other) still emits full-path
-/// `use <nodule>.<Item>;` (B1/#1659; may oracle-false-fail — dual-report). See `symtab.rs`.
+/// **ONESHOT L2-B phase-2 / DN-124 + G-α Rank-2:** a leaf that **does** resolve and has a sibling
+/// baseline **type** def is **co-included** into the consumer (Declared local surface + EXPLAIN
+/// naming the full home nodule path — M-1084 provenance, never short-form collapse) so single-file
+/// oracle can check clean. A resolved leaf with a sibling baseline **free-fn** def is co-included
+/// the same way (G-α Import non-type). A resolved leaf **without** a type/fn extractable surface
+/// still emits full-path `use <nodule>.<Item>;` (B1/#1659; may oracle-false-fail — dual-report).
+/// See `symtab.rs`.
 fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
     let Some(candidates) = symtab::use_candidates(&u.tree, ctx.module) else {
         // A tree with no module-path segment at all (a bare `use Item;` naming nothing), or a
@@ -756,6 +758,8 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
     // (module_key, name) — module-keyed so two crates both exporting `Foo` do not first-wins collide.
     let mut co_include_seeds: Vec<(String, String)> = Vec::new();
     let mut co_include_homes: Vec<String> = Vec::new();
+    let mut fn_co_include_seeds: Vec<(String, String)> = Vec::new();
+    let mut fn_co_include_homes: Vec<String> = Vec::new();
     let mut resolved_names = Vec::new();
     let mut leaf_gaps = Vec::new();
     for c in &candidates {
@@ -784,17 +788,52 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
                             }
                             resolved_names.push(name.clone());
                             emit::record_imported_name(name);
+                        } else if emit::cross_nodule_has_fn_def(key, name) {
+                            // G-α L2-B non-type: co-include free-fn surface + any batch type
+                            // names the fn line references (so oracle sees Source/IoError/…).
+                            if !fn_co_include_seeds
+                                .iter()
+                                .any(|(k, n)| k == key && n == name)
+                            {
+                                fn_co_include_seeds.push(((*key).clone(), name.clone()));
+                            }
+                            if !fn_co_include_homes.iter().any(|h| h == &nodule_path) {
+                                fn_co_include_homes.push(nodule_path.clone());
+                            }
+                            if let Some(fn_line) = emit::cross_nodule_fn_def(key, name) {
+                                for ty in symtab::upper_camel_names_in_line(&fn_line, name) {
+                                    if emit::cross_nodule_has_type_def(key, &ty)
+                                        && !emit::name_already_available(&ty)
+                                        && !co_include_seeds
+                                            .iter()
+                                            .any(|(k, n)| k == key && n == &ty)
+                                    {
+                                        co_include_seeds.push(((*key).clone(), ty));
+                                    }
+                                }
+                            }
+                            if !fn_co_include_homes.is_empty() {
+                                for h in &fn_co_include_homes {
+                                    if !co_include_homes.iter().any(|x| x == h) {
+                                        co_include_homes.push(h.clone());
+                                    }
+                                }
+                            }
+                            resolved_names.push(name.clone());
+                            emit::record_imported_name(name);
                         } else {
-                            // Non-type sibling surface (fn/…): full-path use (B1 form).
+                            // Residual non-type surface without extractable single-line fn
+                            // (const / multi-line / other): full-path use (B1 form) + EXPLAIN.
                             let prefix =
                                 SymbolTable::use_emit_qualifier(ctx.crate_ident, &nodule_path, key);
                             if use_lines.is_empty() {
                                 use_lines.push(
                                     "// EXPLAIN (DN-124): batch-resolved cross-nodule `use` of a \
-                                     non-type item — phylum mode sees the sibling export; \
-                                     single-file oracle (phylum-of-one) may refuse until multi-nodule \
-                                     co-check. Type imports co-include instead (L2-B). Not a silent \
-                                     skip (G2/VR-5)."
+                                     non-type item with no extractable single-line free-fn surface \
+                                     — phylum mode sees the sibling export; single-file oracle \
+                                     (phylum-of-one) may refuse until multi-nodule co-check. Types \
+                                     and free-fns with extractable surface co-include instead \
+                                     (L2-B / G-α Rank-2). Not a silent skip (G2/VR-5)."
                                         .to_string(),
                                 );
                             }
@@ -851,7 +890,7 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
         }
     }
 
-    // Materialize co-includes (transitive type deps) before any remaining use lines.
+    // Materialize co-includes: types (transitive) first, then free-fns, then residual use lines.
     let mut emitted_lines: Vec<String> = Vec::new();
     if !co_include_seeds.is_empty() {
         let closure = emit::cross_nodule_type_def_closure(&co_include_seeds);
@@ -897,6 +936,46 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
             }
         }
     }
+    if !fn_co_include_seeds.is_empty() {
+        let fn_lines = emit::cross_nodule_fn_def_lines(&fn_co_include_seeds);
+        if !fn_lines.is_empty() {
+            let homes = if fn_co_include_homes.is_empty() {
+                "(batch sibling)".to_string()
+            } else {
+                fn_co_include_homes.join(", ")
+            };
+            emitted_lines.push(format!(
+                "// EXPLAIN (G-α L2-B/DN-124): Declared co-include of batch-sibling free-fn \
+                 surface (homes: {homes}) so single-file oracle is self-contained — not a \
+                 language `use` identity, not a short-form path collapse (M-1084 full path \
+                 retained as provenance). Type deps on the fn line are co-included above when \
+                 present in-batch. Body free-fn/method callees may still residual-poison oracle \
+                 (FLAG, not silent). G2/VR-5."
+            ));
+            for (_home, def_line) in &fn_lines {
+                let local = def_line.strip_prefix("pub ").unwrap_or(def_line.as_str());
+                if let Some(n) = local
+                    .strip_prefix("fn ")
+                    .and_then(|r| r.find(['(', '[']).map(|i| r[..i].trim()))
+                {
+                    if !emit::name_already_available(n) {
+                        emit::record_imported_name(n);
+                    }
+                }
+                emitted_lines.push(local.to_string());
+            }
+        } else {
+            for (_key, name) in &fn_co_include_seeds {
+                leaf_gaps.push(GapReason::new(
+                    Category::Import,
+                    format!(
+                        "`{name}` resolved as a free-fn seed but no fn_def line was produced — \
+                         internal residual; flagged, not guessed (VR-5/G2)"
+                    ),
+                ));
+            }
+        }
+    }
     let had_use_emit = use_lines.iter().any(|l| l.starts_with("use "));
     emitted_lines.extend(use_lines);
 
@@ -924,7 +1003,8 @@ fn dispatch_use(u: &syn::ItemUse, ctx: &UseCtx) -> Outcome {
             .join("; ");
         Outcome::Gap(GapReason::new(Category::Import, joined))
     } else {
-        let item_name = if co_include_seeds.is_empty() {
+        let had_co = !co_include_seeds.is_empty() || !fn_co_include_seeds.is_empty();
+        let item_name = if !had_co {
             format!("use:{}", resolved_names.join(","))
         } else if had_use_emit {
             format!("co-include+use:{}", resolved_names.join(","))
