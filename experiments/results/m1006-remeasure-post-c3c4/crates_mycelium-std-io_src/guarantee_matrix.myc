@@ -1,0 +1,90 @@
+// nodule: std.io.guarantee_matrix
+// The `std.io` + `serialize` guarantee matrix encoded as **data** (RFC-0016 §4.5).
+//
+// Every exported operation has exactly one row in [`MATRIX`].  The matrix is the
+// load-bearing C2/VR-5 deliverable: guarantee tags are asserted in tests, not
+// prose-only.
+//
+// # Tag justification summary (VR-5 — downgrade rather than overclaim)
+//
+// | Tag | Rows | Reason |
+// |---|---|---|
+// | `Exact` | `serialize`, `to_json`, `read_all`, `read`, `write` | No accuracy/precision/probability semantics (RFC-0016 C2 "no accuracy semantics → Exact"). `serialize`/`to_json` are `Exact` *when `Ok`* but **fallible**: a non-finite `f64` has no JSON form and is refused (never a silent `null`). |
+// | `Empirical` | `deserialize`, `from_json`, `read_value` | Round-trip property established by proptest corpus; no checked theorem → `Empirical`, not `Proven` (VR-5 / spec §7-Q2) |
+//
+// # Effect column (C6)
+// - `"none"` — the op is pure over its byte input; no OS facility touched.
+// - `"io"` — the op reads from or writes to a `Source`/`Sink`; the `io` effect
+//   is declared on the signature (RFC-0014 §4.5).
+// - `"io + alloc(Budget)"` — chunked `read` additionally allocates a buffer
+//   bounded by the declared `Budget` (C6/ADR-015).
+//
+// # EXPLAIN-able column (C3)
+// - `"n/a"` — `serialize`/`to_json` are faithful projections; `read_all`/`read`/
+//   `write` are pure byte-movement.  None selects, converts, or approximates, so
+//   there is no hidden decision to expose.
+// - `"yes"` — the fallible ops (`deserialize`/`from_json`/`read_value`) carry an
+//   RFC-0013 diagnostic record with the failure locus (byte offset / field path),
+//   making decode failures legible (C3/G11).
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io.guarantee_matrix;
+
+// Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`
+// (RFC-0016 §4.1 C2; VR-5).
+//
+// All values are `'static` strings matching the lattice names so they can be
+// asserted in tests without a dependency on the core lattice type from this
+// matrix module.
+// Declared: renamed Exact -> Exact_kw (reserved-word collision, DN-140)
+// Declared: renamed Proven -> Proven_kw (reserved-word collision, DN-140)
+// Declared: renamed Empirical -> Empirical_kw (reserved-word collision, DN-140)
+// Declared: renamed Declared -> Declared_kw (reserved-word collision, DN-140)
+type GuaranteeTag = Exact_kw | Proven_kw | Empirical_kw | Declared_kw;
+
+impl Show[GuaranteeTag] for GuaranteeTag {
+  fn render(x: GuaranteeTag) => Bytes =
+    match x { Exact_kw => "Exact_kw", Proven_kw => "Proven_kw", Empirical_kw => "Empirical_kw", Declared_kw => "Declared_kw" };
+};
+
+fn eq_GuaranteeTag(a: GuaranteeTag, b: GuaranteeTag) => Binary{1} =
+  match a { Exact_kw => match b { Exact_kw => 0b1, _ => 0b0 }, Proven_kw => match b { Proven_kw => 0b1, _ => 0b0 }, Empirical_kw => match b { Empirical_kw => 0b1, _ => 0b0 }, Declared_kw => match b { Declared_kw => 0b1, _ => 0b0 } };
+
+impl GuaranteeTag {
+  // Human-readable name matching the lattice notation (`"Exact"`, etc.).
+  fn as_str(self: GuaranteeTag) => Bytes = match self { Exact_kw => "Exact", Proven_kw => "Proven", Empirical_kw => "Empirical", Declared_kw => "Declared" };
+};
+
+// Fallibility classification for an exported op (C1).
+type Fallibility = Total | Fallible;
+
+impl Show[Fallibility] for Fallibility {
+  fn render(x: Fallibility) => Bytes =
+    match x { Total => "Total", Fallible => "Fallible" };
+};
+
+fn eq_Fallibility(a: Fallibility, b: Fallibility) => Binary{1} =
+  match a { Total => match b { Total => 0b1, _ => 0b0 }, Fallible => match b { Fallible => 0b1, _ => 0b0 } };
+
+// Whether the op surfaces an EXPLAIN artifact (C3).
+type Explainable = Yes | NotApplicable;
+
+impl Show[Explainable] for Explainable {
+  fn render(x: Explainable) => Bytes =
+    match x { Yes => "Yes", NotApplicable => "NotApplicable" };
+};
+
+fn eq_Explainable(a: Explainable, b: Explainable) => Binary{1} =
+  match a { Yes => match b { Yes => 0b1, _ => 0b0 }, NotApplicable => match b { NotApplicable => 0b1, _ => 0b0 } };
+
+// One row in the `std.io` + `serialize` guarantee matrix (RFC-0016 §4.5).
+type MatrixRow = MatrixRow(Bytes, GuaranteeTag, Fallibility, Bytes, Bytes, Explainable);
+
+impl Show[MatrixRow] for MatrixRow {
+  fn render(x: MatrixRow) => Bytes =
+    match x { MatrixRow(p0, p1, p2, p3, p4, p5) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("MatrixRow(", render(p0)), ", "), render(p1)), ", "), render(p2)), ", "), render(p3)), ", "), render(p4)), ", "), render(p5)), ")") };
+};
+
+fn eq_MatrixRow(a: MatrixRow, b: MatrixRow) => Binary{1} =
+    match a { MatrixRow(p0, p1, p2, p3, p4, p5) => match b { MatrixRow(q0, q1, q2, q3, q4, q5) => and(and(and(and(and(bytes_eq(p0, q0), eq_GuaranteeTag(p1, q1)), eq_Fallibility(p2, q2)), bytes_eq(p3, q3)), bytes_eq(p4, q4)), eq_Explainable(p5, q5)) } };

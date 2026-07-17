@@ -1,0 +1,164 @@
+// nodule: std.rand
+// `std.rand` — Ring 2 / Tier B random number generation with reified, named nondeterminism
+// (M-531 / #171).
+//
+// # Summary
+//
+// `std.rand` is the random-number surface, held to the RFC-0016 §4.1 contract. Its honesty crux
+// is **C6 in its sharpest form**: nondeterminism is reified and named (RT3). A generator that
+// consumes real entropy carries a *declared* `entropy` effect on its signature, so a
+// deterministic-fragment program **cannot** pull randomness silently. The only way to obtain
+// reproducible "randomness" is the structurally distinct [`Rng`] — a seeded, pure-function
+// generator whose state is an ordinary immutable value.
+//
+// # Architecture
+//
+// Two structurally distinct constructs:
+//
+// 1. **[`Rng`]** — a seeded generator *value*: `{ algo, state }`. All draw functions are pure
+//    functions returning `(output, Rng')`. Same seed ⇒ same sequence — reproducibility is
+//    value-equality (C4 / ADR-003). No ambient global RNG.
+//
+// 2. **[`EntropyRng`]** — an entropy-backed generator. Constructing one and drawing from it carry
+//    the *declared* [`EntropyEffect`] effect (C6 / RFC-0014 / RT3). A deterministic fragment
+//    cannot call these. [`seed_from_entropy`] bridges the two: it draws entropy *once* (declared),
+//    mints a reproducible seed, and hands back a pure [`Rng`].
+//
+// # PRNG algorithm
+//
+// The seeded generator uses **xoshiro256++** (Blackman & Vigna 2021): a well-studied, fast
+// 256-bit state PRNG with a 2^256 - 1 period, widely used in production. Its statistical quality
+// is `Empirical` (passes TestU01 BigCrush; the *uniformity* claim is `Declared`/`Empirical`,
+// not `Proven` — VR-5). — FLAG (Q2): final algorithm selection is ratified at M-501/RFC-0016;
+// the tag is held at `Empirical`/`Declared` pending that decision.
+//
+// # Guarantee matrix (RFC-0016 §4.5)
+//
+// Encoded as data in [`GUARANTEE_MATRIX`] and asserted in tests — never prose-only.
+//
+// # Contract conformance (RFC-0016 §4.1 C1–C6)
+//
+// - **C1 never-silent:** every fallible op returns `Result<_, RandErr>`; no sentinel, no silent
+//   fallback. An unavailable entropy source is `Err(RandErr::EntropyUnavailable)` — **never** a
+//   silent fixed/zero seed.
+// - **C2 honest tag:** mechanism-determinism (`Exact`) and statistical quality
+//   (`Declared`/`Empirical`) are tagged on *separate* footings; no distribution row reaches
+//   `Proven` without a checked theorem (VR-5).
+// - **C3 no black boxes / EXPLAIN:** a seeded generator's `(algo, state, seed)` is fully
+//   inspectable; a draw can report its algorithm; no opaque global RNG.
+// - **C4 value-semantic:** [`Rng`] is an immutable value — a draw returns a *new* generator;
+//   the input is unchanged.
+// - **C5 above the kernel:** no `unsafe`, no FFI. The platform-entropy `wild`/FFI floor is
+//   deferred to the `std-sys` phylum (FLAGGED §8-Q6 / M-541). The injectable [`EntropySource`]
+//   trait is the seam for that floor without polluting pure `std.rand`.
+// - **C6 declared bounded effects:** the seeded surface is pure (`effects: none`). The entropy
+//   surface declares [`EntropyEffect`] on every op drawing real nondeterminism (RT3 / RFC-0014).
+//
+// Design spec: `docs/spec/stdlib/rand.md`; contract: RFC-0016 §4.1 (C1–C6);
+// guarantee matrix: §4.5.
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 2, Tier B):** Randomness is representation-neutral — [`Rng`] produces
+// raw bits whose `Repr` is the caller's responsibility. `EntropyEffect` is always declared on
+// any op that draws real nondeterminism; there is no ambient entropy (no global RNG, no silent
+// entropy draw). The entropy effect declaration is inspectable on the return type, not a side
+// effect — a deterministic-fragment program cannot pull it silently.
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/rand.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.rand;
+
+// Errors returned by `std.rand` operations (C1 — every fallible op returns this
+// explicitly; never a sentinel or a silent fallback).
+//
+// The variants map exactly to the spec §3 error set:
+// `EmptyRange | BadProbability | EmptyDomain | BadParameter | EntropyUnavailable`.
+type RandErr = EmptyRange | BadProbability | EmptyDomain | BadParameter | EntropyUnavailable;
+
+impl Show[RandErr] for RandErr {
+  fn render(x: RandErr) => Bytes =
+    match x { EmptyRange => "EmptyRange", BadProbability => "BadProbability", EmptyDomain => "EmptyDomain", BadParameter => "BadParameter", EntropyUnavailable => "EntropyUnavailable" };
+};
+
+fn eq_RandErr(a: RandErr, b: RandErr) => Binary{1} =
+  match a { EmptyRange => match b { EmptyRange => 0b1, _ => 0b0 }, BadProbability => match b { BadProbability => 0b1, _ => 0b0 }, EmptyDomain => match b { EmptyDomain => 0b1, _ => 0b0 }, BadParameter => match b { BadParameter => 0b1, _ => 0b0 }, EntropyUnavailable => match b { EntropyUnavailable => 0b1, _ => 0b0 } };
+
+// The reified `entropy` declared effect (C6 / RT3 / RFC-0014).
+//
+// A function that returns this type in a result-bearing position (e.g. wrapped in an
+// `! entropy`-annotated signature in the future Mycelium language) declares that it draws
+// real nondeterminism. This is the Rust-side bearer: it is a zero-cost proof that entropy
+// was consumed, not fabricated.
+//
+// In Rust (before the Mycelium-lang migration) the effect is *named and documented* rather
+// than enforced structurally by the type system — the RT3 rule is enforced by convention
+// (use `EntropyRng` for entropy, `Rng` for determinism) and by the test suite checking that
+// the seeded surface is reproducible without any `EntropyEffect`.
+//
+// FLAG (Q4 / §8-Q6): the real OS entropy floor is the `std-sys` phylum (M-541); only the
+// declared-effect structure and the injectable [`EntropySource`] seam live here.
+type EntropyEffect = EntropyEffect;
+
+impl Show[EntropyEffect] for EntropyEffect {
+  fn render(x: EntropyEffect) => Bytes =
+    "EntropyEffect";
+};
+
+fn eq_EntropyEffect(a: EntropyEffect, b: EntropyEffect) => Binary{1} =
+    0b1;
+
+// The PRNG algorithm used by a [`Rng`] — the inspectable algorithm tag (C3).
+//
+// This is the EXPLAIN artifact for the seeded generator: callers can inspect which
+// algorithm produced a draw without reverse-engineering state.
+//
+// FLAG (Q2): the concrete algorithm choice is ratified at M-501/RFC-0016. The current
+// default is `Xoshiro256PlusPlus` — a well-studied, fast PRNG with 2^256 - 1 period
+// (Blackman & Vigna 2021). Statistical quality is `Empirical` (passes TestU01 BigCrush),
+// not `Proven`.
+type RngAlgo = Xoshiro256PlusPlus;
+
+impl Show[RngAlgo] for RngAlgo {
+  fn render(x: RngAlgo) => Bytes =
+    match x { Xoshiro256PlusPlus => "Xoshiro256PlusPlus" };
+};
+
+fn eq_RngAlgo(a: RngAlgo, b: RngAlgo) => Binary{1} =
+    0b1;
+
+fn rotl64(x: Binary{64}, k: Binary{32}) => Binary{64} = or(shl_u(x, width_cast(k, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000)), shr_u(x, sub_u(0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000, width_cast(k, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000))));
+
+// A deterministic, injectable [`EntropySource`] for tests.
+//
+// Fills buffers with a fixed counter-based pattern so the test suite exercises the full
+// entropy-surface code path without any OS calls. This is **not** a source of real entropy
+// and must not be used outside tests.
+//
+// FLAG (Q4 / §8-Q6): real OS entropy is in `std-sys` (M-541). This stub is the test seam.
+type StubEntropy = StubEntropy(Binary{8});
+
+impl StubEntropy {
+  // Build a new stub with the given starting byte.
+  // Declared: renamed `impl StubEntropy { fn new }` -> `_11StubEntropy3new` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _11StubEntropy3new(start: Binary{8}) => StubEntropy = StubEntropy(start);
+};

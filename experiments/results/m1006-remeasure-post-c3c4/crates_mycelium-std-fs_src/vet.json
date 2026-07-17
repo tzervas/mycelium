@@ -1,0 +1,138 @@
+{
+  "records": [
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/error.myc",
+      "source_file": "crates/mycelium-std-fs/src/error.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 7,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/guarantee_matrix.myc",
+      "source_file": "crates/mycelium-std-fs/src/guarantee_matrix.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/lib.myc",
+      "source_file": "crates/mycelium-std-fs/src/lib.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.fs.<use>`: `use std.fs.error.ErrnoClass`: no such name `std.fs.error.ErrnoClass` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
+      "non_test_items": 12,
+      "emitted_items": 6
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/metadata.myc",
+      "source_file": "crates/mycelium-std-fs/src/metadata.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 5,
+      "emitted_items": 5
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/options.myc",
+      "source_file": "crates/mycelium-std-fs/src/options.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 3,
+      "emitted_items": 3
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/path.myc",
+      "source_file": "crates/mycelium-std-fs/src/path.rs",
+      "class": "Clean",
+      "exit_code": 0,
+      "diagnostic": "",
+      "non_test_items": 6,
+      "emitted_items": 2
+    },
+    {
+      "myc_file": "experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-std-fs_src/substrate.myc",
+      "source_file": "crates/mycelium-std-fs/src/substrate.rs",
+      "class": "CheckError",
+      "exit_code": 3,
+      "diagnostic": "check-error: check error in `std.fs.substrate.<use>`: `use std.fs.error.FsErr`: no such name `std.fs.error.FsErr` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)",
+      "non_test_items": 8,
+      "emitted_items": 4
+    }
+  ],
+  "total_non_test_items": 47,
+  "total_emitted_items": 28,
+  "total_checked_clean_items": 18,
+  "class_counts": {
+    "CheckError": 2,
+    "Clean": 5
+  },
+  "phylum": {
+    "ran": true,
+    "ok": true,
+    "nodules": [
+      {
+        "nodule": "std.fs.error",
+        "file": "error.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.guarantee_matrix",
+        "file": "guarantee_matrix.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs",
+        "file": "lib.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.metadata",
+        "file": "metadata.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.options",
+        "file": "options.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.path",
+        "file": "path.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      },
+      {
+        "nodule": "std.fs.substrate",
+        "file": "substrate.myc",
+        "class": "Clean",
+        "site": null,
+        "on": null,
+        "message": null
+      }
+    ],
+    "diagnostic": ""
+  },
+  "total_checked_clean_items_phylum": 28
+}

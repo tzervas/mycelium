@@ -1,0 +1,92 @@
+// nodule: std.fs
+// `std.fs` — filesystem over affine `substrate` handles (M-528).
+//
+// Ring 2 / Tier B. The filesystem surface — open a path to an affine handle, read/write/append
+// bytes through it, `stat` metadata, `list` a directory, and `create`/`remove`/`rename` entries
+// — layered on the `io` byte-stream surface (M-514, FLAGGED seam below).
+//
+// # Honesty crux (C1/G2)
+// Every path, permission, or IO failure is an explicit `Result::Err` carrying an RFC-0013
+// diagnostic record that names *the path* and the *errno-class cause* — there is:
+// - **no silent create-on-write**: opening for write without `create` is `Err(NotFound)`,
+// - **no silent truncation**: an existing file is not zeroed unless the caller declared `truncate`,
+// - **no silent partial write**: a short write is surfaced as the actual count, never swallowed,
+// - **no silent overwrite**: `copy`/`rename` to an existing target without declared intent is an error.
+//
+// A `File` handle is **affine** (LR-8): consumed exactly once; use-after-consume is
+// `Err(UseAfterConsume)`, never undefined behaviour.
+//
+// # Guarantee tag
+// Every exported op tags `Exact` — `fs` carries no accuracy/approximation semantics (VR-5:
+// `Exact` is the honest floor, not an overclaim). The honesty is borne by C1 (fallibility)
+// and C6 (declared effects), not by a C2 precision tag.
+//
+// # In-memory substrate
+// The real OS syscall floor (`open`/`read`/`write`/`stat`/…) is deferred to `std-sys` (M-541 —
+// **FLAG Q1**). This crate implements the honest surface over a fully-testable `InMemoryFs`
+// substrate. The `FsBackend` trait is the seam; `RealFs` wires in when M-541 lands.
+//
+// # FLAGs (see spec §7)
+// - **Q1** — Real-OS syscall floor (`RealFs`) deferred to `std-sys` (M-541 / RFC-0016 §8-Q6).
+// - **Q2** — The `io` seam: local `ByteSink`/`ByteSource` stand-ins replace M-514 `Read`/`Write`.
+//   Thread M-514's surface when it lands; do NOT pre-commit io's signatures from `fs`.
+// - **Q3** — Path model + portability: `Path` is currently a UTF-8 newtype (conservative). Non-UTF-8
+//   OS paths are an open question (spec §7-Q3 / RFC-0016 §8-Q3); a lossy decode would violate C1.
+// - **Q4** — Atomicity, symlinks, and `walk_dir`: cross-platform `rename`/`copy` atomicity,
+//   symlink follow-vs-nofollow as declared intent, and recursive `walk_dir` (with a traversal
+//   budget) are unsettled (spec §7-Q4). In-memory substrate always follows no symlinks (flat map).
+// - **Q5** — Capability-scoped filesystem effect: whether the `io` effect is ambient or a scoped
+//   capability (WASI-style preopens) is deferred (spec §7-Q5 / RFC-0016 §8-Q3/Q6).
+//
+// # Design spec
+// `docs/spec/stdlib/fs.md` (M-528, #169). Contract: RFC-0016 §4.1 (C1–C6). Guarantee matrix:
+// spec §4 / [`guarantee_matrix::MATRIX`].
+//
+// ## Ambient Representation (RFC-0012 §8-Q3)
+//
+// This crate's public API participates in the RFC-0012 ambient-representation contract:
+// the representation choice (binary/ternary/dense/VSA) is implicit at the call site but
+// always reified, queryable, and EXPLAIN-able — never a black box (C3/SC-3).
+// [Declared per RFC-0012; direction accepted in DN-07 §8-Q3; per-ring pass scheduled as M-540.]
+//
+// **For this crate (Ring 2, Tier B):** FS ops are representation-opaque at the byte level —
+// filesystem handles move raw bytes without interpreting any `Repr`. Encoding is always the
+// caller's responsibility; no silent re-encoding occurs at the FS layer. The `Path` type is a
+// UTF-8 newtype (conservative — see FLAG Q3); no non-UTF-8 path is silently coerced (C1).
+//
+// # Stability (DN-66 freeze, 2026-07-01)
+//
+// This crate's public API, as documented in `docs/spec/stdlib/fs.md` (spec status:
+// Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+// [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+// A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//
+// **Unfrozen for the gap-closure window (ADR-045, Accepted 2026-07-10):** this DN-66 freeze is
+// lifted per [ADR-045](../../../docs/adr/ADR-045-Kernel-And-Lexicon-Unfreeze-For-Early-Gap-Closure.md)
+// for a bounded window; a breaking change here still needs a spec amendment + changelog entry
+// (G2), not a silent edit — the window closes per the ADR-045 §2.4 re-freeze conditions, bound by
+// the DN-99 residual worklist.
+// It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs;
+
+use std.fs.error.ErrnoClass;
+use std.fs.error.FsErr;
+
+use std.fs.guarantee_matrix.Effects;
+use std.fs.guarantee_matrix.Explainable;
+use std.fs.guarantee_matrix.Fallibility;
+use std.fs.guarantee_matrix.MatrixRow;
+use std.fs.guarantee_matrix.Wild;
+
+use std.fs.metadata.FileKind;
+use std.fs.metadata.Metadata;
+use std.fs.metadata.Permissions;
+
+use std.fs.options.OpenOptions;
+
+use std.fs.path.Path;
+
+use std.fs.substrate.InMemHandle;

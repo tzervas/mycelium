@@ -1,0 +1,56 @@
+// nodule: std.fs.options
+// `OpenOptions` — explicit, declared open intent (C1/G2 — never a silent default).
+//
+// Every field defaults to `false`. Opening an absent path without `create` is `Err(NotFound)`,
+// not a conjured file. Opening an existing file without `truncate` preserves its bytes, not a
+// silent zero-out. The mutation is the caller's **declared intent or it does not happen** — this
+// is the spec §4.4 honesty crux made structural.
+//
+// Design spec: `docs/spec/stdlib/fs.md` §3; contract: RFC-0016 §4.1 C1/G2.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.fs.options;
+
+// Declared open intent for `open` (spec §3).
+//
+// All fields default `false`. Every create/truncate option is **opt-in, never a default**:
+//
+// | Field | When `true` |
+// |---|---|
+// | `read` | Allow reading through the handle |
+// | `write` | Allow writing through the handle |
+// | `append` | Allow appending (implies write; position always at end) |
+// | `create` | Create the file if absent; open existing file if present |
+// | `create_new` | Create the file, failing with `AlreadyExists` if it exists |
+// | `truncate` | Zero-out the file's contents on open; requires `write` |
+//
+// # C1 — never-silent
+// - Opening absent path, `create = false`, `create_new = false` → `Err(NotFound)` (no conjured file).
+// - Opening existing path, `truncate = false` → existing bytes preserved (no silent zero-out).
+// - `create_new = true` on an existing path → `Err(AlreadyExists)` (no silent overwrite).
+pub type OpenOptions = OpenOptions(Bool, Bool, Bool, Bool, Bool, Bool);
+
+impl Show[OpenOptions] for OpenOptions {
+  fn render(x: OpenOptions) => Bytes =
+    match x { OpenOptions(p0, p1, p2, p3, p4, p5) => bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat(bytes_concat("OpenOptions(", render(p0)), ", "), render(p1)), ", "), render(p2)), ", "), render(p3)), ", "), render(p4)), ", "), render(p5)), ")") };
+};
+
+fn eq_OpenOptions(a: OpenOptions, b: OpenOptions) => Binary{1} =
+    match a { OpenOptions(p0, p1, p2, p3, p4, p5) => match b { OpenOptions(q0, q1, q2, q3, q4, q5) => and(and(and(and(and(match p0 { True => match q0 { True => 0b1, False => 0b0 }, False => match q0 { True => 0b0, False => 0b1 } }, match p1 { True => match q1 { True => 0b1, False => 0b0 }, False => match q1 { True => 0b0, False => 0b1 } }), match p2 { True => match q2 { True => 0b1, False => 0b0 }, False => match q2 { True => 0b0, False => 0b1 } }), match p3 { True => match q3 { True => 0b1, False => 0b0 }, False => match q3 { True => 0b0, False => 0b1 } }), match p4 { True => match q4 { True => 0b1, False => 0b0 }, False => match q4 { True => 0b0, False => 0b1 } }), match p5 { True => match q5 { True => 0b1, False => 0b0 }, False => match q5 { True => 0b0, False => 0b1 } }) } };
+
+impl OpenOptions {
+  // All-false options: pure open (no create, no truncate, no write).
+  //
+  // This is the **only** constructor. Every flag must be explicitly enabled by the caller;
+  // there is no convenience constructor that secretly enables a subset of flags.
+  // Declared: renamed `impl OpenOptions { fn new }` -> `_11OpenOptions3new` (D4 inherent-impl flat-fn desugar + DN-140 length-prefix mangle, M-664).
+  fn _11OpenOptions3new() => OpenOptions = OpenOptions(False, False, False, False, False, False);
+  // Whether this intent requests any write capability (write or append).
+  fn wants_write(self: OpenOptions) => Bool = match ((match self { OpenOptions(_, p1, _, _, _, _) => p1 })) { True => True, False => ((match self { OpenOptions(_, _, p2, _, _, _) => p2 })) };
+};
+
+// Declared: prelude-trait remapping — foreign-trait impl of a prelude-seeded single-param trait (DN-122 Ord3 MVP and/or DN-129 Default→Init); the `[<SelfTy>]` argument below is synthesized (Rust's zero-explicit-arg `impl Trait for T` never spells it — Mycelium stage-1 has no implicit Self slot, RFC-0019 §4.1).
+impl Init[OpenOptions] for OpenOptions {
+  fn init() => OpenOptions = _11OpenOptions3new();
+};

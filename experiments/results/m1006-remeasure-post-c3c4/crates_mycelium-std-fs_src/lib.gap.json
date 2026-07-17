@@ -1,0 +1,174 @@
+{
+  "source": "crates/mycelium-std-fs/src/lib.rs",
+  "emitted_items": [
+    "use:ErrnoClass,FsErr",
+    "use:Effects,Explainable,Fallibility,MatrixRow,Wild",
+    "use:FileKind,Metadata,Permissions",
+    "use:OpenOptions",
+    "use:Path",
+    "use:InMemHandle"
+  ],
+  "gaps": [
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 1,
+      "col": 1,
+      "category": "InnerAttr",
+      "rust_construct": "InnerAttr",
+      "snippet": "# ! [forbid (unsafe_code)]",
+      "reason": "crate/file-level inner attributes (#![...]) are not transpiled (no nodule-header equivalent for these Rust-specific directives)",
+      "item_name": null
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 71,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod error ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "error"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 72,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod guarantee_matrix ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "guarantee_matrix"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 73,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod metadata ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "metadata"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 74,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod options ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "options"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 75,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub mod path ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "path"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 76,
+      "col": 1,
+      "category": "ModuleDecl",
+      "rust_construct": "ModuleDecl",
+      "snippet": "pub (crate) mod substrate ;",
+      "reason": "external `mod foo;` declaration — file-linkage, not translatable library surface (Mycelium's nodule-per-file model makes the module tree implicit in the file layout; the sibling file transpiles as its own nodule). Excluded from the expressible-fraction denominator, recorded not dropped",
+      "item_name": "substrate"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 81,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "pub use guarantee_matrix :: { Effects , Explainable , Fallibility , MatrixRow , Wild , MATRIX } ;",
+      "reason": "`use guarantee_matrix::MATRIX` — `MATRIX` is not among sibling `guarantee_matrix`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:Effects,Explainable,Fallibility,MatrixRow,Wild"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 88,
+      "col": 1,
+      "category": "Import",
+      "rust_construct": "Import",
+      "snippet": "use substrate :: { InMemHandle , InMemoryFs } ;",
+      "reason": "`use substrate::InMemoryFs` — `InMemoryFs` is not among sibling `substrate`'s successfully-emitted surface in this batch (the sibling file itself gapped it rather than emitting it). Flagged, not guessed (VR-5/G2)",
+      "item_name": "use:InMemHandle"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 90,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An affine open-file handle (LR-8: consumed exactly once).\"] # [doc = \"\"] # [doc = \" Obtained from [`Fs::open`]. Must be explicitly closed with [`Fs::close`]; any operation on a\"] # [doc = \" consumed handle returns `Err(FsErr::UseAfterConsume)`. This structural constraint closes the\"] # [doc = \" only resource-leak vector (LR-9): an unclosed handle is a leak; close errors are surfaced (C1).\"] # [doc = \"\"] # [doc = \" # FLAG (LR-8 / Rust linear types)\"] # [doc = \" Rust does not have native linear types, so the single-consumption invariant is enforced at\"] # [doc = \" runtime via a `consumed` flag. A future Mycelium-lang implementation can enforce it at\"] # [doc = \" compile time (RFC-0006 LR-8). Until then, every op checks `consumed` first.\"] # [derive (Debug)] pub struct File { handle : InMemHandle , }",
+      "reason": "struct `File` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
+      "item_name": "File"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 105,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl File { # [doc = \" The original path this handle was opened for (for diagnostics).\"] # [must_use] pub fn path (& self) -> & str { & self . handle . path } # [doc = \" Whether this handle has been consumed.\"] # [must_use] pub fn is_consumed (& self) -> bool { self . handle . consumed } }",
+      "reason": "no member of this impl block could be transpiled (2 sub-issue(s)): impl method `path` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`); impl method `is_consumed` body: field access on a non-`self` base — the transpiler tracks no local types, so the projection cannot be resolved to a constructor position (only `self.<field>` desugars to a `match`)",
+      "item_name": "File"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 119,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" An open directory iterator handle.\"] # [doc = \"\"] # [doc = \" Produced by [`Fs::read_dir`]. Yields child paths as `String`s. This is an in-memory\"] # [doc = \" snapshot iterator; in the real-OS path it would iterate `readdir(3)` entries.\"] # [derive (Debug)] pub struct DirIter { entries : std :: vec :: IntoIter < String > , }",
+      "reason": "struct `DirIter` has a field type with no confirmed mapping (qualified type path `std :: vec :: IntoIter < String >` — collapsing to its last segment would risk colliding with an unrelated same-named local type (e.g. `std::cmp::Ordering` vs a local `Ordering`); left an explicit gap rather than guessed (VR-5))",
+      "item_name": "DirIter"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 128,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Iterator for DirIter { type Item = String ; fn next (& mut self) -> Option < Self :: Item > { self . entries . next () } }",
+      "reason": "trait-impl of non-prelude trait `Iterator` — no ambient trait definition and synthetic trait emission is refused (DN-34 §8.8 / DN-122 MVP); gapped the whole impl so the residual cannot file-poison myc-check (G2; express gap-close 2026-07-16)",
+      "item_name": "DirIter"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 137,
+      "col": 1,
+      "category": "Struct",
+      "rust_construct": "Struct",
+      "snippet": "# [doc = \" The filesystem context: holds the substrate and exposes all effectful fs ops.\"] # [doc = \"\"] # [doc = \" All effectful operations (`open`, `stat`, `read_dir`, `create_dir`, `remove_file`,\"] # [doc = \" `remove_dir`, `rename`, `copy`) are methods on `Fs`. This makes the filesystem effect\"] # [doc = \" explicit and inspectable: a function that does not hold an `&mut Fs` cannot perform\"] # [doc = \" filesystem IO (partial C6 capability scoping — see FLAG Q5).\"] # [doc = \"\"] # [doc = \" Currently backed by `InMemoryFs`. Wire `RealFs` (M-541) when the `std-sys` phylum lands.\"] pub struct Fs { backend : InMemoryFs , }",
+      "reason": "struct `Fs` uses named fields and references a type not resolvable in-file — emitting it positionally would introduce an unresolved reference that poisons the file's `myc check`; left gapped under the M-1006 resolvability gate (VR-5/G2)",
+      "item_name": "Fs"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 149,
+      "col": 1,
+      "category": "Impl",
+      "rust_construct": "Impl",
+      "snippet": "impl Fs { # [doc = \" Create a new `Fs` over a fresh in-memory substrate.\"] # [doc = \"\"] # [doc = \" # Effects: none (pure construction)\"] # [doc = \" The in-memory substrate is fully testable without OS interaction.\"] # [must_use] pub fn in_memory () -> Self { Self { backend : InMemoryFs :: new () , } } # [doc = \" Create a new `Fs` with a simulated disk limit (for testing `DiskFull` paths).\"] # [must_use] pub fn in_memory_with_limit (bytes : u64) -> Self { Self { backend : InMemoryFs :: new () . with_disk_limit (bytes) , } } # [doc = \" Construct a `Path` from a UTF-8 string.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, total, effects: none\"] # [must_use] pub fn path (& self , s : impl Into < String >) -> Path { Path :: new (s) } # [doc = \" Check whether a path exists.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<bool, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `stat`/`access` syscall; in-memory: map lookup)\"] # [doc = \"\"] # [doc = \" Returns `Err(PermDenied)` when the OS denies access to the path. **Never** returns `Ok(false)`\"] # [doc = \" as a substitute for a permission failure (C1: no silent clamp).\"] # [doc = \"\"] # [doc = \" # FLAG (Q5): the `io` effect is currently ambient on this `&mut Fs`; the capability-scoped\"] # [doc = \" design (WASI-style) is deferred (spec §7-Q5).\"] pub fn exists (& self , path : & Path) -> Result < bool , FsErr > { self . backend . exists (path . as_str ()) } # [doc = \" Get filesystem metadata for a path.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<Metadata, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `stat`/`fstat` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied`\"] pub fn stat (& self , path : & Path) -> Result < Metadata , FsErr > { self . backend . stat (path . as_str ()) } # [doc = \" Open a path to an affine `File` handle under an explicit `OpenOptions`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<File, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `open`/`openat` syscall)\"] # [doc = \" # Errors\"] # [doc = \" - `NotFound` — path absent and `create`/`create_new` not set (**no silent create**, C1)\"] # [doc = \" - `AlreadyExists` — `create_new` set and path exists (**no silent overwrite**, C1)\"] # [doc = \" - `PermDenied` — OS access denied\"] # [doc = \" - `IsADirectory` — path is a directory; open a file with `read_dir` for directories\"] # [doc = \" - `NotFound` — parent directory does not exist (create/create_new path)\"] pub fn open (& mut self , path : & Path , opts : & OpenOptions) -> Result < File , FsErr > { let handle = self . backend . open (path . as_str () , opts) ? ; Ok (File { handle }) } # [doc = \" Read bytes from an open `File` handle into `buf`. Returns the bytes read.\"] # [doc = \"\"] # [doc = \" A short read (fewer than `buf.len()` bytes) is returned explicitly — not swallowed (C1).\"] # [doc = \" `0` means EOF.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<usize, FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `read` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `PermDenied` | `NotFound` | `IsADirectory`\"] pub fn read (& self , file : & mut File , buf : & mut [u8]) -> Result < usize , FsErr > { self . backend . read (& mut file . handle , buf) } # [doc = \" Write bytes to an open `File` handle. Returns the bytes written.\"] # [doc = \"\"] # [doc = \" A short write (fewer than `buf.len()` bytes) is returned explicitly — never swallowed (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<usize, FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `write` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `PermDenied` | `DiskFull` | `NotFound`\"] pub fn write (& mut self , file : & mut File , buf : & [u8]) -> Result < usize , FsErr > { self . backend . write (& mut file . handle , buf) } # [doc = \" Flush deferred write state for a `File` handle.\"] # [doc = \"\"] # [doc = \" In the real-OS path this calls `fsync`. In the in-memory substrate it is a consistency\"] # [doc = \" check (still surfaces `UseAfterConsume` if the handle is consumed).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io (io M-514 seam — FLAG Q2)\"] # [doc = \" # `wild`?: yes (real-OS: `fsync`/`write` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `Io` | `DiskFull`\"] pub fn flush (& self , file : & File) -> Result < () , FsErr > { self . backend . flush (& file . handle) } # [doc = \" Close (consume) a `File` handle. **This consumes the handle (LR-8).**\"] # [doc = \"\"] # [doc = \" After `close`, any subsequent use of `file` returns `Err(UseAfterConsume)`. A close error\"] # [doc = \" is surfaced, not dropped (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `close` syscall)\"] # [doc = \" # Errors: `UseAfterConsume` | `Io` | `DiskFull`\"] pub fn close (& self , file : & mut File) -> Result < () , FsErr > { self . backend . close (& mut file . handle) } # [doc = \" List the entries in a directory.\"] # [doc = \"\"] # [doc = \" Returns a `DirIter` that yields child path strings. The iterator is a snapshot — it is not\"] # [doc = \" backed by a live `readdir` stream (in the in-memory substrate; the real-OS seam will differ\"] # [doc = \" once M-541 lands).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<DirIter, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `opendir`/`readdir` syscall)\"] # [doc = \" # Errors: `NotFound` | `NotADirectory` | `PermDenied`\"] pub fn read_dir (& self , path : & Path) -> Result < DirIter , FsErr > { let entries = self . backend . read_dir (path . as_str ()) ? ; Ok (DirIter { entries : entries . into_iter () , }) } # [doc = \" Create a directory at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `mkdir` syscall)\"] # [doc = \" # Errors: `AlreadyExists` | `PermDenied` | `NotFound` (parent absent)\"] pub fn create_dir (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . create_dir (path . as_str ()) } # [doc = \" Remove a regular file at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `unlink` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `IsADirectory` (use `remove_dir` for directories)\"] pub fn remove_file (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . remove_file (path . as_str ()) } # [doc = \" Remove an **empty** directory at `path`.\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `rmdir` syscall)\"] # [doc = \" # Errors: `NotEmpty` | `NotFound` | `PermDenied`\"] pub fn remove_dir (& mut self , path : & Path) -> Result < () , FsErr > { self . backend . remove_dir (path . as_str ()) } # [doc = \" Rename / move `from` to `to`.\"] # [doc = \"\"] # [doc = \" **No silent overwrite**: if `to` already exists, returns `Err(AlreadyExists)` (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<(), FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `rename`/`renameat` syscall)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `CrossDevice` | `AlreadyExists`\"] # [doc = \" # FLAG (Q4): cross-device rename atomicity is unsettled; in-memory ignores it.\"] pub fn rename (& mut self , from : & Path , to : & Path) -> Result < () , FsErr > { self . backend . rename (from . as_str () , to . as_str ()) } # [doc = \" Copy `from` to `to`. Returns the number of bytes copied.\"] # [doc = \"\"] # [doc = \" **No silent overwrite**: if `to` already exists, returns `Err(AlreadyExists)` (C1).\"] # [doc = \"\"] # [doc = \" # Guarantee: `Exact`, `Result<u64, FsErr>`\"] # [doc = \" # Effects: io\"] # [doc = \" # `wild`?: yes (real-OS: `open`+`read`+`write` syscalls)\"] # [doc = \" # Errors: `NotFound` | `PermDenied` | `DiskFull` | `AlreadyExists`\"] pub fn copy (& mut self , from : & Path , to : & Path) -> Result < u64 , FsErr > { self . backend . copy (from . as_str () , to . as_str ()) } }",
+      "reason": "no member of this impl block could be transpiled (16 sub-issue(s)): impl method `in_memory` body: struct literal `Fs { .. }` — not an in-file single-ctor struct or enum struct-variant that emits (no constructor to build; a cross-nodule variant is an honest DN-113/DN-134-OQ-2 resolvability gap, never a fabricated out-of-file reference — VR-5/G2); impl method `in_memory_with_limit` body: struct literal `Fs { .. }` — not an in-file single-ctor struct or enum struct-variant that emits (no constructor to build; a cross-nodule variant is an honest DN-113/DN-134-OQ-2 resolvability gap, never a fabricated out-of-file reference — VR-5/G2); impl method `path` signature: unsupported Rust type form `impl Into < String >`; impl method `exists` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `stat` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `open` body: unsupported expression form `self . backend . open (path . as_str () , opts) ?`; impl method `read` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `write` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `flush` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `close` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `read_dir` body: unsupported expression form `self . backend . read_dir (path . as_str ()) ?`; impl method `create_dir` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `remove_file` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `remove_dir` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `rename` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against); impl method `copy` body: field projection `self.backend` on `Fs` — not an in-file single-ctor struct that emits (an enum / external / non-resolvable type has no constructor to `match` against)",
+      "item_name": "Fs"
+    },
+    {
+      "file": "crates/mycelium-std-fs/src/lib.rs",
+      "line": 348,
+      "col": 1,
+      "category": "TestItem",
+      "rust_construct": "TestItem",
+      "snippet": "# [cfg (test)] mod tests { use super :: * ; fn fs () -> Fs { Fs :: in_memory () } # [doc = \" Full create-write-close-read round-trip over the public API.\"] # [test] fn create_write_read_round_trip () { let mut fs = fs () ; let p = Path :: new (\"/hello.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut file = fs . open (& p , & opts_w) . expect (\"open for write\") ; let n = fs . write (& mut file , b\"hello world\") . expect (\"write\") ; assert_eq ! (n , 11) ; fs . close (& mut file) . expect (\"close\") ; let opts_r = OpenOptions :: read_only () ; let mut rfile = fs . open (& p , & opts_r) . expect (\"open for read\") ; let mut buf = vec ! [0u8 ; 16] ; let rn = fs . read (& mut rfile , & mut buf) . expect (\"read\") ; assert_eq ! (rn , 11) ; assert_eq ! (& buf [.. 11] , b\"hello world\") ; fs . close (& mut rfile) . expect (\"close\") ; } # [doc = \" `stat` returns correct metadata after creating a file.\"] # [test] fn stat_returns_correct_metadata () { let mut fs = fs () ; let p = Path :: new (\"/meta.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"open\") ; fs . write (& mut h , b\"abc\") . expect (\"write\") ; fs . close (& mut h) . expect (\"close\") ; let meta = fs . stat (& p) . expect (\"stat\") ; assert ! (meta . is_file ()) ; assert_eq ! (meta . size , 3) ; } # [doc = \" `exists` is `true` after creation, `false` before.\"] # [test] fn exists_reflects_creation_and_removal () { let mut fs = fs () ; let p = Path :: new (\"/exist_test.txt\") ; assert ! (! fs . exists (& p) . expect (\"exists before create\")) ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"open\") ; fs . close (& mut h) . expect (\"close\") ; assert ! (fs . exists (& p) . expect (\"exists after create\")) ; fs . remove_file (& p) . expect (\"remove\") ; assert ! (! fs . exists (& p) . expect (\"exists after remove\")) ; } # [doc = \" Opening an absent file without create returns `NotFound` (no silent create, C1).\"] # [doc = \" Guard: returning Ok or a default handle makes this fail.\"] # [test] fn open_absent_without_create_returns_not_found () { let mut fs = fs () ; let p = Path :: new (\"/no-such.txt\") ; let err = fs . open (& p , & OpenOptions :: read_only ()) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: NotFound { .. }) , \"expected NotFound; got {err:?}\") ; } # [doc = \" `create_new` on an existing file returns `AlreadyExists` (no silent overwrite, C1).\"] # [test] fn create_new_on_existing_returns_already_exists () { let mut fs = fs () ; let p = Path :: new (\"/dup.txt\") ; let opts_c = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_c) . expect (\"create\") ; fs . close (& mut h) . expect (\"close\") ; let opts_cn = OpenOptions :: new () . with_write (true) . with_create_new (true) ; let err = fs . open (& p , & opts_cn) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: AlreadyExists { .. }) , \"expected AlreadyExists; got {err:?}\") ; } # [doc = \" Use-after-consume returns `UseAfterConsume` (LR-8 — never UB).\"] # [doc = \" Guard: returning Ok or panicking on a consumed handle makes this fail.\"] # [test] fn use_after_consume_is_explicit_error () { let mut fs = fs () ; let p = Path :: new (\"/consumed.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"open\") ; fs . close (& mut h) . expect (\"close\") ; let err = fs . write (& mut h , b\"data\") . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: UseAfterConsume { .. }) , \"use after consume must return UseAfterConsume (LR-8); got {err:?}\") ; } # [doc = \" Rename to an existing target returns `AlreadyExists` (no silent overwrite, C1).\"] # [test] fn rename_no_silent_overwrite () { let mut fs = fs () ; let opts_c = OpenOptions :: new () . with_write (true) . with_create (true) ; let a = Path :: new (\"/a.txt\") ; let b = Path :: new (\"/b.txt\") ; let mut ha = fs . open (& a , & opts_c) . expect (\"create a\") ; fs . close (& mut ha) . expect (\"close\") ; let mut hb = fs . open (& b , & opts_c . clone ()) . expect (\"create b\") ; fs . close (& mut hb) . expect (\"close\") ; let err = fs . rename (& a , & b) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: AlreadyExists { .. }) , \"rename to existing must return AlreadyExists; got {err:?}\") ; } # [doc = \" Copy to an existing target returns `AlreadyExists` (no silent overwrite, C1).\"] # [test] fn copy_no_silent_overwrite () { let mut fs = fs () ; let opts_c = OpenOptions :: new () . with_write (true) . with_create (true) ; let a = Path :: new (\"/src.txt\") ; let b = Path :: new (\"/dst.txt\") ; let mut ha = fs . open (& a , & opts_c) . expect (\"create src\") ; fs . close (& mut ha) . expect (\"close\") ; let mut hb = fs . open (& b , & opts_c . clone ()) . expect (\"create dst\") ; fs . close (& mut hb) . expect (\"close\") ; let err = fs . copy (& a , & b) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: AlreadyExists { .. }) , \"copy to existing must return AlreadyExists; got {err:?}\") ; } # [doc = \" Truncate without write is rejected at validation time (no silent data loss).\"] # [test] fn truncate_without_write_is_rejected () { let opts = OpenOptions :: new () . with_truncate (true) ; assert ! (opts . validate () . is_err () , \"truncate without write must be invalid (C1 — no silent truncation)\") ; } # [doc = \" DiskFull is an explicit error (no silent partial write, C1).\"] # [test] fn disk_full_is_explicit_error () { let mut fs = Fs :: in_memory_with_limit (3) ; let p = Path :: new (\"/big.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"open\") ; let err = fs . write (& mut h , b\"hello\") . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: DiskFull { .. }) , \"disk full must return DiskFull; got {err:?}\") ; fs . close (& mut h) . ok () ; } # [doc = \" Creating and listing a directory works end-to-end.\"] # [test] fn create_dir_and_list () { let mut fs = fs () ; let dir = Path :: new (\"/mydir\") ; fs . create_dir (& dir) . expect (\"mkdir\") ; let p = Path :: new (\"/mydir/f.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"create file in dir\") ; fs . close (& mut h) . expect (\"close\") ; let entries : Vec < String > = fs . read_dir (& dir) . expect (\"read_dir\") . collect () ; assert ! (entries . contains (& \"/mydir/f.txt\" . to_owned ()) , \"directory must list the created file\") ; } # [doc = \" `remove_dir` on a non-empty directory returns `NotEmpty` (C1).\"] # [test] fn remove_dir_nonempty_is_error () { let mut fs = fs () ; let dir = Path :: new (\"/full-dir\") ; fs . create_dir (& dir) . expect (\"mkdir\") ; let child = Path :: new (\"/full-dir/child.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& child , & opts_w) . expect (\"create child\") ; fs . close (& mut h) . expect (\"close\") ; let err = fs . remove_dir (& dir) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: NotEmpty { .. }) , \"expected NotEmpty; got {err:?}\") ; } # [doc = \" `read_dir` on a file returns `NotADirectory` (C1).\"] # [test] fn read_dir_on_file_is_error () { let mut fs = fs () ; let p = Path :: new (\"/just-a-file.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& p , & opts_w) . expect (\"create\") ; fs . close (& mut h) . expect (\"close\") ; let err = fs . read_dir (& p) . expect_err (\"must fail\") ; assert ! (matches ! (err , FsErr :: NotADirectory { .. }) , \"expected NotADirectory; got {err:?}\") ; } # [doc = \" Path join and parent are value-semantic and deterministic (Exact, total).\"] # [test] fn path_ops_are_deterministic () { let base = Path :: new (\"/root\") ; for _ in 0 .. 3 { assert_eq ! (base . join (\"child\") , base . join (\"child\") , \"join must be deterministic\") ; } assert_eq ! (base . join (\"child\") . parent () , Some (base . clone ())) ; } # [doc = \" A short read (less than buf.len()) returns the actual count — never silently zero-padded.\"] # [doc = \" Guard: zero-padding the buffer and returning buf.len() makes this fail.\"] # [test] fn short_read_is_explicit () { let mut fs = fs () ; let p = Path :: new (\"/short.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut hw = fs . open (& p , & opts_w) . expect (\"create\") ; fs . write (& mut hw , b\"hi\") . expect (\"write 2 bytes\") ; fs . close (& mut hw) . expect (\"close\") ; let opts_r = OpenOptions :: read_only () ; let mut hr = fs . open (& p , & opts_r) . expect (\"open for read\") ; let mut buf = vec ! [0u8 ; 16] ; let n = fs . read (& mut hr , & mut buf) . expect (\"read\") ; assert_eq ! (n , 2 , \"short read must return 2, not 16 (the buffer size)\") ; assert_eq ! (& buf [.. 2] , b\"hi\") ; fs . close (& mut hr) . expect (\"close\") ; } # [doc = \" The guarantee matrix covers all spec §3 ops.\"] # [test] fn guarantee_matrix_is_complete () { assert_eq ! (MATRIX . len () , 16 , \"spec §3 lists 16 rows; matrix must match\") ; } # [doc = \" Every row in the matrix is Exact (VR-5 — fs has no accuracy semantics).\"] # [test] fn guarantee_matrix_all_rows_exact () { for row in MATRIX { assert_eq ! (row . guarantee , \"Exact\" , \"op {:?} must be Exact\" , row . op) ; } } # [doc = \" Every fallible IO row carries a non-empty error_set (C1 — never-silent contract).\"] # [test] fn guarantee_matrix_fallible_rows_have_error_sets () { for row in MATRIX { if row . fallibility == Fallibility :: ResultFallible { assert ! (! row . error_set . is_empty () , \"fallible op {:?} must name its error set (C1)\" , row . op) ; } } } # [doc = \" Append mode writes to the end of an existing file (not the beginning).\"] # [test] fn append_mode_writes_at_end () { let mut fs = fs () ; let p = Path :: new (\"/append_test.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h1 = fs . open (& p , & opts_w) . expect (\"create\") ; fs . write (& mut h1 , b\"hello\") . expect (\"write first\") ; fs . close (& mut h1) . expect (\"close\") ; let opts_a = OpenOptions :: new () . with_append (true) ; let mut h2 = fs . open (& p , & opts_a) . expect (\"open for append\") ; fs . write (& mut h2 , b\" world\") . expect (\"append\") ; fs . close (& mut h2) . expect (\"close\") ; let opts_r = OpenOptions :: read_only () ; let mut h3 = fs . open (& p , & opts_r) . expect (\"open for read\") ; let mut buf = vec ! [0u8 ; 32] ; let n = fs . read (& mut h3 , & mut buf) . expect (\"read\") ; fs . close (& mut h3) . expect (\"close\") ; assert_eq ! (& buf [.. n] , b\"hello world\" , \"append must produce 'hello world'\") ; } # [doc = \" After rename, source is gone and target has the original content.\"] # [test] fn rename_moves_content () { let mut fs = fs () ; let src = Path :: new (\"/src_rename.txt\") ; let dst = Path :: new (\"/dst_rename.txt\") ; let opts_w = OpenOptions :: new () . with_write (true) . with_create (true) ; let mut h = fs . open (& src , & opts_w) . expect (\"create\") ; fs . write (& mut h , b\"moved\") . expect (\"write\") ; fs . close (& mut h) . expect (\"close\") ; fs . rename (& src , & dst) . expect (\"rename\") ; assert ! (! fs . exists (& src) . unwrap () , \"source must be gone after rename\") ; assert ! (fs . exists (& dst) . unwrap () , \"dest must exist after rename\") ; let opts_r = OpenOptions :: read_only () ; let mut rh = fs . open (& dst , & opts_r) . expect (\"open renamed\") ; let mut buf = vec ! [0u8 ; 8] ; let n = fs . read (& mut rh , & mut buf) . expect (\"read\") ; fs . close (& mut rh) . expect (\"close\") ; assert_eq ! (& buf [.. n] , b\"moved\") ; } }",
+      "reason": "#[cfg(test)] item — out of scope for this PoC's transpilation surface (excluded from the expressible-fraction denominator, but recorded, never silently skipped)",
+      "item_name": "tests"
+    }
+  ],
+  "total_top_level_items": 19
+}
