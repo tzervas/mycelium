@@ -19,8 +19,10 @@ Same set as `m1006-baseline-oneshot` / `m1006-remeasure-post-b1b2` (default-5 + 
 | `crates_mycelium-std-fs_src/` | `crates/mycelium-std-fs/src` |
 | `crates_mycelium-std-io_src/` | `crates/mycelium-std-io/src` |
 
-Each target directory holds `vet.json` + `vet-stdout.txt` / `vet-stderr.txt` (lean artifact set).
-See `summary.txt` for the raw driver log.
+Each target directory holds **full** emit (`.myc`, `*.gap.json`, and for dirs `union.gap.json` /
+`summary.json` / `REMAP.md`) plus `vet.json` + `vet-stdout.txt` / `vet-stderr.txt`. Directory
+targets include automatic `--vet --phylum` dual-report inside `vet.json`. See `summary.txt` for
+the raw driver log.
 
 ## Headlines (`Empirical`, tip `167f0bf2`)
 

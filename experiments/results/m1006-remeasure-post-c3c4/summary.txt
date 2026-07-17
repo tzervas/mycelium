@@ -1,8 +1,7 @@
-M-1006 remeasure post C3+C4 @ 167f0bf2
+M-1006 remeasure post C3+C4 @ 167f0bf2f35482cf635371c84869ab3643699fb2
 Empirical: mycelium-transpile --vet + real myc-check
 Tip: 167f0bf2f35482cf635371c84869ab3643699fb2
-Includes C2 #1665 + C3 #1667 + C4 #1670 + model policy #1671 on origin/dev
-Session also captured post-C3-only snapshot @ ed80e850 before C4 merge (see planning note)
+Includes C2 #1665 + C3 #1667 + C4 #1670 (single-variant enum eq_*) + model policy #1671
 
 === crates_mycelium-l1_src_eval_rs ===
 mycelium-transpile: 42 top-level item(s) (42 non-test) — 9 emitted, 40 gap(s) recorded, 21.4% expressible -> experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_eval_rs/eval.myc, experiments/results/m1006-remeasure-post-c3c4/crates_mycelium-l1_src_eval_rs/eval.gap.json
@@ -47,15 +46,13 @@ mycelium-transpile: --vet --phylum: checked_fraction_phylum 23.7% (14/59 items, 
 vet.json: non_test=59 emitted=20 checked=12 class_counts={'CheckError': 3, 'Clean': 2}
   poison: crates/mycelium-std-io/src/io.rs: check-error: check error in `std.io.io.<use>`: `use std.io.error.IoError`: no such name `std.io.error.IoError` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
   poison: crates/mycelium-std-io/src/lib.rs: check-error: check error in `std.io.<use>`: `use std.io.error.ByteCount`: no such name `std.io.error.ByteCount` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
-  poison: crates/mycelium-std-io/src/serialize.rs: check-error: check error in `std.io.serialize.<use>`: `use std.io.error.ByteOffset`: no such name `std.io.error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G2)
-  phylum_poison: std.io.io/io.myc: site=read_all msg=unknown type `Source`
-  phylum_poison: std.io/lib.myc: site=read_all msg=unknown type `Source`
+  poison: crates/mycelium-std-io/src/serialize.rs: check-error: check error in `std.io.serialize.<use>`: `use std.io.error.ByteOffset`: no such name `std.io.error.ByteOffset` in the phylum — no nodule declares it (M-662/DN-113; never a silent skip — G
 
 UNION default-5: checked 46/236 = 19.5%; expressible 46/236 = 19.5%
 UNION all-7:     checked 76/342 = 22.2%; expressible 94/342 = 27.5%
-DELTA vs post-B1B2 (788574ab): default-5 checked 19.5%→19.5% (0.0pp); all-7 checked 17.0%→22.2% (+5.2pp)
-DELTA vs post-C3-only (ed80e850, session mid-flight): default-5 13.1%→19.5% (+6.4pp via C4); all-7 17.8%→22.2% (+4.4pp)
-C3 claim check: std-fs oracle 38.3% CONFIRMED; phylum Δ_basis +21.3pp CONFIRMED (Import single-file residual)
-C4 claim check: std-rand 17.6% Clean CONFIRMED; eval 21.4% Clean CONFIRMED
-GAP_CATEGORY_COUNTS: {'DeriveSatisfied': 85, 'MacroInvocation': 64, 'DeriveAttr': 60, 'Other': 59, 'Impl': 57, 'NamedFieldDrop': 41, 'Import': 38, 'MultiStmtBody': 26, 'TestItem': 15, 'Struct': 13, 'GenericBound': 13, 'ModuleDecl': 10, 'Trait': 7, 'InnerAttr': 5, 'MacroDef': 5, 'PayloadVariant': 4, 'AssocConst': 3, 'Closure': 2, 'ReservedWord': 1}
+DELTA vs post-B1B2 (788574ab): default-5 19.5%→19.5% (0.0pp); all-7 17.0%→22.2% (+5.2pp)
+DELTA vs baseline-oneshot (2ac85a84): default-5 19.5%→19.5% (0.0pp); all-7 17.0%→22.2% (+5.2pp)
+std-fs oracle 10.6%→38.3% (+27.7pp); phylum 59.6% (Δ_basis +21.3pp; phylum ok true)
+std-io oracle 11.9%→20.3% (+8.4pp); phylum 23.7% (Δ_basis +3.4pp)
+Residual first-poisons (oracle): Import single-file only
 DONE

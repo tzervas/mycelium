@@ -14,8 +14,8 @@ remeasure after that advance. A mid-flight **post-C3-only** snapshot is retained
 [`M1006-baseline-oneshot-2026-07-16.md`](./M1006-baseline-oneshot-2026-07-16.md) and
 [`M1006-remeasure-post-B1B2-2026-07-16.md`](./M1006-remeasure-post-B1B2-2026-07-16.md). **Not** the
 full M-1006 17-target / whole-corpus ladder (VR-5).
-**Artifacts:** `experiments/results/m1006-remeasure-post-c3c4/` (per-target `vet.json` +
-`summary.txt`).
+**Artifacts:** `experiments/results/m1006-remeasure-post-c3c4/` (per-target full emit + `vet.json` +
+`summary.txt` / README).
 **Oracle:** real `myc-check` via `MYC_CHECK_CMD` (`scripts/checks/transpile-vet.sh` discipline).
 
 ## Commands
@@ -68,6 +68,20 @@ equal checked, remaining gap is **non-emission**, not check failure (DN-34 §8.7
 | `crates/mycelium-std-io/src` | 59 | 12 | **20.3%** | 20 | **33.9%** | CheckError×3, Clean×2 | Import residual (full path): `std.io.error.IoError` / `ByteCount` / `ByteOffset` |
 
 **Union all-7:** **76 / 342** checked → **22.2%**; **94 / 342** emitted → **27.5%**.
+
+#### First-poison list (every CheckError file — oracle, single-file)
+
+| Crate | File | First diagnostic (truncated) |
+|-------|------|------------------------------|
+| std-fs | `lib.rs` | `use std.fs.error.ErrnoClass`: no such name in the phylum (M-662/DN-113) |
+| std-fs | `substrate.rs` | `use std.fs.error.FsErr`: no such name in the phylum |
+| std-io | `io.rs` | `use std.io.error.IoError`: no such name in the phylum |
+| std-io | `lib.rs` | `use std.io.error.ByteCount`: no such name in the phylum |
+| std-io | `serialize.rs` | `use std.io.error.ByteOffset`: no such name in the phylum |
+
+**Cleared since post-B1B2 (no longer CheckError):** fs `guarantee_matrix` (`eq_Fallibility`),
+fs `metadata` (`eq_FileKind`), fs `options` (Bool `or`), io `guarantee_matrix` (`eq_GuaranteeTag`).
+**No NEW first-poison family post-C4** on this pilot set (oracle residual = Import only).
 
 ### Phylum dual-report (`Empirical`)
 
@@ -175,7 +189,7 @@ impact on `checked_fraction`** first, then emission heat.
 | **M-875** | Remains design/needs-design — Macro still top non-emission heat on cmp. |
 | **One-shot / SemVer** | **Forbidden** on this evidence. |
 | **Shared files** | FLAG: `tools/github/issues.yaml` body/`doc_refs`, `CHANGELOG.md`, `docs/Doc-Index.md` — integrating parent. This leaf owns only `docs/planning/` + `experiments/results/`. |
-| **Handoff tip** | FLAG for L1/orch: bump PROGRAM-HANDOFF-ONESHOT base tip to `167f0bf2` and point active remeasure at this file (this leaf appends a short changelog row only). |
+| **Handoff tip** | FLAG for L1/orch: bump `PROGRAM-HANDOFF-ONESHOT.md` base tip to `167f0bf2` and add changelog row pointing at this file — **this leaf does not edit the handoff** (pointer lives here only). |
 
 ## Method notes (VR-5)
 

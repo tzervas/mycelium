@@ -1,0 +1,85 @@
+// nodule: std.io.io
+// Byte-movement surface: abstract `Source`/`Sink` with **affine single-consumption**
+// (LR-8; spec §3 — the io half).
+//
+// # The single-consumption guarantee (LR-8)
+//
+// A `Source` is an **affine handle** (RFC-0006 §Q5): it wraps the underlying
+// substrate and moves it exactly once.
+//
+// - [`read_all`] takes `Source` **by-move** and does **not** return it: the handle
+//   is consumed exactly once.  A double-consume is a **compile-time type error**,
+//   not a runtime check.
+// - [`read`] (chunked) returns the handle so a caller may continue reading; the same
+//   handle is threaded linearly through every call.
+// - [`write()`] similarly returns the `Sink` so the caller may continue writing.
+//
+// The affine type enforces that a substrate cannot be silently re-read after
+// exhaustion (LR-8 / spec §1/§3 / the module's honesty crux).
+//
+// # In-memory substrate
+//
+// The OS I/O floor is **FLAGGED** (spec §7-Q4 / §8-Q6) and deferred to `std-sys`
+// (M-541).  This module ships a fully testable **in-memory substrate** (`Bytes`
+// cursor) so the abstraction and the affine type are complete and the tests pass
+// without OS facilities.  A `std-sys` crate will implement the real-OS-backed
+// `Source`/`Sink` that wraps this module's types.
+//
+// # Declared effects (C6)
+//
+// Every io op declares **`io`** as its declared effect (`#[doc = "Effects: io"]`).
+// The serialize ops are pure; they declare `none`.  Chunked `read` additionally
+// allocates a buffer (`alloc(Budget)`, as stated in the matrix).
+//
+// # FLAG: no OS I/O here
+// This module contains **no** `wild`/FFI and no `std::fs`/`std::net` usage (ADR-014
+// / LR-9 / spec §7-Q4).  The `std-sys` phylum (M-541) will supply OS-backed
+// constructors that produce a `Source`/`Sink` over a file descriptor or network
+// socket; `std.io` only defines the abstract surface.
+// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,
+// unvalidated — no Mycelium parser/typechecker confirms this output; see the
+// accompanying .gap.json for every construct this pass could not express.
+nodule std.io.io;
+
+use std.io.error.IoError;
+
+// A declared byte-read budget (C6/RFC-0014 §4.5; ADR-015).
+//
+// Passed to [`read`] to cap the allocation.  An overrun yields
+// [`IoError::EffectBudget`] instead of unbounded allocation (C6).
+//
+// The `Unbounded` variant is available for in-memory tests where an allocation
+// ceiling is not meaningful; production uses of the OS-backed substrate should
+// always supply `Bytes(n)` (spec §7-Q5 / RFC-0016 §8-Q3).
+// Declared: renamed Bytes -> Bytes_kw (reserved-word collision, DN-140)
+pub type Budget = Bytes_kw(Binary{64}) | Unbounded;
+
+impl Show[Budget] for Budget {
+  fn render(x: Budget) => Bytes =
+    match x { Bytes_kw(p0) => bytes_concat(bytes_concat("Bytes_kw(", render(p0)), ")"), Unbounded => "Unbounded" };
+};
+
+fn eq_Budget(a: Budget, b: Budget) => Binary{1} =
+  match a { Bytes_kw(p0) => match b { Bytes_kw(q0) => eq(p0, q0), _ => 0b0 }, Unbounded => match b { Unbounded => 0b1, _ => 0b0 } };
+
+// Read all remaining bytes from `src`, consuming it exactly once (LR-8).
+//
+// # Guarantee tag: `Exact`
+// The bytes returned are exactly the bytes the substrate delivers — neither
+// reordered nor approximated.  The `Exact` tag signals no accuracy semantics
+// (RFC-0016 C2: "an op with no accuracy semantics is simply `Exact`").
+//
+// # Fallibility
+// - `Err(IoError::UnexpectedEof{read})` if the source has already been consumed
+//   before this call (in practice, Rust move semantics prevent a double-consume
+//   at the type level; this variant can only be triggered by a substrate that
+//   reports zero bytes when some were expected, e.g. a racing close in the OS-
+//   backed variant).
+// - `Err(IoError::Refused{why})` if the substrate declines the operation.
+// - `Err(IoError::EffectBudget{kind})` on an effect-budget overrun.
+//
+// # Effects: io (declared, C6)
+// This operation reads bytes from the substrate — the `io` effect is declared
+// on the signature.  (For the in-memory substrate the "IO" is a buffer copy, but
+// the effect abstraction is preserved for composability with OS-backed substrates.)
+pub fn read_all(src: Source) => Result[Vec[Binary{8}], IoError] = let src = src in Ok(read_to_end(src));
