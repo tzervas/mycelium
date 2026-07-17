@@ -6,7 +6,9 @@
 //! property, cross-phylum multi-crate batches — lives in `src/tests/batch.rs`, alongside the rest of
 //! the batch-mode test corpus.
 
-use crate::symtab::{use_candidates, CandidateKind, HeadKind, SymbolTable, UseCandidate};
+use crate::symtab::{
+    extract_type_defs, use_candidates, CandidateKind, HeadKind, SymbolTable, UseCandidate,
+};
 
 fn candidates_of(src: &str, current_module: &[String]) -> Option<Vec<UseCandidate>> {
     let item: syn::ItemUse = syn::parse_str(src).unwrap_or_else(|e| panic!("{src}: {e}"));
@@ -237,6 +239,7 @@ fn symbol_table_resolve_requires_both_module_and_emitted_name() {
         ["Width".to_string(), "CheckError".to_string()]
             .into_iter()
             .collect(),
+        std::collections::HashMap::new(),
     );
 
     assert_eq!(table.resolve("checkty", "Width"), Some("l1.checkty"));
@@ -384,6 +387,7 @@ fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity_in_root_file() {
         "mycelium_a.sibling".to_string(),
         "a.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
     );
     // A DIFFERENT phylum, coincidentally also named `sibling` (crate identifier), exporting the
     // SAME item name at its crate root.
@@ -391,6 +395,7 @@ fn resolve_prefers_same_crate_over_cross_phylum_on_ambiguity_in_root_file() {
         "sibling".to_string(),
         "b.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
     );
 
     let candidate = UseCandidate {
@@ -419,11 +424,13 @@ fn resolve_goes_cross_phylum_only_from_non_root_file_even_with_a_same_crate_subm
         "mycelium_a.sibling".to_string(),
         "a.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
     );
     table.insert(
         "sibling".to_string(),
         "b.sibling".to_string(),
         ["Thing".to_string()].into_iter().collect(),
+        std::collections::HashMap::new(),
     );
 
     let candidate = UseCandidate {
@@ -482,4 +489,98 @@ fn use_emit_qualifier_bare_fixture_key_same_as_pre_m1084() {
         SymbolTable::use_emit_qualifier(None, "checkty", "checkty"),
         "checkty"
     );
+}
+
+// ── L2-B: type_def extract + module-keyed co-include closure ────────────────────────────────────
+
+#[test]
+fn extract_type_defs_picks_single_line_type_and_pub_type() {
+    let myc = "\
+nodule std.fs.error;
+pub type ErrnoClass = NotFound | Other;
+type FsErr = NotFound(Bytes) | Os(Bytes, ErrnoClass);
+fn helper(x: Bool) => Bool = x;
+";
+    let defs = extract_type_defs(myc);
+    assert_eq!(defs.len(), 2, "got {defs:?}");
+    assert!(
+        defs["ErrnoClass"].starts_with("pub type ErrnoClass"),
+        "{:?}",
+        defs["ErrnoClass"]
+    );
+    assert!(
+        defs["FsErr"].starts_with("type FsErr"),
+        "{:?}",
+        defs["FsErr"]
+    );
+}
+
+#[test]
+fn type_def_closure_is_module_keyed_not_bare_name_first_wins() {
+    let mut table = SymbolTable::new();
+    table.insert(
+        "crate_a".to_string(),
+        "crate.a".to_string(),
+        ["Foo".to_string()].into_iter().collect(),
+        [("Foo".to_string(), "type Foo = Foo(Binary{8});".to_string())]
+            .into_iter()
+            .collect(),
+    );
+    table.insert(
+        "crate_b".to_string(),
+        "crate.b".to_string(),
+        ["Foo".to_string()].into_iter().collect(),
+        [("Foo".to_string(), "type Foo = Foo(Binary{16});".to_string())]
+            .into_iter()
+            .collect(),
+    );
+    // Seed from crate_b only — must get Binary{16}, never crate_a's Binary{8}.
+    let closure = table.type_def_closure(&[("crate_b".to_string(), "Foo".to_string())]);
+    assert_eq!(closure.len(), 1, "{closure:?}");
+    assert_eq!(closure[0].0, "crate.b");
+    assert!(
+        closure[0].1.contains("Binary{16}"),
+        "module-keyed seed must not first-wins across crates; got {:?}",
+        closure[0]
+    );
+}
+
+#[test]
+fn type_def_closure_pulls_transitive_deps_from_same_home() {
+    let mut table = SymbolTable::new();
+    let mut defs = std::collections::HashMap::new();
+    defs.insert(
+        "ErrnoClass".to_string(),
+        "type ErrnoClass = NotFound | Other;".to_string(),
+    );
+    defs.insert(
+        "FsErr".to_string(),
+        "type FsErr = Os(Bytes, ErrnoClass);".to_string(),
+    );
+    table.insert(
+        "error".to_string(),
+        "std.fs.error".to_string(),
+        ["ErrnoClass".to_string(), "FsErr".to_string()]
+            .into_iter()
+            .collect(),
+        defs,
+    );
+    let closure = table.type_def_closure(&[("error".to_string(), "FsErr".to_string())]);
+    let names: Vec<&str> = closure
+        .iter()
+        .filter_map(|(_, d)| {
+            d.trim()
+                .strip_prefix("type ")
+                .and_then(|r| r.split('=').next())
+                .map(str::trim)
+        })
+        .collect();
+    assert!(
+        names.contains(&"ErrnoClass") && names.contains(&"FsErr"),
+        "transitive ErrnoClass must co-include with FsErr; got {names:?}"
+    );
+    // ErrnoClass before FsErr (dep before user).
+    let ei = names.iter().position(|n| *n == "ErrnoClass").unwrap();
+    let fi = names.iter().position(|n| *n == "FsErr").unwrap();
+    assert!(ei < fi, "ErrnoClass must precede FsErr; order={names:?}");
 }

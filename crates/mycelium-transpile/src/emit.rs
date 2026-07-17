@@ -897,6 +897,37 @@ pub(crate) fn cross_nodule_has_module(module_key: &str) -> bool {
     })
 }
 
+/// L2-B: does `module_key` have a baseline single-line type def for `name`? Used by
+/// `transpile::dispatch_use` to choose co-include vs full-path `use`.
+pub(crate) fn cross_nodule_has_type_def(module_key: &str, name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => ctx.symtab.type_def(module_key, name).is_some(),
+    })
+}
+
+/// L2-B: transitive type-def co-include set for seed `(module_key, name)` pairs.
+/// Empty when the context is off or no seed has a type def in the table.
+pub(crate) fn cross_nodule_type_def_closure(seeds: &[(String, String)]) -> Vec<(String, String)> {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => Vec::new(),
+        Some(ctx) => ctx.symtab.type_def_closure(seeds),
+    })
+}
+
+/// Whether `name` is already available in this file (declared resolvable, imported, or lattice
+/// co-emitted) — L2-B skips re-co-including a name the consumer already has.
+pub(crate) fn name_already_available(name: &str) -> bool {
+    EMIT_CTX.with(|c| match &*c.borrow() {
+        None => false,
+        Some(ctx) => {
+            ctx.resolvable.contains(name)
+                || ctx.imported_names.contains(name)
+                || ctx.lattice_co_emits.contains(name)
+        }
+    })
+}
+
 /// DN-133 (M-1094) tier (i): record that this file's own single-pass emission just successfully
 /// produced the mangled inherent-impl associated-fn `mangled_name` (`mangled_inherent_fn_name`'s
 /// `{Type}__{method}` form) — called once, from `emit_impl`'s success path, right after it renames
