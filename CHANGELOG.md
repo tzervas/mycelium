@@ -12,6 +12,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(brand): undouble README logo (2026-07-17)
+
+README brand block used badge + hero of the same mark; keep a single centered badge.
+
 ### docs(brand+process): discussion template + brand badge (2026-07-17)
 
 Add `docs/templates/DISCUSSION.md` and GitHub Discussion form

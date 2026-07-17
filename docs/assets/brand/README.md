@@ -8,8 +8,9 @@
 | **Social** | `mycelium-social-1280x640.png` — wide preview |
 | **Variants** | `mycelium-variant-0{2..5}.jpg` — additional frames from the same set |
 
-**Use:** README badge + hero; docsite/social when needed. Prefer **primary + badge-256** in
-markdown. Do not re-encode without need (keep originals).
+**Use:** README shows **one** centered badge (`mycelium-badge-256.png`) — do not stack badge +
+hero (same mark twice). Prefer badge-256 in markdown; `mycelium-hero.jpg` / social / full primary
+for docsite or marketing pages that want a larger single frame. Do not re-encode without need.
 
 **License:** project branding; same MIT first-party policy as the repo unless a future brand
 license note says otherwise.
