@@ -28,16 +28,20 @@ project requirements, deliverables, acceptance criteria, and success metrics.
 | **L1** | Epic agent | Re-decompose; spawn L2; self-review L2 PRs; write epic handoff notes; FLAG shared files | Prefer not implement product code (tiny pins OK after L2 stall); protected-branch writes |
 | **L2** | Leaf implementer (`isolation: worktree`) | Own disjoint paths; tests + emit/docs; open PR → parent tier; report SHA/PR/FLAGs | Shared files (`CHANGELOG`, `issues.yaml`, `Doc-Index`, `api-index`); merge to protected trunks |
 
-**Model floor (standing assignment — lock unless L0 re-ratifies):**
+**Model policy (standing assignment — lock unless L0 re-ratifies):**
 
-| Slot | Model | Strength |
-|------|-------|----------|
-| **PR reviews (all)** | `grok-composer-2.5-fast` | required floor |
+| Role / slot | Model | Strength |
+|-------------|-------|----------|
+| **L0** (orchestrator / PM in parent session) | `grok-4.5` | hardest thinking, high effort — **parent session only** |
+| **ALL spawned agents** (L1 epic, L2 leaf, pr-reviewer, explore, plan, security, etc.) | `grok-composer-2.5-fast` | speed + cost; **never** spawn agents on `grok-4.5` |
+| **PR reviews (all)** | `grok-composer-2.5-fast` | required floor (subset of spawned agents) |
 | **L2 implementers (all)** | `grok-composer-2.5-fast` | required floor |
-| **L1 (majority; prefer all)** | `grok-composer-2.5-fast` | prefer all; majority is the minimum |
+| **L1 (all)** | `grok-composer-2.5-fast` | required floor — **all**, not merely majority |
 
-If the runtime cannot offer `grok-composer-2.5-fast`, **record the actual model** in the handoff
+If the runtime cannot offer the assigned model, **record the actual model** in the handoff
 packet / leaf report (never-silent — G2). Do not silently substitute a different model.
+**Do not** spawn L1/L2/review/explore agents on `grok-4.5` even when it is available — that
+tier is reserved for L0 parent-session orchestration.
 
 **Handoff rule:** every L0↔L1 and L1↔L2 transition leaves a **durable doc** on disc (this guide’s
 [Handoff packet](#handoff-packet-template) or the wave’s `PROGRAM-HANDOFF.md`). Branches hold code;
