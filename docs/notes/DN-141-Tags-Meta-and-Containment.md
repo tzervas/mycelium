@@ -347,6 +347,38 @@ enforcement structurally cannot express; (c) maintainer judgment, per the steer'
 as a "probable" (not certain) future need. No rule changes as a result of this spike alone (§6.2) —
 only a future, separately-ratified decision could adopt the carrier.
 
+**Addendum (2026-07-18, W-D — grounding the carrier sketch against the real type system, not just
+in the abstract).** `Quarantined[T]`'s "**zero-cost newtype... forbids implicit unwrap**" claim is
+not a novel type-system feature this spike is proposing from nothing: Mycelium's surface language
+already has the exact shape needed — a **single-constructor ADT** with no auto-`Deref`/coercion path
+out, the same pattern `lib/std/*.myc` already uses pervasively for "a marker that must be
+pattern-matched to remove" (e.g. `type SInt = SPos(Binary{16}) | SNeg(Binary{16})` in
+`lib/std/ternary.myc`; `mycelium-diag`'s own Rust-side `EventId(pub String)` and `ContentHash(String)`
+newtypes are the same idea one layer down, in the Rust kernel). So `Quarantined[T] ≜
+{ inner: T @ g }` is implementable **today**, syntactically, as an ordinary single-constructor
+`type Quarantined[T] = MkQuarantined(T)` — no new language construct, no compiler-level newtype
+feature to build. What genuinely does **not** exist today, and is the actual open engineering
+question this spike leaves for its own future adoption decision (not resolved here, since resolving
+it would be implementation, out of this spike's Declared/no-production-code scope), is the **checker
+enforcement** half: (i) a construction-site rule that only `std.airlock`'s successful-seal path (or
+entry to a quarantine bag) may produce a `Quarantined[T]` value — an ordinary ADT constructor is
+otherwise callable from anywhere, so without an additional checker rule a bare `MkQuarantined(x)`
+would trivially forge the marker (the "no implicit unwrap" half is free via ordinary
+pattern-matching-required ADT semantics; the "no implicit **wrap**, either, outside the sanctioned
+construction sites" half is not — an unchecked ADT constructor is not sufficient by itself for the
+containment guarantee the carrier exists to provide); (ii) the call-site type error described above
+("a function whose parameter type is `T @ g` … called with a `Quarantined[T]` argument") needs
+`Quarantined[T]` and `T @ g` to be checker-recognized as **distinct, non-coercible** types even
+though `Quarantined[T]`'s sole field is a `T @ g` — an ordinary single-constructor ADT already gives
+this for free too (Mycelium's nominal typing does not structurally unify `MkQuarantined(T)` with
+bare `T`), so (ii) is actually already covered by the ADT sketch and only (i) is a genuinely new
+checker rule. **Revised ceremony/effort estimate (still `Declared` — no implementation exists to
+measure):** because (ii) is free and (i) is the only new checker-side rule, the carrier's
+implementation cost is smaller than a "new type-system feature" framing would suggest — closer to
+"one construction-site guard rule, reusing the existing `std.airlock` seal-success path as its sole
+legal call site" than to a new kind of type. This does not change the adoption trigger criteria
+above; it sharpens the cost estimate one of those criteria (maintainer judgment) would weigh.
+
 ## Appendix B — S2 spike: phylum-wide free meet (Declared, timeboxed, no production code)
 
 Per §6.4 (P2-Q4), commissioned as design prep for a **probable** future widening. `Declared`,
@@ -386,6 +418,79 @@ refusals cluster overwhelmingly at intra-phylum, inter-nodule crossings within p
 independent evidence of a real trust boundary (a proxy the spike must define precisely, not assume),
 that is empirical evidence toward widening. Until such telemetry exists, this stays `Declared` and
 undecided — no widening happens on this spike's say-so alone.
+
+**Addendum (2026-07-18, W-D — the actual boundary-table delta, grounded against the landed
+`crates/mycelium-l1/src/meet_boundary.rs` (W-C X4), producing this appendix's own previously-deferred
+required output).**
+
+**Correction to this appendix's own framing (VR-5 — checked against the real table, not assumed).**
+The passage above frames "today's meet-boundary table" as having "one crossing tier under R4/R5:
+nodule-exit," as if `BoundaryKind`/`check_boundary` already encode a *scope* dimension (nodule-exit
+vs. phylum-exit) that a widening would edit. Reading the landed table (`meet_boundary.rs`, W-C X4)
+shows this is not quite the real shape: `BoundaryKind` has **three crossing *kinds*** (`Export`,
+`ExactDemand`, `CertifiedConsumer` — the latter unwired, no row) and **carries no scope field at
+all**. R4's "meet is free inside the nodule" is enforced **structurally**, not by a table row:
+`grade.rs::check_guarantees` walks only a nodule's `own_names` (its own top-level fn/impl-method
+bodies) and checks each call's argument against the resolved `fns` table (own **and** imported)
+via `Gx::grade_app` — so the `ExactDemand` crossing **already fires exactly at "this nodule's own
+code calling an imported (i.e., not-this-nodule's-own) function,"** which **is** the nodule-exit
+wall, just implemented as "which functions are in `own_names`" rather than as an explicit
+`scope: Nodule | Phylum` table field. This appendix's own "collapse to phylum-exit only / add an
+intermediate tier" framing (the two candidate shapes above) implicitly assumed a scope-tagged table
+row to edit; the real delta is one level lower, in the checker's **own-vs-imported** partition
+itself, not in `BoundaryKind`'s enum shape.
+
+**The actual delta, both candidate shapes, restated against the real mechanism:**
+
+| | Today (landed, W-C X4) | (a) Collapse to phylum-exit only | (b) Add an intermediate, softer tier |
+|---|---|---|---|
+| `BoundaryKind` enum | `Export` \| `ExactDemand` \| `CertifiedConsumer` (no scope field) | **unchanged** — no new variant needed (the delta is not here) | **unchanged**, same reason |
+| `check_guarantees`'s partition | `own_names` = this nodule's own top-level fns/methods; every call to anything NOT in `own_names` hits `ExactDemand`. **Per the DN-113 finding below, EVERY such call today is already same-phylum** — cross-phylum calls are not resolvable at all yet, so this row cannot currently distinguish "intra-phylum" from "cross-phylum" imports; there is only one kind of import to see | `own_names` widens to **every fn declared anywhere in the same phylum** (own nodule + every other nodule `PhylumEnv::link` merges into the same phylum); `ExactDemand` fires only for a **genuinely cross-phylum** import (not yet constructible pre-DN-113, per the finding below) | `own_names` stays nodule-scoped for the **hard** wall (cross-phylum still refuses exactly as `ExactDemand` does today, once constructible); a **second**, weaker check is added for same-phylum/cross-nodule calls — `Allow`-with-`EXPLAIN` (a `Decision::PassWeak`-shaped outcome, DN-141 §7.1's existing `decision` vocabulary already names this arm) instead of today's binary `Allow`/`Refuse` |
+| `meet_boundary_refuse_diag` | Fires (`Refuse`) whenever `have` does not satisfy `demand` — this fires for every same-phylum import that fails `satisfies` today (the only kind that exists) | Fires **only** for cross-phylum imports that fail `satisfies`. **Pre-DN-113, this set is EMPTY** (no cross-phylum call exists to fail it) — so shape (a), adopted today, refuses **nothing** via `ExactDemand`: every currently-refusing intra-phylum crossing becomes silently `Allow`, which is exactly the "walk-to-a-wall property... is what's lost" cost this appendix's blast-radius analysis already names, now at its MAXIMUM extent (not a partial narrowing) | Fires `Refuse` unchanged for genuinely cross-phylum calls (empty set pre-DN-113, same as (a)); for intra-phylum/cross-nodule (today's ENTIRE `ExactDemand` population), a **new, non-refusing** `Decision::PassWeak`-shaped first-fault fires instead of silence — the composition still proceeds (matching R4's existing "meet is free" spirit) but an `EXPLAIN` record exists, so the "notice a crossing" property is **retained** at reduced ceremony (a record, not a refusal) rather than fully removed |
+| New checker state needed | — | A same-phylum fn-name resolution set at grading time — see the DN-113 finding below: this is **NOT** the small lookup it would first appear | Same finding applies, **plus** a new `Decision` arm's plumbing through `meet_boundary_refuse_diag` (today `Option<Diag>`, `None` on `Allow` — (b) needs a THIRD outcome, not just the existing two, so the fn's own return shape would need to grow, e.g. `enum BoundaryOutcome { Allow, PassWeak(Diag), Refuse(Diag) }`, not merely a boolean) |
+| Cost/risk, `Declared` | — | Lower implementation cost (reuses the existing binary `Allow`/`Refuse` shape unchanged); **higher semantic cost** — a real behavior change (some calls that refuse today would silently allow) | Higher implementation cost (a new outcome shape, new `Decision` plumbing); **lower semantic cost** — no call that refuses today would silently start passing; the softening is additive (a new non-refusing record), never a removed refusal |
+
+**A load-bearing DN-113 finding, corrected against the actual codebase state (VR-5 — checked, not
+assumed).** The "engineering prerequisite" both shapes above need — a same-phylum-membership lookup
+for an imported name, to distinguish "same-phylum, cross-nodule" from "genuinely cross-phylum" —
+does **not** already have a data source to wire in. `DN-113` (Accepted, 2026-07-10) is the
+**cross-phylum** (crate→crate) import-resolution **design**, and its own grounding states plainly:
+*"This is genuinely green-field: 0% is wired today."* DN-113's own §0 states the CURRENT reality even
+more sharply: *"A Mycelium nodule can already `use` a `pub` symbol from another nodule of the **same
+phylum** (M-662/M-1024, real fixtures). It **cannot** reference a symbol in a dependency phylum — the
+crate→crate boundary"* (cross-phylum imports are not merely unchecked, they are **not resolvable at
+all** yet). Consequence for THIS spike: **every `ExactDemand`/`Export` crossing `meet_boundary.rs`
+can see today is, by construction, already same-phylum** (M-662/M-1024's own cross-nodule resolution
+is intra-phylum only) — there is no code path today that produces a cross-phylum call for the
+checker to distinguish. So a phylum-wide widening implemented **today**, before DN-113 lands, would
+not need any new "phylum-membership lookup" at all — it would simply mean **every currently-checked
+`ExactDemand` crossing becomes free**, because none of them can currently be anything other than
+intra-phylum. This is a materially different, more consequential finding than "add a lookup": at
+v0's actual resolution ceiling, "nodule-wide" and "phylum-wide" free-meet are **the same claim** for
+every crossing the checker can see today, and they diverge only once DN-113's cross-phylum path
+lands and genuinely cross-phylum calls become possible to write at all. The phylum-membership lookup
+this addendum's table describes is real future engineering, but its trigger is **DN-113 landing**,
+not this spike alone — until then, "widen R4 to phylum-wide" and "remove the `ExactDemand` wall
+entirely" are operationally indistinguishable, which sharpens (not weakens) the blast-radius concern
+this appendix's own analysis raises: adopting phylum-wide free meet **today** would, in the CURRENT
+codebase, be equivalent to removing the wall, not narrowing it — a materially higher-cost adoption
+than "phylum-wide" sounds like it should be, and a strong argument for holding this widening until
+AFTER DN-113 lands and the two scopes actually diverge in practice.
+
+**This addendum's own recommendation (`Declared`, a spike output — not a ratified decision; §6.4's
+own steer language is explicit that only telemetry, not this spike, may adopt a widening).** Shape
+(b) is the shape consistent with this note's own house rules — G2 (never-silent: (a) turns an
+existing `Refuse` into a silent `Allow` for some real inputs, which is exactly the kind of
+contamination-stops-at-walls property N5 exists to prevent) and VR-5 (a downgrade in ceremony is
+fine; a downgrade in what gets REPORTED is not). Shape (a) is flagged as the cheaper-to-build but
+honesty-regressing option, not recommended, though it remains the literal reading of "collapse to
+phylum-exit only" this appendix originally sketched. Given the DN-113 finding above, this addendum
+additionally recommends **sequencing**: neither shape should adopt before DN-113 lands (M-1060), since
+before then there is no genuine phylum-vs-nodule distinction left to widen INTO — adopting early would
+be indistinguishable from removing R5's `ExactDemand` wall outright. No rule changes as a result of
+this addendum alone (§6.4's own posture, restated) — adoption remains gated on the trigger criteria
+above, now understood to include "DN-113 has landed" as a practical precondition, not just a telemetry
+threshold.
 
 ## Appendix C — W-C implementation note (X2–X5, 2026-07-18; `Declared`, disclosed judgment calls)
 
@@ -500,3 +605,4 @@ live-wired, for the reasons stated in their own sections above.
 |---|---|
 | 2026-07-18 | **Draft** minted. Distills `DESIGN-02-TAGS-META-AND-CONTAINMENT.md` into DN-141's body per steer P2-Q5 ("pack 02 ratifies as DN-141's body; one source of truth"); folds in the five 2026-07-17 binding steers (P2-Q1..Q5, §6) as normative; adds S1 (`Quarantined[T]` carrier) and S2 (phylum-wide free meet) spike appendices per the steer's own commissioning; flags one correction against the steer's own P2-Q4 grounds text (RFC-0018 §4.5 is Enacted/Ratified, not "still-open" — §6.4) rather than silently repeating it, per VR-5/house rule #4. Free-ID check: `DN-141`/`DN-142` both verified absent before minting (H1); `DN-142` is noted as reserved elsewhere in this wave for the unrelated Swap Ergonomics DN (§6.5), not for pack 02. Status stays **Draft**; not self-ratifying (H2). `CHANGELOG.md`/`docs/Doc-Index.md`/`tools/github/issues.yaml` rows FLAGGED for the integrating parent (§10), not edited here. |
 | 2026-07-18 | **Appendix C added** (W-C leaf, steer wave X2–X5): records what actually landed in `crates/mycelium-l1/` (`grade_catalog.rs`/`regime.rs`/`meet_boundary.rs` + the direct `mycelium-diag` dependency edge + two live-wired first-fault refusal sites in `check_swap`) and the disclosed residuals (the `regime_type_lie` hard refusal deferred to the held X9 `to:`-elision feature; `meet_boundary`/`grade_annotation` live-wiring into `grade.rs::require` left as a focused follow-on; R18-Q3's per-prim table out of scope). Status stays **Draft**; this appendix does not self-ratify (H1/H2). `CHANGELOG.md`/`docs/Doc-Index.md`/`docs/api-index/`/`tools/github/issues.yaml` rows FLAGGED for the integrating parent, not edited here. |
+| 2026-07-18 | **Appendix A/B addenda added** (W-D leaf, course-correction items 4): (A) grounds the S1 `Quarantined[T]` carrier sketch against the real language ADT convention (single-constructor wrappers already ubiquitous in `lib/std/*.myc`/`mycelium-diag`'s newtypes), narrowing the open engineering question to one new construction-site checker rule (the unwrap-and-nominal-typing halves are already free from an ordinary ADT). (B) produces S2's own previously-deferred "actual table delta" output, grounded against the landed `crates/mycelium-l1/src/meet_boundary.rs` (W-C X4): corrects this appendix's own prior framing (the real table carries no scope field; R4's nodule-scoping is enforced structurally via `check_guarantees`'s `own_names` partition, not a table row) and — the load-bearing finding — establishes via DN-113's own grounding ("0% is wired today," cross-phylum imports **not resolvable at all** yet) that every `ExactDemand` crossing the checker can see today is *already* same-phylum by construction, so adopting phylum-wide free meet **before DN-113 lands** would be operationally indistinguishable from removing the `ExactDemand` wall entirely, not narrowing it — a materially sharper cost finding than the appendix's original framing, and grounds for recommending shape (b) (an additive, non-refusing softening) over shape (a) (a silent-`Allow` regression), sequenced after DN-113 (tracked: M-1060). Both additions are `Declared` design output (no production code), append-only (existing appendix text untouched, addenda appended), and do not move `Status` past **Draft** (H1/H2) — Appendix C is undisturbed. `CHANGELOG.md`/`docs/Doc-Index.md`/`tools/github/issues.yaml` rows FLAGGED for the integrating parent, not edited here. |
