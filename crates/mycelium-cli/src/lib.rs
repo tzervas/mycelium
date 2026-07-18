@@ -181,6 +181,11 @@ pub struct CheckReport {
     /// The structured failure(s), each with a location where known (DN-22). All-or-nothing: at most
     /// one entry (the single refusal that blocked the phylum), never a per-file fabrication.
     pub failures: Vec<Report>,
+    /// The active `CertMode`'s single, stable disclosure line (design-steer P3-Q3a — "always-print
+    /// active CertMode on check/run"; `PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §1.3 P3-Q3a).
+    /// Always populated, unconditionally of whether the phylum checked clean — the mode is
+    /// disclosed regardless of outcome, never gated on success (see [`cert_mode_line_for`]).
+    pub cert_mode_line: String,
 }
 
 impl CheckReport {
@@ -206,10 +211,13 @@ impl CheckReport {
 /// [`Report`] (`myc-io`) only when the source tree cannot be walked; a parse/link/check failure is
 /// carried in the returned [`CheckReport`], not as an `Err`.
 pub fn check_project(manifest_path: &Path) -> Result<CheckReport, Report> {
-    let (_, project_dir) = load_manifest(manifest_path)?;
+    let (manifest, project_dir) = load_manifest(manifest_path)?;
     let sources =
         mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
-    let mut report = CheckReport::default();
+    let mut report = CheckReport {
+        cert_mode_line: cert_mode_line_for(&manifest),
+        ..CheckReport::default()
+    };
     match assemble_and_check_phylum(&sources, &project_dir) {
         Ok((_phylum_env, parsed)) => {
             report.checked = parsed.into_iter().map(|(rel, _)| rel).collect();
@@ -217,6 +225,36 @@ pub fn check_project(manifest_path: &Path) -> Result<CheckReport, Report> {
         Err(r) => report.failures.push(r),
     }
     Ok(report)
+}
+
+/// Resolve and render the active `CertMode`'s single, stable disclosure line (design-steer P3-Q3a —
+/// "always-print active CertMode on check/run"; `PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §1.3
+/// P3-Q3a implementation notes: "(a)/(b) read existing `Meta` fields — zero schema commitment").
+///
+/// Reuses the already-built, already-tested `mycelium_proj::cert_scope` resolution machinery
+/// (RFC-0034 §6; M-790) rather than re-deriving it: the manifest's `[project] certification` value,
+/// if declared, is treated as a `Phylum`-scope declaration ([`mycelium_proj::CertScope::Phylum`] —
+/// FLAG-B in that module: the v0 single-manifest model has no separate `global` tier), then resolved
+/// and rendered via [`mycelium_proj::resolve_mode`]/[`mycelium_proj::explain_mode`].
+///
+/// **Judgment call, flagged (not a full implementation of RFC-0034 §6's three-tier lattice).** `myc`
+/// does not yet parse a per-nodule `// @certification:` header (`CertScope::Nodule` — that surface
+/// is separate M-790 work this driver does not do), so only the `Phylum` tier the manifest carries
+/// ever contributes here; `Nodule`/`Global` never win a resolution through this function. With no
+/// manifest declaration at all, this renders the `CertMode::default()` (`Fast`) line exactly as
+/// [`mycelium_proj::ResolvedMode::defaulted`] would.
+#[must_use]
+pub fn cert_mode_line_for(manifest: &mycelium_proj::Manifest) -> String {
+    let decls: Vec<mycelium_proj::CertDecl> = manifest
+        .project
+        .certification
+        .map(|mode| mycelium_proj::CertDecl {
+            scope: mycelium_proj::CertScope::Phylum,
+            mode,
+        })
+        .into_iter()
+        .collect();
+    mycelium_proj::explain_mode(&mycelium_proj::resolve_mode(&decls))
 }
 
 /// The outcome of a successful `myc run` (M-908/M-909): which source ran, which entry function was
@@ -233,6 +271,11 @@ pub struct RunReport {
     /// not a stable/parseable format; a dedicated value-printer is follow-up work, not silently
     /// approximated here).
     pub rendered: String,
+    /// The active `CertMode`'s single, stable disclosure line (design-steer P3-Q3a). Set once, by
+    /// [`run_with_options`], after the single-/multi-nodule path returns — see
+    /// [`cert_mode_line_for`]'s doc. `run_single_nodule`/`run_multi_nodule` leave this empty; they
+    /// are not the shared entry point that holds the resolved manifest.
+    pub cert_mode_line: String,
 }
 
 /// Options that tune a `myc run` (or `myc build`) invocation beyond `--config` (RFC-0041 §5 /
@@ -401,11 +444,12 @@ pub fn run(manifest_path: &Path) -> Result<RunReport, Report> {
 /// # Errors
 /// The same [`Report`] set as [`run`].
 pub fn run_with_options(manifest_path: &Path, opts: &RunOptions) -> Result<RunReport, Report> {
-    let (_, project_dir) = load_manifest(manifest_path)?;
+    let (manifest, project_dir) = load_manifest(manifest_path)?;
+    let cert_mode_line = cert_mode_line_for(&manifest);
     let sources =
         mycelium_cli_common::walk_myc(&project_dir).map_err(|e| Report::new("myc-io", e, 66))?;
 
-    match sources.as_slice() {
+    let mut report = match sources.as_slice() {
         [] => Err(Report::new(
             "myc-run-no-source",
             format!("no `.myc` source found under {}", project_dir.display()),
@@ -414,7 +458,12 @@ pub fn run_with_options(manifest_path: &Path, opts: &RunOptions) -> Result<RunRe
         .help("add a `.myc` source file to the project")),
         [single] => run_single_nodule(single, &project_dir, opts),
         multiple => run_multi_nodule(multiple, &project_dir, opts),
-    }
+    }?;
+    // Always-print (design-steer P3-Q3a — see `cert_mode_line_for`'s doc): populated here rather
+    // than threaded through both the single- and multi-nodule paths, since the manifest (the only
+    // input `cert_mode_line_for` needs) is already resolved once, at this shared entry point.
+    report.cert_mode_line = cert_mode_line;
+    Ok(report)
 }
 
 /// The M-908 v0 path: exactly one `.myc` source — parse, [`check_nodule`], [`elaborate`] its
@@ -482,6 +531,8 @@ fn run_single_nodule(
         source: rel,
         entry: ENTRY.to_owned(),
         rendered: format!("{value:?}"),
+        // Set by `run_with_options` after this returns (it holds the resolved manifest).
+        cert_mode_line: String::new(),
     })
 }
 
@@ -546,6 +597,8 @@ fn run_multi_nodule(
         source: entry_rel,
         entry: ENTRY.to_owned(),
         rendered: format!("{value:?}"),
+        // Set by `run_with_options` after this returns (it holds the resolved manifest).
+        cert_mode_line: String::new(),
     })
 }
 
