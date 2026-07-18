@@ -1712,7 +1712,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 45,
+      "line": 47,
       "summary": "Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1723,7 +1723,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 362,
+      "line": 364,
       "summary": "A [`SwapEngine`] for the reference interpreter that performs the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1734,7 +1734,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 397,
+      "line": 399,
       "summary": "A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1756,7 +1756,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 388,
+      "line": 390,
       "summary": "The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1811,7 +1811,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 39,
+      "line": 46,
       "summary": "The outcome of a **mode-gated** swap: the converted value (with its mode-reconciled `Meta`), the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1822,7 +1822,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 162,
+      "line": 276,
       "summary": "A [`SwapEngine`] that wraps the CertifiedSwapEngine surface and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1855,7 +1855,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 56,
+      "line": 58,
       "summary": "The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1866,7 +1866,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 85,
+      "line": 87,
       "summary": "Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1877,7 +1877,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 272,
+      "line": 274,
       "summary": "`enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2009,7 +2009,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 120,
+      "line": 141,
       "summary": "Apply the [`CertMode`] policy to a **raw** swap result `(value, cert)` produced by one of the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2020,7 +2020,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 236,
+      "line": 238,
       "summary": "Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2042,7 +2042,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert::mode::GatedSwap",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 54,
+      "line": 69,
       "summary": "`true` iff this swap was certified-and-validated — i.e.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2053,7 +2053,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert::mode::ModeGatedSwapEngine",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 184,
+      "line": 298,
       "summary": "The active [`CertMode`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2064,7 +2064,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert::mode::ModeGatedSwapEngine",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 178,
+      "line": 292,
       "summary": "A mode-gated engine in the given [`CertMode`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2075,7 +2075,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert::mode::ModeGatedSwapEngine",
       "file": "crates/mycelium-cert/src/mode.rs",
-      "line": 191,
+      "line": 305,
       "summary": "Perform the swap and return the **full** [`GatedSwap`] (value + certificate + check verdict",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2086,7 +2086,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 249,
+      "line": 251,
       "summary": "The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2097,7 +2097,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 316,
+      "line": 318,
       "summary": "`dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2383,7 +2383,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::CheckReport",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 189,
+      "line": 194,
       "summary": "Whether the phylum checked clean.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2449,7 +2449,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 241,
+      "line": 284,
       "summary": "Options that tune a `myc run` (or `myc build`) invocation beyond `--config` (RFC-0041 §5 /",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2460,7 +2460,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 225,
+      "line": 263,
       "summary": "The outcome of a successful `myc run` (M-908/M-909): which source ran, which entry function was",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2471,7 +2471,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 832,
+      "line": 885,
       "summary": "The outcome of a single nodule-component parse in [`stream_parse`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2482,7 +2482,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 1084,
+      "line": 1137,
       "summary": "The result of [`stream_parse`] summarised for the CLI.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2504,7 +2504,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 208,
+      "line": 213,
       "summary": "`myc check` — parse and type-check every `.myc` source under the project directory containing",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2515,7 +2515,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 321,
+      "line": 364,
       "summary": "Whether the process is running under a **conformance-corpus / CI** context that must refuse",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2537,7 +2537,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 299,
+      "line": 342,
       "summary": "The conformance-corpus / CI guard (RFC-0041 §5): a corpus/CI run is the **deterministic** path, so",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2548,7 +2548,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 393,
+      "line": 436,
       "summary": "`myc run` — execute a project through the reference interpreter (M-908 v0 single-nodule;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2559,7 +2559,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 1110,
+      "line": 1163,
       "summary": "Drive [`stream_parse`] and collect results into a [`StreamReport`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2570,7 +2570,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 403,
+      "line": 446,
       "summary": "[`run`] with an explicit [`RunOptions`] (RFC-0041 §5) — the entry the `myc` driver calls so a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2581,7 +2581,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 879,
+      "line": 932,
       "summary": "`myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2592,7 +2592,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 272,
+      "line": 315,
       "summary": "The never-silent stderr banner printed when `--unbounded` is engaged (G2 — an explicit escape",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4407,7 +4407,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 236,
+      "line": 265,
       "summary": "The bound, if approximate.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4418,7 +4418,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 262,
+      "line": 291,
       "summary": "The certification mode this value was produced under (RFC-0034 §3.1; M-786).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4429,7 +4429,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 210,
+      "line": 238,
       "summary": "The common `Exact` metadata with no bound (M-I1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4440,7 +4440,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 231,
+      "line": 260,
       "summary": "The disclosed guarantee strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4451,7 +4451,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 120,
+      "line": 137,
       "summary": "Build a `Meta`, enforcing the guarantee/bound invariants:",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4462,7 +4462,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 246,
+      "line": 275,
       "summary": "The recorded physical layout, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4473,7 +4473,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 256,
+      "line": 285,
       "summary": "The policy that produced this value (set iff produced by a swap).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4484,7 +4484,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 226,
+      "line": 255,
       "summary": "The value's provenance.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4495,7 +4495,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 251,
+      "line": 280,
       "summary": "The reconstruction manifest, if attached (RFC-0003 §6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4506,7 +4506,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 241,
+      "line": 270,
       "summary": "Measured sparsity, if recorded.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4517,7 +4517,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 183,
+      "line": 201,
       "summary": "Record the certification mode this value was produced under (RFC-0034 §3.1; M-786).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4528,7 +4528,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 173,
+      "line": 191,
       "summary": "Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4539,7 +4539,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 158,
+      "line": 176,
       "summary": "Attach a reconstruction manifest (RFC-0003 §6; M-260).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4550,7 +4550,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 203,
+      "line": 221,
       "summary": "Attach the explicit named Axis-B `wrapping` opt-out marker (RFC-0034 §10; M-791).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4561,7 +4561,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 275,
+      "line": 304,
       "summary": "The explicit Axis-B `wrapping` opt-out marker, if present (RFC-0034 §10; M-791).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5595,7 +5595,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 216,
+      "line": 504,
       "summary": "A structured diagnostic record (RFC-0013 §4.1): a content-addressable value over an",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5606,7 +5606,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 274,
+      "line": 596,
       "summary": "Attach a source locus (explicit; absence stays `None` — never a fabricated zero, G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5617,7 +5617,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 303,
+      "line": 633,
       "summary": "The diagnostic code / error class.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5628,7 +5628,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 318,
+      "line": 678,
       "summary": "The **content address** of this diagnostic (RFC-0013 §4.3; ADR-003) — a deterministic BLAKE3",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5639,7 +5639,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 236,
+      "line": 557,
       "summary": "Build an `Error`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5650,7 +5650,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 451,
+      "line": 834,
       "summary": "Recover a `Diag` from its machine JSON projection (I3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5661,7 +5661,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 375,
+      "line": 758,
       "summary": "The **human projection** (G11 / RFC-0013 I3): a human-readable string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5672,7 +5672,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 248,
+      "line": 569,
       "summary": "Build an `Info`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5683,7 +5683,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 429,
+      "line": 812,
       "summary": "The **machine projection** (G11 / RFC-0013 I3): a lossless JSON record with the content `id`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5694,7 +5694,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 267,
+      "line": 589,
       "summary": "Set the human-readable message (value-semantic builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5705,7 +5705,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 281,
+      "line": 603,
       "summary": "Attach a note (EXPLAIN payload).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5716,7 +5716,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 297,
+      "line": 627,
       "summary": "The typed severity (a `Warn` never silently becomes a pass — I1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5727,7 +5727,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 288,
+      "line": 610,
       "summary": "Replace the trace (value-semantic builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5738,7 +5738,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 242,
+      "line": 563,
       "summary": "Build a `Warn`-severity diagnostic with the given code (total builder).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5749,7 +5749,7 @@
       "crate": "mycelium-diag",
       "module": "mycelium_diag::Diag",
       "file": "crates/mycelium-diag/src/lib.rs",
-      "line": 254,
+      "line": 575,
       "summary": "The common total builder behind [`Self::error`]/[`Self::warn`]/[`Self::info`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27749,7 +27749,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 417,
+      "line": 1226,
       "summary": "The `.myc` text (+ any dropped sub-features, e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27760,7 +27760,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 436,
+      "line": 1245,
       "summary": "Extract `///`/`//!` doc-comment lines (represented by `syn` as `#[doc = \"...\"]` attributes),",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27771,7 +27771,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1176,
+      "line": 2029,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27782,7 +27782,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 3927,
+      "line": 5169,
       "summary": "`enum` -> `type_item` (`type Name = C1 | C2(T1, T2) | ...;`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27793,7 +27793,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 1942,
+      "line": 2795,
       "summary": "Translate one Rust expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27804,7 +27804,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4195,
+      "line": 5592,
       "summary": "Top-level `fn` -> `fn_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27815,7 +27815,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4569,
+      "line": 5971,
       "summary": "`impl` -> `impl_item` (trait-instance or inherent form).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27826,7 +27826,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4064,
+      "line": 5458,
       "summary": "`struct` -> a single-constructor `type_item`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27837,7 +27837,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 4243,
+      "line": 5645,
       "summary": "`trait` -> `trait_item` (`trait Name { fn sig1; fn sig2; ...",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27848,7 +27848,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 480,
+      "line": 1289,
       "summary": "Heuristic `#[cfg(test)]` detection (Declared: a token-text `contains(\"test\")` check, not a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27859,7 +27859,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 3706,
+      "line": 4933,
       "summary": "Translate one Rust pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -27870,7 +27870,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::emit",
       "file": "crates/mycelium-transpile/src/emit.rs",
-      "line": 456,
+      "line": 1265,
       "summary": "Every non-doc attribute on an item, rendered as text — these are always dropped (KNOWN HARD",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28068,7 +28068,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 180,
+      "line": 191,
       "summary": "One forward-mapped Rust `Expr::MethodCall` pattern (see module docs).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28079,7 +28079,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 150,
+      "line": 161,
       "summary": "The gate on a `wired: true` row's **receiver** — required so a coincidentally-same-named method",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28090,7 +28090,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 237,
+      "line": 248,
       "summary": "The table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28101,7 +28101,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 395,
+      "line": 478,
       "summary": "Look up `rust_method` in [`TABLE`] (first match; the table has no duplicate `rust_method`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28112,7 +28112,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile::prim_map",
       "file": "crates/mycelium-transpile/src/prim_map.rs",
-      "line": 402,
+      "line": 485,
       "summary": "Whether `receiver_ty` (a resolved [`crate::emit::TypeEnv`] entry, when the receiver is a known",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28310,7 +28310,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 384,
+      "line": 390,
       "summary": "Build the [`BatchSummary`] + [`UnionGapReport`] artifacts from a batch's [`FileResult`]s.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28332,7 +28332,7 @@
       "crate": "mycelium-transpile",
       "module": "mycelium_transpile",
       "file": "crates/mycelium-transpile/src/batch.rs",
-      "line": 264,
+      "line": 270,
       "summary": "Transpile every file in `files` (already-discovered `.rs` paths), collecting a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -32117,7 +32117,7 @@
     },
     {
       "symbol": "mycelium_cert::mode::GatedSwap",
-      "reason": "dedup-alias: same definition as `mycelium_cert::GatedSwap` at crates/mycelium-cert/src/mode.rs:39 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_cert::GatedSwap` at crates/mycelium-cert/src/mode.rs:46 — one canonical row kept"
     },
     {
       "symbol": "mycelium_cert::mode::GatedSwap::clone",
@@ -32145,7 +32145,7 @@
     },
     {
       "symbol": "mycelium_cert::mode::ModeGatedSwapEngine",
-      "reason": "dedup-alias: same definition as `mycelium_cert::ModeGatedSwapEngine` at crates/mycelium-cert/src/mode.rs:162 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_cert::ModeGatedSwapEngine` at crates/mycelium-cert/src/mode.rs:276 — one canonical row kept"
     },
     {
       "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::clone",
@@ -32181,7 +32181,7 @@
     },
     {
       "symbol": "mycelium_cert::mode::gate_swap",
-      "reason": "dedup-alias: same definition as `mycelium_cert::gate_swap` at crates/mycelium-cert/src/mode.rs:120 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_cert::gate_swap` at crates/mycelium-cert/src/mode.rs:141 — one canonical row kept"
     },
     {
       "symbol": "mycelium_check::Finding::clone",
@@ -32369,7 +32369,7 @@
     },
     {
       "symbol": "mycelium_cli::StreamReport::ok",
-      "reason": "dedup-alias: same definition as `mycelium_cli::CheckReport::ok` at crates/mycelium-cli/src/lib.rs:189 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_cli::CheckReport::ok` at crates/mycelium-cli/src/lib.rs:194 — one canonical row kept"
     },
     {
       "symbol": "mycelium_cli_common::ReadError::clone",
@@ -51469,11 +51469,11 @@
     },
     {
       "symbol": "mycelium_transpile::batch::summarize",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:384 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::summarize` at crates/mycelium-transpile/src/batch.rs:390 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::batch::transpile_batch",
-      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:264 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_transpile::transpile_batch` at crates/mycelium-transpile/src/batch.rs:270 — one canonical row kept"
     },
     {
       "symbol": "mycelium_transpile::gap::Category",

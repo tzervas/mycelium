@@ -12,6 +12,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(diag+cert): AX-core W-A landed — first-fault envelope, swap_check emitter, Meta.cert handle, capped cert store, CertMode print (2026-07-18)
+
+Course-correction Phase C wave W-A (steer §5; implements the Draft captures without moving their
+status — pending ratification): RFC-0013 Amendment A1's `FirstFaultEnvelope` lands on `Diag` as an
+optional additive field (13-entry `site_kind` catalog; backward-compat proven by a pinned golden
+content hash + legacy-JSON round-trip; inline tests extracted per M-797 as-touched);
+`mycelium-cert` gains the `swap_check` emitter at the `ModeGatedSwapEngine` seam (refuse event +
+validated crumb through the one `Diag` system — G-9) and the **G-3 audit fix** (Certified-mode
+`Bounded` certs with `Crosstalk`/`Capacity` bounds now map to explicit `NotValidated{Incomplete}`
+instead of a silent `check: None` pass — regression-tested at the exact latent surface);
+`Meta.cert: Option<Box<ContentHash>>` handle beside `policy_used` (hash-excluded, wire-carried;
+boxed for a measured `large_enum_variant` regression); mode-gated capped `CertStore` (fast 0 ·
+certified 256 `Declared` caps, never-silent EXPLAINed drop counter — G-8 capped by construction);
+`myc check`/`run`/`test` print the active certification mode (P3-Q3a); `Diag::first_fault_line()`
+renders `where · site_kind · decision` — the W-A exit criterion. ~537 tests green change-scoped
+(fmt/clippy `-D warnings`/test across diag/cert/core/cli); api-index regenerated. Judgment calls
+(EventId shape open per the RFC's own flag; Balanced store cap reuses certified's 256; envelope
+hashed only when present) are flagged in-code and in the program ledger.
+
 ### fix(components): Phase B complete — all 45 Rust component repos buildable at train v0.464.0 (2026-07-18)
 
 Course-correction Phase B (executed in the component repos; recorded here): nine topological
