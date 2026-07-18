@@ -175,10 +175,11 @@ fn map_then_map_err_chain_declines_outer_and_gaps_never_emits_unsound_nesting() 
          {myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("no proven-emitted free-fn referent")
-            || g.reason.contains("no explicit type annotation")),
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")
+                || g.reason.contains("no explicit type annotation")),
         "expected G-β Rank A (or legacy DN-118) gap on the outer chain, got {:?}",
         report
             .gaps
@@ -209,9 +210,10 @@ fn chain_outer_map_err_function_value_gaps_never_fabricates_free_fn() {
         "must never emit bare `map_err(` (G-β Rank A poison stop), got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("no proven-emitted free-fn referent")),
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")),
         "expected G-β Rank A gap, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
@@ -258,9 +260,10 @@ fn map_on_non_result_option_receiver_never_inlines_and_never_fabricates() {
         "must neither combinator-inline nor fabricate bare `map(`, got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("no proven-emitted free-fn referent")),
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")),
         "expected G-β Rank A gap, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
@@ -286,10 +289,11 @@ fn map_over_unresolved_call_receiver_gaps_never_fabricates() {
         "must never fabricate `Ok`/`Err` or bare `map(` for an unresolved receiver, got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("no proven-emitted free-fn referent")
-            || g.reason.contains("no explicit type annotation")),
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")
+                || g.reason.contains("no explicit type annotation")),
         "expected G-β Rank A (or legacy DN-118) gap, got {:?}",
         report
             .gaps
@@ -384,9 +388,10 @@ fn map_with_function_value_argument_gaps_never_fabricates_free_fn() {
         "must neither combinator-inline nor fabricate bare `map(`, got:\n{myc}"
     );
     assert!(
-        report.gaps.iter().any(|g| g
-            .reason
-            .contains("no proven-emitted free-fn referent")),
+        report
+            .gaps
+            .iter()
+            .any(|g| g.reason.contains("no proven-emitted free-fn referent")),
         "expected G-β Rank A gap, got {:?}",
         report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
