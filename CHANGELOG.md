@@ -12,6 +12,45 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(core+std): AX-core W-D landed — ternary conversion-ceiling lift (E-W1/M-1119), W-1 std exports, PolicySlot caps (CC-B6), retention sizing pass, S1/S2 addenda (2026-07-18)
+
+Course-correction Phase C wave W-D (steer §5), closing the monorepo AX-core wave set.
+
+- **E-W1/M-1119 — BREAKING (Rust API):** `mycelium-core::ternary::{int_to_trits, trits_to_int,
+  max_magnitude}` and the `mycelium-std-ternary::arithmetic` mirrors widen `i64`→`i128`
+  (new ceiling m ≤ 80; m ≥ 81 explicit `None`; no unsafe). Verify-first surfaced two latent
+  findings: the documented "exact to m ≤ 40" ceiling was really m ≤ 39 (`max_magnitude`
+  overflowed computing 3^40), and the old Horner fold could transiently overflow mid-decode for
+  a genuinely-41-trit value whose result fits `i64` — a live G2 gap on the
+  `ternary_to_binary` path. Call sites across cert/mlir/interp/std-swap/std-conformance/xtask
+  updated; `mycelium-mlir`'s own AOT `MAX_TERNARY_WIDTH_I64=39` bound deliberately untouched
+  (separate, documented concern). The DN-66-frozen surface change is recorded append-only in
+  `docs/spec/stdlib/ternary.md` (ADR-045 §2). Exact m=41 round-trip tests over the full
+  Binary{64} range are the DoD witness.
+- **W-1 std exports:** `lib/std/swap.myc` gains `bin32_to_tern21`/`tern21_to_bin32` and
+  `bin64_to_tern41`/`tern41_to_bin64` (the new canonical pair, 3^40 < 2^64 ≤ 3^41),
+  `myc check` clean (22 files) and exercised end-to-end (L1-eval/L0-interp/AOT + live Rust
+  oracle). `matrix_len` moves to the Binary{64} length canon; `bytes_len`'s matching move is a
+  kernel-primitive-registry change, ledgered in-file as a residual. `docs/lib-index/` regenerated.
+- **CC-B6 — PolicySlot caps:** `transitions`/`trace` logs capped (CertStore precedent:
+  `drop_oldest`, never-silent drop counters, `seq` from an eviction-surviving monotonic total).
+  Caps `Declared` (64/1024-anchored), deliberately not mode-gated — no production caller supplies
+  a `CertMode` today (YAGNI, disclosed in-code and in the spec). Property test bounds the cap.
+- **Sizing pass:** committed measurement tests (diag/cert/std-runtime) upgrade the retention
+  spec's measured rows `Declared`→`Empirical` in a new §5.1 — L4 ≈608 B/record (64 ≈38 KiB,
+  1024 ≈608 KiB, consistent with the declared 256 KiB/8 MiB budgets), L1 certified ≈397 B/pair
+  (256 ≈99 KiB, a new figure), new L8 row for the PolicySlot logs. `balanced`, wider L2, L3, and
+  warm-epoch counts stay `Declared` (unmeasured — VR-5).
+- **DN-141 S1/S2 addenda** (append-only, no production code): S1 grounds `Quarantined[T]`
+  against the single-constructor-ADT convention (narrowing the open question to one checker
+  rule); S2 produces the concrete boundary-table delta against the landed `meet_boundary.rs`,
+  surfacing a load-bearing sequencing finding — before DN-113/M-1060 wires cross-phylum imports,
+  phylum-wide free meet would be indistinguishable from removing the Exact-demand wall entirely.
+
+Gates green: fmt/clippy `-D warnings`/build workspace-wide, targeted tests on every touched crate
+(incl. `mycelium-l1` full suite and the 9/9 reject-ledger guard — pins untouched), `myc-check`
+on `lib/std`, markdown/links/structured. M-1119 → done with landed basis.
+
 ### feat(l1): AX-core W-C landed — structural grade catalog + overclaim guard, regime classification, meet-boundary table, envelope-instance EXPLAIN (2026-07-18)
 
 Course-correction Phase C wave W-C (steer §5; X2–X5, completing the AX-core implementation

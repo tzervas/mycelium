@@ -173,10 +173,10 @@
 | `mycelium_cert::BF16_MIN_NORMAL:` | const | `crates/mycelium-cert/src/dense.rs:34` | Smallest positive *normal* bfloat16 (same exponent range as f32): `2^−126`. |
 | `mycelium_cert::BF16_REL_EPS:` | const | `crates/mycelium-cert/src/dense.rs:30` | The proven per-element relative rounding bound: the unit roundoff `u = β^(1−p)/2 = 2^(1−8)/2 = |
 | `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:47` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
-| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:364` | A [`SwapEngine`] for the reference interpreter that performs the |
-| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:399` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
+| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:374` | A [`SwapEngine`] for the reference interpreter that performs the |
+| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:409` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
 | `mycelium_cert::CheckVerdict` | enum | `crates/mycelium-cert/src/check.rs:110` | The checker's verdict. |
-| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:390` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
+| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:400` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
 | `mycelium_cert::DENSE_VSA_EMP_DELTA:` | const | `crates/mycelium-cert/src/dense_vsa.rs:48` | Empirical profile — the validated δ. |
 | `mycelium_cert::DENSE_VSA_MODEL:` | const | `crates/mycelium-cert/src/dense_vsa.rs:41` | The VSA model the swap targets (the atoms are bipolar and the encoding is the MAP-I additive |
 | `mycelium_cert::Evidence` | enum | `crates/mycelium-cert/src/check.rs:58` | The evidence presented to the checker — the *certificate* of `(A, B, R, claimed, certificate)`. |
@@ -187,7 +187,7 @@
 | `mycelium_cert::RefinementRelation` | enum | `crates/mycelium-cert/src/check.rs:45` | The relation `R` under which `B` claims to refine `A` (RFC-0002 §2). |
 | `mycelium_cert::SwapCertificate` | enum | `crates/mycelium-cert/src/lib.rs:58` | The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`). |
 | `mycelium_cert::SwapError` | enum | `crates/mycelium-cert/src/lib.rs:87` | Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion. |
-| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:274` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
+| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:275` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
 | `mycelium_cert::check` | mod | `crates/mycelium-cert/src/lib.rs:22` | — |
 | `mycelium_cert::check` | fn | `crates/mycelium-cert/src/check.rs:158` | The single shared checker: does artifact `B` refine reference `A` under `relation` within the |
 | `mycelium_cert::check_core` | fn | `crates/mycelium-cert/src/check.rs:293` | Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210 |
@@ -200,14 +200,14 @@
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_METHOD:` | const | `crates/mycelium-cert/src/dense_vsa.rs:52` | Empirical profile — the method recorded in the `EmpiricalFit` basis. |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_TRIALS:` | const | `crates/mycelium-cert/src/dense_vsa.rs:50` | Empirical profile — the trial count `tests/dense_vsa.rs` runs. |
 | `mycelium_cert::gate_swap` | fn | `crates/mycelium-cert/src/mode.rs:141` | Apply the [`CertMode`] policy to a **raw** swap result `(value, cert)` produced by one of the |
-| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:238` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
+| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:239` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
 | `mycelium_cert::mode` | mod | `crates/mycelium-cert/src/lib.rs:25` | — |
 | `mycelium_cert::mode::GatedSwap::validated` | fn | `crates/mycelium-cert/src/mode.rs:69` | `true` iff this swap was certified-and-validated — i.e. |
 | `mycelium_cert::mode::ModeGatedSwapEngine::mode` | fn | `crates/mycelium-cert/src/mode.rs:298` | The active [`CertMode`]. |
 | `mycelium_cert::mode::ModeGatedSwapEngine::new` | fn | `crates/mycelium-cert/src/mode.rs:292` | A mode-gated engine in the given [`CertMode`]. |
 | `mycelium_cert::mode::ModeGatedSwapEngine::swap_gated` | fn | `crates/mycelium-cert/src/mode.rs:305` | Perform the swap and return the **full** [`GatedSwap`] (value + certificate + check verdict |
-| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:251` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
-| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:318` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
+| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:252` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
+| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:321` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
 | `mycelium_cert::vsa_to_dense` | fn | `crates/mycelium-cert/src/dense_vsa.rs:195` | Decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{components, F32}` value by |
 
 ## mycelium-check
@@ -498,15 +498,15 @@
 | `mycelium_core::ternary::BigTernary::zero` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:55` | The additive identity (empty digit vector). |
 | `mycelium_core::ternary::FixedWidthTrits` | struct | `crates/mycelium-core/src/ternary/big_ternary.rs:216` | A balanced-ternary value pinned to exactly `trits.len()` trits — the in-memory image of |
 | `mycelium_core::ternary::FixedWidthTrits::to_big` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:224` | Promote to the growable form (always exact). |
-| `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary/mod.rs:164` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
+| `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary/mod.rs:205` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
 | `mycelium_core::ternary::checked_add_fixed` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:234` | NEVER-SILENT fixed-width addition: ripples the shared [`super::add_with_carry`] across `n` trits and |
-| `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary/mod.rs:39` | The signed value of a single trit. |
-| `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary/mod.rs:126` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
-| `mycelium_core::ternary::max_magnitude` | fn | `crates/mycelium-core/src/ternary/mod.rs:108` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
-| `mycelium_core::ternary::mul` | fn | `crates/mycelium-core/src/ternary/mod.rs:197` | Fixed-width multiplication. |
-| `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary/mod.rs:149` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
-| `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary/mod.rs:186` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
-| `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary/mod.rs:118` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
+| `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary/mod.rs:67` | The signed value of a single trit. |
+| `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary/mod.rs:164` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
+| `mycelium_core::ternary::max_magnitude` | fn | `crates/mycelium-core/src/ternary/mod.rs:137` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
+| `mycelium_core::ternary::mul` | fn | `crates/mycelium-core/src/ternary/mod.rs:238` | Fixed-width multiplication. |
+| `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary/mod.rs:190` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
+| `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary/mod.rs:227` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
+| `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary/mod.rs:151` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
 | `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:28` | — |
 | `mycelium_core::value::Value::bytes` | fn | `crates/mycelium-core/src/value.rs:361` | The bytes of a [`Repr::Bytes`] value as a slice, or `None` for any other representation |
 | `mycelium_core::value::Value::bytes_get` | fn | `crates/mycelium-core/src/value.rs:340` | Never-silent indexed byte access into a [`Repr::Bytes`] value (RFC-0032 D4): the `i`-th byte, |
@@ -1496,7 +1496,7 @@
 | `mycelium_mlir::swap_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:79` | — |
 | `mycelium_mlir::swap_codegen::SwapCertMode::cert_source` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:96` | The cert **source** this mode records — independently re-checked vs carried-from-interp. |
 | `mycelium_mlir::swap_codegen::SwapCertMode::label` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:86` | A short, stable label for the EXPLAIN record / IR comment (never a hidden mode — G2). |
-| `mycelium_mlir::swap_codegen::legal_pair` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:134` | Whether `(n, m)` admits a lossless binary↔ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
+| `mycelium_mlir::swap_codegen::legal_pair` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:135` | Whether `(n, m)` admits a lossless binary↔ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
 | `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::trampoline` | mod | `crates/mycelium-mlir/src/lib.rs:80` | — |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
@@ -2337,22 +2337,22 @@
 | `mycelium_std_runtime::network::TryRecv` | enum | `crates/mycelium-std-runtime/src/network.rs:371` | Result of a non-blocking receive attempt. |
 | `mycelium_std_runtime::network::TrySend` | enum | `crates/mycelium-std-runtime/src/network.rs:360` | Result of a non-blocking send attempt. |
 | `mycelium_std_runtime::policy_mech` | mod | `crates/mycelium-std-runtime/src/lib.rs:119` | — |
-| `mycelium_std_runtime::policy_mech::CaptureError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:224` | Why a capture failed — always explicit (G2), never a silent reconstruction. |
-| `mycelium_std_runtime::policy_mech::CapturedPolicy` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:215` | A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded |
-| `mycelium_std_runtime::policy_mech::PolicySetRecord` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:66` | A reified policy-set transition record (G2: a mechanized set is never a silent override — |
-| `mycelium_std_runtime::policy_mech::PolicySite` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:42` | The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the |
-| `mycelium_std_runtime::policy_mech::PolicySlot` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:124` | A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with an |
-| `mycelium_std_runtime::policy_mech::PolicySlot::active` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:172` | The active policy, if one has been set. |
-| `mycelium_std_runtime::policy_mech::PolicySlot::new` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:134` | An empty slot for `site` — no active policy, no transitions, no trace. |
-| `mycelium_std_runtime::policy_mech::PolicySlot::select` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:195` | Decide through the active policy (RFC-0005 `select`), recording the mandatory |
-| `mycelium_std_runtime::policy_mech::PolicySlot::set` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:154` | Set the active policy, appending a [`PolicySetRecord`] (returned by reference). |
-| `mycelium_std_runtime::policy_mech::PolicySlot::site` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:145` | The site this slot governs. |
-| `mycelium_std_runtime::policy_mech::PolicySlot::trace` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:185` | The selection trace: the mandatory [`Explanation`] of every selection made through this |
-| `mycelium_std_runtime::policy_mech::PolicySlot::transitions` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:178` | The append-only transition log (every `set`, in order). |
-| `mycelium_std_runtime::policy_mech::ReplayError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:298` | Why a replay failed — always explicit (G2), never a silent pass. |
-| `mycelium_std_runtime::policy_mech::SlotError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:81` | Why a slot operation failed — always explicit (G2), never a silent default choice. |
-| `mycelium_std_runtime::policy_mech::capture` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:273` | Materialize the policy that decided `explanation` from `registry` (DN-78 §3 B-1). |
-| `mycelium_std_runtime::policy_mech::replay` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:360` | Replay a recorded decision against its captured policy (DN-78 §3 B-1): re-run the recorded |
+| `mycelium_std_runtime::policy_mech::CaptureError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:347` | Why a capture failed — always explicit (G2), never a silent reconstruction. |
+| `mycelium_std_runtime::policy_mech::CapturedPolicy` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:338` | A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded |
+| `mycelium_std_runtime::policy_mech::PolicySetRecord` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:112` | A reified policy-set transition record (G2: a mechanized set is never a silent override — |
+| `mycelium_std_runtime::policy_mech::PolicySite` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:88` | The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the |
+| `mycelium_std_runtime::policy_mech::PolicySlot` | struct | `crates/mycelium-std-runtime/src/policy_mech.rs:177` | A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with a |
+| `mycelium_std_runtime::policy_mech::PolicySlot::active` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:250` | The active policy, if one has been set. |
+| `mycelium_std_runtime::policy_mech::PolicySlot::new` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:196` | An empty slot for `site` — no active policy, no transitions, no trace. |
+| `mycelium_std_runtime::policy_mech::PolicySlot::select` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:312` | Decide through the active policy (RFC-0005 `select`), recording the mandatory |
+| `mycelium_std_runtime::policy_mech::PolicySlot::set` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:226` | Set the active policy, appending a [`PolicySetRecord`] (returned by reference). |
+| `mycelium_std_runtime::policy_mech::PolicySlot::site` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:211` | The site this slot governs. |
+| `mycelium_std_runtime::policy_mech::PolicySlot::trace` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:287` | The selection trace: the mandatory [`Explanation`] of every **retained** selection made |
+| `mycelium_std_runtime::policy_mech::PolicySlot::transitions` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:260` | The transition log — every **retained** `set`, in order. |
+| `mycelium_std_runtime::policy_mech::ReplayError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:421` | Why a replay failed — always explicit (G2), never a silent pass. |
+| `mycelium_std_runtime::policy_mech::SlotError` | enum | `crates/mycelium-std-runtime/src/policy_mech.rs:129` | Why a slot operation failed — always explicit (G2), never a silent default choice. |
+| `mycelium_std_runtime::policy_mech::capture` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:396` | Materialize the policy that decided `explanation` from `registry` (DN-78 §3 B-1). |
+| `mycelium_std_runtime::policy_mech::replay` | fn | `crates/mycelium-std-runtime/src/policy_mech.rs:483` | Replay a recorded decision against its captured policy (DN-78 §3 B-1): re-run the recorded |
 | `mycelium_std_runtime::r2_residual` | mod | `crates/mycelium-std-runtime/src/lib.rs:120` | — |
 | `mycelium_std_runtime::r2_residual::DeferredR2` | enum | `crates/mycelium-std-runtime/src/r2_residual.rs:29` | A deferred M-828-tail item (DN-78 §4). |
 | `mycelium_std_runtime::r2_residual::DeferredR2::ALL:` | const | `crates/mycelium-std-runtime/src/r2_residual.rs:50` | Every deferred item, for exhaustive iteration in tests and tooling. |
@@ -2548,29 +2548,29 @@
 | `mycelium_std_ternary::Packed` | struct | `crates/mycelium-std-ternary/src/packing.rs:163` | A packed trit sequence: bytes + the inspectable `Meta.physical` scheme record (C3/C4/NFR-1). |
 | `mycelium_std_ternary::Scheme` | enum | `crates/mycelium-std-ternary/src/packing.rs:38` | The packing scheme chosen at a lowering stage (RFC-0004 §5; `physical-layout.schema.json`). |
 | `mycelium_std_ternary::Trit` | enum | `crates/mycelium-std-ternary/src/primitives.rs:21` | A balanced trit in `{−1, 0, +1}` (FR-M2; M-111). |
-| `mycelium_std_ternary::add` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:90` | Fixed-width balanced-ternary addition `a + b`. |
-| `mycelium_std_ternary::arithmetic` | mod | `crates/mycelium-std-ternary/src/lib.rs:68` | — |
+| `mycelium_std_ternary::add` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:100` | Fixed-width balanced-ternary addition `a + b`. |
+| `mycelium_std_ternary::arithmetic` | mod | `crates/mycelium-std-ternary/src/lib.rs:70` | — |
 | `mycelium_std_ternary::explain` | fn | `crates/mycelium-std-ternary/src/packing.rs:205` | The full EXPLAIN record for this packed value (C3/G11/NFR-1/SC-3). |
-| `mycelium_std_ternary::guarantee_matrix` | mod | `crates/mycelium-std-ternary/src/lib.rs:69` | — |
+| `mycelium_std_ternary::guarantee_matrix` | mod | `crates/mycelium-std-ternary/src/lib.rs:71` | — |
 | `mycelium_std_ternary::guarantee_matrix::Explainable` | enum | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:52` | Whether the op exposes an inspectable artifact for its selection/conversion (C3/G11). |
 | `mycelium_std_ternary::guarantee_matrix::Fallibility` | enum | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:41` | Whether an op is total or returns an explicit error on some inputs. |
 | `mycelium_std_ternary::guarantee_matrix::MATRIX:` | const | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:78` | The complete guarantee matrix for `std.ternary` (RFC-0016 §4.5). |
 | `mycelium_std_ternary::guarantee_matrix::OpGuarantee` | struct | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:61` | One row of the guarantee matrix (RFC-0016 §4.5; `docs/spec/stdlib/ternary.md` §4). |
 | `mycelium_std_ternary::guarantee_matrix::Tag` | enum | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:28` | A guarantee-lattice tag (C2/VR-5). |
 | `mycelium_std_ternary::guarantee_matrix::assert_matrix_invariants` | fn | `crates/mycelium-std-ternary/src/guarantee_matrix.rs:222` | Structural invariants on the matrix — asserted in tests. |
-| `mycelium_std_ternary::int_to_trits` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:54` | The unique `m`-trit balanced representation of `value`, MSB-first. |
-| `mycelium_std_ternary::max_magnitude` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:65` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
-| `mycelium_std_ternary::mul` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:112` | Fixed-width balanced-ternary multiplication `a × b`. |
-| `mycelium_std_ternary::neg` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:79` | Digit-wise negation of an `m`-trit balanced-ternary number. |
+| `mycelium_std_ternary::int_to_trits` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:64` | The unique `m`-trit balanced representation of `value`, MSB-first. |
+| `mycelium_std_ternary::max_magnitude` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:75` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
+| `mycelium_std_ternary::mul` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:122` | Fixed-width balanced-ternary multiplication `a × b`. |
+| `mycelium_std_ternary::neg` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:89` | Digit-wise negation of an `m`-trit balanced-ternary number. |
 | `mycelium_std_ternary::pack` | fn | `crates/mycelium-std-ternary/src/packing.rs:411` | Pack a trit sequence under the given scheme. |
-| `mycelium_std_ternary::packing` | mod | `crates/mycelium-std-ternary/src/lib.rs:70` | — |
+| `mycelium_std_ternary::packing` | mod | `crates/mycelium-std-ternary/src/lib.rs:72` | — |
 | `mycelium_std_ternary::packing::Packed::bytes` | fn | `crates/mycelium-std-ternary/src/packing.rs:197` | The packed bytes, read-only (lossless re-encoding of the trits; RFC-0004 §5). |
 | `mycelium_std_ternary::packing::Packed::scheme` | fn | `crates/mycelium-std-ternary/src/packing.rs:182` | The scheme used to pack these bytes (the `Meta.physical` inspectable record; C3/NFR-1). |
 | `mycelium_std_ternary::packing::Packed::trit_count` | fn | `crates/mycelium-std-ternary/src/packing.rs:188` | The number of trits originally packed (total; needed for reconstructing the last group). |
 | `mycelium_std_ternary::packing::Scheme::group_size` | fn | `crates/mycelium-std-ternary/src/packing.rs:64` | The alignment group size (number of trits that must be present for a complete group). |
 | `mycelium_std_ternary::packing::Scheme::trits_per_byte` | fn | `crates/mycelium-std-ternary/src/packing.rs:53` | The number of trits packed per byte for this scheme. |
 | `mycelium_std_ternary::packing::SelectionNote` | enum | `crates/mycelium-std-ternary/src/packing.rs:132` | How the scheme was selected (for the EXPLAIN record). |
-| `mycelium_std_ternary::primitives` | mod | `crates/mycelium-std-ternary/src/lib.rs:71` | — |
+| `mycelium_std_ternary::primitives` | mod | `crates/mycelium-std-ternary/src/lib.rs:73` | — |
 | `mycelium_std_ternary::primitives::Bit::and` | fn | `crates/mycelium-std-ternary/src/primitives.rs:146` | Boolean AND. |
 | `mycelium_std_ternary::primitives::Bit::digit` | fn | `crates/mycelium-std-ternary/src/primitives.rs:50` | The signed integer value of this trit: `Neg↦−1, Zero↦0, Pos↦+1`. |
 | `mycelium_std_ternary::primitives::Bit::new` | fn | `crates/mycelium-std-ternary/src/primitives.rs:37` | Construct a `Trit` from an integer. |
@@ -2579,8 +2579,8 @@
 | `mycelium_std_ternary::primitives::Trit::from_wire_char` | fn | `crates/mycelium-std-ternary/src/primitives.rs:93` | Parse a wire glyph back into a `Trit`. |
 | `mycelium_std_ternary::primitives::Trit::to_wire_char` | fn | `crates/mycelium-std-ternary/src/primitives.rs:81` | The MSB-first wire glyph for this trit: `-` / `0` / `+` |
 | `mycelium_std_ternary::scheme_of` | fn | `crates/mycelium-std-ternary/src/packing.rs:221` | The scheme used to pack `p` (the inspectable `Meta.physical` record; C3/NFR-1). |
-| `mycelium_std_ternary::sub` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:98` | Fixed-width balanced-ternary subtraction `a − b = add(a, neg(b))`. |
-| `mycelium_std_ternary::trits_to_int` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:43` | The integer denoted by an MSB-first trit string. |
+| `mycelium_std_ternary::sub` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:108` | Fixed-width balanced-ternary subtraction `a − b = add(a, neg(b))`. |
+| `mycelium_std_ternary::trits_to_int` | fn | `crates/mycelium-std-ternary/src/arithmetic.rs:52` | The integer denoted by an MSB-first trit string. |
 | `mycelium_std_ternary::unpack` | fn | `crates/mycelium-std-ternary/src/packing.rs:443` | Unpack a [`Packed`] trit sequence back to a `Vec<Trit>`. |
 
 ## mycelium-std-testing
@@ -4125,14 +4125,14 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::repr::SparsityClass::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::ternary::BigTernary::add` | dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:164 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::add` | dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:205 — one canonical row kept |
 | `mycelium_core::ternary::BigTernary::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::ternary::BigTernary::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_core::ternary::BigTernary::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::ternary::BigTernary::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_core::ternary::BigTernary::mul` | dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:197 — one canonical row kept |
-| `mycelium_core::ternary::BigTernary::neg` | dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:149 — one canonical row kept |
-| `mycelium_core::ternary::BigTernary::sub` | dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:186 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::mul` | dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:238 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::neg` | dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:190 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::sub` | dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:227 — one canonical row kept |
 | `mycelium_core::ternary::FixedWidthTrits::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::ternary::FixedWidthTrits::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::ternary::FixedWidthTrits::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -7982,13 +7982,13 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_sys_host::OsEntropy::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_std_sys_host::OsEntropy::fill_bytes` | definition not found via regex heuristic (kind='fn', name='fill_bytes') — possibly macro-generated or cfg-gated |
 | `mycelium_std_sys_host::OsEntropy::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_ternary::arithmetic::add` | dedup-alias: same definition as `mycelium_std_ternary::add` at crates/mycelium-std-ternary/src/arithmetic.rs:90 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::int_to_trits` | dedup-alias: same definition as `mycelium_std_ternary::int_to_trits` at crates/mycelium-std-ternary/src/arithmetic.rs:54 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::max_magnitude` | dedup-alias: same definition as `mycelium_std_ternary::max_magnitude` at crates/mycelium-std-ternary/src/arithmetic.rs:65 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::mul` | dedup-alias: same definition as `mycelium_std_ternary::mul` at crates/mycelium-std-ternary/src/arithmetic.rs:112 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::sub` | dedup-alias: same definition as `mycelium_std_ternary::sub` at crates/mycelium-std-ternary/src/arithmetic.rs:98 — one canonical row kept |
-| `mycelium_std_ternary::arithmetic::trits_to_int` | dedup-alias: same definition as `mycelium_std_ternary::trits_to_int` at crates/mycelium-std-ternary/src/arithmetic.rs:43 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::add` | dedup-alias: same definition as `mycelium_std_ternary::add` at crates/mycelium-std-ternary/src/arithmetic.rs:100 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::int_to_trits` | dedup-alias: same definition as `mycelium_std_ternary::int_to_trits` at crates/mycelium-std-ternary/src/arithmetic.rs:64 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::max_magnitude` | dedup-alias: same definition as `mycelium_std_ternary::max_magnitude` at crates/mycelium-std-ternary/src/arithmetic.rs:75 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::mul` | dedup-alias: same definition as `mycelium_std_ternary::mul` at crates/mycelium-std-ternary/src/arithmetic.rs:122 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::sub` | dedup-alias: same definition as `mycelium_std_ternary::sub` at crates/mycelium-std-ternary/src/arithmetic.rs:108 — one canonical row kept |
+| `mycelium_std_ternary::arithmetic::trits_to_int` | dedup-alias: same definition as `mycelium_std_ternary::trits_to_int` at crates/mycelium-std-ternary/src/arithmetic.rs:52 — one canonical row kept |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::guarantee_matrix::Explainable::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -8072,8 +8072,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_ternary::primitives::Trit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::primitives::Trit::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_std_ternary::primitives::Trit::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
-| `mycelium_std_ternary::primitives::Trit::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept |
-| `mycelium_std_ternary::primitives::Trit::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept |
+| `mycelium_std_ternary::primitives::Trit::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept |
+| `mycelium_std_ternary::primitives::Trit::neg` | dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept |
 | `mycelium_std_ternary::primitives::Trit::new` | dedup-alias: same definition as `mycelium_std_ternary::primitives::Bit::new` at crates/mycelium-std-ternary/src/primitives.rs:37 — one canonical row kept |
 | `mycelium_std_ternary::primitives::Trit::new` | dedup-alias: same definition as `mycelium_std_ternary::primitives::Bit::new` at crates/mycelium-std-ternary/src/primitives.rs:37 — one canonical row kept |
 | `mycelium_std_testing::Budget::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

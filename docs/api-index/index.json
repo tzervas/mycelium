@@ -1723,7 +1723,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 364,
+      "line": 374,
       "summary": "A [`SwapEngine`] for the reference interpreter that performs the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1734,7 +1734,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 399,
+      "line": 409,
       "summary": "A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1756,7 +1756,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 390,
+      "line": 400,
       "summary": "The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -1877,7 +1877,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 274,
+      "line": 275,
       "summary": "`enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2020,7 +2020,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 238,
+      "line": 239,
       "summary": "Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2086,7 +2086,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 251,
+      "line": 252,
       "summary": "The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2097,7 +2097,7 @@
       "crate": "mycelium-cert",
       "module": "mycelium_cert",
       "file": "crates/mycelium-cert/src/lib.rs",
-      "line": 318,
+      "line": 321,
       "summary": "`dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5078,7 +5078,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 164,
+      "line": 205,
       "summary": "Ripple-carry add over two equal-length MSB-first trit strings, fixed-width.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5100,7 +5100,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 39,
+      "line": 67,
       "summary": "The signed value of a single trit.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5111,7 +5111,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 126,
+      "line": 164,
       "summary": "The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5122,7 +5122,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 108,
+      "line": 137,
       "summary": "The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5133,7 +5133,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 197,
+      "line": 238,
       "summary": "Fixed-width multiplication.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5144,7 +5144,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 149,
+      "line": 190,
       "summary": "Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5155,7 +5155,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 186,
+      "line": 227,
       "summary": "Fixed-width subtraction `a − b` = `add(a, neg(b))`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5166,7 +5166,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::ternary",
       "file": "crates/mycelium-core/src/ternary/mod.rs",
-      "line": 118,
+      "line": 151,
       "summary": "The integer denoted by an MSB-first trit string (`value(t)`, §1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15506,7 +15506,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::swap_codegen",
       "file": "crates/mycelium-mlir/src/swap_codegen.rs",
-      "line": 134,
+      "line": 135,
       "summary": "Whether `(n, m)` admits a lossless binary↔ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23437,7 +23437,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 224,
+      "line": 347,
       "summary": "Why a capture failed — always explicit (G2), never a silent reconstruction.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23448,7 +23448,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 215,
+      "line": 338,
       "summary": "A captured policy: the RFC-0005-conformant [`SelectionPolicy`] value that decided a recorded",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23459,7 +23459,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 66,
+      "line": 112,
       "summary": "A reified policy-set transition record (G2: a mechanized set is never a silent override —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23470,7 +23470,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 42,
+      "line": 88,
       "summary": "The RFC-0005 policy sites (§4: swap-target, packing; RFC-0008 RT3 adds placement as the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23481,8 +23481,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 124,
-      "summary": "A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with an",
+      "line": 177,
+      "summary": "A runtime slot binding the **active** [`SelectionPolicy`] for one RFC-0005 site, with a",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -23492,7 +23492,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 172,
+      "line": 250,
       "summary": "The active policy, if one has been set.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23503,7 +23503,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 134,
+      "line": 196,
       "summary": "An empty slot for `site` — no active policy, no transitions, no trace.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23514,7 +23514,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 195,
+      "line": 312,
       "summary": "Decide through the active policy (RFC-0005 `select`), recording the mandatory",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23525,7 +23525,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 154,
+      "line": 226,
       "summary": "Set the active policy, appending a [`PolicySetRecord`] (returned by reference).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23536,7 +23536,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 145,
+      "line": 211,
       "summary": "The site this slot governs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23547,8 +23547,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 185,
-      "summary": "The selection trace: the mandatory [`Explanation`] of every selection made through this",
+      "line": 287,
+      "summary": "The selection trace: the mandatory [`Explanation`] of every **retained** selection made",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -23558,8 +23558,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech::PolicySlot",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 178,
-      "summary": "The append-only transition log (every `set`, in order).",
+      "line": 260,
+      "summary": "The transition log — every **retained** `set`, in order.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -23569,7 +23569,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 298,
+      "line": 421,
       "summary": "Why a replay failed — always explicit (G2), never a silent pass.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23580,7 +23580,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 81,
+      "line": 129,
       "summary": "Why a slot operation failed — always explicit (G2), never a silent default choice.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23591,7 +23591,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 273,
+      "line": 396,
       "summary": "Materialize the policy that decided `explanation` from `registry` (DN-78 §3 B-1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23602,7 +23602,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::policy_mech",
       "file": "crates/mycelium-std-runtime/src/policy_mech.rs",
-      "line": 360,
+      "line": 483,
       "summary": "Replay a recorded decision against its captured policy (DN-78 §3 B-1): re-run the recorded",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25428,7 +25428,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 90,
+      "line": 100,
       "summary": "Fixed-width balanced-ternary addition `a + b`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25439,7 +25439,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 68,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25461,7 +25461,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 69,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25538,7 +25538,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 54,
+      "line": 64,
       "summary": "The unique `m`-trit balanced representation of `value`, MSB-first.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25549,7 +25549,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 65,
+      "line": 75,
       "summary": "The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25560,7 +25560,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 112,
+      "line": 122,
       "summary": "Fixed-width balanced-ternary multiplication `a × b`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25571,7 +25571,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 79,
+      "line": 89,
       "summary": "Digit-wise negation of an `m`-trit balanced-ternary number.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25593,7 +25593,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 70,
+      "line": 72,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25670,7 +25670,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 71,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25769,7 +25769,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 98,
+      "line": 108,
       "summary": "Fixed-width balanced-ternary subtraction `a − b = add(a, neg(b))`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -25780,7 +25780,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/arithmetic.rs",
-      "line": 43,
+      "line": 52,
       "summary": "The integer denoted by an MSB-first trit string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -34409,7 +34409,7 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::add",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:164 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:205 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::clone",
@@ -34429,15 +34429,15 @@
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::mul",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:197 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:238 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::neg",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:149 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:190 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::BigTernary::sub",
-      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:186 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:227 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::ternary::FixedWidthTrits::clone",
@@ -49837,31 +49837,31 @@
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::add",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::add` at crates/mycelium-std-ternary/src/arithmetic.rs:90 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::add` at crates/mycelium-std-ternary/src/arithmetic.rs:100 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::int_to_trits",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::int_to_trits` at crates/mycelium-std-ternary/src/arithmetic.rs:54 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::int_to_trits` at crates/mycelium-std-ternary/src/arithmetic.rs:64 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::max_magnitude",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::max_magnitude` at crates/mycelium-std-ternary/src/arithmetic.rs:65 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::max_magnitude` at crates/mycelium-std-ternary/src/arithmetic.rs:75 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::mul",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::mul` at crates/mycelium-std-ternary/src/arithmetic.rs:112 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::mul` at crates/mycelium-std-ternary/src/arithmetic.rs:122 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::neg",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::sub",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::sub` at crates/mycelium-std-ternary/src/arithmetic.rs:98 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::sub` at crates/mycelium-std-ternary/src/arithmetic.rs:108 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::arithmetic::trits_to_int",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::trits_to_int` at crates/mycelium-std-ternary/src/arithmetic.rs:43 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::trits_to_int` at crates/mycelium-std-ternary/src/arithmetic.rs:52 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::guarantee_matrix::Explainable::clone",
@@ -50197,11 +50197,11 @@
     },
     {
       "symbol": "mycelium_std_ternary::primitives::Trit::neg",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::primitives::Trit::neg",
-      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_ternary::neg` at crates/mycelium-std-ternary/src/arithmetic.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_ternary::primitives::Trit::new",

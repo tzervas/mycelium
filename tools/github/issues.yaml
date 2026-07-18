@@ -18198,7 +18198,7 @@ issues:
   - id: M-1119
     title: "M-1119 -- E-W1: lift the ternary conversion-utility i64 ceiling (int_to_trits/trits_to_int/max_magnitude, m > 40)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -18223,3 +18223,11 @@ issues:
       1. cargo fmt/clippy -D warnings/test green, change-scoped.
       2. m=41 round-trip exact test present (mirrors max_magnitude_overflows_at_m41, now Some).
       3. No unsafe (KC-3); the mycelium-std-ternary and mycelium-core call sites agree.
+
+      Landed (2026-07-18, course-correction W-D commit 5749dfbb): i64->i128 widening across
+      mycelium-core::ternary + mycelium-std-ternary::arithmetic (new ceiling m <= 80, m >= 81
+      explicit None); DoD 1-3 verified (m41_round_trip_covers_the_full_binary64_range +
+      max_magnitude_succeeds_at_m41_and_beyond green; no unsafe; cert/mlir/interp call sites
+      agree). lib/std/swap.myc gained bin64_to_tern41/tern41_to_bin64 (+ the 32/21 pair),
+      myc-check clean. Verify-first correction recorded: the real i64 ceiling was m=39
+      (max_magnitude overflowed at m=40, one trit earlier than documented).
