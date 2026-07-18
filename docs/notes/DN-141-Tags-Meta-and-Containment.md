@@ -387,6 +387,93 @@ independent evidence of a real trust boundary (a proxy the spike must define pre
 that is empirical evidence toward widening. Until such telemetry exists, this stays `Declared` and
 undecided — no widening happens on this spike's say-so alone.
 
+## Appendix C — W-C implementation note (X2–X5, 2026-07-18; `Declared`, disclosed judgment calls)
+
+Per this note's own posture (§0/no-status-change discipline — this appendix does **not** move
+`DN-141`'s `Status` past `Draft`, H1/H2), the W-C leaf (steer §5 row: "structural grade catalog + CI
+overclaim guard; regime→result enforcement (`regime_type_lie`); meet-boundary table; isolation
+EXPLAIN as envelope instances") records what actually landed in `crates/mycelium-l1/`, and the
+disclosed residuals it chose **not** to force, rather than silently claiming completion (VR-5).
+
+**X2 (structural grade catalog + overclaim guard) — landed.**
+`crates/mycelium-l1/src/grade_catalog.rs` commits the R3 "matrix mint" as data: one row per
+RFC-0018 §4.3 structural rule `crate::grade::Gx::grade` already implements (G-Const…G-Wrapping),
+each naming its RFC citation — replacing scattered doc-comment prose with a single, queryable,
+completeness-tested table. R1 (modular bottom) and R2 (weaken-only annotation) were **already**
+fully implemented and tested (`crates/mycelium-l1/tests/check.rs`'s guarantee-grading suite,
+`M-663`) — cited, not duplicated (exit-criterion instruction). The **overclaim guard** is an
+exhaustive (not sampled — `Strength` is a 4-variant closed enum) property-test suite over
+`Strength::meet`/`Strength::satisfies` (`src/tests/grade_catalog.rs`) proving the lattice arithmetic
+every rule composes on can never let a composed grade outrank either of its inputs — the algebraic
+form of "no op's displayed/exported grade exceeds its catalog/basis." R7 (the `fast`-mode floor) is
+**already** implemented and tested at the value/kernel layer (`mycelium_core::CertMode::gate_result`,
+`crates/mycelium-core/src/tests/{cert_mode,mode_tests,mode_harness}.rs`) — cited, not duplicated; the
+static checker (`grade.rs`) runs mode-independently, so there is no analogous static-layer floor to
+add. **Out of scope, by RFC-0018's own disposition:** R18-Q3's per-prim signature table (§8: "a
+separate tracked deliverable... the conservative G-Op default is sound meanwhile") — this leaf does
+not invent per-prim precision RFC-0018 itself declines to require yet (VR-5, no unbounded upgrade).
+
+**X3 (regime→result enforcement) — classification + `Diag` builder landed; hard refusal deferred,
+disclosed.** `crates/mycelium-l1/src/regime.rs` implements RFC-0002 §4's own **direction-aware**
+distinction (`enc : Bin_n -> Tern_m`, no `Option` in its signature = **Total**; `dec : Tern_m ->
+Option Bin_n` = **Partial**) plus a `regime_type_lie` `Diag` builder (`SiteKind::RegimeTypeLie`).
+**Deliberately not wired as a hard checker refusal into the pre-existing, explicit `to:` swap
+spelling**: doing so would retroactively break already-shipped, already-tested behavior — concretely,
+the `dec`-direction round-trip chain `swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy:
+rt)` that `crates/mycelium-l1/tests/differential.rs`, `tests/runnable_gate.rs`, and
+`crates/mycelium-bench/src/corpus.rs` all assert type-checks (verified 2026-07-18: still present,
+still green). DN-142 §5 gate 3 itself binds "regime typing from the resolved pair" to the **`to:`-
+elision feature (X9)**, which is held per the steer (§5, "AX-sugar... after walls") and does not
+exist anywhere in `parse.rs` today (grep-verified, zero hits) — X9's own elision-resolution path is
+the natural, non-breaking call site for a hard `regime_type_lie` refusal once it lands. Retrofitting
+the *existing* spelling instead would be an unauthorized, breaking redesign outside a single leaf's
+authority (mitigation #14). Flagged, not silently decided either way.
+
+**X4 (meet-boundary table) — table + `Diag` builder landed and tested-equivalent to the real
+enforcement; not yet live-wired into `grade.rs`, disclosed.** `crates/mycelium-l1/src/meet_boundary.rs`
+commits `BoundaryKind::{Export, ExactDemand, CertifiedConsumer}` (the last with **no row** — X6/X7,
+held to wave W-E, per P2-Q2/P2-Q3) and a table-driven `check_boundary`/`meet_boundary_refuse_diag`
+pair, proven (exhaustively, `src/tests/meet_boundary.rs`) equivalent to the arithmetic
+`grade.rs::Gx::require`/`check_fn_grades` already enforce. R4 ("meet is free inside") is confirmed
+holding in `grade.rs`'s actual source today by a grep-level regression guard (7 `.meet(` internal-
+composition sites vs. 3 `self.require(` boundary-demand sites, pinned). **Not wired live into
+`grade.rs`**: `require`'s three call sites are not all the same DN-141/DESIGN-03 site_kind (a `let`/
+value ascription is `grade_annotation`; only the `grade_app` argument-demand call site is genuinely
+`meet_boundary`), and `grade.rs` is the file `crates/mycelium-std-conformance/tests/reject_ledger.rs`
+pins an exact `CheckError`-construction count for (DN-80) — correctly threading a `BoundaryKind`
+through three semantically-distinct call sites is a small, focused follow-on in its own right, not
+folded into this already-large leaf (KC-3 smallest-auditable-step discipline).
+
+**X5 (isolation EXPLAIN as envelope instances) — the `mycelium-l1` → `mycelium-diag` edge added;
+two refusal sites live-wired; two more built and tested but not (yet) live-wired, disclosed.**
+Added `mycelium-diag` as a **direct** dependency of `mycelium-l1` (`Cargo.toml`) — judged
+architecturally clean: both crates are `core`-tier (`xtask/deps-strata.toml`), the edge is strictly
+downward (`mycelium-l1` stratum 4 → `mycelium-diag` stratum 1), and `mycelium-diag` was already
+pulled in *transitively* via `mycelium-cert` (W-A's `swap_check` emitter, `mode.rs`), so no new node
+enters the workspace dependency graph. **Live-wired** (`crates/mycelium-l1/src/checkty.rs::check_swap`):
+the `legal_pair_refuse` and `policy_resolve` (refuse form) first-fault packages now back the
+checker's own `illegal swap pair`/`no ambient policy declared` `CheckError`s — the `Diag`'s rendered
+text is the error message (one source of truth, never a second diagnostic system — G-9), and the
+DN-80-pinned `checkty.rs` `CheckError::new`/`::at` (115) and `self.err(` (135) call-site counts are
+**unchanged** (an argument-only change to two pre-existing call sites, verified by re-grep — no DN-80
+reconcile row needed). A `policy_resolve` **success**-crumb builder also landed
+(`ambient_policy::policy_resolve_diag`, reusing `explain_origin`'s rendering, DRY) but is not wired to
+a live sink — a successful resolution is an optional RFC-0013 §4.6 "non-site" crumb, and `checkty::Cx`
+has no diagnostics-collection channel to push it through without a broader, separately-scoped API
+change. `regime_type_lie` (X3) and `meet_boundary` (X4) are correct and tested but likewise not
+live-wired, for the reasons stated in their own sections above.
+
+**Residual/deferred items, summarized (never silently dropped — G2):**
+1. R18-Q3 per-prim grade table — RFC-0018's own separately-tracked deliverable, out of scope.
+2. `regime_type_lie` hard refusal — deferred to the X9 `to:`-elision landing (or an explicit
+   maintainer decision to accept breaking the cited pre-existing tests).
+3. `meet_boundary`/`grade_annotation` live wiring into `grade.rs::require` — a small, focused
+   follow-on (three call sites, two distinct site_kinds) deliberately left unfolded into this leaf.
+4. A `checkty::Cx` diagnostics-collection channel (for `policy_resolve`'s success crumb and any
+   future non-refusing first-fault emission) — a broader API addition, not attempted here.
+5. `CertifiedConsumer` boundary crossing (mode × grade firewall, P2-Q3/X7) — held to wave W-E per the
+   steer; `meet_boundary.rs`'s enum names the kind with no row, not fabricated.
+
 ## 10. FLAGs for the integrating parent (this note does not edit these)
 
 - **`CHANGELOG.md`** — add a `docs(notes): DN-141 …` entry under the design-phase section
@@ -412,3 +499,4 @@ undecided — no widening happens on this spike's say-so alone.
 | When | Note |
 |---|---|
 | 2026-07-18 | **Draft** minted. Distills `DESIGN-02-TAGS-META-AND-CONTAINMENT.md` into DN-141's body per steer P2-Q5 ("pack 02 ratifies as DN-141's body; one source of truth"); folds in the five 2026-07-17 binding steers (P2-Q1..Q5, §6) as normative; adds S1 (`Quarantined[T]` carrier) and S2 (phylum-wide free meet) spike appendices per the steer's own commissioning; flags one correction against the steer's own P2-Q4 grounds text (RFC-0018 §4.5 is Enacted/Ratified, not "still-open" — §6.4) rather than silently repeating it, per VR-5/house rule #4. Free-ID check: `DN-141`/`DN-142` both verified absent before minting (H1); `DN-142` is noted as reserved elsewhere in this wave for the unrelated Swap Ergonomics DN (§6.5), not for pack 02. Status stays **Draft**; not self-ratifying (H2). `CHANGELOG.md`/`docs/Doc-Index.md`/`tools/github/issues.yaml` rows FLAGGED for the integrating parent (§10), not edited here. |
+| 2026-07-18 | **Appendix C added** (W-C leaf, steer wave X2–X5): records what actually landed in `crates/mycelium-l1/` (`grade_catalog.rs`/`regime.rs`/`meet_boundary.rs` + the direct `mycelium-diag` dependency edge + two live-wired first-fault refusal sites in `check_swap`) and the disclosed residuals (the `regime_type_lie` hard refusal deferred to the held X9 `to:`-elision feature; `meet_boundary`/`grade_annotation` live-wiring into `grade.rs::require` left as a focused follow-on; R18-Q3's per-prim table out of scope). Status stays **Draft**; this appendix does not self-ratify (H1/H2). `CHANGELOG.md`/`docs/Doc-Index.md`/`docs/api-index/`/`tools/github/issues.yaml` rows FLAGGED for the integrating parent, not edited here. |

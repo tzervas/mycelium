@@ -35,6 +35,9 @@
 //! an unrequested language declaration form for it.
 
 use crate::ast::Path;
+use mycelium_diag::{
+    CertMode, Decision, Diag, EventId, FirstFaultEnvelope, Phase, Severity, SiteKind,
+};
 
 /// The scope an ambient-policy declaration was made at — the RFC-0034 §6 lattice `global ⊐ phylum ⊐
 /// nodule`, reused verbatim (DN-142 §3.2), ordered **least-specific → most-specific**. Resolution is
@@ -201,4 +204,63 @@ pub fn is_ambient_spelling(p: &Path) -> bool {
 #[must_use]
 pub fn explain_origin(r: &ResolvedPolicy) -> String {
     format!("policy: {}  [{}]", r.policy.0.join("."), r.origin.label())
+}
+
+/// The `policy_resolve` first-fault event (RFC-0013 Amendment A1 §10.3 — `site_kind:
+/// policy_resolve`, "selection resolution to a `PolicyRef` (check)"; DESIGN-01 §4.3) for a
+/// **successful** resolution — an `Info`-severity crumb (RFC-0013 §4.6 "non-sites": a resolved
+/// selection is optional to consume, never mandatory), reusing [`explain_origin`]'s own rendering
+/// so the envelope's message and the pre-existing EXPLAIN string never drift apart (DRY).
+///
+/// `event_id`/`cert_mode` are caller-supplied (this is a check-time site; see [`explain_origin`]'s
+/// own scope note — `crate::checkty::Cx::check_swap` runs before `@certification` scope resolution
+/// reaches the checker, so a caller there passes the project default, `CertMode::Fast`).
+#[must_use]
+pub fn policy_resolve_diag(r: &ResolvedPolicy, event_id: EventId, cert_mode: CertMode) -> Diag {
+    let envelope = FirstFaultEnvelope::new(
+        event_id,
+        Phase::Check,
+        SiteKind::PolicyResolve,
+        Decision::Resolved,
+        "policy_resolve.v0",
+        cert_mode,
+    )
+    .with_basis_ref(format!("origin={}", r.origin.label()));
+    Diag::with_severity(
+        Severity::Info,
+        mycelium_diag::Code::Other("PolicyResolved".to_owned()),
+    )
+    .message(explain_origin(r))
+    .with_envelope(envelope)
+}
+
+/// The `policy_resolve` first-fault event for a **failed** resolution
+/// ([`UnresolvedAmbientPolicy`]) — an `Error`-severity refuse event, used by
+/// [`crate::checkty::Cx::check_swap`] (W-C X5) to build the "no ambient policy declared" error's
+/// message so the same reason text backs both the `Result::Err` and the reified record.
+#[must_use]
+pub fn policy_resolve_refuse_diag(
+    src_display: &str,
+    target_display: &str,
+    event_id: EventId,
+    cert_mode: CertMode,
+) -> Diag {
+    let envelope = FirstFaultEnvelope::new(
+        event_id,
+        Phase::Check,
+        SiteKind::PolicyResolve,
+        Decision::Refuse,
+        "policy_resolve.v0",
+        cert_mode,
+    );
+    Diag::with_severity(
+        Severity::Error,
+        mycelium_diag::Code::Other("PolicyUnresolved".to_owned()),
+    )
+    .message(format!(
+        "no ambient policy declared for this pair in scope ({src_display} → {target_display}) — \
+         declare `default policy <name>` or write an explicit `policy: <name>`; there is no \
+         implicit fallback (DN-142 §3.2, never-silent)"
+    ))
+    .with_envelope(envelope)
 }

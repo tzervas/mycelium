@@ -63,6 +63,11 @@ pub(crate) mod fuse;
 /// the guarantee lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` statically. Internal to the
 /// frontend (driven by [`checkty::check_nodule`]); not part of the public surface.
 mod grade;
+/// **The structural grade catalog** (DN-141 R3 "matrix mint", W-C X2) — committed data naming the
+/// RFC-0018 §4.3 grade rule each structural form [`grade`] implements. `pub` so the catalog
+/// (`grade_catalog::STRUCTURAL_GRADE_CATALOG`) is directly citable/EXPLAIN-able, matching
+/// [`legal_pair`]'s own materialized-table posture.
+pub mod grade_catalog;
 /// DN-129 §3 (M-1091) — the `Init` prelude trait (Mycelium's native `Default`), seeded exactly
 /// like [`fuse`]'s `Fuse` (M-965) over the shared [`preseed`] spine. Internal to the frontend, like
 /// [`fuse`]; not part of the public surface.
@@ -72,6 +77,12 @@ pub(crate) mod init;
 /// (`LEGAL_PAIR_TABLE`) is directly citable/inspectable, matching RFC-0002 §5's own normative status.
 pub mod legal_pair;
 pub mod lexer;
+/// **The meet-boundary table** (DN-141 B3/R4/R5, W-C X4) — committed data naming, per boundary
+/// crossing kind (an exported/declared return demand, an argument demand), the allow/refuse rule
+/// over the guarantee lattice. `pub` so the table is directly citable/EXPLAIN-able, matching
+/// [`legal_pair`]'s own materialized-table posture; see the module doc for scope (v0 has no
+/// certified-consumer/mode-firewall crossing yet — ledgered, deferred to wave W-E).
+pub mod meet_boundary;
 pub mod mono;
 pub mod nodule;
 /// DN-122 §13 (M-1080) — the `Ord3` prelude trait (WU-B), the MVP single-param/param-only-sig
@@ -89,6 +100,14 @@ pub mod phyla;
 /// [`fault`] all ride (a DRY factoring of the `Fuse`/`Ord3` conditionals `checkty` used to
 /// hand-copy). Internal to the frontend; not part of the public surface.
 pub(crate) mod preseed;
+/// **The regime classification** (DESIGN-01 A5, W-C X3) — committed, direction-aware data
+/// distinguishing a **total** swap regime (never fails to produce a value — RFC-0002 §4's `enc`)
+/// from a **partial** one (`RFC-0002 §4`'s `dec`, `Option`-typed at the kernel layer). `pub` so the
+/// classification is directly citable/testable; see the module doc for the disclosed scope limit
+/// (classification + a `regime_type_lie` `Diag` builder land; a hard checker refusal for an
+/// existing bare-typed partial swap does **not** — it would break already-shipped, tested behavior
+/// — see the module doc's "Deferred" section for the exact citation).
+pub mod regime;
 /// `reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;
 /// DN-110-8.2-hygiene-deepdive §5/§7 E3/§10 OQ-H3). The E3-enabling core: [`reveal::reveal_l0`]
 /// (the shown L0 term), [`reveal::render_surface`] (the honestly-labelled surface pretty-printer),

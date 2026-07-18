@@ -6451,7 +6451,18 @@ impl Cx<'_> {
         if let crate::legal_pair::PairVerdict::Refuse { reason } =
             crate::legal_pair::classify_swap_pair(src_kind, target_kind)
         {
-            return self.err(format!("illegal swap pair {vty} → {tty}: {reason}"));
+            // W-C X5: the refusal is an INSTANCE of the RFC-0013 first-fault envelope
+            // (`site_kind: legal_pair_refuse`), never a second, parallel diagnostic system (G-9) —
+            // the `Diag`'s rendered text (which carries the same reason string as before) backs the
+            // `CheckError`, so there is one source of truth for the refusal's wording.
+            let diag = crate::legal_pair::legal_pair_refuse_diag(
+                &vty.to_string(),
+                &tty.to_string(),
+                reason,
+                mycelium_diag::EventId::new(format!("{}:legal_pair_refuse", self.site)),
+                mycelium_diag::CertMode::Fast,
+            );
+            return self.err(diag.human());
         }
 
         // DN-142 §3.1/§3.2: `policy: ambient` resolves through the nodule's declared ambient policy
@@ -6475,11 +6486,16 @@ impl Cx<'_> {
             match crate::ambient_policy::resolve_policy(&decls, catalog_default) {
                 Ok(resolved) => resolved.policy,
                 Err(_unresolved) => {
-                    return self.err(format!(
-                        "no ambient policy declared for this pair in scope ({vty} → {tty}) — \
-                         declare `default policy <name>` or write an explicit `policy: <name>`; \
-                         there is no implicit fallback (DN-142 §3.2, never-silent)"
-                    ));
+                    // W-C X5: the refusal is an INSTANCE of the RFC-0013 first-fault envelope
+                    // (`site_kind: policy_resolve`, `decision: refuse`) — same posture as the
+                    // legal-pair refusal above.
+                    let diag = crate::ambient_policy::policy_resolve_refuse_diag(
+                        &vty.to_string(),
+                        &tty.to_string(),
+                        mycelium_diag::EventId::new(format!("{}:policy_resolve", self.site)),
+                        mycelium_diag::CertMode::Fast,
+                    );
+                    return self.err(diag.human());
                 }
             }
         } else {

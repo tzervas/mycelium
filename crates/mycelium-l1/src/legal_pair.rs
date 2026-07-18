@@ -26,6 +26,9 @@
 //! `Ternary → Ternary`) — neither tested nor stated anywhere — are newly refused by this module.
 
 use crate::checkty::Ty;
+use mycelium_diag::{
+    CertMode, Decision, Diag, EventId, FirstFaultEnvelope, Phase, Severity, SiteKind,
+};
 
 /// A coarse repr-kind classification for the legal-pair matrix — coarser than [`Ty`] (widths/dims
 /// erased), but at the granularity RFC-0002 §5's rows actually key on: paradigm, plus, for `Dense`,
@@ -176,6 +179,44 @@ pub fn classify_swap_pair(src: ReprKind, target: ReprKind) -> PairVerdict {
                      Declared gamble)",
         },
     }
+}
+
+/// The `legal_pair_refuse` first-fault event (RFC-0013 Amendment A1 §10.3 — `site_kind:
+/// legal_pair_refuse`, "illegal `Repr` pair (check)"; DESIGN-01 §4.3) for a
+/// [`PairVerdict::Refuse`] verdict — an **instance** of the pack-03 first-fault envelope (never a
+/// second, parallel diagnostic system — G-9), used by [`crate::checkty::Cx::check_swap`] (W-C X5) to
+/// build the `illegal swap pair` [`crate::checkty::CheckError`]'s message so the same reason text
+/// backs both the checker's `Result::Err` and the reified, `EXPLAIN`-able record.
+///
+/// `event_id`/`cert_mode` are caller-supplied — this is a **check-time** site, running before any
+/// `@certification` scope resolution reaches the checker (`crate::ambient_policy`'s own module doc
+/// makes the same disclosure), so a caller in that position passes the project default,
+/// [`mycelium_diag::CertMode::Fast`].
+#[must_use]
+pub fn legal_pair_refuse_diag(
+    src_display: &str,
+    target_display: &str,
+    reason: &str,
+    event_id: EventId,
+    cert_mode: CertMode,
+) -> Diag {
+    let envelope = FirstFaultEnvelope::new(
+        event_id,
+        Phase::Check,
+        SiteKind::LegalPairRefuse,
+        Decision::Refuse,
+        "legal_pair_refuse.v0",
+        cert_mode,
+    )
+    .with_basis_ref(format!("A1 legal-pair matrix (RFC-0002 §5): {reason}"));
+    Diag::with_severity(
+        Severity::Error,
+        mycelium_diag::Code::Other("LegalPairRefuse".to_owned()),
+    )
+    .message(format!(
+        "illegal swap pair {src_display} → {target_display}: {reason}"
+    ))
+    .with_envelope(envelope)
 }
 
 /// A **v0 seed** of the `std.swap.policy` catalog (DESIGN-01 §4.1 row A2; DN-142 §3.2) — the

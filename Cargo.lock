@@ -356,6 +356,7 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-dense",
+ "mycelium-diag",
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
