@@ -12,6 +12,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): course-correction program opened; steer pack committed; decomposition record corrected (2026-07-18)
+
+Course-correction program `docs/planning/course-correction-2026-07-18/PROGRAM.md` opened
+(maintainer-directed): monorepo alignment corrections → component-repo build fixes → transpile
+readiness → `*-myc` delivery → dual-side validation + metrics → releases; recorded defaults and
+ratification queue inside. The three maintainer steer docs are now committed verbatim under
+`docs/planning/design-steer-2026-07-17/` (previously uncommitted — assessment F1 context).
+Record corrections (append-only; assessment F3): PROGRAM-SELFHOST-DECOMPOSE status corrected from
+"seed complete" to "seeds created (Declared, unverified)" with a retro-record status-log row; this
+row also serves as the Phase-A archive CHANGELOG record its own A3 step required — archive tag
+`archive/main-pre-component-transpile-2026-07-17` at monorepo `main` tip `aad96b7a425710db5…`,
+plus the D/T/R seed record (45 Rust component repos, `mycelium-cli-myc`, `mycelium-lang` umbrella,
+91-pin `components.lock`; mirror carries a 92nd self-pin). DESIGN-02 MD027 blockquote fix (G-10
+mechanical).
+
 ### docs(assessment): decomposition alignment assessment (2026-07-18)
 
 Assessment record under `docs/planning/alignment-assessment-2026-07-18/` (report, per-repo

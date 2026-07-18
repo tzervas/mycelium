@@ -10,7 +10,7 @@
 
 > Content integrates former Draft DN-141 and Agent D. Ratify later as DN-141 rewrite / DN-142 or
 > RFCs as steered. Isolation EXPLAIN packages are **first-fault emitter instances** (pack 03 bus /
->  — not a parallel diagnostics invent.
+> — not a parallel diagnostics invent.
 
 ## 1. Why this document exists
 
