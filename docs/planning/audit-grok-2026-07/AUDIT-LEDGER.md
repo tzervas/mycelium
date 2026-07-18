@@ -1,0 +1,32 @@
+# Grok-era audit ledger (steer handoff Phase 0)
+
+| Field | Value |
+|---|---|
+| **Status** | Executed 2026-07-18 by the course-correction program (A2) against the checklist in `../design-steer-2026-07-17/PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §3. The steer's stop point ("maintainer reviews the ledger before Phase 1") is folded into the post-fix review per the maintainer's 2026-07-18 directive (recorded: course-correction default D-7 context, `../course-correction-2026-07-18/PROGRAM.md`). |
+| **Window** | Grok-era work: the archive→dev delta (`aad96b7a`→`64431967`, ~509 files — the G-α/G-β transpile waves, `lib/std/io.myc`, planning docs) plus whole-tree spot passes at HEAD, plus the 2026-07-17 decomposition itself (audited exhaustively by `../alignment-assessment-2026-07-18/ALIGNMENT-REPORT.md`, findings F1–F19 — cross-referenced, not duplicated). |
+| **Honesty** | Each row carries its evidence class. "Clean" = no violation found by the stated method, not a proof of absence. |
+
+One row per finding: `{id, severity, site, gate violated, evidence, disposition}`.
+
+| ID | Check | Result | Severity / evidence / disposition |
+|---|---|---|---|
+| G-1 | No auto-inserted `swap` (S1/N3) | **Clean** | `Exact`+`Empirical`: `Expr::Swap` built only in `parse.rs:2221` after the `swap` keyword; `Node::Swap` built only from `Expr::Swap` (`mycelium-l1/src/elab.rs:1836-1866`); every other construction site classified (renderers, hasher, structural clone, mlir carry-through, fixtures); the transpiler never emits `swap(` text (float-cast refusal `emit.rs:3995-4028`). RFC-0012 elaboration goldens **run green** (`cargo test -p mycelium-l1 --test ambient`, 12/12 incl. the ambient≡longhand identical-L0 twins). |
+| G-2 | No grade upgrade without basis (VR-5/N2) | **Clean** | `Exact`: core lattice is meet-only (`core/src/guarantee.rs`, property-tested); the window's transpile delta renders `Declared` explicitly (`remap.rs:213`); `lib/std/io.myc` tags verified row-for-row against the `mycelium-std-io` guarantee-matrix oracle (Exact×5/Empirical×3, exact transcription; the oracle carries its own VR-5 upgrade-guard test). |
+| G-3 | `NotValidated` never treated as success | **Clean, one P2 latent (pre-Grok)** | `GatedSwap::validated()` treats absent check as not-validated (mode.rs:54-56); engine hard-errors on `NotValidated` (mode.rs:206-210); `cargo test -p mycelium-cert --test mode` 7/7. **P2 latent** (`Exact`, landed pre-archive, PR #555/M-788): in `Certified` mode a `Bounded` cert with `BoundKind::Crosstalk`/`Capacity` yields `relation_and_claim = None` → `check: None`, and `SwapEngine::swap` only errors on `Some(NotValidated)` — a direct caller of `pub gate_swap` could pass with no check run. Unreachable via the engine today (no production constructor of such certs; `std-swap` handles the same case correctly at lib.rs:425-436). **Disposition:** forward-fix in Phase C W-A (map `None`→explicit `NotValidated{Incomplete}` in Certified, mirroring std-swap) — the W-A `swap_check` emitter work touches exactly this seam. |
+| G-4 | No silent fallback in resolution paths | **Clean** | `Exact`: `mycelium-select` has zero `unwrap_or`/`or_else` (typed errors only); L1 ambient resolution hard-errors (`ambient.rs:576`); transpile import-resolution misses produce explicit EXPLAINed gaps or flagged full-path `use` fallbacks (DN-124 dual-report), never silent substitutes; every `unwrap_or*` in the delta individually judged benign. Two info items: `io.myc` matrix-row framing comment suggested (oracle op vs refusing scaffold); `emit.rs:6230` `"?"`-in-mangled-name is loud-fail-downstream, explicit gap suggested. |
+| G-5 | Status discipline (H1/H2) | **Clean with one corrected claim** | Decision-doc corpus (`docs/adr\|notes\|rfcs`) unchanged archive→dev (`Exact`, assessment F18); no backdating found. The one status-discipline defect was the *program header's* "seed complete" claim (assessment F3, `Exact`) — corrected append-only 2026-07-18 (commit `e3af7c28`). Disposition: fixed. |
+| G-6 | Steer vocabulary (`policy: default/auto/_`) | **Clean** | Zero hits across the monorepo and all 46 component repos (`Exact` grep, assessment F18). |
+| G-7 | Width canon (W-1) | **No new introductions; canon sweep not yet executed** | No `Binary{8}` introductions in the Grok window beyond pre-existing sites; 199 files carrying the de facto 8-bit canon were replicated into 20 component repos as byte-identical snapshots (`Exact`, assessment F17). Disposition: W-1 §2.1 sweep is Phase-C work (E-W1 minted as M-1119). |
+| G-8 | No unbounded accumulators before caps exist | **One pre-existing candidate; none introduced** | `PolicySlot { transitions: Vec<PolicySetRecord>, trace: Vec<Explanation> }` — `crates/mycelium-std-runtime/src/policy_mech.rs:125` — uncapped append-only logs (by DN-78 §3 B-2 design), contradicting the steer §3 G-8 baseline claim "none exist" (`Exact`). Not introduced by the Grok window. Disposition: ledgered (CC-B6); cap lands with the §1.4 retention store in Phase C — no ad-hoc change (it would contradict DN-78 without the ratified retention policy). |
+| G-9 | No third diagnostic system | **Clean** | No new error/diag schema outside `mycelium-diag::Diag` in the window (`Exact` grep for parallel human+JSON writers; the RFC-0013 Amendment A1 capture explicitly re-binds the first-fault bus to `Diag`). |
+| G-10 | Mechanical green | **One defect found and fixed; component-side structural failures ledgered separately** | Monorepo: repo-wide markdown gate had exactly one error (DESIGN-02:13 MD027, `Empirical` 2026-07-18) — fixed in commit `e3af7c28`; branch-guard ok; secrets fallback clean (gitleaks unavailable in the scoped session — noted). Component repos: every seed CI run failed structurally (assessment F5/F11) — remediated by course-correction Phase B, not this ledger. |
+| G-11 | Do-not-lift respected (H4) | **Clean** | Sole `embeddonator` reference is the sanctioned do-not-lift comment in `crates/mycelium-core/src/ternary/big_ternary.rs` (`Exact`, assessment F18); no lifted code found in new blobs. |
+
+Decomposition-specific findings (gates F1–F15) are **not** re-rowed here — the alignment report is
+their ledger; its remediation is the course-correction program itself.
+
+## Changelog
+
+| When | Note |
+|---|---|
+| 2026-07-18 | Ledger opened with G-5..G-11 rows (evidence from the alignment assessment + this wave's gates); G-1..G-4 rows pending the code-audit agent's report in the same wave. |
