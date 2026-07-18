@@ -39,6 +39,12 @@
 /// frontend; not part of the public surface.
 mod affine;
 pub mod ambient;
+/// **`policy: ambient` scoped resolution** (DN-142 §3.2) — the third instance of the RFC-0012
+/// ambient/scoped-override mechanism, mirroring `mycelium_proj::cert_scope`'s pure resolution shape.
+/// Driven by [`checkty::Cx::check_swap`]; `pub` (like `mycelium_proj::cert_scope`) so its resolution
+/// law + EXPLAIN rendering are directly citable/testable, not because an external crate consumes it
+/// yet.
+pub mod ambient_policy;
 pub mod ast;
 pub mod checkty;
 pub(crate) mod decision;
@@ -61,6 +67,10 @@ mod grade;
 /// like [`fuse`]'s `Fuse` (M-965) over the shared [`preseed`] spine. Internal to the frontend, like
 /// [`fuse`]; not part of the public surface.
 pub(crate) mod init;
+/// The **A1 legal-pair matrix** (DN-142 §7; DESIGN-01 §4.1 row A1) — a checker materialization of
+/// RFC-0002 §5's legal-pair table, consulted by [`checkty::Cx::check_swap`]. `pub` so the matrix
+/// (`LEGAL_PAIR_TABLE`) is directly citable/inspectable, matching RFC-0002 §5's own normative status.
+pub mod legal_pair;
 pub mod lexer;
 pub mod mono;
 pub mod nodule;

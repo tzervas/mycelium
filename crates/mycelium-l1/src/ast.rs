@@ -190,6 +190,15 @@ pub enum Item {
     /// `default paradigm P` — the nodule-scope ambient (RFC-0012 §4.2). At most one per nodule; the
     /// outermost ambient frame. Consumed (stripped) by the resolution pass ([`crate::ambient`]).
     Default(Paradigm),
+    /// `default policy <name>` — the nodule-scope **ambient policy** declaration (DN-142 §3.2; the
+    /// third instance of the RFC-0012 ambient/scoped-override mechanism, after paradigm ambient and
+    /// `@certification`/`CertMode` — `mycelium_proj::cert_scope`). At most one per nodule (checked by
+    /// [`crate::ambient::resolve`], mirroring [`Item::Default`]'s duplicate refusal). Unlike
+    /// `Item::Default`, this item is **not** stripped by ambient resolution — it carries no paradigm
+    /// state and needs the checked `(src, target)` pair to resolve, so it survives into `checkty` as
+    /// data and is resolved there ([`crate::ambient_policy`]) when a `swap`'s `policy: ambient` is
+    /// checked.
+    DefaultPolicy(Path),
     /// A data-type declaration.
     Type(TypeDecl),
     /// A trait declaration.
