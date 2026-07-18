@@ -12972,6 +12972,7 @@ issues:
       - src:.claude/kickoffs/trx2.md
       - src:crates/mycelium-transpile/src/map.rs
       - src:crates/mycelium-transpile/src/emit.rs
+      - src:docs/planning/course-correction-2026-07-18/PHASE-D-READINESS.md
       - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-post-A1A2-2026-07-16.md
       - src:docs/planning/gap-analysis-2026-07-16/M1006-remeasure-2026-07-16.md
       - src:docs/planning/gap-analysis-2026-07-16/M1006-baseline-oneshot-2026-07-16.md

@@ -12,6 +12,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(transpile)+docs(pm): Phase D transpile-readiness pass — M-1006 remeasure, G-γ discard close, per-component DoD table (2026-07-18)
+
+Course-correction Phase D (bounded readiness pass; full record:
+`docs/planning/course-correction-2026-07-18/PHASE-D-READINESS.md`).
+
+- **Verify-first correction (VR-5):** the launch framing treated all-7 `checked_fraction` 28.7% as
+  a pre-G-α/β baseline; the committed record shows 28.7% (98/342) is the POST-G-β number. The
+  fresh remeasure at this branch's tip (which matters because Phase C's AX-core waves changed the
+  `myc-check` oracle's own crates) confirms it **flat**: default-5 19.5% (46/236), all-7 28.7%
+  (98/342), same 514 gap records, zero `CheckError` files (`Empirical`, run basis in-doc).
+- **G-γ gap close:** value-discarding statements (`g(x);`) and `let _ = e;` now lower to the
+  existing `let _ = <value> in <rest>` surface instead of a blanket `MultiStmtBody` refusal —
+  live-oracle differential witness plus text pins; the golden snapshot delta reviewed
+  (exactly one entry changed). Headline effect honestly 0.0pp — residual advancement (5 records
+  moved to a deeper blocking construct), matching the G-α precedent pattern. 277 transpile tests
+  green; fmt/clippy clean.
+- **Per-component DoD (steer §7 Phase 4), scoped to the 7-target pilot:** zero P0 gap classes
+  (zero `CheckError` files); dual-report vet default; `transpile_gap` worklist with `// src:`
+  breadcrumbs in closest-to-clean order; T6 draft-phylum quarantine verified (zero live
+  `gen/myc-drafts` imports); no tag fabrication. ONESHOT one-shot claims remain HOLD.
+- **Ledgered residuals (design-gated or deferred, never forced):** `.contains()` kernel prim;
+  non-prelude trait impls; M-875 macros; `Option::ok_or` (surface absent — flagged as a Phase-E
+  stdlib addition); if-without-else early-return desugar (12 sites) and tuple-`let` (5 sites)
+  deferred as a future leaf; whole-corpus Phase-2 remeasure not re-run (pilot-scoped verdict,
+  stated as such).
+
 ### feat(core+std): AX-core W-D landed — ternary conversion-ceiling lift (E-W1/M-1119), W-1 std exports, PolicySlot caps (CC-B6), retention sizing pass, S1/S2 addenda (2026-07-18)
 
 Course-correction Phase C wave W-D (steer §5), closing the monorepo AX-core wave set.
