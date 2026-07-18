@@ -315,6 +315,9 @@ fn ambient_error_variants_match_the_ledger() {
             "ParadigmShapeMismatch",
             "BareDecimalNoEncoding",
             "DepthExceeded",
+            // DN-142 §3.2 (2026-07-18): `policy: ambient`'s nodule-scope `default policy`
+            // declaration mirrors `default paradigm`'s own duplicate-declaration refusal.
+            "MultiplePolicyDefaults",
         ],
     );
 }

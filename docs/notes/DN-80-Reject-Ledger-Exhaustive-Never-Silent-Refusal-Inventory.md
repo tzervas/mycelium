@@ -40,7 +40,8 @@ both.
    `checkty.rs`/`grade.rs`. §4 below groups these into **construct families** (the ledger's unit of
    row, since the underlying type carries no enum to enumerate 1:1) and pins the exact call-site count
    per family so growth is checkable.
-3. **Ambient-resolution-level** (`mycelium-l1::ambient`) — a closed `AmbientError` enum (5 variants).
+3. **Ambient-resolution-level** (`mycelium-l1::ambient`) — a closed `AmbientError` enum (6 variants,
+   append-only extended 2026-07-18 by DN-142 §3.2's `MultiplePolicyDefaults`).
    §5 below ledgers it 1:1 by variant.
 4. **Runtime/interpreter-level** (`mycelium-interp`) — a closed `EvalError` enum (17 variants) and the
    kernel well-formedness `WfError` enum (`mycelium-core`, 7 variants) it wraps. §6/§7 ledger both
@@ -174,7 +175,7 @@ reject category the never-silent depth budget adds):**
 | 40 | `Fuse` semilattice-**law** rejects (definition-time) | a declared `Fuse` instance whose `join`, over a finite enumerable domain, violates idempotence / commutativity / associativity, or errors while being probed — refused at the `impl` site with a concrete counterexample (`Empirical`: exhaustive over the domain; a non-enumerable domain is *skipped*, never silently assumed lawful) | fix `join` to be a semilattice operation (idempotent, commutative, associative) | DN-58 §A.1/§A.4, RFC-0008 RT6, M-965 | 4 |
 | | **Total** | | | | **217** |
 
-## 5. Part C — Ambient-resolution rejects (`AmbientError`, 5/5 variants ledgered)
+## 5. Part C — Ambient-resolution rejects (`AmbientError`, 6/6 variants ledgered)
 
 `AmbientError` (`crates/mycelium-l1/src/ambient.rs:51`) is a **closed enum** — ledgered 1:1.
 
@@ -185,6 +186,7 @@ reject category the never-silent depth budget adds):**
 | `ParadigmShapeMismatch` | a written shape doesn't fit the ambient paradigm in force | match the ambient paradigm's shape, or write an explicit paradigm |
 | `BareDecimalNoEncoding` | a bare decimal under a `Dense`/`VSA` ambient — those paradigms have no bare-decimal encoding | use `Binary`/`Ternary`, or write the value in the paradigm's own literal form |
 | `DepthExceeded` | the resolution pass's own AST recursion exceeded its budget (compiler-internal, not a program-semantics claim) | reduce nesting depth |
+| `MultiplePolicyDefaults` | two nodule-scope `default policy` declarations (DN-142 §3.2, added 2026-07-18) — a nodule has one ambient policy | keep exactly one `default policy` per nodule |
 
 ## 6. Part D — Runtime/interpreter rejects (`EvalError`, 17/17 variants ledgered)
 
@@ -249,9 +251,10 @@ immediately actionable):**
    file/pattern drifted and by how much, and pointing at this note to add/adjust the family rows
    before updating the pinned constant.
 3. **Closed-enum variant sets.** The `AmbientError`, `EvalError`, and `WfError` variant **names**
-   (extracted from each `pub enum … { … }` block by regex) must equal the exact 5/17/7-element sets
-   ledgered in §5/§6/§7 — as a `BTreeSet` equality, so an added, removed, *or renamed* variant fails
-   loudly (the strongest guarantee this guard offers, since these are genuinely closed types).
+   (extracted from each `pub enum … { … }` block by regex) must equal the exact 6/17/7-element sets
+   ledgered in §5/§6/§7 (updated 2026-07-18 from 5/17/7 by DN-142 §3.2's `MultiplePolicyDefaults`) —
+   as a `BTreeSet` equality, so an added, removed, *or renamed* variant fails loudly (the strongest
+   guarantee this guard offers, since these are genuinely closed types).
 
 **Honesty (`Empirical`, never `Proven`):** this is a **line/regex heuristic over source text**, the
 same posture `docs/api-index/` states for itself. It proves *"the audited call-site/variant counts
@@ -316,3 +319,4 @@ tip `41ec4fe` (2026-07-02).
 | 2026-07-02 | **Accepted** | Reconcile: the concurrent `grm` wave (M-916, RFC-0037 D1) landed reject fixture `31-old-le-ge-glyph-retired.myc` on `dev` without a ledger row, so `parse_level_reject_corpus_matches_the_ledger` failed never-silently — exactly the drift the guard exists to catch. Adds the §3 row 31 (the retired two-char `<=`/`>=` glyphs → word-canonical `lte`/`gte`), bumps the §3 header + §8.1 corpus-size to 30, and updates the guard's pinned fixture list + count (29 → 30) in the same commit. **Also re-audits Part B:** the M-919 (DN-71 Model S) and M-973 (DN-54 §10 attachment Model A) lower/derive extension-checker work landed **6 net new** `checkty.rs` `CheckError` sites (verified: 8 added, 2 refactored-out, all in `check_nodule_with`/`check_lower_*` — family 8), so `checkty.rs` direct total goes 93 → 99, family 8's site count 8 → 14, §4 grand total 204 → 210, and §8.2's pinned `93/110/2` → `99/110/2`. `self.err` (110), grade (2), and all closed enums (Parts C–E) unchanged. **And absorbs M-965's `Fuse` law-checker (landed on `dev` concurrently):** `+2` `checkty.rs` family-5 `Fuse`-redeclaration refusals (checkty direct 99 → 101, family 5 count 9 → 11) and a **new audited file** `crates/mycelium-l1/src/fuse.rs` with `4` definition-time semilattice-law rejects (idempotence/commutativity/associativity/probe-eval-failure) ledgered as **new family 40**; §4 grand total 210 → 216, family count 40 → 41, §8.2 pinned `99/110/2` → `101/110/2/4`, and the guard gains a `fuse.rs` count assertion so the new reject path is guarded like the rest. Tags remain `Empirical` (mechanical re-count, VR-5). |
 | 2026-07-02 | **Accepted** | Reconcile: M-966 (`via`-delegation deterministic ordering) landed on `dev` adding **1** `checkty.rs` `CheckError` site — the `via` ambiguity refusal (two `via` clauses claiming one trait). → family 6 count 2 → 3, `checkty.rs` direct total 101 → 102, §4 grand total 216 → 217, §8.2 pinned `101/110/2/4` → `102/110/2/4`, guard pinned count updated. Also corrected the family-table Total row (was stale at 204 since the first re-audit — the guard pins only the per-file totals, not the family sum, so it went uncaught; now 217, matching the audited non-plumbing total). Tags remain `Empirical`. |
 | 2026-07-08 | **Accepted** | Reconcile (dev→staging promotion of the trx2 wave): trx2 Lane C CU-3 (2026-07-08) landed **5** new `checkty.rs` `self.err(` sites — the never-silent `Binary↔Float` conversion prims `bin_to_flt`/`flt_to_bin` refusing on arity, non-`Binary{N}`/non-`Float` operands, and a non-literal DN-41 width witness (ADR-040 §2.4). Spot-checked: each is a legitimate refusal path, a benign count increase, not a regression. → §4 table `self.err(` 111 → 116, §4 Total 221/220 → 226/225, §8.2 pinned `self.err(` 110 → 116 (also reconciling the pre-existing §8.2-vs-§4 110/111 typo to the ground-truth 116), and the guard's pinned constant in `reject_ledger.rs` 111 → 116 in the same commit. Tags remain `Empirical` (mechanical re-count, VR-5). |
+| 2026-07-18 | **Accepted** | Reconcile (DN-142 §3.2 W-B — `policy: ambient` scoped resolution): `AmbientError` gains a 6th variant, `MultiplePolicyDefaults` (two nodule-scope `default policy` declarations — mirrors `MultipleDefaults`'s own duplicate-declaration shape). §5's header/table and §8.1's variant-set note move 5/5 → 6/6 (5/17/7 → 6/17/7); `reject_ledger.rs`'s `ambient_error_variants_match_the_ledger` expected-set updated in the same commit; re-run and verified green (`variant_extraction_is_non_vacuous`/`eval_error_variants_match_the_ledger`/`wf_error_variants_match_the_ledger` unaffected). **Also records a pre-existing, unrelated finding surfaced by this leaf's own verify-first pass (mitigation #14), not caused by this change and not fixed here:** `checkty_direct_checkerror_construction_count_matches_the_ledger` and `checkty_self_err_call_count_matches_the_ledger` were **already red at the `dev` tip this leaf branched from**, before any of this leaf's edits — `git show HEAD:crates/mycelium-l1/src/checkty.rs` counts 115 `CheckError::new(`/`CheckError::at(` sites (pinned 103) and 133 `self.err(` sites (pinned 116), a drift this leaf did not introduce and has no visibility into the attributing history for (the last reconciliation here is dated 2026-07-08; unknown intervening waves added the remainder). This leaf's own `check_swap` additions (the A1 legal-pair gate + the DN-142 §3.2 unresolved-ambient-policy refusal) add exactly **+2** `self.err(` sites on top of that pre-existing drift (133 → 135; **+0** `CheckError::new`/`CheckError::at`, since both new refusals reuse the existing `self.err` helper) — disclosed, not silently absorbed into a re-baselined pinned constant (re-baselining without the attributing family-table update the guard's own doc/comments require would erase the signal the guard exists to give, rather than honestly closing it). **FLAG for the ledger-owning lane:** a dedicated Part B re-audit (attributing the full 103→115 / 116→133 drift to its real construct families, the same way each prior "Reconcile" row above did) is needed before those two tests can go green again; out of this leaf's scope (`mycelium-l1`/`mycelium-select` only). |
