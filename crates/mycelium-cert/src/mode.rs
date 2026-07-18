@@ -224,7 +224,7 @@ pub fn gate_swap(
 ///
 /// Additive only (I1): this `Diag` **presents** the verdict the checker already computed. It never
 /// itself decides validity, and constructing it here has no effect on whether
-/// [`SwapEngine::swap`](mode::ModeGatedSwapEngine)'s `Result` is `Ok`/`Err` — that decision is made
+/// [`ModeGatedSwapEngine`]'s [`SwapEngine::swap`] `Result` is `Ok`/`Err` — that decision is made
 /// independently, from the same `verdict`, exactly as before this function existed.
 #[must_use]
 pub fn swap_check_diag(verdict: &CheckVerdict, mode: CertMode, event_id: EventId) -> Diag {
