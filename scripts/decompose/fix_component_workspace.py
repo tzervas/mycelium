@@ -23,10 +23,14 @@ ORG = "https://github.com/tzervas"
 
 CONTAINERS = {
     "mycelium-core": ["mycelium-core", "mycelium-stack", "mycelium-workstack"],
-    "mycelium-value": ["mycelium-dense", "mycelium-numerics", "mycelium-vsa", "mycelium-vsa-decode"],
+    "mycelium-value": ["mycelium-dense", "mycelium-numerics", "mycelium-vsa"],
     "mycelium-runtime": ["mycelium-sched", "mycelium-rt-abi", "mycelium-interp", "mycelium-cert",
-                          "mycelium-diag", "mycelium-select"],  # select: DN-143 §4 micro-amendment
+                          "mycelium-diag", "mycelium-select",
+                          "mycelium-vsa-decode"],  # select + vsa-decode: DN-143 §4 (approved)
     "mycelium-codegen": ["mycelium-mir-passes", "mycelium-mlir"],
+    # l1 converted to container layout in Phase B W5 so its CARGO_MANIFEST_DIR/../../lib and
+    # ../../docs/spec/grammar fixture paths resolve identically to the monorepo (zero divergence).
+    "mycelium-l1": ["mycelium-l1"],
 }
 SKIP = {"mycelium-lang", "mycelium-cli-myc", "mycelium"}
 
@@ -45,7 +49,14 @@ def crate2repo():
 C2R = crate2repo()
 REPOS = sorted(set(C2R.values()))
 
-DEP_RE = re.compile(r'^(mycelium-[a-z0-9-]+)(\s*=\s*)\{\s*path\s*=\s*"[^"]*"\s*\}\s*$')
+# Matches any inline-table mycelium dep that carries a `path` key (optionally with `version`
+# and/or other keys — e.g. bench's `{ path = "../x", version = "0.463.1" }`). The rewrite drops
+# the version key (git pins don't need it; intra-repo path deps must not pin the old train).
+DEP_RE = re.compile(r'^(mycelium-[a-z0-9-]+)(\s*=\s*)\{[^}]*\bpath\s*=\s*"[^"]*"[^}]*\}\s*(#.*)?$')
+# Already-pinned git dep line (re-pin support: pins are FROZEN per train — a drifted rev is
+# rewritten back to the pin-table rev so the whole train shares one rev per repo; two revs of the
+# same git URL would otherwise split into two package identities and E0308 across the graph).
+GIT_RE = re.compile(r'^(mycelium-[a-z0-9-]+)\s*=\s*\{\s*git\s*=\s*"[^"]*/([a-z0-9-]+)"\s*,\s*rev\s*=\s*"([0-9a-f]{40})"\s*\}\s*$')
 
 def manifests(repo):
     out = []
@@ -185,6 +196,22 @@ def apply(repo, pins):
                     dirty = True
                     edges.append((dep, target, pins[target]))
                     continue
+                if target == repo and "version" in line:
+                    # intra-repo path dep: strip the stale train version key
+                    out.append(f'{dep} = {{ path = "../{dep}" }}\n')
+                    dirty = True
+                    continue
+            g = GIT_RE.match(line.strip())
+            if g:
+                dep, target, rev = g.group(1), g.group(2), g.group(3)
+                want = pins.get(target)
+                if want and want != rev:
+                    out.append(f'{dep} = {{ git = "{ORG}/{target}", rev = "{want}" }}\n')
+                    dirty = True
+                    edges.append((dep, target, want))
+                    continue
+                if want:
+                    edges.append((dep, target, rev))
             out.append(line)
         if dirty:
             open(mf, "w").writelines(out)

@@ -68,13 +68,16 @@ packages from different git sources, which cargo rejects. The full component dep
 cycle detection are reproducible from the component manifests (course-correction Phase-B
 tooling).
 
-**Capture:** `mycelium-select` (the crate, unchanged) relocates to `mycelium-runtime`'s
-`crates/`. Result: `mycelium-value` = {dense, numerics, vsa, vsa-decode} depending only on core;
-`mycelium-runtime` = {sched, rt-abi, interp, cert, diag, select} depending on core + value —
-the repo graph becomes a DAG (re-verified after the move). Every dependent of `select`
-(`l1`, `lsp`, `std-select`, …) already depends on the runtime repo, so no new edges appear.
-Crate coverage stays 56/56; the monorepo is untouched. **Reversal path:** move the crate back if
-the maintainer instead resolves FLAG-K2 by inverting/removing the `select→interp` edge in code.
+**Capture (maintainer-approved 2026-07-18):** `mycelium-select` (the crate, unchanged) relocates
+to `mycelium-runtime`'s `crates/`, and `mycelium-vsa-decode` rides along (it depends on `select`
+and has **zero dependents** anywhere — component repos and monorepo both, `Exact` grep — so the
+move is safe by construction). Result: `mycelium-value` = {dense, numerics, vsa} depending only on
+core; `mycelium-runtime` = {sched, rt-abi, interp, cert, diag, select, vsa-decode} depending on
+core + value — the repo graph becomes a DAG (re-verified after the move). Every dependent of
+`select` (`l1`, `lsp`, `std-select`, …) already depends on the runtime repo, so no new edges
+appear. Crate coverage stays 56/56; the monorepo is untouched. Both crates extracted from archive
+`aad96b7a` (provenance-preserving). **Reversal path:** move the crates back if the maintainer
+instead resolves FLAG-K2 by inverting/removing the `select→interp` edge in code.
 
 ## Changelog
 
