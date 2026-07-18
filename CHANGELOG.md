@@ -12,6 +12,45 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): AX-core W-B landed — `policy: ambient` surface, scoped resolution, A1 legal-pair matrix, elaboration-hash goldens (2026-07-18)
+
+Course-correction Phase C wave W-B (steer §5 / DN-142 §3, implemented Rust-first, pending
+ratification — the doc stays Draft). Verify-first confirmed nothing pre-existed: `policy: ambient`
+would previously have hashed the literal string as a catalog name (the exact silent-miss DN-142
+§3.1 names), and no legal-pair matrix existed in the checker.
+
+What landed (`crates/mycelium-l1`, plus a one-line `mycelium-fmt` print rule):
+
+- **Surface:** `policy: ambient` parses as an ordinary identifier; `default policy <name>;` is new
+  nodule-scope grammar reusing existing keyword tokens. The rejected vocabulary `policy: _` /
+  `auto` / `default` is a hard parse-time error naming `ambient` and DN-142 §3.1 — one shared
+  guarded production covers both the `swap` field and the declaration.
+- **Scoped resolution** (`ambient_policy.rs`): precedence-fold mirroring `cert_scope` exactly
+  (no new scoping machinery); nodule tier surface-wired, phylum/global structurally present but
+  unwired (same disclosed boundary as `cert_scope`'s FLAG-B); a closed 2-entry catalog fallback
+  (`rt`, `bf16_round` — corpus-grounded, no invented names). Unresolved is a hard `checkty` error
+  ("no ambient policy declared for this pair in scope"), never a fallback.
+- **A1 legal-pair matrix** (`legal_pair.rs`): RFC-0002 §5's six rows materialized as data;
+  `classify_swap_pair` wired into `check_swap` for early refusal. Preserves the tested DN-52
+  freeze-ledger carve-out unchanged; newly refuses same-paradigm pairs per row 6.
+- **Elaboration identity:** resolution rewrites the checked swap's policy to the concrete name
+  before elaboration, so ambient and longhand elaborate to byte-identical L0. The W-B exit
+  criterion is proven by `tests/ambient_policy.rs`: five (ambient, longhand) pairs asserting
+  identical elaborated content hashes, plus a runtime-value-agreement twin — both green
+  (`Empirical`).
+- **DN-80 reconcile (close-out):** `AmbientError` gains `MultiplePolicyDefaults` (ledgered 6/6),
+  and the integrating parent performed the FLAGged Part B re-audit — the reject-site count drift
+  since the 2026-07-08 reconcile (103→115 direct, 116→135 `self.err`, of which W-B adds exactly
+  the two `check_swap` refusals) is attributed function-by-function in DN-80's 2026-07-18
+  Reconcile row and the guard re-pinned in the same commit; `reject_ledger.rs` 9/9 green. The §4
+  family-table re-derivation is queued as CC-B8, disclosed not silent.
+
+Gates: `cargo fmt --check`, `clippy --all-targets -D warnings`, and tests green change-scoped on
+`mycelium-l1` (full suite incl. self-hosted `.myc` differentials), `mycelium-fmt`,
+`mycelium-select`, `mycelium-std-conformance`. Known deferral, disclosed: the W-A
+`SiteKind::PolicyResolve`/`LegalPairRefuse` catalog entries have no wired emitter from
+`mycelium-l1` yet (needs a new l1→diag dependency edge; DN-142 §9 defers the envelope wiring).
+
 ### feat(diag+cert): AX-core W-A landed — first-fault envelope, swap_check emitter, Meta.cert handle, capped cert store, CertMode print (2026-07-18)
 
 Course-correction Phase C wave W-A (steer §5; implements the Draft captures without moving their
