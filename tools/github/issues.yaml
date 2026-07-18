@@ -18195,3 +18195,31 @@ issues:
       4. Main-bound PR Tracking footer includes Closes for this gate (and the epic issue when appropriate).
 
       Parent epic: E40-1 — E40-1 (epic) — validated documentation generation
+  - id: M-1119
+    title: "M-1119 -- E-W1: lift the ternary conversion-utility i64 ceiling (int_to_trits/trits_to_int/max_magnitude, m > 40)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
+    epic: E20-1
+    depends_on: [M-756]
+    doc_refs:
+      - corpus:RFC-0033
+      - corpus:RFC-0002
+      - corpus:DN-142
+      - src:crates/mycelium-std-ternary/src/arithmetic.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
+    body: |
+      W-1 enablement item (maintainer corrective, docs/planning/design-steer-2026-07-17/
+      PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md section 2.2 item 4; captured 2026-07-18 by the
+      course-correction program). BigTernary (M-756, landed) already removes the arithmetic
+      ceiling, but the conversion utilities int_to_trits/trits_to_int/max_magnitude still route
+      through i64 and return None at m >= 41 (never-silent about the ceiling -- an enablement
+      gap, not a bug). Route m > 40 through i128 or the existing BigTernary path so
+      Binary{64} <-> Ternary{41} (the new W-1 canonical pair; 3^40 < 2^64 <= 3^41) is
+      constructible via the conversion-utility fast path. Unblocks the lib/std/swap.myc
+      bin64_to_tern41/tern41_to_bin64 exports (docs/spec/stdlib/swap.md 2026-07-18 amendment).
+      Does NOT activate M-758 (PackedTernary stays YAGNI/benchmark-gated -- steer explicit).
+
+      Definition of Done:
+      1. cargo fmt/clippy -D warnings/test green, change-scoped.
+      2. m=41 round-trip exact test present (mirrors max_magnitude_overflows_at_m41, now Some).
+      3. No unsafe (KC-3); the mycelium-std-ternary and mycelium-core call sites agree.

@@ -10,7 +10,7 @@
 
 | Phase | Work | State |
 |---|---|---|
-| **A** | Monorepo alignment corrections: steer pack committed (A1) · record fixes (A3) · Phase-0 audit ledger (A2) · Phase-1 Draft captures (A4) · deviation captures + blockers (A5) · G-8 ledger entry (A6) | in progress |
+| **A** | Monorepo alignment corrections: steer pack committed (A1) · record fixes (A3) · Phase-0 audit ledger (A2) · Phase-1 Draft captures (A4) · deviation captures + blockers (A5) · G-8 ledger entry (A6) | **complete 2026-07-18** (see phase log) |
 | **B** | 46 component repos: workspace roots (train v0.464.0), git-pinned cross-repo deps in topo order, toolchain/supply-chain/CI/CROSS-REF/docs scaffolding, umbrella upgrade, per-repo green + identity suite | pending |
 | **C** | AX-core waves W-A..W-D in the monorepo; delta propagated to affected components via the §6.2-5 umbrella-PR protocol | pending |
 | **D** | Transpile readiness: closable gap classes iterated, M-1006 remeasure, per-component DoD per steer Phase 4 | pending |
@@ -48,3 +48,4 @@
 | When | Entry |
 |---|---|
 | 2026-07-18 | Program opened. A1 done: steer pack committed verbatim (`../design-steer-2026-07-17/` + PROVENANCE). |
+| 2026-07-18 | **Phase A complete.** A2: audit-grok ledger — G-1/2/4 clean (`Exact`/`Empirical`; RFC-0012 goldens 12/12, mode tests 7/7, io.myc tags oracle-matched), G-3 one P2 latent pre-archive finding (mode.rs Certified/`check:None` — forward-fix scheduled with W-A), G-5..G-11 rowed. A3: program record corrected append-only + CHANGELOG rows + lock accounting. A4: all six Phase-1 captures landed **Draft** — DN-142, DN-141, RFC-0013 §10 Amendment A1, RFC-0034 §7 footnote, `Language-Retention-Policy.md`, W-1 amendments + **M-1119** (E-W1). A5: DN-143 (four deviation captures incl. the `select`→runtime repo-cycle fix). A6: G-8 `PolicySlot` ledgered (CC-B6). Gates at close: markdown 672 clean · doc_refs OK · links OK. Two agent-flagged grounded corrections recorded in the docs themselves (RFC-0018 §4.5 status; RFC-0013 I1-vs-I3 citation). Next: Phase B. |

@@ -12,6 +12,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(capture): design-steer Phase-1 ratifiable captures — all six landed Draft (2026-07-18)
+
+Course-correction A4, per the steer handoff §4 (all Draft, no ratification dates — H1/H2; the
+maintainer ratifies at the post-fix review): **DN-142 Swap Ergonomics** (`policy: ambient`
+spelling/resolution law, handle-plus-sink certificate architecture closing the
+`ModeGatedSwapEngine` cert-discard gap, `to:`-elision gates, kernel-`Option`-vs-std-`Result`
+regime reconcile); **DN-141 Tags/Meta/Containment rewrite** from DESIGN-02 + the P2 steers with
+S1/S2 spike-stub appendices (one grounded correction: RFC-0018 §4.5 is Enacted — the open coupling
+is its T9.6 purity precondition); **RFC-0013 §10 Amendment A1** (first-fault envelope fields, the
+13-entry `site_kind` catalog, linking rules; consumption tiers unchanged; no third system);
+**RFC-0034 §7 clarifying footnote** (first-fault records are the always-generated signal — P3-Q2);
+**`docs/spec/Language-Retention-Policy.md`** (DESIGN-04 §5.3 fields; fourth RFC-0012 scoped
+instance; `Declared` placeholder caps; EXPLAIN-of-drop; no-full-retention-under-certified);
+**W-1 width-canon capture** as append-only amendments to `docs/spec/swaps/binary-ternary.md` and
+`docs/spec/stdlib/swap.md` (canon `Binary{64}`, fallback `Binary{32}`; pairs `32↔21` now and
+`64↔41` behind E-W1, filed as **M-1119**). Also **DN-143** deviation captures (topology keep-46,
+clean-slice history, U1 front repo, `select`→runtime cycle fix) and the Phase-0
+**audit-grok ledger** (G-1/2/4 clean with goldens green; G-3 one P2 latent pre-archive
+`mode.rs` finding scheduled with W-A). Docs-only; no product code.
+
 ### docs(pm): course-correction program opened; steer pack committed; decomposition record corrected (2026-07-18)
 
 Course-correction program `docs/planning/course-correction-2026-07-18/PROGRAM.md` opened

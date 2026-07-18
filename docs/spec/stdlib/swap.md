@@ -204,6 +204,58 @@ Tag justification (VR-5 — downgrade rather than overclaim):
   *certificate + EXPLAIN bit-for-bit*? Ties to **RFC-0016 §8-Q5 (the migration differential's bar)** /
   NFR-7. A certificate consumer arguably must match the cert, not just the value — FLAGGED for the gate.
 
+## Amendment — 2026-07-18: W-1 binary width canon corrective (append-only)
+
+**Status of this amendment.** Captured 2026-07-18 from the maintainer's binding corrective
+(`docs/planning/design-steer-2026-07-17/PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §2). This section
+**amends by addition** — §1-§7 above (Accepted 2026-06-20, DN-07) stand unchanged; nothing in §3's
+exported-op surface or §4's guarantee matrix is rewritten. Implementation (the site sweep, the new
+exports) is **Phase-C work** (the program handoff's §5 wave W-D) and is **pending**. The doc's own
+`Status` field above is left unchanged (**Accepted**, 2026-06-20, DN-07): this is an additive capture of
+a binding steer, not an independent re-ratification.
+
+### B.1 What changes for `std.swap`
+
+`bin_to_tern`/`tern_to_bin` (§3 above) are unaffected in *signature* — both already take an explicit
+`trits_width`/`binary_width: u32` parameter, so no default-width assumption is baked into the exported op
+itself. What the corrective changes is which pair is treated as **canonical** wherever a width is
+*exemplified* (docs, examples, the fungal-lexicon std exports) rather than *parameterized*:
+`Binary{64} ↔ Ternary{41}` is now that canonical pair (`Binary{32} ↔ Ternary{21}` the recognized
+fallback), per `docs/spec/swaps/binary-ternary.md`'s companion 2026-07-18 amendment (§A.2-§A.3 there) —
+see that file for the legality arithmetic and the E-W1 enablement gate; not restated here.
+
+### B.2 Std-export sweep (Phase-C, pending)
+
+`lib/std/swap.myc` today exports only the `{8,6}` and `{4,3}` pairs (`bin8_to_tern6`/`tern6_to_bin8`,
+`bin4_to_tern3`/`tern3_to_bin4`) — verified against the file 2026-07-18; no `bin32_to_tern21` or
+`bin64_to_tern41` family exists yet. Per the corrective, the Phase-C sweep adds `bin32_to_tern21`/
+`tern21_to_bin32` **now** (available — no enablement gap) and `bin64_to_tern41`/`tern41_to_bin64`
+**behind E-W1**. This is a `lib/` code change and is explicitly **out of scope for this amendment**
+(docs capture only) — recorded here as the normative TODO the Phase-C sweep must close, with the new
+exports' certificate class unchanged from §6 of `docs/spec/swaps/binary-ternary.md` (both pairs stay
+`LosslessWithinRange`, RFC-0002 §4).
+
+### B.3 Length/count canon fix-list (normative TODO, not landed here)
+
+The corrective also standardizes length- and count-typed returns on `Binary{64}` (`usize` parity with
+the transpiler's `u64`/`usize` → width-64 mapping). Verified against the tree 2026-07-18,
+`lib/std/swap.myc` has **one** concrete inconsistency in this class: `matrix_len`
+(`lib/std/swap.myc:222`) returns `Binary{8}`, while the `nonempty` helper's `bytes_len` delegate
+(`lib/std/swap.myc:171-174`) already returns `Binary{32}` — the two length-typed helpers in the same
+file disagree with each other, and neither yet uses the new `Binary{64}` canon. **This amendment does
+not fix the code** (out of the docs-only scope of this capture); it records the fix as **normative for
+the Phase-C sweep**: `matrix_len` moves `Binary{8} → Binary{64}`, and `bytes_len` aligns to the same
+`Binary{64}` canon (currently `Binary{32}`, the recognized fallback — not wrong, but not canonical once
+Phase-C lands).
+
+### B.4 Tracking
+
+The E-W1 enablement item (lifting the `mycelium-std-ternary`/`mycelium-core` conversion-utility `i64`
+ceiling so `bin64_to_tern41`/`tern41_to_bin64` are constructible) is proposed to the integrating parent
+as **M-1119** — not filed in `tools/github/issues.yaml` by this amendment (`issues.yaml` is
+orchestrator-owned; see this batch's FLAG report for the exact entry text). The full sweep-site list is
+`PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §2.1/§2.2 item 5, not duplicated here.
+
 ## Meta — changelog
 
 - **2026-06-17 — Draft (needs-design).** Stands up the `std.swap` module design spec (M-516, #158; Ring 1,
@@ -222,3 +274,12 @@ Tag justification (VR-5 — downgrade rather than overclaim):
   kernel change (KC-3). Append-only.
 
 - **2026-06-20 — Accepted (maintainer ratification, DN-07).** The maintainer ratified this Rust-first spec: the §4.5 guarantee matrix is asserted in tests, never-silent fallibility and honest per-op tags hold, and the open §7/§8 questions are design/scope calls, not contract violations. No guarantee tag was upgraded without a checked basis (VR-5). Status moves *Implemented (Rust-first) — pending ratification → Accepted*. Append-only; no kernel change (KC-3).
+
+- **2026-07-18 — W-1 corrective captured (Amendment, append-only; see §B above).** Records the
+  maintainer's binding width-canon corrective as it applies to `std.swap`: canonical pair moves to
+  `Binary{64}↔Ternary{41}` (`Binary{32}↔Ternary{21}` recognized fallback) for exemplified/exported
+  widths; `bin_to_tern`/`tern_to_bin` signatures (§3) are unaffected (already width-parameterized); the
+  Phase-C std-export sweep (`bin32_to_tern21`/`tern21_to_bin32` now, `bin64_to_tern41`/`tern41_to_bin64`
+  behind E-W1) and the `matrix_len`/`bytes_len` length-canon fix-list are recorded as normative TODOs,
+  not landed (docs-only capture). E-W1 proposed to the integrating parent as **M-1119**. `Status` field
+  unchanged (**Accepted**, 2026-06-20, DN-07) — additive amendment, not a re-ratification.
