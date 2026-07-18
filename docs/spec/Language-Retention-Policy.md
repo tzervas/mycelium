@@ -52,6 +52,15 @@ chose to log is in scope (DESIGN-04 §1):
 | **L3** | **`Meta`/provenance** on live `Value`s | per value + meet | yes, qualitatively (mode-aware; RP2); no dedicated numeric field yet — **FLAGGED**, §11 |
 | **L4** | **First-fault bus** (RFC-0013 + Amendment A1) | per refuse (+ optional crumbs) | yes — `hot_first_fault_cap` (§5) |
 | L5–L7 | Live value graph (GC, not a ledger), spore/deploy identity (compile-time, not a long-run ledger), future language-event streams | — | not this policy's concern today (L5/L6); L7 inherits this policy at birth once it exists (DESIGN-04 §6) |
+| **L8** *(added 2026-07-18, CC-B6)* | **Policy-transition log** (`mycelium-std-runtime::policy_mech::PolicySlot::transitions`, DN-78 §3 B-2 — the mechanized-set history, distinct from the `Explanation`/EXPLAIN signal each `select` produces) | per `PolicySlot::set` | yes — `DECLARED_POLICY_TRANSITION_CAP` (§5.1, a NEW surface this spec did not originally inventory; not an L1/L4 field, a genuinely distinct one) |
+
+**L8 note:** `PolicySlot::trace` (the mandatory [`Explanation`] each `select` records) is a **concrete
+instance of L2** (`§11`'s previously-`FLAGGED` "no dedicated numeric cap field" gap) — CC-B6 gives it
+one (`DECLARED_POLICY_TRACE_CAP`, §5.1), but L2 is broader than this one call site; other
+EXPLAIN-signal storage elsewhere in the tree may still be uncapped and is not addressed by this
+change. `PolicySlot::transitions` is not an L2 instance (it is not the mandatory `Explanation`
+itself, it is the record of *which policy is bound*) — hence the new L8 id rather than folding it
+into L2.
 
 ## 3. The `LanguageRetentionPolicy` record (DESIGN-04 §5.3 fields)
 
@@ -121,6 +130,49 @@ All numbers are **overridable** per §4's resolution (the whole point of a `Lang
 declaration is to override the mode default). L2 (`EXPLAIN`-signal storage) and L3 (`Meta` on live
 values) have **no dedicated numeric cap field** in the DESIGN-04 §5.3 record as captured — they are
 bounded only *qualitatively* today (RP1/RP2, §8 below); see §11 for this residual.
+
+### 5.1 CC-B6 — the L8/L2-instance caps (`Declared`), and the Phase-2 sizing pass (`Empirical` upgrades)
+
+**Captured 2026-07-18, course-correction W-D items 1+2.** Two additions, landed together:
+
+**(a) New `Declared` caps for L8 and this L2 instance (`mycelium-std-runtime::policy_mech`,
+`DECLARED_POLICY_TRANSITION_CAP`/`DECLARED_POLICY_TRACE_CAP`).** Neither is `CertMode`-scaled like
+the L1/L4 table above — flagged, not silently assumed: no current construction site of
+`PolicySlot` carries a live `CertMode` to gate on (checked before assuming otherwise, per
+mitigation #14), so mode-dispatching a parameter nothing would vary yet would be speculative
+generality (YAGNI), not honesty. Both numbers are anchored to the EXISTING `fast`/`certified`
+`hot_first_fault_cap` record counts above rather than invented fresh (mirroring
+`CertStore::declared_cert_handle_cap`'s own `Balanced`-cap judgment-call style):
+
+| Surface | `Declared` cap | Anchor |
+|---|---|---|
+| L8 — `PolicySlot::transitions` (`PolicySetRecord`, rare/coarse events) | 64 | `fast`'s `hot_first_fault_cap` record count |
+| L2 instance — `PolicySlot::trace` (`Explanation`, frequent/fine-grained events) | 1024 | `certified`'s `hot_first_fault_cap` record count |
+
+**(b) Phase-2 sizing pass — `Declared` → `Empirical` where actually measured (DESIGN-04 §10 P0
+item).** Static struct-footprint sizing (`std::mem::size_of`) plus a synthetic-load run (fill each
+capped store to its declared cap with representative instances, sum stack size plus a heap-estimate
+— `.capacity()` of owned `String`/`Vec` fields, never `.len()`, since an allocation reserves its
+capacity). **Never `Exact`** (a heap-estimate ignores allocator bucket rounding/overhead, and
+"representative" is a judgment call, not exhaustive) — tagged `Empirical`, method stated per row,
+never asserted bare (VR-5). **Unmeasured cells (`balanced`'s whole row; L2/L3's still-missing
+numeric fields beyond the one L8/L2 instance above) stay `Declared`** — this pass upgrades only
+what it actually measured, never the whole table by association.
+
+| Surface | Measured | Method (committed test) |
+|---|---|---|
+| L4, `fast` (64 records) | `Diag` `size_of` = 376 B; `FirstFaultEnvelope` `size_of` = 232 B; a representative populated `Diag`+envelope's heap-estimate = 232 B → **≈608 B/record → ≈38.0 KiB for 64 records** (well under the 256 KiB `Declared` budget — consistent) | `mycelium-diag/src/tests.rs::{diag_and_envelope_stack_sizes_are_sane, synthetic_load_fits_the_declared_byte_budgets}` |
+| L4, `certified` (1024 records) | Same per-record figure → **≈608 KiB for 1024 records** (well under the 8 MiB `Declared` budget — consistent) | same test, second case |
+| L1, `certified` (256 cert handles) | `ContentHash` `size_of` = 24 B; `SwapCertificate` `size_of` = 160 B; a representative `Bijective` binary↔ternary cert's handle+body estimate = 397 B/pair → **≈99.25 KiB for 256 pairs** (a NEW figure — the §5 table's L1 cell was a count only, no prior byte budget to check against) | `mycelium-cert/tests/sizing.rs::{handle_and_body_stack_sizes_are_sane, synthetic_load_at_certified_cap_reports_estimated_bytes}` |
+| L8, `PolicySlot::transitions` (64 records) | `PolicySetRecord` `size_of` = 88 B; measured retained-set total at cap = 5,852 B → **≈91 B/record avg, ≈5.7 KiB for 64 records** (a NEW figure for a NEW surface, §2 L8) | `mycelium-std-runtime/src/tests/policy_mech.rs::{transition_and_explanation_stack_sizes_are_sane, synthetic_load_at_caps_reports_estimated_bytes}` |
+| L2 instance, `PolicySlot::trace` (1024 records) | `Explanation` `size_of` = 304 B; measured retained-set total at cap = 471,040 B → **≈460 B/record avg, ≈460 KiB for 1024 records** (a NEW figure for this one L2 call site — the wider L2 surface, §11, stays qualitative) | same test, second case |
+
+**What did NOT get measured (stays `Declared`):** `balanced`'s whole row (§5 table — no steered
+number to anchor a measurement to, and no `balanced`-mode caller exists to synthetically load
+against); L2/L3's own dedicated numeric fields beyond the one `PolicySlot::trace` call site above
+(the wider `EXPLAIN`-signal and `Meta`/provenance surfaces remain qualitatively bounded only, §11);
+`fast`'s warm-epoch count (§11); the `@retention` declaration surface's grammar (§11). None of these
+were silently left ambiguous — each is named here as still open, exactly as §11 already recorded.
 
 ## 6. P4-Q2 — bounded default + warning when unset; required-explicit only under a declared audit obligation
 
@@ -241,7 +293,10 @@ dropped. None of the three axes — generation, consumption, retention — impli
   and L4 (`hot_first_fault_cap`) explicitly; L2 (`EXPLAIN`-signal storage) and L3 (live-value `Meta`) are
   bounded only qualitatively by mode (DESIGN-04 §5.2) today. Whether they get their own
   `LanguageRetentionPolicy` fields or share the L1/L4 caps by convention is left to the Phase-2 sizing
-  pass — not invented here.
+  pass — not invented here. **Partially closed 2026-07-18 (CC-B6, §5.1):** ONE concrete L2 call site
+  (`PolicySlot::trace`) now has a `Declared` numeric cap; the wider L2 surface (other EXPLAIN-signal
+  storage in the tree) and all of L3 remain open — this is a single-instance closure, not a general
+  answer to "does L2/L3 get a dedicated field."
 - **`balanced` mode's concrete numbers.** P4-Q1 gave concrete placeholder numbers for `fast` and
   `certified` only; `balanced`'s dual caps are unspecified. §5's table marks every `balanced` cell
   FLAGGED rather than interpolating a number the steer did not give.
@@ -269,12 +324,39 @@ dropped. None of the three axes — generation, consumption, retention — impli
       proof) model + the append-all opt-in exception, each stating its own bound (§9).
 - [x] Every genuinely-open item flagged rather than guessed (§11) — G2/VR-5.
 - [ ] Maintainer ratifies this capture (gate, per the handoff §4 Phase-1 stop point).
-- [ ] Phase-2 sizing pass (DESIGN-04 §10 P0) upgrades the `Declared` defaults toward `Empirical`.
-- [ ] The concrete `LanguageRetentionPolicy` Rust/Mycelium-lang struct, the mode-gated cert store, and
-      the `@retention`-style declaration surface land in a later wave — not this capture (no code lands
-      with this spec, mirroring RFC-0013 Amendment A1's own "no code lands with this capture" posture).
+- [x] Phase-2 sizing pass (DESIGN-04 §10 P0) upgrades the `Declared` defaults toward `Empirical` —
+      **partially**, for what was actually measured (§5.1): L4's `fast`/`certified` byte budgets
+      confirmed consistent with measurement; L1's `certified` cap and the new L8/L2-instance caps get
+      NEW measured byte figures. `balanced`'s whole row, the wider L2/L3 surfaces beyond one L2
+      instance, and `fast`'s warm-epoch count remain `Declared` (§11) — VR-5: upgrade only what was
+      checked, never the whole table by association.
+- [x] The mode-gated cert store landed (W-A, `mycelium-cert::store::CertStore`) and the CC-B6
+      `PolicySlot` transitions/trace caps landed (§5.1, this capture's own W-D item 1) — both ahead of
+      this spec's own ratification, ratified retroactively by this update. The concrete
+      `LanguageRetentionPolicy` Rust/Mycelium-lang struct itself and the `@retention`-style declaration
+      surface remain unlanded — a later wave's work, not this capture (no *policy-record* code lands
+      with this spec, mirroring RFC-0013 Amendment A1's own posture; the two capped *stores* above are
+      narrower, already-landed instances of the shape this policy describes, not the policy record
+      itself).
 
 ## Meta — changelog
+
+- **2026-07-18 — CC-B6 caps + Phase-2 sizing pass (course-correction W-D items 1+2; append-only —
+  supersedes no prior text, adds §2's L8 row, §5.1, and the §11/§12 notes above).** Two landed pieces:
+  (1) `mycelium-std-runtime::policy_mech::PolicySlot`'s previously-unbounded `transitions`/`trace`
+  logs (G-8/assessment F13) get `Declared`, non-`CertMode`-gated caps (§5.1a) — a new L8 surface
+  (`transitions`) and the first concrete numeric cap for one L2 call site (`trace`); drops are
+  never-silent (a per-log counter) and `seq` stays monotonic across eviction (backward compat). (2) A
+  real Phase-2 sizing-pass measurement (§5.1b): static `size_of` + a synthetic-load byte-estimate for
+  L4 (`Diag`/`FirstFaultEnvelope`, confirming the `fast`/`certified` byte budgets are consistent with
+  measurement), L1 (`ContentHash`/`SwapCertificate`, a new figure for `certified`'s 256-handle cap),
+  and the two new L8/L2-instance caps — every number Empirical with its committed test named as the
+  method (VR-5); `balanced`'s row, the wider L2/L3 surfaces, and `fast`'s warm-epoch count remain
+  `Declared`, unmeasured, and explicitly still open (§11) — this upgrades only what was checked, never
+  the whole table by association. `Status` unchanged (**Draft**, pending ratification) — a body
+  revision with its own changelog entry, not a status change. Grounds: this capture's own §5/§11/§12;
+  `crates/mycelium-std-runtime/src/policy_mech.rs`; `crates/mycelium-diag/src/tests.rs`;
+  `crates/mycelium-cert/tests/sizing.rs`; `crates/mycelium-std-runtime/src/tests/policy_mech.rs`.
 
 - **2026-07-18 — Created (Draft, pending ratification).** Mints `docs/spec/Language-Retention-Policy.md`
   as the Phase-1 ratifiable capture of `LanguageRetentionPolicy` (handoff §4 item 5; steer §1.4

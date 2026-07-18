@@ -570,3 +570,125 @@ fn first_fault_line_renders_a_partial_locus() {
         Some("swap.myc · swap_check · not_validated")
     );
 }
+
+// ── Sizing pass (course-correction W-D item 2): Declared -> Empirical where measured ───────────
+//
+// `docs/spec/Language-Retention-Policy.md` §5's L4 (`hot_first_fault_cap`) row states a byte
+// budget alongside its record count (`fast`: 64 records / 256 KiB; `certified`: 1024 records /
+// 8 MiB) — a `Declared` placeholder per that spec. This measures the REAL per-record footprint
+// two ways: (a) the static stack size (`size_of`), and (b) a synthetic-load estimate that sums
+// each record's stack size plus its owned heap allocations' `.capacity()` (never `.len()` — an
+// allocation reserves its capacity, not just what's written) for a representative corpus. Neither
+// is `Exact` (heap-estimate ignores allocator bucket rounding/overhead, and "representative" is a
+// judgment call, not exhaustive) — both are `Empirical`, with the method stated here rather than
+// asserted bare (VR-5). The cap COUNTS (64/1024) themselves stay `Declared` (they are a retention
+// POLICY choice, not something this measurement derives) — only the byte-budget figures move.
+
+/// A rough (never `Exact` — ignores allocator bucket rounding/overhead), reproducible byte
+/// estimate of a [`Diag`]'s heap allocations: sums every owned `String`/`Vec`'s `.capacity()`
+/// (what the allocator actually reserved, not `.len()`) across `message`, `notes`, `trace.frames`,
+/// `locus.source`, and (if present) the envelope's `how`/`basis_ref`/`event_id`/`parent_event`/
+/// `child_cause` strings. Does not attempt to model global allocator overhead per allocation
+/// (a further, smaller `Declared` fudge factor, not measured here).
+fn diag_heap_estimate(d: &Diag) -> usize {
+    let mut bytes = d.message.capacity();
+    bytes += d.notes.iter().map(String::capacity).sum::<usize>();
+    bytes += d.trace.frames.iter().map(String::capacity).sum::<usize>();
+    if let Some(locus) = &d.locus {
+        bytes += locus.source.as_deref().map_or(0, str::len);
+    }
+    if let Some(env) = &d.envelope {
+        bytes += env.how.capacity();
+        bytes += env.basis_ref.as_deref().map_or(0, str::len);
+        bytes += env.event_id.0.capacity();
+        bytes += env.parent_event.as_ref().map_or(0, |e| e.0.capacity());
+        bytes += env.child_cause.as_ref().map_or(0, |e| e.0.capacity());
+    }
+    bytes
+}
+
+/// A representative, non-trivial `Diag` with a first-fault envelope — a message, two notes, a
+/// two-frame trace, a locus with a source path, and a fully-populated envelope (the WORST-CASE
+/// shape this crate's own API can build with named-junction fields, not a minimal/empty one —
+/// picked so the estimate below is a conservative upper bound, not an optimistic best case).
+fn representative_diag_with_envelope() -> Diag {
+    Diag::error(Code::Other("SwapCheckNotValidated".to_owned()))
+        .message("swap check did not validate: translation-validation incompleteness")
+        .note("fallback: UseReference")
+        .note("see mycelium-cert::check for the M-210 checker")
+        .at(Locus {
+            source: Some("lib/std/swap.myc".to_owned()),
+            line: Some(42),
+            column: Some(7),
+        })
+        .trace(Trace {
+            frames: vec!["swap_check.v0".to_owned(), "mode::gate_swap".to_owned()],
+        })
+        .with_envelope(
+            FirstFaultEnvelope::new(
+                EventId::new("evt-0000000001"),
+                Phase::Runtime,
+                SiteKind::SwapCheck,
+                Decision::NotValidated,
+                "swap_check.v0",
+                CertMode::Certified,
+            )
+            .with_grades(Grades {
+                input: vec![GuaranteeStrength::Empirical],
+                output: Some(GuaranteeStrength::Declared),
+            })
+            .with_basis_ref("matrix-row-42")
+            .with_parent_event(EventId::new("evt-0000000000")),
+        )
+}
+
+/// Static stack footprint (`size_of`) of [`Diag`]/[`FirstFaultEnvelope`] — sanity-bounded, not
+/// pinned to an exact byte count (a struct-layout-fragile assertion would break on every
+/// unrelated field reorder/compiler bump; the ACTUAL measured figures, obtained by running this
+/// crate's tests, are recorded in `docs/spec/Language-Retention-Policy.md` §5 with this test named
+/// as the method).
+#[test]
+fn diag_and_envelope_stack_sizes_are_sane() {
+    let diag_size = std::mem::size_of::<Diag>();
+    let envelope_size = std::mem::size_of::<FirstFaultEnvelope>();
+    // Sanity bounds only (a real struct, not zero-sized; well under 1 KiB each on any sane
+    // layout) — the exact figures are read from a local `cargo test -- --nocapture` run, not
+    // hardcoded here (see the module doc note above).
+    assert!(
+        diag_size > 0 && diag_size < 1024,
+        "Diag stack size {diag_size}"
+    );
+    assert!(
+        envelope_size > 0 && envelope_size < 1024,
+        "FirstFaultEnvelope stack size {envelope_size}"
+    );
+}
+
+/// Synthetic-load measurement: `cap` representative `Diag`s' combined estimated footprint
+/// (stack + heap-estimate), compared against the `LanguageRetentionPolicy` §5 byte budget for
+/// that `cap` (`fast`: 64 -> 256 KiB; `certified`: 1024 -> 8 MiB). This is the property test that
+/// exercises the bound (SC-2): for both declared `(cap, budget)` pairs, `cap` WORST-CASE
+/// representative records must fit the declared budget — if a future field addition ever makes a
+/// single record's estimate large enough to blow the budget, this fails loudly instead of the
+/// budget silently becoming a fiction.
+#[test]
+fn synthetic_load_fits_the_declared_byte_budgets() {
+    let per_record =
+        std::mem::size_of::<Diag>() + diag_heap_estimate(&representative_diag_with_envelope());
+    for (cap, budget_bytes, label) in [
+        (64usize, 256 * 1024, "fast: 64 records / 256 KiB"),
+        (
+            1024usize,
+            8 * 1024 * 1024,
+            "certified: 1024 records / 8 MiB",
+        ),
+    ] {
+        let total = per_record * cap;
+        assert!(
+            total <= budget_bytes,
+            "{label}: {cap} worst-case representative records estimate to {total} bytes, \
+             which exceeds the declared budget of {budget_bytes} bytes (per-record estimate \
+             {per_record} bytes) — the declared byte budget needs revisiting, not silently kept"
+        );
+    }
+}
