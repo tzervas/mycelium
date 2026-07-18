@@ -78,7 +78,7 @@ fn byte_of(v: i64) -> Value {
 fn tern_of(v: i64, trits: u32) -> Value {
     Value::new(
         Repr::Ternary { trits },
-        Payload::Trits(ternary::int_to_trits(v, trits).unwrap()),
+        Payload::Trits(ternary::int_to_trits(i128::from(v), trits).unwrap()),
         Meta::exact(Provenance::Root),
     )
     .unwrap()

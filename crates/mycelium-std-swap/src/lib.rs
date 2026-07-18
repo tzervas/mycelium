@@ -642,7 +642,7 @@ mod tests {
     /// Build a `Ternary{m}` value from a signed integer.
     fn make_ternary(value: i64, trits: u32) -> Value {
         use mycelium_core::{GuaranteeStrength, Meta, Provenance};
-        let trit_vec = mycelium_core::ternary::int_to_trits(value, trits)
+        let trit_vec = mycelium_core::ternary::int_to_trits(i128::from(value), trits)
             .unwrap_or_else(|| panic!("value {value} does not fit in {trits} trits"));
         let meta = Meta::new(
             Provenance::Root,

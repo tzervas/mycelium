@@ -128,7 +128,7 @@ fn make_binary(value: i64, width: u32) -> Value {
 
 /// Build a `Ternary{m}` oracle value from a signed integer (balanced, MSB-first).
 fn make_ternary(value: i64, trits: u32) -> Value {
-    let tv = int_to_trits(value, trits)
+    let tv = int_to_trits(i128::from(value), trits)
         .unwrap_or_else(|| panic!("value {value} does not fit in {trits} trits"));
     let meta = Meta::new(
         Provenance::Root,
@@ -152,7 +152,8 @@ fn bin_lit(v: u64, width: u32) -> String {
 /// (MSB-first; `-`/`0`/`+` — the wire glyphs of `binary-ternary.md` §1), via the same
 /// `int_to_trits` codec the oracle values use.
 fn tern_lit(v: i64, m: u32) -> String {
-    let trits = int_to_trits(v, m).unwrap_or_else(|| panic!("{v} does not fit in {m} trits"));
+    let trits =
+        int_to_trits(i128::from(v), m).unwrap_or_else(|| panic!("{v} does not fit in {m} trits"));
     let glyphs: String = trits
         .iter()
         .map(|t| match t {
@@ -203,11 +204,16 @@ const REF_TYPES: &str = "type Guarantee = GExact | GProven | GEmpirical | GDecla
 /// Render the `n`-deep nested `add_u(0b1, …)` expression `matrix_len`'s recursive spine-walk
 /// expands to (the `std_diag.rs` precedent: the reference recomputes via the SAME primitive-op
 /// composition, so it carries the matching `Derived` provenance while remaining an independent
-/// check of the row count).
+/// check of the row count). `Binary{64}`-width literals (W-1 length/count canon, 2026-07-18 —
+/// `matrix_len` itself moved `Binary{8}` -> `Binary{64}`).
 fn myc_len_chain(n: u8) -> String {
-    let mut expr = "0b0000_0000".to_owned();
+    let mut expr =
+        "0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000"
+            .to_owned();
     for _ in 0..n {
-        expr = format!("add_u(0b0000_0001, {expr})");
+        expr = format!(
+            "add_u(0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0001, {expr})"
+        );
     }
     expr
 }
@@ -323,13 +329,18 @@ fn oracle_matrix_rows_match_port_rows_one_to_one() {
 // ══════════════════════════════════════════════════════════════════════════════════════════════
 
 /// `matrix_len(matrix())` equals the live oracle's row count.
+///
+/// **W-1 length/count canon (2026-07-18):** `matrix_len` moved `Binary{8}` -> `Binary{64}`
+/// (`docs/spec/swaps/binary-ternary.md` §A.4; `docs/spec/stdlib/swap.md` §B.3) — this test's
+/// driver/expected widths track that change.
+///
 /// Guarantee: Declared (the transcription); Empirical (differential).
 #[test]
 fn matrix_len_matches_oracle_row_count() {
     let expected_count = u8::try_from(GUARANTEE_MATRIX.len()).expect("row count fits u8");
-    let driver = "fn main() => Binary{8} = matrix_len(matrix());";
+    let driver = "fn main() => Binary{64} = matrix_len(matrix());";
     let expected = format!(
-        "nodule ref;\nfn main() => Binary{{8}} = {};",
+        "nodule ref;\nfn main() => Binary{{64}} = {};",
         myc_len_chain(expected_count)
     );
     assert_three_way(
@@ -645,6 +656,80 @@ fn roundtrip4_full_corpus_identity_and_oracle_agreement() {
         assert_eq!(
             &myc_enc,
             oracle_enc.value.payload(),
+            "encode payload divergence vs the Rust oracle for {lit} (= {signed})"
+        );
+    }
+}
+
+/// **W-1 canonical width (2026-07-18): `Binary{64} <-> Ternary{41}`** — the E-W1/M-1119 enablement
+/// item unblocked this pair for the conversion-utility fast path
+/// (`docs/spec/swaps/binary-ternary.md` §A.3/§A.5; `docs/spec/stdlib/swap.md` §B.2/§B.4). A curated
+/// edge corpus (`i64::MIN`/`MAX` and values whose magnitude needs the 41st trit — i.e. exceeds
+/// `max_magnitude(40)` but not `max_magnitude(41)`, so 40 trits alone could not represent them,
+/// exactly the values M-1119 exists for) — NOT exhaustive (`2^64` is infeasible; mirrors the
+/// curated-corpus style of `TERN6_CORPUS` above, scaled to the new canonical width). The exhaustive
+/// kernel-level witness lives in
+/// `mycelium-core::tests::ternary::m41_round_trip_covers_the_full_binary64_range`; this test's own
+/// job is confirming the `.myc` `swap(…, to: …, policy: …)` surface — not just the underlying Rust
+/// kernel fns — round-trips correctly at the new width, end to end (L1-eval ≡ L0-interp ≡ AOT, plus
+/// the live oracle).
+#[test]
+fn w1_bin64_tern41_roundtrip_over_curated_corpus() {
+    let policy = test_policy();
+    let corpus: &[i64] = &[
+        i64::MIN,
+        i64::MIN + 1,
+        -1,
+        0,
+        1,
+        i64::MAX - 1,
+        i64::MAX,
+        7_000_000_000_000_000_000,
+        -7_000_000_000_000_000_000,
+    ];
+    for &signed in corpus {
+        let bits = signed as u64; // two's-complement bit pattern, reinterpreted unsigned
+        let lit = bin_lit(bits, 64);
+
+        // roundtrip64 is the identity — three-way + oracle agreement.
+        let driver = format!("fn main() => Binary{{64}} = roundtrip64({lit});");
+        let expected = format!(
+            "nodule ref;\nfn main() => Binary{{64}} = \
+             swap(swap({lit}, to: Ternary{{41}}, policy: rt), to: Binary{{64}}, policy: rt);"
+        );
+        assert_three_way(
+            &format!("roundtrip64({lit}) three-way"),
+            &program(&driver),
+            &expected,
+        );
+
+        let src = make_binary(signed, 64);
+        let enc = bin_to_tern(&src, 41, &policy)
+            .unwrap_or_else(|e| panic!("oracle enc({signed}) failed: {e}"));
+        assert!(
+            matches!(enc.cert, SwapCertificate::Bijective { .. }),
+            "oracle cert for {signed} must be Bijective"
+        );
+        let dec = tern_to_bin(&enc.value, 64, &policy)
+            .unwrap_or_else(|e| panic!("oracle dec(enc({signed})) failed: {e}"));
+        assert_eq!(
+            dec.value.payload(),
+            src.payload(),
+            "oracle round-trip must be the identity for {signed}"
+        );
+        let myc_payload = eval_payload(&format!("roundtrip64({lit}) payload"), &driver);
+        assert_eq!(
+            &myc_payload,
+            src.payload(),
+            "ported round-trip must return the original bits for {lit} (= {signed})"
+        );
+
+        // bin64_to_tern41 payload matches the oracle encode directly.
+        let driver = format!("fn main() => Ternary{{41}} = bin64_to_tern41({lit});");
+        let myc_enc = eval_payload(&format!("bin64_to_tern41({lit})"), &driver);
+        assert_eq!(
+            &myc_enc,
+            enc.value.payload(),
             "encode payload divergence vs the Rust oracle for {lit} (= {signed})"
         );
     }
