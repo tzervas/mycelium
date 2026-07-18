@@ -12,6 +12,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(pm): Phase G — v0.464.0 release staged; tag pushes policy-blocked, manifest committed (2026-07-18)
+
+Course-correction Phase G: the `v0.464.0` cut is fully staged in
+`docs/planning/course-correction-2026-07-18/RELEASE-v0.464.0.md` — a 92-row manifest (repo →
+verified rev for all 45 Rust components, 46 `*-myc` twins, and the umbrella), release-notes text,
+and the exact per-repo tag command. The tags themselves could not be pushed from this session:
+the scoped git relay returns 403 on `refs/tags/*` (branch pushes permitted; a policy boundary,
+disclosed per the blocked-op protocol), and the session's GitHub toolset has no release-object
+creation capability. Cutting the release is one script-run from any tag-authorized environment.
+Monorepo promotion stays the PR #1705 → tiered path with the terminal squash held (CC-B7).
+
 ### docs(measurements): Phase F — dual-side validation + apples-to-apples metrics report (2026-07-18)
 
 Course-correction Phase F: `docs/measurements/course-correction-dual-side-2026-07-18.md`.
