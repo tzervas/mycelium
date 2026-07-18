@@ -12,6 +12,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(delivery)+docs(pm): Phase E — all 46 `*-myc` twins delivered with honesty records (2026-07-18)
+
+Course-correction Phase E (records here; content in the `*-myc` repos): every twin refreshed to
+the AX-core-train graduated content where a hand-vetted nodule exists, with a `DELIVERY.md`
+honesty record per repo (provenance, guarantee basis per file, measured `myc-check` result).
+Real content refreshes: `std-swap-myc` (W-1 exports), `std-core-myc` (`derive_prelude.myc`),
+`std-error-myc` (`option.myc` + `result.myc`) — placements are recorded judgment calls; all
+other twins were verified already at train parity byte-for-byte. Measured at delivery: 27/46
+twins `myc-check --project lib` CLEAN (incl. the full 9-nodule self-hosted compiler surface in
+`mycelium-compiler-myc`); 19/46 FINDINGS confined to `Declared` Grok-era seed drafts — disclosed
+per-repo, no tag upgraded (T6 quarantine holds). Umbrella lock `*-myc` pins advanced to the
+delivered revs; monorepo mirror updated.
+
 ### feat(transpile)+docs(pm): Phase D transpile-readiness pass — M-1006 remeasure, G-γ discard close, per-component DoD table (2026-07-18)
 
 Course-correction Phase D (bounded readiness pass; full record:
