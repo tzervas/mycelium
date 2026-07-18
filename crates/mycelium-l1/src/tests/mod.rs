@@ -5,6 +5,7 @@
 mod affine;
 mod affine_stage3;
 mod ambient;
+mod ambient_policy;
 mod ast;
 mod checkty;
 mod compiler_stage5_classify;
@@ -31,6 +32,7 @@ mod hygiene_affine_expanded;
 mod hygiene_defsite_resolution;
 mod hygiene_expr_sugar;
 mod init;
+mod legal_pair;
 mod lexer;
 mod lib_root;
 mod marshal_support;
