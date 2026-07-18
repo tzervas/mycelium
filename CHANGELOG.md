@@ -12,6 +12,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### fix(components): Phase B complete — all 45 Rust component repos buildable at train v0.464.0 (2026-07-18)
+
+Course-correction Phase B (executed in the component repos; recorded here): nine topological
+waves fixed every Rust component repo to a standalone, verified-green workspace — workspace roots
+restoring the orphaned inheritance, cross-repo deps as git pins at frozen lockstep revs,
+toolchain + supply-chain replicas, CI v2 (fmt + clippy `-D warnings` + test), CROSS-REF.md per
+repo, owned docs/fixture slices (core schemas; l1 `lib/compiler` + `lib/std` + grammar corpus;
+std spec slices), Cargo.lock. The approved DN-143 §4 move (select + vsa-decode → runtime)
+dissolved the one repo-level dependency cycle. Umbrella `mycelium-lang`: lock v2 (rev + tree-hash
+pins) + real integration CI; mirror updated in `artifacts/`. Every repo verified fmt/clippy/test
+green standalone at its merged rev (`Empirical`); monorepo untouched by the component fixes
+except this record and the generator (`scripts/decompose/fix_component_workspace.py`).
+
 ### docs(capture): design-steer Phase-1 ratifiable captures — all six landed Draft (2026-07-18)
 
 Course-correction A4, per the steer handoff §4 (all Draft, no ratification dates — H1/H2; the
