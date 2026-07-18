@@ -12,6 +12,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(measurements): Phase F — dual-side validation + apples-to-apples metrics report (2026-07-18)
+
+Course-correction Phase F: `docs/measurements/course-correction-dual-side-2026-07-18.md`.
+Freshly measured (`Empirical`, methods in-doc): Rust side 1,901/1,901 tests green (l1/cert/core
+at tip); Mycelium side `myc-check` clean on `lib/std` (22 files, median 0.218 s/3 runs) and
+`lib/compiler` (9 files, median 5.007 s); differential witnesses 32/32 + runnable-gate + the W-1
+64↔41 round-trip against the live Rust oracle; `mycelium-bench` shared corpus (14 cases) — JIT
+3.5–4.9× over the interpreter where a program lowers, AOT-env 1.6–2.6× on recursion cases, zero
+correctness divergences; diagnostic sample, std-swap LOC pair (613 Rust / 358 `.myc`), toolchain
+steps. VSA/GPU/proof rows desktop-held (`scripts/vsa-desktop-checks.sh`). **Correction (VR-5):**
+the Phase E twin `myc-check` tally is **26/46 CLEAN, 20/46 FINDINGS** — the Phase E CHANGELOG
+entry below and the umbrella lock header said 27/19 (a miscount surfaced by this phase's re-read
+and confirmed against the delivery-run records; per-repo `DELIVERY.md` files were always correct).
+
 ### feat(delivery)+docs(pm): Phase E — all 46 `*-myc` twins delivered with honesty records (2026-07-18)
 
 Course-correction Phase E (records here; content in the `*-myc` repos): every twin refreshed to
