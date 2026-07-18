@@ -12,6 +12,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### docs(assessment): decomposition alignment assessment (2026-07-18)
+
+Assessment record under `docs/planning/alignment-assessment-2026-07-18/` (report, per-repo
+scorecard, blob-parity evidence + generator scripts): the 2026-07-17 component-repo decomposition
+evaluated against the maintainer's uploaded design-steer reference docs. Headline: content
+superset PASS (monorepo contains everything in the 45 Rust component repos; sole exception:
+10 generated files in `mycelium-cli-myc`); steer Phase-3 gates and §6 structural requirements
+unmet (findings F1–F18, all P0/P1 rows adversarially re-verified). Report-only — no product code,
+no decision-doc changes.
+
 ### docs(pm): PROGRAM-SELFHOST-DECOMPOSE active implement program (2026-07-17)
 
 L0 program under `docs/planning/gap-analysis-2026-07-16/`: gap-close → archive main → component
