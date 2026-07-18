@@ -6,6 +6,16 @@ cd "$REPO_ROOT" || exit 1
 section "markdownlint"
 
 tracked '*.md'
+# Verbatim-capture exemption (course-correction A1, 2026-07-18; G2 — documented, not silent):
+# docs/planning/design-steer-2026-07-17/ holds three maintainer steer docs committed BYTE-VERBATIM
+# (see its PROVENANCE.md). They pre-date the repo's markdown style gate and must not be reflowed
+# to satisfy it (MD029/MD052 hits are theirs by construction). Style-exempt; content still binding.
+FILTERED=()
+for f in "${TRACKED[@]}"; do
+  [[ "$f" == docs/planning/design-steer-2026-07-17/* && "$f" != */PROVENANCE.md ]] && continue
+  FILTERED+=("$f")
+done
+TRACKED=("${FILTERED[@]}")
 if [[ ${#TRACKED[@]} -eq 0 ]]; then skip "no markdown"; exit 0; fi
 if ! have npx; then skip "node/npx not found — run \`just setup\`"; exit 0; fi
 
