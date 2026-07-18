@@ -713,6 +713,18 @@ pub enum Strength {
 }
 
 impl Strength {
+    /// Every lattice point, in **rank order** (`Declared` weakest → `Exact` strongest) — for
+    /// exhaustive iteration in tests/tooling (mirrors `CertMode::ALL`/`PolicyScope::ALL`'s
+    /// closed-enumeration pattern elsewhere in this crate). A closed, 4-variant enum, so exhaustive
+    /// enumeration is a complete proof over the lattice, not a sample (W-C X2 overclaim-guard
+    /// property tests; `crate::grade_catalog`).
+    pub const ALL: [Strength; 4] = [
+        Strength::Declared,
+        Strength::Empirical,
+        Strength::Proven,
+        Strength::Exact,
+    ];
+
     /// The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`
     /// (RFC-0018 §4.1; Biba 1977, T3.2). Higher = more trusted: `Exact = 3 … Declared = 0`. This is
     /// the *only* place the chain's order is encoded; [`Self::meet`] and [`Self::satisfies`] derive
