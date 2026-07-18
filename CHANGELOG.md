@@ -12,6 +12,46 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### feat(l1): AX-core W-C landed — structural grade catalog + overclaim guard, regime classification, meet-boundary table, envelope-instance EXPLAIN (2026-07-18)
+
+Course-correction Phase C wave W-C (steer §5; X2–X5, completing the AX-core implementation
+surface). Verify-first found R1/R2 (modular bottom, weaken-only) and R7 (fast-mode floor) already
+landed and tested — not re-implemented; scope reduced to the genuine residuals.
+
+- **X2** (`grade_catalog.rs`): the 14 RFC-0018 §4.3 structural grade rules as committed data plus
+  the CI overclaim guard — completeness (every rule `grade.rs` implements is cataloged) and
+  exhaustive lattice properties (meet never exceeds an operand; a strength never satisfies a
+  strictly stronger demand) as closed-form 16/64-case enumerations (`Exact`).
+- **X3** (`regime.rs`): direction-aware regime classification per RFC-0002 §4 (`enc` Total,
+  `dec` Partial) reusing the W-B pair matrix, plus the `SiteKind::RegimeTypeLie` Diag builder.
+  The hard refusal is **deliberately deferred, ledgered** (DN-141 Appendix C): wiring it today
+  would break three shipped, tested behaviors (`differential.rs`/`runnable_gate.rs`/bench corpus
+  assert a bare-typed `dec` swap); the natural non-breaking wiring point is the held X9
+  `to:`-elision — queued as CC-B9 for the maintainer (accept the break now vs wait for X9).
+- **X4** (`meet_boundary.rs`): the DN-141 B3 allow/refuse table (export / Exact-demand crossings;
+  certified-consumer rows held to W-E with X6/X7) proven exhaustively equivalent to `grade.rs`'s
+  real enforcement, plus a structural regression guard pinning R4 ("meet free inside": 7 internal
+  `.meet(` sites vs 3 boundary `require` sites). Live-wiring into `require` is a focused
+  follow-on (two site_kinds share that function; it is a DN-80-pinned file).
+- **X5**: `mycelium-diag` added as a direct `mycelium-l1` dependency (previously transitive via
+  `mycelium-cert`; strictly downward, no new graph node) and the two W-B refusal branches in
+  `check_swap` now build their messages from real envelope instances
+  (`legal_pair_refuse_diag`, `policy_resolve_refuse_diag`) — byte-identical message text, DN-80
+  pins unchanged (re-grep verified). The success-path `policy_resolve` crumb is built + tested
+  but has no sink yet (`checkty::Cx` has no diagnostics-collection channel — disclosed follow-on).
+
+DESIGN-03 §7 probe coverage (the AX-core DoD component), honest per-probe: 1/2/4/6 witnessed by
+new or cited tests; 3 partial (single Exact-endorsement arm proven; full R6 needs X6 airlock,
+W-E); 5 residual (B6 dataset partitions, later package); 7 out of scope until the transpile
+phase; 8 structural gap (the checker has no span tracking anywhere — pre-existing; all new Diags
+carry `locus: None` honestly). Gates: fmt/clippy/tests green change-scoped (full `mycelium-l1`,
+`mycelium-std-conformance` incl. the 9/9 reject-ledger guard, `mycelium-diag`, `mycelium-cert`)
+plus `cargo check --workspace` for the new dependency edge. New code `Declared` except the
+overclaim-guard enumerations (`Exact`); nothing upgraded past its basis. Disclosed: the committed
+`docs/spec/api/*.txt` baselines (and therefore the derived api-index rows) do not yet carry
+W-A..W-C's new pub symbols — `cargo-public-api` + nightly rustdoc are absent in this session
+(`api.sh` skips gracefully); baseline regen is queued before the dev→staging promotion.
+
 ### feat(l1): AX-core W-B landed — `policy: ambient` surface, scoped resolution, A1 legal-pair matrix, elaboration-hash goldens (2026-07-18)
 
 Course-correction Phase C wave W-B (steer §5 / DN-142 §3, implemented Rust-first, pending

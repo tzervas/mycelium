@@ -8323,7 +8323,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 970,
+      "line": 982,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8378,7 +8378,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 756,
+      "line": 768,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8433,7 +8433,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 984,
+      "line": 996,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1079,
+      "line": 1091,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8488,7 +8488,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1103,
+      "line": 1115,
       "summary": "A float literal from its verbatim decimal source text (ADR-040 / M-897).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8499,7 +8499,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1095,
+      "line": 1107,
       "summary": "A string literal from its **decoded** content.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8510,7 +8510,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1087,
+      "line": 1099,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8620,7 +8620,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 1001,
+      "line": 1013,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8675,7 +8675,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 736,
+      "line": 748,
       "summary": "The **meet** `g₁ ∧ g₂` — the *weaker* (less trusted) of the two grades (RFC-0018 §4.1: the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8686,7 +8686,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 721,
+      "line": 733,
       "summary": "The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8697,7 +8697,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 749,
+      "line": 761,
       "summary": "`self ⊒ demand` — is `self` **at least as trusted** as `demand`? The honesty rule as a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9148,7 +9148,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10908,
+      "line": 10924,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9159,7 +9159,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10857,
+      "line": 10873,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9181,7 +9181,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 10898,
+      "line": 10914,
       "summary": "Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9489,7 +9489,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 74,
+      "line": 79,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9533,7 +9533,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 75,
+      "line": 86,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9665,7 +9665,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 76,
+      "line": 87,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9698,7 +9698,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 81,
+      "line": 92,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9742,7 +9742,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 87,
+      "line": 98,
       "summary": "**DN-113 Rank 1 / M-1060** — the multi-phylum dependency-graph builder: [`phyla::PhylumNode`] +",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9819,7 +9819,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 98,
+      "line": 117,
       "summary": "`reveal` — desugar-on-demand, Increment-1 (M-1051; DN-38 §5/§8.3; DN-110 §3.4/§8.4;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9907,7 +9907,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 108,
+      "line": 127,
       "summary": "The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10017,7 +10017,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 109,
+      "line": 128,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10094,7 +10094,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 110,
+      "line": 129,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10138,7 +10138,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/lib.rs",
-      "line": 116,
+      "line": 135,
       "summary": "DN-126 (M-1077) — the **type-strictness axis**: loose/duck-typed on the interpreted path vs.",
       "guarantee_tag": null,
       "corpus_refs": []
