@@ -136,6 +136,14 @@ fn bias_encode(v: Option<i64>) -> i64 {
     }
 }
 
+/// Narrow an oracle `trits_to_int` result (`i128` since E-W1/M-1119) back to `i64` for comparison
+/// against the `.myc` side (which stays `Binary{16}`-bounded, unaffected by the widening). Every
+/// value in this file's edge corpora is well within `i64` — the `expect` documents that
+/// assumption rather than silently truncating (C1/G2).
+fn narrow(v: i128) -> i64 {
+    i64::try_from(v).expect("this file's edge corpus values fit i64")
+}
+
 /// A `.myc` `main` that reduces `Option[Trits]`-producing `expr` to the shared biased scalar at
 /// `Binary{16}`: None -> 0, Some(ts) -> BIAS + trits_to_int(ts) (sign folded via match).
 fn biased_option_trits_driver(expr: &str) -> String {
@@ -553,7 +561,9 @@ fn oracle_codec_round_trip_edges() {
             biased_option_trits_driver(&format!("int_to_trits({}, 0b0000_0110)", sint_expr(v)));
         let myc = eval_uint(&format!("codec round-trip v={v}"), &driver);
 
-        let rust = bias_encode(rust_int_to_trits(v, 6).map(|ts| rust_trits_to_int(&ts)));
+        let rust = bias_encode(
+            rust_int_to_trits(i128::from(v), 6).map(|ts| narrow(rust_trits_to_int(&ts))),
+        );
         assert_eq!(
             myc, rust,
             "int_to_trits({v}, 6) |> trits_to_int must match the Rust oracle (biased observable)"
@@ -567,7 +577,7 @@ fn oracle_codec_round_trip_edges() {
 #[test]
 fn oracle_codec_digits_match() {
     for v in edge_values_w6() {
-        let Some(oracle_trits) = rust_int_to_trits(v, 6) else {
+        let Some(oracle_trits) = rust_int_to_trits(i128::from(v), 6) else {
             continue; // the None edges are covered by the biased round-trip test above
         };
         let driver = format!(
@@ -587,8 +597,8 @@ fn oracle_codec_digits_match() {
 }
 
 /// max_magnitude agrees with the oracle across widths 0..=10 (and both ceilings refuse:
-/// the oracle at m=41, the port at m=11 — each side's ceiling is its own documented bound,
-/// FLAG-ternary-2, asserted here rather than papered over).
+/// the oracle at m=81 [E-W1/M-1119 widened this from m=41], the port at m=11 — each side's
+/// ceiling is its own documented bound, FLAG-ternary-2, asserted here rather than papered over).
 #[test]
 fn oracle_max_magnitude_agrees_on_shared_domain() {
     for m in 0u32..=10 {
@@ -596,10 +606,10 @@ fn oracle_max_magnitude_agrees_on_shared_domain() {
             "fn main() => Binary{{16}} = match max_magnitude(0b{m:08b}) {{ Some(v) => v, None => 0b0000_0000_0000_0000 }};"
         );
         let myc = eval_uint(&format!("max_magnitude({m})"), &driver);
-        let rust = rust_max_magnitude(m).expect("m <= 10 is in the oracle's i64 range");
+        let rust = narrow(rust_max_magnitude(m).expect("m <= 10 is in the oracle's i128 range"));
         assert_eq!(myc, rust, "max_magnitude({m}) must match the Rust oracle");
     }
-    // The port's ceiling (m = 11) refuses explicitly; the oracle still answers (i64 headroom).
+    // The port's ceiling (m = 11) refuses explicitly; the oracle still answers (i128 headroom).
     let driver = "fn main() => Binary{8} = match max_magnitude(0b0000_1011) { Some(_) => 0b0000_0001, None => 0b0000_0000 };";
     assert_eq!(
         eval_uint("ceiling m=11", driver),
@@ -608,11 +618,23 @@ fn oracle_max_magnitude_agrees_on_shared_domain() {
     );
     assert!(
         rust_max_magnitude(11).is_some(),
-        "the oracle's i64 ceiling is higher (m <= 40)"
+        "the oracle's ceiling is much higher (m <= 80, E-W1/M-1119)"
+    );
+    // E-W1/M-1119: the oracle's ceiling widened from i64 (m >= 41 refused) to i128 (m >= 81
+    // refused) — m=41, the W-1 canonical Ternary width, now succeeds on the oracle side. The
+    // port (`.myc`, Binary{16}-bounded) still refuses at m=11; the two ceilings were never
+    // required to match (FLAG-ternary-2).
+    assert!(
+        rust_max_magnitude(41).is_some(),
+        "the oracle now answers at m = 41 (E-W1/M-1119 — the W-1 canonical Ternary width)"
     );
     assert!(
-        rust_max_magnitude(41).is_none(),
-        "the oracle's own ceiling refuses at m = 41"
+        rust_max_magnitude(80).is_some(),
+        "the widened oracle ceiling reaches m = 80"
+    );
+    assert!(
+        rust_max_magnitude(81).is_none(),
+        "the oracle's new i128 ceiling refuses at m = 81"
     );
 }
 
@@ -633,14 +655,14 @@ fn oracle_add_carry_and_bound_pairs() {
         (0, 0),
     ];
     for &(x, y) in pairs {
-        let a = trits_expr(&rust_int_to_trits(x, 4).expect("x fits width 4"));
-        let b = trits_expr(&rust_int_to_trits(y, 4).expect("y fits width 4"));
+        let a = trits_expr(&rust_int_to_trits(i128::from(x), 4).expect("x fits width 4"));
+        let b = trits_expr(&rust_int_to_trits(i128::from(y), 4).expect("y fits width 4"));
         let driver = biased_option_trits_driver(&format!("trits_add({a}, {b})"));
         let myc = eval_uint(&format!("add({x},{y})"), &driver);
 
-        let ra = rust_int_to_trits(x, 4).expect("in range");
-        let rb = rust_int_to_trits(y, 4).expect("in range");
-        let rust = bias_encode(rust_add(&ra, &rb).map(|ts| rust_trits_to_int(&ts)));
+        let ra = rust_int_to_trits(i128::from(x), 4).expect("in range");
+        let rb = rust_int_to_trits(i128::from(y), 4).expect("in range");
+        let rust = bias_encode(rust_add(&ra, &rb).map(|ts| narrow(rust_trits_to_int(&ts))));
         assert_eq!(
             myc, rust,
             "add({x},{y}) at width 4 must match the Rust oracle"
@@ -654,14 +676,14 @@ fn oracle_add_carry_and_bound_pairs() {
 fn oracle_sub_and_neg_pairs() {
     let pairs: &[(i64, i64)] = &[(1, 1), (13, -14), (-40, 40), (40, 40), (0, 40), (-39, 1)];
     for &(x, y) in pairs {
-        let a = trits_expr(&rust_int_to_trits(x, 4).expect("x fits width 4"));
-        let b = trits_expr(&rust_int_to_trits(y, 4).expect("y fits width 4"));
+        let a = trits_expr(&rust_int_to_trits(i128::from(x), 4).expect("x fits width 4"));
+        let b = trits_expr(&rust_int_to_trits(i128::from(y), 4).expect("y fits width 4"));
         let driver = biased_option_trits_driver(&format!("trits_sub({a}, {b})"));
         let myc = eval_uint(&format!("sub({x},{y})"), &driver);
 
-        let ra = rust_int_to_trits(x, 4).expect("in range");
-        let rb = rust_int_to_trits(y, 4).expect("in range");
-        let rust = bias_encode(rust_sub(&ra, &rb).map(|ts| rust_trits_to_int(&ts)));
+        let ra = rust_int_to_trits(i128::from(x), 4).expect("in range");
+        let rb = rust_int_to_trits(i128::from(y), 4).expect("in range");
+        let rust = bias_encode(rust_sub(&ra, &rb).map(|ts| narrow(rust_trits_to_int(&ts))));
         assert_eq!(
             myc, rust,
             "sub({x},{y}) at width 4 must match the Rust oracle"
@@ -674,7 +696,7 @@ fn oracle_sub_and_neg_pairs() {
     );
     let myc = eval_uint("neg(-78)", &driver);
     let ra = rust_int_to_trits(-78, 6).expect("in range");
-    let rust = BIAS + rust_trits_to_int(&rust_neg(&ra));
+    let rust = BIAS + narrow(rust_trits_to_int(&rust_neg(&ra)));
     assert_eq!(myc, rust, "value(neg(-78)) must match the Rust oracle");
 }
 
@@ -692,14 +714,14 @@ fn oracle_mul_bound_pairs() {
         (0, 13),  // zero edge
     ];
     for &(x, y) in pairs {
-        let a = trits_expr(&rust_int_to_trits(x, 3).expect("x fits width 3"));
-        let b = trits_expr(&rust_int_to_trits(y, 3).expect("y fits width 3"));
+        let a = trits_expr(&rust_int_to_trits(i128::from(x), 3).expect("x fits width 3"));
+        let b = trits_expr(&rust_int_to_trits(i128::from(y), 3).expect("y fits width 3"));
         let driver = biased_option_trits_driver(&format!("trits_mul({a}, {b})"));
         let myc = eval_uint(&format!("mul({x},{y})"), &driver);
 
-        let ra = rust_int_to_trits(x, 3).expect("in range");
-        let rb = rust_int_to_trits(y, 3).expect("in range");
-        let rust = bias_encode(rust_mul(&ra, &rb).map(|ts| rust_trits_to_int(&ts)));
+        let ra = rust_int_to_trits(i128::from(x), 3).expect("in range");
+        let rb = rust_int_to_trits(i128::from(y), 3).expect("in range");
+        let rust = bias_encode(rust_mul(&ra, &rb).map(|ts| narrow(rust_trits_to_int(&ts))));
         assert_eq!(
             myc, rust,
             "mul({x},{y}) at width 3 must match the Rust oracle"
@@ -714,7 +736,7 @@ fn oracle_mul_bound_pairs() {
 fn oracle_packed_bytes_match() {
     // TL1/TL2 over 5-trit strings.
     for v in [0i64, 1, -1, 121, -121, 60, -60] {
-        let ts = rust_int_to_trits(v, 5).expect("v fits width 5");
+        let ts = rust_int_to_trits(i128::from(v), 5).expect("v fits width 5");
         let myc_ts = trits_expr(&ts);
         for (scheme_myc, scheme_rust) in [("Tl1", RustScheme::Tl1), ("Tl2", RustScheme::Tl2)] {
             let driver = format!(

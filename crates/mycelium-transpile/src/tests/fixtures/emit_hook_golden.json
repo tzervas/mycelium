@@ -185,8 +185,8 @@
     "emitted_items": [],
     "gaps": [
       [
-        "MultiStmtBody",
-        "function body has a semicolon-terminated (value-discarding) statement expression before the tail — a `let`-chain body maps only simple `let x = e;` bindings plus a single trailing expression",
+        "Other",
+        "unsupported/compound binary operator `+=`",
         "f"
       ]
     ]

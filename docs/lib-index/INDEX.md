@@ -3056,6 +3056,89 @@
 | `std.fmt::render` | fn | `lib/std/fmt.myc:228` | `fn render(x: Bytes) => Bytes` | — | Empirical/Declared |
 | `std.fmt::render` | fn | `lib/std/fmt.myc:235` | `fn render(x: Bool) => Bytes` | — | Empirical/Declared |
 
+### std.io
+
+| Symbol | Kind | File:Line | Signature | Summary | Tag |
+|---|---|---|---|---|---|
+| `std.io` | nodule | `lib/std/io.myc:8` | `nodule std.io` | Honest minimal scaffold for `std.io` + `serialize` (M-514): error ADTs, the §4.5 | Empirical/Declared |
+| `std.io::Option` | type | `lib/std/io.myc:37` | `type Option[A] = Some(A) \| None` | Honesty (VR-5): matrix rows transcribed from `mycelium-std-io` guarantee_matrix.rs as `Declared` data; in-memory io ops tagged `Exact` in matrix; round-trip rows stay `GEmpirical` without a corpus. ── Local prelude (single-nodule harness — no cross-nodule `use`; `lib/std/content.myc` convention) ── | Empirical/Declared |
+| `std.io::Option::None` | ctor | `lib/std/io.myc:37` | `None` | — | Empirical/Declared |
+| `std.io::Option::Some` | ctor | `lib/std/io.myc:37` | `Some(A)` | — | Empirical/Declared |
+| `std.io::Result` | type | `lib/std/io.myc:39` | `type Result[A, E] = Ok(A) \| Err(E)` | — | Empirical/Declared |
+| `std.io::Result::Err` | ctor | `lib/std/io.myc:39` | `Err(E)` | — | Empirical/Declared |
+| `std.io::Result::Ok` | ctor | `lib/std/io.myc:39` | `Ok(A)` | — | Empirical/Declared |
+| `std.io::Pair` | type | `lib/std/io.myc:41` | `type Pair[A, B] = Pr(A, B)` | — | Empirical/Declared |
+| `std.io::Pair::Pr` | ctor | `lib/std/io.myc:41` | `Pr(A, B)` | — | Empirical/Declared |
+| `std.io::Vec` | type | `lib/std/io.myc:43` | `type Vec[A] = Nil \| Cons(A, Vec[A])` | — | Empirical/Declared |
+| `std.io::Vec::Cons` | ctor | `lib/std/io.myc:43` | `Cons(A, Vec[A])` | — | Empirical/Declared |
+| `std.io::Vec::Nil` | ctor | `lib/std/io.myc:43` | `Nil` | — | Empirical/Declared |
+| `std.io::bool_and` | fn | `lib/std/io.myc:45` | `fn bool_and(a: Bool, b: Bool) => Bool` | — | Empirical/Declared |
+| `std.io::bit_true` | fn | `lib/std/io.myc:48` | `fn bit_true(x: Binary{1}) => Bool` | — | Empirical/Declared |
+| `std.io::byte_len` | fn | `lib/std/io.myc:52` | `fn byte_len(b: Bytes) => Binary{32}` | `byte_len`: delegate to `bytes_len` (Exact), widened witness for slice bounds (`lib/std/text.myc`). | Empirical/Declared |
+| `std.io::ByteOffset` | type | `lib/std/io.myc:56` | `type ByteOffset = Off(Binary{64})` | — | Empirical/Declared |
+| `std.io::ByteOffset::Off` | ctor | `lib/std/io.myc:56` | `Off(Binary{64})` | — | Empirical/Declared |
+| `std.io::FieldPath` | type | `lib/std/io.myc:58` | `type FieldPath = Fp(Bytes)` | — | Empirical/Declared |
+| `std.io::FieldPath::Fp` | ctor | `lib/std/io.myc:58` | `Fp(Bytes)` | — | Empirical/Declared |
+| `std.io::ByteCount` | type | `lib/std/io.myc:60` | `type ByteCount = Cnt(Binary{64})` | — | Empirical/Declared |
+| `std.io::ByteCount::Cnt` | ctor | `lib/std/io.myc:60` | `Cnt(Binary{64})` | — | Empirical/Declared |
+| `std.io::SerError` | type | `lib/std/io.myc:62` | `type SerError = Truncated(ByteOffset) \| Malformed(ByteOffset, Bytes) \| UnknownTag(FieldPath, Bytes) \| OutOfDomain(FieldPath, Bytes) \| BudgetExceeded(Bytes)` | — | Empirical/Declared |
+| `std.io::SerError::Truncated` | ctor | `lib/std/io.myc:63` | `Truncated(ByteOffset)` | — | Empirical/Declared |
+| `std.io::SerError::Malformed` | ctor | `lib/std/io.myc:64` | `Malformed(ByteOffset, Bytes)` | — | Empirical/Declared |
+| `std.io::SerError::UnknownTag` | ctor | `lib/std/io.myc:65` | `UnknownTag(FieldPath, Bytes)` | — | Empirical/Declared |
+| `std.io::SerError::OutOfDomain` | ctor | `lib/std/io.myc:66` | `OutOfDomain(FieldPath, Bytes)` | — | Empirical/Declared |
+| `std.io::SerError::BudgetExceeded` | ctor | `lib/std/io.myc:67` | `BudgetExceeded(Bytes)` | — | Empirical/Declared |
+| `std.io::IoError` | type | `lib/std/io.myc:69` | `type IoError = UnexpectedEof(ByteCount) \| Refused(Bytes) \| EffectBudget(Bytes)` | — | Empirical/Declared |
+| `std.io::IoError::EffectBudget` | ctor | `lib/std/io.myc:69` | `EffectBudget(Bytes)` | — | Empirical/Declared |
+| `std.io::IoError::Refused` | ctor | `lib/std/io.myc:69` | `Refused(Bytes)` | — | Empirical/Declared |
+| `std.io::IoError::UnexpectedEof` | ctor | `lib/std/io.myc:69` | `UnexpectedEof(ByteCount)` | — | Empirical/Declared |
+| `std.io::ReadValueError` | type | `lib/std/io.myc:71` | `type ReadValueError = RvIo(IoError) \| RvSer(SerError)` | — | Empirical/Declared |
+| `std.io::ReadValueError::RvIo` | ctor | `lib/std/io.myc:71` | `RvIo(IoError)` | — | Empirical/Declared |
+| `std.io::ReadValueError::RvSer` | ctor | `lib/std/io.myc:71` | `RvSer(SerError)` | — | Empirical/Declared |
+| `std.io::Format` | type | `lib/std/io.myc:74` | `type Format = Wire \| Json` | — | Empirical/Declared |
+| `std.io::Format::Json` | ctor | `lib/std/io.myc:74` | `Json` | — | Empirical/Declared |
+| `std.io::Format::Wire` | ctor | `lib/std/io.myc:74` | `Wire` | — | Empirical/Declared |
+| `std.io::Budget` | type | `lib/std/io.myc:77` | `type Budget = BCap(Binary{64}) \| BUnbounded` | — | Empirical/Declared |
+| `std.io::Budget::BCap` | ctor | `lib/std/io.myc:77` | `BCap(Binary{64})` | — | Empirical/Declared |
+| `std.io::Budget::BUnbounded` | ctor | `lib/std/io.myc:77` | `BUnbounded` | — | Empirical/Declared |
+| `std.io::MemCursor` | type | `lib/std/io.myc:81` | `type MemCursor = SData(Bytes, Binary{32})` | `MemCursor`: in-memory byte cursor (Rust `Substrate` — name avoided: `Substrate` is a reserved affine kind token in the surface grammar, LR-8 / token.rs). | Empirical/Declared |
+| `std.io::MemCursor::SData` | ctor | `lib/std/io.myc:81` | `SData(Bytes, Binary{32})` | — | Empirical/Declared |
+| `std.io::Source` | type | `lib/std/io.myc:83` | `type Source = SFrom(MemCursor)` | — | Empirical/Declared |
+| `std.io::Source::SFrom` | ctor | `lib/std/io.myc:83` | `SFrom(MemCursor)` | — | Empirical/Declared |
+| `std.io::Sink` | type | `lib/std/io.myc:85` | `type Sink = SInk(Bytes)` | — | Empirical/Declared |
+| `std.io::Sink::SInk` | ctor | `lib/std/io.myc:85` | `SInk(Bytes)` | — | Empirical/Declared |
+| `std.io::mem_cursor_from_bytes` | fn | `lib/std/io.myc:87` | `fn mem_cursor_from_bytes(data: Bytes) => MemCursor` | — | Empirical/Declared |
+| `std.io::source_from_bytes` | fn | `lib/std/io.myc:90` | `fn source_from_bytes(data: Bytes) => Source` | — | Empirical/Declared |
+| `std.io::sink_new` | fn | `lib/std/io.myc:93` | `fn sink_new() => Sink` | — | Empirical/Declared |
+| `std.io::sink_into_bytes` | fn | `lib/std/io.myc:96` | `fn sink_into_bytes(snk: Sink) => Bytes` | — | Empirical/Declared |
+| `std.io::read_all` | fn | `lib/std/io.myc:101` | `fn read_all(src: Source) => Result[Bytes, IoError]` | read_all: consume `Source` by-move; return all bytes from cursor to end (in-memory only). Effects: io (declared — RFC-0014 §4.5; host floor FLAG-io-1). Guarantee: Exact (matrix row). | Empirical/Declared |
+| `std.io::read` | fn | `lib/std/io.myc:105` | `fn read(src: Source, budget: Budget) => Result[Pair[Bytes, Source], IoError]` | read: chunked read — scaffold refuses until budgeted slice + linear threading is hand-ported. | Empirical/Declared |
+| `std.io::write` | fn | `lib/std/io.myc:112` | `fn write(snk: Sink, chunk: Bytes) => Result[Sink, IoError]` | write: thread `Sink` linearly; append bytes (in-memory). Effects: io (declared). Guarantee: Exact. | Empirical/Declared |
+| `std.io::serialize_residual` | fn | `lib/std/io.myc:116` | `fn serialize_residual(f: Format) => Result[Bytes, SerError]` | — | Empirical/Declared |
+| `std.io::deserialize_residual` | fn | `lib/std/io.myc:122` | `fn deserialize_residual(f: Format) => Result[Bytes, SerError]` | — | Empirical/Declared |
+| `std.io::read_value_residual` | fn | `lib/std/io.myc:131` | `fn read_value_residual(src: Source, f: Format) => Result[Bytes, ReadValueError]` | — | Empirical/Declared |
+| `std.io::GuaranteeTag` | type | `lib/std/io.myc:138` | `type GuaranteeTag = GExact \| GEmpirical \| GDeclared` | — | Empirical/Declared |
+| `std.io::GuaranteeTag::GDeclared` | ctor | `lib/std/io.myc:138` | `GDeclared` | — | Empirical/Declared |
+| `std.io::GuaranteeTag::GEmpirical` | ctor | `lib/std/io.myc:138` | `GEmpirical` | — | Empirical/Declared |
+| `std.io::GuaranteeTag::GExact` | ctor | `lib/std/io.myc:138` | `GExact` | — | Empirical/Declared |
+| `std.io::MatrixRow` | type | `lib/std/io.myc:140` | `type MatrixRow = MRow(Bytes, GuaranteeTag, Bytes, Bytes, Bytes, Bool)` | — | Empirical/Declared |
+| `std.io::MatrixRow::MRow` | ctor | `lib/std/io.myc:140` | `MRow(Bytes, GuaranteeTag, Bytes, Bytes, Bytes, Bool)` | — | Empirical/Declared |
+| `std.io::row_op` | fn | `lib/std/io.myc:142` | `fn row_op(r: MatrixRow) => Bytes` | — | Empirical/Declared |
+| `std.io::row_tag` | fn | `lib/std/io.myc:145` | `fn row_tag(r: MatrixRow) => GuaranteeTag` | — | Empirical/Declared |
+| `std.io::row_fallibility` | fn | `lib/std/io.myc:148` | `fn row_fallibility(r: MatrixRow) => Bytes` | — | Empirical/Declared |
+| `std.io::row_effects` | fn | `lib/std/io.myc:151` | `fn row_effects(r: MatrixRow) => Bytes` | — | Empirical/Declared |
+| `std.io::row_explainable` | fn | `lib/std/io.myc:154` | `fn row_explainable(r: MatrixRow) => Bool` | — | Empirical/Declared |
+| `std.io::row_serialize` | fn | `lib/std/io.myc:157` | `fn row_serialize() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_deserialize` | fn | `lib/std/io.myc:160` | `fn row_deserialize() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_to_json` | fn | `lib/std/io.myc:163` | `fn row_to_json() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_from_json` | fn | `lib/std/io.myc:166` | `fn row_from_json() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_read_all` | fn | `lib/std/io.myc:169` | `fn row_read_all() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_read` | fn | `lib/std/io.myc:172` | `fn row_read() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_write` | fn | `lib/std/io.myc:175` | `fn row_write() => MatrixRow` | — | Empirical/Declared |
+| `std.io::row_read_value` | fn | `lib/std/io.myc:178` | `fn row_read_value() => MatrixRow` | — | Empirical/Declared |
+| `std.io::matrix` | fn | `lib/std/io.myc:181` | `fn matrix() => Vec[MatrixRow]` | — | Empirical/Declared |
+| `std.io::matrix_len` | fn | `lib/std/io.myc:193` | `fn matrix_len(xs: Vec[MatrixRow]) => Binary{8}` | — | Empirical/Declared |
+| `std.io::matrix_has_eight_rows` | fn | `lib/std/io.myc:197` | `fn matrix_has_eight_rows() => Bool` | matrix_has_eight_rows: structural witness that the scaffold carries the full §4 matrix (Declared). | Empirical/Declared |
+
 ### std.iter
 
 | Symbol | Kind | File:Line | Signature | Summary | Tag |
@@ -3623,30 +3706,36 @@
 | `std.swaps::is_kind_none` | fn | `lib/std/swap.myc:159` | `fn is_kind_none(k: CertKind) => Bool` | — | Empirical/Declared |
 | `std.swaps::bool_and` | fn | `lib/std/swap.myc:164` | `fn bool_and(a: Bool, b: Bool) => Bool` | bool_and: local total conjunction (no cross-leaf import; the std.diag/std.cmp self-containedness convention). Total over Bool x Bool (Exact). | Empirical/Declared |
 | `std.swaps::bool_not` | fn | `lib/std/swap.myc:168` | `fn bool_not(a: Bool) => Bool` | bool_not: local total negation. Total (Exact). | Empirical/Declared |
-| `std.swaps::nonempty` | fn | `lib/std/swap.myc:173` | `fn nonempty(b: Bytes) => Bool` | nonempty: True iff `b` has at least one byte. Delegates to the Exact `bytes_len` prim; the zero-comparison is the Exact `eq` prim at Binary{32} (the width `bytes_len` returns). Total (Exact). | Empirical/Declared |
-| `std.swaps::row_bin_to_tern` | fn | `lib/std/swap.myc:180` | `fn row_bin_to_tern() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_tern_to_bin` | fn | `lib/std/swap.myc:183` | `fn row_tern_to_bin() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_f32_to_bf16` | fn | `lib/std/swap.myc:186` | `fn row_f32_to_bf16() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_dense_to_vsa` | fn | `lib/std/swap.myc:189` | `fn row_dense_to_vsa() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_vsa_to_dense` | fn | `lib/std/swap.myc:192` | `fn row_vsa_to_dense() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_check_swap` | fn | `lib/std/swap.myc:195` | `fn row_check_swap() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::row_explain` | fn | `lib/std/swap.myc:198` | `fn row_explain() => MatrixRow` | — | Empirical/Declared |
-| `std.swaps::Vec` | type | `lib/std/swap.myc:202` | `type Vec[A] = Nil \| Cons(A, Vec[A])` | — | Empirical/Declared |
-| `std.swaps::Vec::Cons` | ctor | `lib/std/swap.myc:202` | `Cons(A, Vec[A])` | — | Empirical/Declared |
-| `std.swaps::Vec::Nil` | ctor | `lib/std/swap.myc:202` | `Nil` | — | Empirical/Declared |
-| `std.swaps::matrix` | fn | `lib/std/swap.myc:205` | `fn matrix() => Vec[MatrixRow]` | matrix: the full 7-row table, in the same order as lib.rs::GUARANTEE_MATRIX. | Empirical/Declared |
-| `std.swaps::matrix_len` | fn | `lib/std/swap.myc:222` | `fn matrix_len(xs: Vec[MatrixRow]) => Binary{8}` | — | Empirical/Declared |
-| `std.swaps::all_ops_nonempty` | fn | `lib/std/swap.myc:226` | `fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool` | all_ops_nonempty: no matrix row has an empty op name (lib.rs: "matrix row has empty op name"). | Empirical/Declared |
-| `std.swaps::bijective_implies_exact` | fn | `lib/std/swap.myc:231` | `fn bijective_implies_exact(xs: Vec[MatrixRow]) => Bool` | bijective_implies_exact: a Bijective cert implies an Exact guarantee — the only genuinely bijective/exact swap class (RFC-0002 §4; lib.rs: "Bijective cert implies Exact guarantee"). | Empirical/Declared |
-| `std.swaps::bounded_never_exact` | fn | `lib/std/swap.myc:243` | `fn bounded_never_exact(xs: Vec[MatrixRow]) => Bool` | bounded_never_exact: a Bounded cert is never Exact — Exact means no bound (M-I1; RFC-0001 §4.3; lib.rs: "Bounded cert cannot be Exact"). | Empirical/Declared |
-| `std.swaps::nonfallible_no_cert_kind` | fn | `lib/std/swap.myc:259` | `fn nonfallible_no_cert_kind(xs: Vec[MatrixRow]) => Bool` | nonfallible_no_cert_kind: a non-fallible op emits no swap cert kind (lib.rs: "non-fallible op should not emit a swap cert_kind" — `explain` is cert_carrying but PROJECTS rather than emits, so its kind is KNone). | Empirical/Declared |
-| `std.swaps::matrix_invariants_hold` | fn | `lib/std/swap.myc:272` | `fn matrix_invariants_hold() => Bool` | matrix_invariants_hold: the conjunction — the whole assert_matrix_invariants contract as one checkable value. (The Rust "cert_kind must be 'Bijective' or 'Bounded'" arm is discharged by the CertKind type — unrepresentable, see the CertKind doc.) | Empirical/Declared |
-| `std.swaps::bin8_to_tern6` | fn | `lib/std/swap.myc:290` | `fn bin8_to_tern6(x: Binary{8}) => Ternary{6}` | Guarantee (VR-5, same strength as the Rust ops): Exact WITHIN RANGE — the kernel engine derives the tag per swap; out-of-range / illegal-pair inputs are explicit runtime REFUSALS (never a clamp, never a sentinel — C1), surfaced identically by the L1 evaluator, the L0 interpreter, and the AOT path (asserted in std_swap.rs). `rt` is the v0 policy name every execution path hashes through the same `policy-name.v0:` reference (NFR-7), the L1-corpus convention. | Empirical/Declared |
-| `std.swaps::tern6_to_bin8` | fn | `lib/std/swap.myc:293` | `fn tern6_to_bin8(x: Ternary{6}) => Binary{8}` | — | Empirical/Declared |
-| `std.swaps::bin4_to_tern3` | fn | `lib/std/swap.myc:296` | `fn bin4_to_tern3(x: Binary{4}) => Ternary{3}` | — | Empirical/Declared |
-| `std.swaps::tern3_to_bin4` | fn | `lib/std/swap.myc:299` | `fn tern3_to_bin4(x: Ternary{3}) => Binary{4}` | — | Empirical/Declared |
-| `std.swaps::roundtrip8` | fn | `lib/std/swap.myc:304` | `fn roundtrip8(x: Binary{8}) => Binary{8}` | roundtrip8 / roundtrip4: dec(enc(x)) — the LosslessWithinRange property (RFC-0002 §4) as a composable value; identity on the full corpus is asserted differentially in std_swap.rs. | Empirical/Declared |
-| `std.swaps::roundtrip4` | fn | `lib/std/swap.myc:307` | `fn roundtrip4(x: Binary{4}) => Binary{4}` | — | Empirical/Declared |
+| `std.swaps::nonempty` | fn | `lib/std/swap.myc:180` | `fn nonempty(b: Bytes) => Bool` | nonempty: True iff `b` has at least one byte. Delegates to the Exact `bytes_len` prim; the zero-comparison is the Exact `eq` prim at Binary{32} (the width `bytes_len` returns). RESIDUAL (ledgered, not forced — W-1 §2.1 sweep, 2026-07-18): `swap.md` §B.3 also names `bytes_len`'s Binary{32} return as not-yet-Binary{64}-canonical. `bytes_len` is a KERNEL primitive (its return width is fixed by the primitive registry, not by this nodule), not a `.myc`-defined function like `matrix_len` above — widening it is a cross-cutting primitive signature change touching every `bytes_len` call site in the tree, well beyond this nodule's own `.myc`-source sweep. Left as the swap.md-recorded normative TODO rather than forced here (G2/VR-5: a real residual, stated, not silently absorbed into this narrower ceiling-lift change). | Empirical/Declared |
+| `std.swaps::row_bin_to_tern` | fn | `lib/std/swap.myc:187` | `fn row_bin_to_tern() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_tern_to_bin` | fn | `lib/std/swap.myc:190` | `fn row_tern_to_bin() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_f32_to_bf16` | fn | `lib/std/swap.myc:193` | `fn row_f32_to_bf16() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_dense_to_vsa` | fn | `lib/std/swap.myc:196` | `fn row_dense_to_vsa() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_vsa_to_dense` | fn | `lib/std/swap.myc:199` | `fn row_vsa_to_dense() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_check_swap` | fn | `lib/std/swap.myc:202` | `fn row_check_swap() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::row_explain` | fn | `lib/std/swap.myc:205` | `fn row_explain() => MatrixRow` | — | Empirical/Declared |
+| `std.swaps::Vec` | type | `lib/std/swap.myc:209` | `type Vec[A] = Nil \| Cons(A, Vec[A])` | — | Empirical/Declared |
+| `std.swaps::Vec::Cons` | ctor | `lib/std/swap.myc:209` | `Cons(A, Vec[A])` | — | Empirical/Declared |
+| `std.swaps::Vec::Nil` | ctor | `lib/std/swap.myc:209` | `Nil` | — | Empirical/Declared |
+| `std.swaps::matrix` | fn | `lib/std/swap.myc:212` | `fn matrix() => Vec[MatrixRow]` | matrix: the full 7-row table, in the same order as lib.rs::GUARANTEE_MATRIX. | Empirical/Declared |
+| `std.swaps::matrix_len` | fn | `lib/std/swap.myc:231` | `fn matrix_len(xs: Vec[MatrixRow]) => Binary{64}` | — | Empirical/Declared |
+| `std.swaps::all_ops_nonempty` | fn | `lib/std/swap.myc:239` | `fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool` | all_ops_nonempty: no matrix row has an empty op name (lib.rs: "matrix row has empty op name"). | Empirical/Declared |
+| `std.swaps::bijective_implies_exact` | fn | `lib/std/swap.myc:244` | `fn bijective_implies_exact(xs: Vec[MatrixRow]) => Bool` | bijective_implies_exact: a Bijective cert implies an Exact guarantee — the only genuinely bijective/exact swap class (RFC-0002 §4; lib.rs: "Bijective cert implies Exact guarantee"). | Empirical/Declared |
+| `std.swaps::bounded_never_exact` | fn | `lib/std/swap.myc:256` | `fn bounded_never_exact(xs: Vec[MatrixRow]) => Bool` | bounded_never_exact: a Bounded cert is never Exact — Exact means no bound (M-I1; RFC-0001 §4.3; lib.rs: "Bounded cert cannot be Exact"). | Empirical/Declared |
+| `std.swaps::nonfallible_no_cert_kind` | fn | `lib/std/swap.myc:272` | `fn nonfallible_no_cert_kind(xs: Vec[MatrixRow]) => Bool` | nonfallible_no_cert_kind: a non-fallible op emits no swap cert kind (lib.rs: "non-fallible op should not emit a swap cert_kind" — `explain` is cert_carrying but PROJECTS rather than emits, so its kind is KNone). | Empirical/Declared |
+| `std.swaps::matrix_invariants_hold` | fn | `lib/std/swap.myc:285` | `fn matrix_invariants_hold() => Bool` | matrix_invariants_hold: the conjunction — the whole assert_matrix_invariants contract as one checkable value. (The Rust "cert_kind must be 'Bijective' or 'Bounded'" arm is discharged by the CertKind type — unrepresentable, see the CertKind doc.) | Empirical/Declared |
+| `std.swaps::bin8_to_tern6` | fn | `lib/std/swap.myc:303` | `fn bin8_to_tern6(x: Binary{8}) => Ternary{6}` | Guarantee (VR-5, same strength as the Rust ops): Exact WITHIN RANGE — the kernel engine derives the tag per swap; out-of-range / illegal-pair inputs are explicit runtime REFUSALS (never a clamp, never a sentinel — C1), surfaced identically by the L1 evaluator, the L0 interpreter, and the AOT path (asserted in std_swap.rs). `rt` is the v0 policy name every execution path hashes through the same `policy-name.v0:` reference (NFR-7), the L1-corpus convention. | Empirical/Declared |
+| `std.swaps::tern6_to_bin8` | fn | `lib/std/swap.myc:306` | `fn tern6_to_bin8(x: Ternary{6}) => Binary{8}` | — | Empirical/Declared |
+| `std.swaps::bin4_to_tern3` | fn | `lib/std/swap.myc:309` | `fn bin4_to_tern3(x: Binary{4}) => Ternary{3}` | — | Empirical/Declared |
+| `std.swaps::tern3_to_bin4` | fn | `lib/std/swap.myc:312` | `fn tern3_to_bin4(x: Ternary{3}) => Binary{4}` | — | Empirical/Declared |
+| `std.swaps::roundtrip8` | fn | `lib/std/swap.myc:317` | `fn roundtrip8(x: Binary{8}) => Binary{8}` | roundtrip8 / roundtrip4: dec(enc(x)) — the LosslessWithinRange property (RFC-0002 §4) as a composable value; identity on the full corpus is asserted differentially in std_swap.rs. | Empirical/Declared |
+| `std.swaps::roundtrip4` | fn | `lib/std/swap.myc:320` | `fn roundtrip4(x: Binary{4}) => Binary{4}` | — | Empirical/Declared |
+| `std.swaps::bin32_to_tern21` | fn | `lib/std/swap.myc:340` | `fn bin32_to_tern21(x: Binary{32}) => Ternary{21}` | — | Empirical/Declared |
+| `std.swaps::tern21_to_bin32` | fn | `lib/std/swap.myc:343` | `fn tern21_to_bin32(x: Ternary{21}) => Binary{32}` | — | Empirical/Declared |
+| `std.swaps::bin64_to_tern41` | fn | `lib/std/swap.myc:346` | `fn bin64_to_tern41(x: Binary{64}) => Ternary{41}` | — | Empirical/Declared |
+| `std.swaps::tern41_to_bin64` | fn | `lib/std/swap.myc:349` | `fn tern41_to_bin64(x: Ternary{41}) => Binary{64}` | — | Empirical/Declared |
+| `std.swaps::roundtrip32` | fn | `lib/std/swap.myc:354` | `fn roundtrip32(x: Binary{32}) => Binary{32}` | roundtrip32 / roundtrip64: dec(enc(x)) at the new canonical widths — the W-1 analogue of roundtrip8/roundtrip4 above. | Empirical/Declared |
+| `std.swaps::roundtrip64` | fn | `lib/std/swap.myc:357` | `fn roundtrip64(x: Binary{64}) => Binary{64}` | — | Empirical/Declared |
 
 ### std.ternary
 

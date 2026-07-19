@@ -73,6 +73,8 @@ fn main() -> ExitCode {
         "test" => with_manifest(&rest, cmd_test),
         "run" => with_run_options(&rest, "run", |m, opts| match run_with_options(m, opts) {
             Ok(report) => {
+                // Always-print the active CertMode (design-steer P3-Q3a).
+                eprintln!("myc: {}", report.cert_mode_line);
                 println!("{}", report.rendered);
                 eprintln!("myc: ran `{}` in {}", report.entry, report.source);
                 ExitCode::SUCCESS
@@ -153,6 +155,8 @@ fn cmd_build(manifest: &Path) -> ExitCode {
 fn cmd_check(manifest: &Path) -> ExitCode {
     match check_project(manifest) {
         Ok(report) => {
+            // Always-print the active CertMode (design-steer P3-Q3a), unconditionally of outcome.
+            eprintln!("myc: {}", report.cert_mode_line);
             for r in &report.failures {
                 eprintln!("{}\n", r.render());
             }

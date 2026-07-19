@@ -1,0 +1,148 @@
+repo	component_path	class	baseline_path	note
+mycelium-bench	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-bench	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-bench	README.md	MODIFIED	crates/mycelium-bench/README.md	SUBSTANTIVE
+mycelium-build	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-build	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-build	README.md	MODIFIED	crates/mycelium-build/README.md	SUBSTANTIVE
+mycelium-check	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-check	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-check	README.md	MODIFIED	crates/mycelium-check/README.md	SUBSTANTIVE
+mycelium-cli-common	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-cli-common	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-cli-common	README.md	MODIFIED	crates/mycelium-cli-common/README.md	SUBSTANTIVE
+mycelium-cli-myc	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-cli-myc	README.md	MODIFIED	README.md	SUBSTANTIVE
+mycelium-cli-myc	experiments/vet/REMAP.md	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/bin/myc.gap.json	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/bin/myc.myc	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/lib.gap.json	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/lib.myc	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/summary.json	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/union.gap.json	NEW_UNEXPLAINED		
+mycelium-cli-myc	experiments/vet/vet.json	NEW_UNEXPLAINED		
+mycelium-cli-myc	lib/lib.myc	NEW_UNEXPLAINED		
+mycelium-cli-myc	lib/myc.myc	NEW_UNEXPLAINED		
+mycelium-cli	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-cli	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-cli	README.md	MODIFIED	crates/mycelium-cli/README.md	SUBSTANTIVE
+mycelium-codegen	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-codegen	README.md	MODIFIED	README.md	SUBSTANTIVE
+mycelium-core	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-core	README.md	MODIFIED	README.md	SUBSTANTIVE
+mycelium-doc	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-doc	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-doc	README.md	MODIFIED	crates/mycelium-doc/README.md	SUBSTANTIVE
+mycelium-fmt	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-fmt	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-fmt	README.md	MODIFIED	crates/mycelium-fmt/README.md	SUBSTANTIVE
+mycelium-l1	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-l1	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-l1	README.md	MODIFIED	crates/mycelium-l1/README.md	SUBSTANTIVE
+mycelium-lang	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-lang	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-lang	README.md	NEW_SCAFFOLD		
+mycelium-lang	components.lock	NEW_SCAFFOLD		
+mycelium-lint	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-lint	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-lint	README.md	MODIFIED	crates/mycelium-lint/README.md	SUBSTANTIVE
+mycelium-lsp	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-lsp	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-lsp	README.md	MODIFIED	crates/mycelium-lsp/README.md	SUBSTANTIVE
+mycelium-proj	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-proj	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-proj	README.md	MODIFIED	crates/mycelium-proj/README.md	SUBSTANTIVE
+mycelium-runtime	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-runtime	README.md	MODIFIED	README.md	SUBSTANTIVE
+mycelium-sec	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-sec	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-sec	README.md	MODIFIED	crates/mycelium-sec/README.md	SUBSTANTIVE
+mycelium-spore	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-spore	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-spore	README.md	MODIFIED	crates/mycelium-spore/README.md	SUBSTANTIVE
+mycelium-std-cmp	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-cmp	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-cmp	README.md	MODIFIED	crates/mycelium-std-cmp/README.md	SUBSTANTIVE
+mycelium-std-collections	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-collections	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-collections	README.md	MODIFIED	crates/mycelium-std-collections/README.md	SUBSTANTIVE
+mycelium-std-conformance	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-conformance	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-conformance	README.md	NEW_SCAFFOLD		
+mycelium-std-content	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-content	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-content	README.md	MODIFIED	crates/mycelium-std-content/README.md	SUBSTANTIVE
+mycelium-std-core	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-core	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-core	README.md	MODIFIED	crates/mycelium-std-core/README.md	SUBSTANTIVE
+mycelium-std-dense	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-dense	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-dense	README.md	MODIFIED	crates/mycelium-std-dense/README.md	SUBSTANTIVE
+mycelium-std-diag	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-diag	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-diag	README.md	MODIFIED	crates/mycelium-std-diag/README.md	SUBSTANTIVE
+mycelium-std-error	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-error	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-error	README.md	MODIFIED	crates/mycelium-std-error/README.md	SUBSTANTIVE
+mycelium-std-fmt	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-fmt	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-fmt	README.md	MODIFIED	crates/mycelium-std-fmt/README.md	SUBSTANTIVE
+mycelium-std-fs	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-fs	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-fs	README.md	MODIFIED	crates/mycelium-std-fs/README.md	SUBSTANTIVE
+mycelium-std-io	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-io	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-io	README.md	MODIFIED	crates/mycelium-std-io/README.md	SUBSTANTIVE
+mycelium-std-iter	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-iter	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-iter	README.md	MODIFIED	crates/mycelium-std-iter/README.md	SUBSTANTIVE
+mycelium-std-math	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-math	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-math	README.md	MODIFIED	crates/mycelium-std-math/README.md	SUBSTANTIVE
+mycelium-std-numerics	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-numerics	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-numerics	README.md	MODIFIED	crates/mycelium-std-numerics/README.md	SUBSTANTIVE
+mycelium-std-rand	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-rand	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-rand	README.md	MODIFIED	crates/mycelium-std-rand/README.md	SUBSTANTIVE
+mycelium-std-recover	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-recover	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-recover	README.md	MODIFIED	crates/mycelium-std-recover/README.md	SUBSTANTIVE
+mycelium-std-runtime	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-runtime	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-runtime	README.md	MODIFIED	crates/mycelium-std-runtime/README.md	SUBSTANTIVE
+mycelium-std-select	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-select	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-select	README.md	MODIFIED	crates/mycelium-std-select/README.md	SUBSTANTIVE
+mycelium-std-spore	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-spore	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-spore	README.md	MODIFIED	crates/mycelium-std-spore/README.md	SUBSTANTIVE
+mycelium-std-swap	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-swap	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-swap	README.md	MODIFIED	crates/mycelium-std-swap/README.md	SUBSTANTIVE
+mycelium-std-sys-host	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-sys-host	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-sys-host	README.md	MODIFIED	crates/mycelium-std-sys-host/README.md	SUBSTANTIVE
+mycelium-std-sys	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-sys	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-sys	README.md	MODIFIED	crates/mycelium-std-sys/README.md	SUBSTANTIVE
+mycelium-std-ternary	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-ternary	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-ternary	README.md	MODIFIED	crates/mycelium-std-ternary/README.md	SUBSTANTIVE
+mycelium-std-testing	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-testing	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-testing	README.md	MODIFIED	crates/mycelium-std-testing/README.md	SUBSTANTIVE
+mycelium-std-text	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-text	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-text	README.md	MODIFIED	crates/mycelium-std-text/README.md	SUBSTANTIVE
+mycelium-std-time	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-time	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-time	README.md	MODIFIED	crates/mycelium-std-time/README.md	SUBSTANTIVE
+mycelium-std-vsa	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-std-vsa	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-std-vsa	README.md	MODIFIED	crates/mycelium-std-vsa/README.md	SUBSTANTIVE
+mycelium-transpile	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-transpile	LICENSE	IDENT_ELSEWHERE	LICENSE;editors/vscode/LICENSE	
+mycelium-transpile	README.md	MODIFIED	crates/mycelium-transpile/README.md	SUBSTANTIVE
+mycelium-value	.github/workflows/ci.yml	NEW_SCAFFOLD		
+mycelium-value	README.md	MODIFIED	README.md	SUBSTANTIVE

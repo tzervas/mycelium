@@ -1990,16 +1990,22 @@ fn emit_local_binding(
     self_ty: Option<&str>,
     local_env: &mut TypeEnv,
 ) -> Result<(String, String), GapReason> {
-    let name = match &local.pat {
-        Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => pi.ident.to_string(),
-        _ => {
-            return Err(GapReason::new(
+    let name =
+        match &local.pat {
+            Pat::Ident(pi) if pi.by_ref.is_none() && pi.subpat.is_none() => pi.ident.to_string(),
+            // G-γ (2026-07-18): `let _ = e;` (`Pat::Wild`) — the explicit-discard idiom, distinct from
+            // a bare `e;` statement (`Stmt::Expr`, handled the same way in
+            // `emit_block_as_expr_inner`'s loop) but with an identical Mycelium lowering: `_` is an
+            // ordinary bound `Ident` the grammar and checker already accept (see that call site's doc
+            // for the empirical confirmation). No new fabrication risk — `init.expr` still runs
+            // through the ordinary `emit_expr` below.
+            Pat::Wild(_) => "_".to_string(),
+            _ => return Err(GapReason::new(
                 Category::MultiStmtBody,
-                "`let` binding uses an unsupported pattern (only simple `let x = e;` is \
-                 supported)",
-            ))
-        }
-    };
+                "`let` binding uses an unsupported pattern (only simple `let x = e;` / `let _ = \
+                 e;` is supported)",
+            )),
+        };
     let init = local.init.as_ref().ok_or_else(|| {
         GapReason::new(Category::MultiStmtBody, "`let` binding has no initializer")
     })?;
@@ -2091,13 +2097,23 @@ fn emit_block_as_expr_inner(
                      `debug_assert!`/`println!`) — no macro system in this grammar fragment",
                 ))
             }
-            Stmt::Expr(_, _) => {
-                return Err(GapReason::new(
-                    Category::MultiStmtBody,
-                    "function body has a semicolon-terminated (value-discarding) statement \
-                     expression before the tail — a `let`-chain body maps only simple `let x = e;` \
-                     bindings plus a single trailing expression",
-                ))
+            // G-γ (2026-07-18): a value-discarding statement expression — Rust's `foo();` mid-body
+            // (semicolon-terminated, or the rarer bare block-like statement form with no trailing
+            // `;`) — maps to `let _ = <value> in <rest>` exactly the way a real `let _ = e;`
+            // binding does (see `emit_local_binding`'s `Pat::Wild` arm below). The Mycelium SURFACE
+            // already supports this: `_` is an ordinary `Ident` (grammar: `Ident ::= (Letter|'_')
+            // (Letter|[0-9]|'_')*`), `let_expr` takes any `Ident`, and repeated `let _ = .. in ..`
+            // shadowing is legal (checker has no unused-binding diagnostic) — confirmed empirically
+            // against the real `myc-check` oracle before this fix landed (2 fixtures, both `ok`).
+            // This is a pure emission-completeness fix: the expression is still run through the
+            // ordinary `emit_expr` (via `?`), so anything IT can't faithfully lower still gaps
+            // exactly as before — never a fabricated body (G2/VR-5). Mirrors Rust's own semantics
+            // faithfully: a discarded value (even a `Result`) is exactly as silently dropped here
+            // as it already is in the source Rust — this fix does not introduce new silence, it
+            // translates existing source behavior.
+            Stmt::Expr(e, _) => {
+                let value = emit_expr(e, self_ty, &local_env)?;
+                bindings.push(("_".to_string(), value));
             }
         }
     }

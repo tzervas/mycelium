@@ -437,6 +437,71 @@ fn run_reports_a_located_parse_error_not_a_panic() {
     assert!(err.location.as_ref().unwrap().contains("badsrc.myc"));
 }
 
+// ── CertMode disclosure line (design-steer P3-Q3a; DN-142 §4) ──────────────────────────────────
+
+#[test]
+fn check_project_reports_the_default_cert_mode_line_when_undeclared() {
+    let parent = scratch("cert-mode-default");
+    write_manifest(&parent, "cmdef");
+    std::fs::write(
+        parent.join("cmdef.myc"),
+        "nodule cmdef;\nfn main() => Binary{8} = 0b0000_0000;\n",
+    )
+    .unwrap();
+    let report = check_project(&parent.join("mycelium-proj.toml")).expect("walk succeeds");
+    assert_eq!(
+        report.cert_mode_line, "certification: fast  [default]",
+        "the always-print line (P3-Q3a); undeclared ⇒ the project default (RFC-0034 §5)"
+    );
+}
+
+#[test]
+fn check_project_reports_the_manifest_declared_cert_mode_line() {
+    let parent = scratch("cert-mode-declared");
+    std::fs::write(
+        parent.join("mycelium-proj.toml"),
+        "[project]\nname=\"cmdecl\"\nkind=\"phylum\"\nversion=\"0.1.0\"\nlicense=\"MIT\"\n\
+         summary=\"s\"\ncertification=\"certified\"\n\n[surface]\nexports=[\"cmdecl\"]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        parent.join("cmdecl.myc"),
+        "nodule cmdecl;\nfn main() => Binary{8} = 0b0000_0000;\n",
+    )
+    .unwrap();
+    let report = check_project(&parent.join("mycelium-proj.toml")).expect("walk succeeds");
+    assert_eq!(
+        report.cert_mode_line, "certification: certified  [phylum]",
+        "a manifest `[project] certification` declaration resolves at the Phylum tier (RFC-0034 §6)"
+    );
+}
+
+#[test]
+fn check_project_prints_the_cert_mode_line_even_when_the_phylum_fails_to_check() {
+    // "Always print" (P3-Q3a) is unconditional of outcome — a failing check still discloses mode.
+    let parent = scratch("cert-mode-on-failure");
+    write_manifest(&parent, "cmfail");
+    std::fs::write(parent.join("cmfail.myc"), "nodule cmfail\nfn f() = §\n").unwrap();
+    let report = check_project(&parent.join("mycelium-proj.toml")).expect("walk succeeds");
+    assert!(!report.ok(), "the malformed source must fail to check");
+    assert_eq!(report.cert_mode_line, "certification: fast  [default]");
+}
+
+#[test]
+fn run_reports_the_cert_mode_line() {
+    let report = run(&run_fixture_manifest()).expect("the committed fixture runs");
+    assert_eq!(
+        report.cert_mode_line, "certification: fast  [default]",
+        "the committed run-single-nodule fixture declares no @certification"
+    );
+}
+
+#[test]
+fn run_multi_nodule_reports_the_cert_mode_line() {
+    let report = run(&run_multi_fixture_manifest()).expect("the committed fixture runs");
+    assert_eq!(report.cert_mode_line, "certification: fast  [default]");
+}
+
 #[test]
 fn report_renders_the_dn22_structured_form() {
     let r = Report::new("myc-parse", "unexpected token", 65)

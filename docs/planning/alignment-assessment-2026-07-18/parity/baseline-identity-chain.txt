@@ -1,0 +1,22 @@
+== git ls-remote origin (filtered) ==
+d6319b080cbd636ec71d6256ffd5e9432e647329	refs/heads/archive
+aad96b7a425710db5e91094d4fc2ca21a129e41a	refs/heads/archive-main-pre-component-transpile-2026-07-17
+64431967f5f47cb2b12e09340c3861f5fd48a002	refs/heads/dev
+2ed4cfd0d93cd509fdc205aa5c46f6a40f3bee68	refs/heads/integration
+aad96b7a425710db5e91094d4fc2ca21a129e41a	refs/heads/main
+9e477cf6b06ebdf77bd95e5067cd4c5c70be21f1	refs/tags/archive/main-pre-component-transpile-2026-07-17
+aad96b7a425710db5e91094d4fc2ca21a129e41a	refs/tags/archive/main-pre-component-transpile-2026-07-17^{}
+
+== tag fetch ==
+From http://127.0.0.1:41729/git/tzervas/mycelium
+ * [new tag]           archive/main-pre-component-transpile-2026-07-17 -> archive-tag-verify
+ * [new tag]           archive/main-pre-component-transpile-2026-07-17 -> archive/main-pre-component-transpile-2026-07-17
+ * [new tag]           backup/main-pre-gap-closure-wave-2026-07-11 -> backup/main-pre-gap-closure-wave-2026-07-11
+ * [new tag]           docs-notebooklm-2026-07-11 -> docs-notebooklm-2026-07-11
+ * [new tag]           v0.463.1                   -> v0.463.1
+aad96b7a425710db5e91094d4fc2ca21a129e41a
+
+== lock header ==
+# components.lock — git SHA pins for mycelium-lang umbrella
+# archive_main=aad96b7a425710db5e91094d4fc2ca21a129e41a
+# generated=2026-07-17T15:40:02Z

@@ -142,15 +142,15 @@ fn checkty_direct_checkerror_construction_count_matches_the_ledger() {
     let direct_at = count_occurrences(&src, "CheckError::at(");
     let total = direct_new + direct_at;
     assert_eq!(
-        total, 103,
+        total, 115,
         "checkty.rs direct `CheckError::new(`/`CheckError::at(` construction sites: found {total}, \
-         DN-80 §4 audited 103 (dev 7b933a3, 2026-07-02; +6 vs the original ca42fd2 audit — the \
-         M-919/M-973 lower/derive extension-checker work, family 8; +2 — M-965's two `Fuse` \
-         built-in-prelude redeclaration refusals, family 5; +1 — M-966's `via`-delegation \
-         ambiguity refusal, family 6; +1 — RFC-0041 W1 (M-979, 2026-07-03) the recursion-depth \
-         `BudgetError` → `CheckError` refusal mapping, family: resource-exhaustion) — a reject path \
-         was added or removed without updating DN-80 §4's construct-family table and this pinned \
-         count (one of these is the shared `Cx::err` helper's own body at line ~3000 — plumbing, not \
+         DN-80 §4 audited 115 (re-audit (e), 2026-07-18 — the fn-level site diff vs the last \
+         reconciled state (dev e1cfd7b5, 2026-07-08, 103): net +12 from the 2026-07-08→13 feature \
+         train — M-1054 sugar-call/stage3 machinery, DN-113/M-1060 cross-phylum imports, M-1024 \
+         `link`, M-1036/M-1027 ctor-seal, DN-122 prelude seed — minus 4 consolidated by the DN-129 \
+         `seed_prelude_trait` DRY refactor; per-function table in DN-80's 2026-07-18 Reconcile row) \
+         — a reject path was added or removed without updating DN-80 §4's audited totals and this \
+         pinned count (one of these is the shared `Cx::err` helper's own body — plumbing, not \
          a distinct construct; see DN-80 §4's audited-totals note)"
     );
 }
@@ -177,13 +177,14 @@ fn checkty_self_err_call_count_matches_the_ledger() {
     let src = read("crates/mycelium-l1/src/checkty.rs");
     let total = count_occurrences(&src, "self.err(");
     assert_eq!(
-        total, 116,
-        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 116 (dev ca42fd2, \
-         2026-07-02; +1 — RFC-0041 W1 (M-979, 2026-07-03) recursion-depth `BudgetError` refusal; \
-         +5 — trx2 Lane C CU-3 (2026-07-08) the never-silent Binary↔Float conversion prims \
-         `bin_to_flt`/`flt_to_bin` — arity, operand-type, and DN-41 width-witness refusals, \
-         ADR-040 §2.4) — a reject path was added or removed without updating DN-80 §4's \
-         construct-family table and this pinned count"
+        total, 135,
+        "checkty.rs `self.err(` call sites: found {total}, DN-80 §4 audited 135 (re-audit (e), \
+         2026-07-18 — the fn-level site diff vs the last reconciled state (dev e1cfd7b5, \
+         2026-07-08, 116): net +19 — M-1054 `check_sugar_call` +5, DN-51/prims \
+         `try_check_seq_bytes_prim` +3, CU-5 `gate_wrapping_body` +2, DN-142 W-B `check_swap` +2, \
+         M-1025 `check_try_let` +1, M-1036 `check_ctor_seal` +1, six single-site increments, \
+         −1 `check_ascribe`; per-function table in DN-80's 2026-07-18 Reconcile row) — a reject \
+         path was added or removed without updating DN-80 §4's audited totals and this pinned count"
     );
 }
 
@@ -315,6 +316,9 @@ fn ambient_error_variants_match_the_ledger() {
             "ParadigmShapeMismatch",
             "BareDecimalNoEncoding",
             "DepthExceeded",
+            // DN-142 §3.2 (2026-07-18): `policy: ambient`'s nodule-scope `default policy`
+            // declaration mirrors `default paradigm`'s own duplicate-declaration refusal.
+            "MultiplePolicyDefaults",
         ],
     );
 }

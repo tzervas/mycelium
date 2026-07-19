@@ -12,6 +12,296 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### ci+docs(pm): Phase G executed via self-hosted release CI — 92/92 dispatched; second-pass review fixes (2026-07-19)
+
+Maintainer-directed continuation: the tag cut now runs through a new per-repo
+`.github/workflows/release.yml` (workflow_dispatch at the exact manifest rev; fresh-tags-only;
+`permissions: contents: write`; zero third-party actions — plain `curl` on each repo's own REST
+API; `runs-on: [self-hosted, linux, x64, podman]`, the gha-runner-ctl-compliant label set with no
+GitHub-hosted fallback). Rolled to all 92 repos (45 Rust + 46 `*-myc` + umbrella) via one PR each,
+all merged; all 92 dispatches queued at the pinned `RELEASE-v0.464.0.md` revs — runs execute when
+the fleet's listeners register (queue-confirmed; run-level conclusions observable fleet-side).
+
+Second-pass `/pr-review` of the trunk PR (fix-then-merge verdict) — fixes applied:
+
+- **Critical (VR-5):** the 26/20 twin-tally correction lacked a committed verification artifact
+  and contradicted the measurements doc's unreconciled 25/20 re-read. Now reconciled IN
+  `docs/measurements/course-correction-dual-side-2026-07-18.md` §2.3 (dated note): delivery-run
+  records recount to 26/20 over 46; the 45-repo re-read (25/20) is exactly consistent once the
+  46th twin (`mycelium-cli-myc`, CLEAN per its committed `DELIVERY.md`) is included; 27/19 was a
+  ledger miscount. The §5 flag row is resolved; the Phase F entry below now has this note as its
+  citable basis.
+- **Medium:** `docs/spec/swaps/binary-ternary.md` (new §A.4b) and `docs/spec/stdlib/swap.md`
+  (new §B.2b) gain append-only landed-status notes — the E-W1 lift and the std-export sweep those
+  docs described as "pending" landed later in this same branch (W-D).
+- **Deferred Lows (ledgered):** `PolicySlot` eviction via `Vec::remove(0)` vs its CertStore
+  `VecDeque` precedent (efficiency nit at caps 64/1024); `meet_boundary::check_boundary`'s
+  `CertifiedConsumer` invariant enforced by `debug_assert!` only (tighten before W-E wires a real
+  caller); `Diag.envelope` missing `skip_serializing_if` (emits `"envelope":null`). Future leaves.
+
+Everything else in the review came back clean: no unearned tag upgrades, no new silent paths,
+append-only discipline intact, all cross-doc numbers exact (92/92 manifest-vs-lock match;
+reject-ledger 9/9 at pins; every cited test count reproduced exactly).
+
+### docs(pm): Phase G — v0.464.0 release staged; tag pushes policy-blocked, manifest committed (2026-07-18)
+
+Course-correction Phase G: the `v0.464.0` cut is fully staged in
+`docs/planning/course-correction-2026-07-18/RELEASE-v0.464.0.md` — a 92-row manifest (repo →
+verified rev for all 45 Rust components, 46 `*-myc` twins, and the umbrella), release-notes text,
+and the exact per-repo tag command. The tags themselves could not be pushed from this session:
+the scoped git relay returns 403 on `refs/tags/*` (branch pushes permitted; a policy boundary,
+disclosed per the blocked-op protocol), and the session's GitHub toolset has no release-object
+creation capability. Cutting the release is one script-run from any tag-authorized environment.
+Monorepo promotion stays the PR #1705 → tiered path with the terminal squash held (CC-B7).
+
+### docs(measurements): Phase F — dual-side validation + apples-to-apples metrics report (2026-07-18)
+
+Course-correction Phase F: `docs/measurements/course-correction-dual-side-2026-07-18.md`.
+Freshly measured (`Empirical`, methods in-doc): Rust side 1,901/1,901 tests green (l1/cert/core
+at tip); Mycelium side `myc-check` clean on `lib/std` (22 files, median 0.218 s/3 runs) and
+`lib/compiler` (9 files, median 5.007 s); differential witnesses 32/32 + runnable-gate + the W-1
+64↔41 round-trip against the live Rust oracle; `mycelium-bench` shared corpus (14 cases) — JIT
+3.5–4.9× over the interpreter where a program lowers, AOT-env 1.6–2.6× on recursion cases, zero
+correctness divergences; diagnostic sample, std-swap LOC pair (613 Rust / 358 `.myc`), toolchain
+steps. VSA/GPU/proof rows desktop-held (`scripts/vsa-desktop-checks.sh`). **Correction (VR-5):**
+the Phase E twin `myc-check` tally is **26/46 CLEAN, 20/46 FINDINGS** — the Phase E CHANGELOG
+entry below and the umbrella lock header said 27/19 (a miscount surfaced by this phase's re-read
+and confirmed against the delivery-run records; per-repo `DELIVERY.md` files were always correct).
+
+### feat(delivery)+docs(pm): Phase E — all 46 `*-myc` twins delivered with honesty records (2026-07-18)
+
+Course-correction Phase E (records here; content in the `*-myc` repos): every twin refreshed to
+the AX-core-train graduated content where a hand-vetted nodule exists, with a `DELIVERY.md`
+honesty record per repo (provenance, guarantee basis per file, measured `myc-check` result).
+Real content refreshes: `std-swap-myc` (W-1 exports), `std-core-myc` (`derive_prelude.myc`),
+`std-error-myc` (`option.myc` + `result.myc`) — placements are recorded judgment calls; all
+other twins were verified already at train parity byte-for-byte. Measured at delivery: 27/46
+twins `myc-check --project lib` CLEAN (incl. the full 9-nodule self-hosted compiler surface in
+`mycelium-compiler-myc`); 19/46 FINDINGS confined to `Declared` Grok-era seed drafts — disclosed
+per-repo, no tag upgraded (T6 quarantine holds). Umbrella lock `*-myc` pins advanced to the
+delivered revs; monorepo mirror updated.
+
+### feat(transpile)+docs(pm): Phase D transpile-readiness pass — M-1006 remeasure, G-γ discard close, per-component DoD table (2026-07-18)
+
+Course-correction Phase D (bounded readiness pass; full record:
+`docs/planning/course-correction-2026-07-18/PHASE-D-READINESS.md`).
+
+- **Verify-first correction (VR-5):** the launch framing treated all-7 `checked_fraction` 28.7% as
+  a pre-G-α/β baseline; the committed record shows 28.7% (98/342) is the POST-G-β number. The
+  fresh remeasure at this branch's tip (which matters because Phase C's AX-core waves changed the
+  `myc-check` oracle's own crates) confirms it **flat**: default-5 19.5% (46/236), all-7 28.7%
+  (98/342), same 514 gap records, zero `CheckError` files (`Empirical`, run basis in-doc).
+- **G-γ gap close:** value-discarding statements (`g(x);`) and `let _ = e;` now lower to the
+  existing `let _ = <value> in <rest>` surface instead of a blanket `MultiStmtBody` refusal —
+  live-oracle differential witness plus text pins; the golden snapshot delta reviewed
+  (exactly one entry changed). Headline effect honestly 0.0pp — residual advancement (5 records
+  moved to a deeper blocking construct), matching the G-α precedent pattern. 277 transpile tests
+  green; fmt/clippy clean.
+- **Per-component DoD (steer §7 Phase 4), scoped to the 7-target pilot:** zero P0 gap classes
+  (zero `CheckError` files); dual-report vet default; `transpile_gap` worklist with `// src:`
+  breadcrumbs in closest-to-clean order; T6 draft-phylum quarantine verified (zero live
+  `gen/myc-drafts` imports); no tag fabrication. ONESHOT one-shot claims remain HOLD.
+- **Ledgered residuals (design-gated or deferred, never forced):** `.contains()` kernel prim;
+  non-prelude trait impls; M-875 macros; `Option::ok_or` (surface absent — flagged as a Phase-E
+  stdlib addition); if-without-else early-return desugar (12 sites) and tuple-`let` (5 sites)
+  deferred as a future leaf; whole-corpus Phase-2 remeasure not re-run (pilot-scoped verdict,
+  stated as such).
+
+### feat(core+std): AX-core W-D landed — ternary conversion-ceiling lift (E-W1/M-1119), W-1 std exports, PolicySlot caps (CC-B6), retention sizing pass, S1/S2 addenda (2026-07-18)
+
+Course-correction Phase C wave W-D (steer §5), closing the monorepo AX-core wave set.
+
+- **E-W1/M-1119 — BREAKING (Rust API):** `mycelium-core::ternary::{int_to_trits, trits_to_int,
+  max_magnitude}` and the `mycelium-std-ternary::arithmetic` mirrors widen `i64`→`i128`
+  (new ceiling m ≤ 80; m ≥ 81 explicit `None`; no unsafe). Verify-first surfaced two latent
+  findings: the documented "exact to m ≤ 40" ceiling was really m ≤ 39 (`max_magnitude`
+  overflowed computing 3^40), and the old Horner fold could transiently overflow mid-decode for
+  a genuinely-41-trit value whose result fits `i64` — a live G2 gap on the
+  `ternary_to_binary` path. Call sites across cert/mlir/interp/std-swap/std-conformance/xtask
+  updated; `mycelium-mlir`'s own AOT `MAX_TERNARY_WIDTH_I64=39` bound deliberately untouched
+  (separate, documented concern). The DN-66-frozen surface change is recorded append-only in
+  `docs/spec/stdlib/ternary.md` (ADR-045 §2). Exact m=41 round-trip tests over the full
+  Binary{64} range are the DoD witness.
+- **W-1 std exports:** `lib/std/swap.myc` gains `bin32_to_tern21`/`tern21_to_bin32` and
+  `bin64_to_tern41`/`tern41_to_bin64` (the new canonical pair, 3^40 < 2^64 ≤ 3^41),
+  `myc check` clean (22 files) and exercised end-to-end (L1-eval/L0-interp/AOT + live Rust
+  oracle). `matrix_len` moves to the Binary{64} length canon; `bytes_len`'s matching move is a
+  kernel-primitive-registry change, ledgered in-file as a residual. `docs/lib-index/` regenerated.
+- **CC-B6 — PolicySlot caps:** `transitions`/`trace` logs capped (CertStore precedent:
+  `drop_oldest`, never-silent drop counters, `seq` from an eviction-surviving monotonic total).
+  Caps `Declared` (64/1024-anchored), deliberately not mode-gated — no production caller supplies
+  a `CertMode` today (YAGNI, disclosed in-code and in the spec). Property test bounds the cap.
+- **Sizing pass:** committed measurement tests (diag/cert/std-runtime) upgrade the retention
+  spec's measured rows `Declared`→`Empirical` in a new §5.1 — L4 ≈608 B/record (64 ≈38 KiB,
+  1024 ≈608 KiB, consistent with the declared 256 KiB/8 MiB budgets), L1 certified ≈397 B/pair
+  (256 ≈99 KiB, a new figure), new L8 row for the PolicySlot logs. `balanced`, wider L2, L3, and
+  warm-epoch counts stay `Declared` (unmeasured — VR-5).
+- **DN-141 S1/S2 addenda** (append-only, no production code): S1 grounds `Quarantined[T]`
+  against the single-constructor-ADT convention (narrowing the open question to one checker
+  rule); S2 produces the concrete boundary-table delta against the landed `meet_boundary.rs`,
+  surfacing a load-bearing sequencing finding — before DN-113/M-1060 wires cross-phylum imports,
+  phylum-wide free meet would be indistinguishable from removing the Exact-demand wall entirely.
+
+Gates green: fmt/clippy `-D warnings`/build workspace-wide, targeted tests on every touched crate
+(incl. `mycelium-l1` full suite and the 9/9 reject-ledger guard — pins untouched), `myc-check`
+on `lib/std`, markdown/links/structured. M-1119 → done with landed basis.
+
+### feat(l1): AX-core W-C landed — structural grade catalog + overclaim guard, regime classification, meet-boundary table, envelope-instance EXPLAIN (2026-07-18)
+
+Course-correction Phase C wave W-C (steer §5; X2–X5, completing the AX-core implementation
+surface). Verify-first found R1/R2 (modular bottom, weaken-only) and R7 (fast-mode floor) already
+landed and tested — not re-implemented; scope reduced to the genuine residuals.
+
+- **X2** (`grade_catalog.rs`): the 14 RFC-0018 §4.3 structural grade rules as committed data plus
+  the CI overclaim guard — completeness (every rule `grade.rs` implements is cataloged) and
+  exhaustive lattice properties (meet never exceeds an operand; a strength never satisfies a
+  strictly stronger demand) as closed-form 16/64-case enumerations (`Exact`).
+- **X3** (`regime.rs`): direction-aware regime classification per RFC-0002 §4 (`enc` Total,
+  `dec` Partial) reusing the W-B pair matrix, plus the `SiteKind::RegimeTypeLie` Diag builder.
+  The hard refusal is **deliberately deferred, ledgered** (DN-141 Appendix C): wiring it today
+  would break three shipped, tested behaviors (`differential.rs`/`runnable_gate.rs`/bench corpus
+  assert a bare-typed `dec` swap); the natural non-breaking wiring point is the held X9
+  `to:`-elision — queued as CC-B9 for the maintainer (accept the break now vs wait for X9).
+- **X4** (`meet_boundary.rs`): the DN-141 B3 allow/refuse table (export / Exact-demand crossings;
+  certified-consumer rows held to W-E with X6/X7) proven exhaustively equivalent to `grade.rs`'s
+  real enforcement, plus a structural regression guard pinning R4 ("meet free inside": 7 internal
+  `.meet(` sites vs 3 boundary `require` sites). Live-wiring into `require` is a focused
+  follow-on (two site_kinds share that function; it is a DN-80-pinned file).
+- **X5**: `mycelium-diag` added as a direct `mycelium-l1` dependency (previously transitive via
+  `mycelium-cert`; strictly downward, no new graph node) and the two W-B refusal branches in
+  `check_swap` now build their messages from real envelope instances
+  (`legal_pair_refuse_diag`, `policy_resolve_refuse_diag`) — byte-identical message text, DN-80
+  pins unchanged (re-grep verified). The success-path `policy_resolve` crumb is built + tested
+  but has no sink yet (`checkty::Cx` has no diagnostics-collection channel — disclosed follow-on).
+
+DESIGN-03 §7 probe coverage (the AX-core DoD component), honest per-probe: 1/2/4/6 witnessed by
+new or cited tests; 3 partial (single Exact-endorsement arm proven; full R6 needs X6 airlock,
+W-E); 5 residual (B6 dataset partitions, later package); 7 out of scope until the transpile
+phase; 8 structural gap (the checker has no span tracking anywhere — pre-existing; all new Diags
+carry `locus: None` honestly). Gates: fmt/clippy/tests green change-scoped (full `mycelium-l1`,
+`mycelium-std-conformance` incl. the 9/9 reject-ledger guard, `mycelium-diag`, `mycelium-cert`)
+plus `cargo check --workspace` for the new dependency edge. New code `Declared` except the
+overclaim-guard enumerations (`Exact`); nothing upgraded past its basis. Disclosed: the committed
+`docs/spec/api/*.txt` baselines (and therefore the derived api-index rows) do not yet carry
+W-A..W-C's new pub symbols — `cargo-public-api` + nightly rustdoc are absent in this session
+(`api.sh` skips gracefully); baseline regen is queued before the dev→staging promotion.
+
+### feat(l1): AX-core W-B landed — `policy: ambient` surface, scoped resolution, A1 legal-pair matrix, elaboration-hash goldens (2026-07-18)
+
+Course-correction Phase C wave W-B (steer §5 / DN-142 §3, implemented Rust-first, pending
+ratification — the doc stays Draft). Verify-first confirmed nothing pre-existed: `policy: ambient`
+would previously have hashed the literal string as a catalog name (the exact silent-miss DN-142
+§3.1 names), and no legal-pair matrix existed in the checker.
+
+What landed (`crates/mycelium-l1`, plus a one-line `mycelium-fmt` print rule):
+
+- **Surface:** `policy: ambient` parses as an ordinary identifier; `default policy <name>;` is new
+  nodule-scope grammar reusing existing keyword tokens. The rejected vocabulary `policy: _` /
+  `auto` / `default` is a hard parse-time error naming `ambient` and DN-142 §3.1 — one shared
+  guarded production covers both the `swap` field and the declaration.
+- **Scoped resolution** (`ambient_policy.rs`): precedence-fold mirroring `cert_scope` exactly
+  (no new scoping machinery); nodule tier surface-wired, phylum/global structurally present but
+  unwired (same disclosed boundary as `cert_scope`'s FLAG-B); a closed 2-entry catalog fallback
+  (`rt`, `bf16_round` — corpus-grounded, no invented names). Unresolved is a hard `checkty` error
+  ("no ambient policy declared for this pair in scope"), never a fallback.
+- **A1 legal-pair matrix** (`legal_pair.rs`): RFC-0002 §5's six rows materialized as data;
+  `classify_swap_pair` wired into `check_swap` for early refusal. Preserves the tested DN-52
+  freeze-ledger carve-out unchanged; newly refuses same-paradigm pairs per row 6.
+- **Elaboration identity:** resolution rewrites the checked swap's policy to the concrete name
+  before elaboration, so ambient and longhand elaborate to byte-identical L0. The W-B exit
+  criterion is proven by `tests/ambient_policy.rs`: five (ambient, longhand) pairs asserting
+  identical elaborated content hashes, plus a runtime-value-agreement twin — both green
+  (`Empirical`).
+- **DN-80 reconcile (close-out):** `AmbientError` gains `MultiplePolicyDefaults` (ledgered 6/6),
+  and the integrating parent performed the FLAGged Part B re-audit — the reject-site count drift
+  since the 2026-07-08 reconcile (103→115 direct, 116→135 `self.err`, of which W-B adds exactly
+  the two `check_swap` refusals) is attributed function-by-function in DN-80's 2026-07-18
+  Reconcile row and the guard re-pinned in the same commit; `reject_ledger.rs` 9/9 green. The §4
+  family-table re-derivation is queued as CC-B8, disclosed not silent.
+
+Gates: `cargo fmt --check`, `clippy --all-targets -D warnings`, and tests green change-scoped on
+`mycelium-l1` (full suite incl. self-hosted `.myc` differentials), `mycelium-fmt`,
+`mycelium-select`, `mycelium-std-conformance`. Known deferral, disclosed: the W-A
+`SiteKind::PolicyResolve`/`LegalPairRefuse` catalog entries have no wired emitter from
+`mycelium-l1` yet (needs a new l1→diag dependency edge; DN-142 §9 defers the envelope wiring).
+
+### feat(diag+cert): AX-core W-A landed — first-fault envelope, swap_check emitter, Meta.cert handle, capped cert store, CertMode print (2026-07-18)
+
+Course-correction Phase C wave W-A (steer §5; implements the Draft captures without moving their
+status — pending ratification): RFC-0013 Amendment A1's `FirstFaultEnvelope` lands on `Diag` as an
+optional additive field (13-entry `site_kind` catalog; backward-compat proven by a pinned golden
+content hash + legacy-JSON round-trip; inline tests extracted per M-797 as-touched);
+`mycelium-cert` gains the `swap_check` emitter at the `ModeGatedSwapEngine` seam (refuse event +
+validated crumb through the one `Diag` system — G-9) and the **G-3 audit fix** (Certified-mode
+`Bounded` certs with `Crosstalk`/`Capacity` bounds now map to explicit `NotValidated{Incomplete}`
+instead of a silent `check: None` pass — regression-tested at the exact latent surface);
+`Meta.cert: Option<Box<ContentHash>>` handle beside `policy_used` (hash-excluded, wire-carried;
+boxed for a measured `large_enum_variant` regression); mode-gated capped `CertStore` (fast 0 ·
+certified 256 `Declared` caps, never-silent EXPLAINed drop counter — G-8 capped by construction);
+`myc check`/`run`/`test` print the active certification mode (P3-Q3a); `Diag::first_fault_line()`
+renders `where · site_kind · decision` — the W-A exit criterion. ~537 tests green change-scoped
+(fmt/clippy `-D warnings`/test across diag/cert/core/cli); api-index regenerated. Judgment calls
+(EventId shape open per the RFC's own flag; Balanced store cap reuses certified's 256; envelope
+hashed only when present) are flagged in-code and in the program ledger.
+
+### fix(components): Phase B complete — all 45 Rust component repos buildable at train v0.464.0 (2026-07-18)
+
+Course-correction Phase B (executed in the component repos; recorded here): nine topological
+waves fixed every Rust component repo to a standalone, verified-green workspace — workspace roots
+restoring the orphaned inheritance, cross-repo deps as git pins at frozen lockstep revs,
+toolchain + supply-chain replicas, CI v2 (fmt + clippy `-D warnings` + test), CROSS-REF.md per
+repo, owned docs/fixture slices (core schemas; l1 `lib/compiler` + `lib/std` + grammar corpus;
+std spec slices), Cargo.lock. The approved DN-143 §4 move (select + vsa-decode → runtime)
+dissolved the one repo-level dependency cycle. Umbrella `mycelium-lang`: lock v2 (rev + tree-hash
+pins) + real integration CI; mirror updated in `artifacts/`. Every repo verified fmt/clippy/test
+green standalone at its merged rev (`Empirical`); monorepo untouched by the component fixes
+except this record and the generator (`scripts/decompose/fix_component_workspace.py`).
+
+### docs(capture): design-steer Phase-1 ratifiable captures — all six landed Draft (2026-07-18)
+
+Course-correction A4, per the steer handoff §4 (all Draft, no ratification dates — H1/H2; the
+maintainer ratifies at the post-fix review): **DN-142 Swap Ergonomics** (`policy: ambient`
+spelling/resolution law, handle-plus-sink certificate architecture closing the
+`ModeGatedSwapEngine` cert-discard gap, `to:`-elision gates, kernel-`Option`-vs-std-`Result`
+regime reconcile); **DN-141 Tags/Meta/Containment rewrite** from DESIGN-02 + the P2 steers with
+S1/S2 spike-stub appendices (one grounded correction: RFC-0018 §4.5 is Enacted — the open coupling
+is its T9.6 purity precondition); **RFC-0013 §10 Amendment A1** (first-fault envelope fields, the
+13-entry `site_kind` catalog, linking rules; consumption tiers unchanged; no third system);
+**RFC-0034 §7 clarifying footnote** (first-fault records are the always-generated signal — P3-Q2);
+**`docs/spec/Language-Retention-Policy.md`** (DESIGN-04 §5.3 fields; fourth RFC-0012 scoped
+instance; `Declared` placeholder caps; EXPLAIN-of-drop; no-full-retention-under-certified);
+**W-1 width-canon capture** as append-only amendments to `docs/spec/swaps/binary-ternary.md` and
+`docs/spec/stdlib/swap.md` (canon `Binary{64}`, fallback `Binary{32}`; pairs `32↔21` now and
+`64↔41` behind E-W1, filed as **M-1119**). Also **DN-143** deviation captures (topology keep-46,
+clean-slice history, U1 front repo, `select`→runtime cycle fix) and the Phase-0
+**audit-grok ledger** (G-1/2/4 clean with goldens green; G-3 one P2 latent pre-archive
+`mode.rs` finding scheduled with W-A). Docs-only; no product code.
+
+### docs(pm): course-correction program opened; steer pack committed; decomposition record corrected (2026-07-18)
+
+Course-correction program `docs/planning/course-correction-2026-07-18/PROGRAM.md` opened
+(maintainer-directed): monorepo alignment corrections → component-repo build fixes → transpile
+readiness → `*-myc` delivery → dual-side validation + metrics → releases; recorded defaults and
+ratification queue inside. The three maintainer steer docs are now committed verbatim under
+`docs/planning/design-steer-2026-07-17/` (previously uncommitted — assessment F1 context).
+Record corrections (append-only; assessment F3): PROGRAM-SELFHOST-DECOMPOSE status corrected from
+"seed complete" to "seeds created (Declared, unverified)" with a retro-record status-log row; this
+row also serves as the Phase-A archive CHANGELOG record its own A3 step required — archive tag
+`archive/main-pre-component-transpile-2026-07-17` at monorepo `main` tip `aad96b7a425710db5…`,
+plus the D/T/R seed record (45 Rust component repos, `mycelium-cli-myc`, `mycelium-lang` umbrella,
+91-pin `components.lock`; mirror carries a 92nd self-pin). DESIGN-02 MD027 blockquote fix (G-10
+mechanical).
+
+### docs(assessment): decomposition alignment assessment (2026-07-18)
+
+Assessment record under `docs/planning/alignment-assessment-2026-07-18/` (report, per-repo
+scorecard, blob-parity evidence + generator scripts): the 2026-07-17 component-repo decomposition
+evaluated against the maintainer's uploaded design-steer reference docs. Headline: content
+superset PASS (monorepo contains everything in the 45 Rust component repos; sole exception:
+10 generated files in `mycelium-cli-myc`); steer Phase-3 gates and §6 structural requirements
+unmet (findings F1–F18, all P0/P1 rows adversarially re-verified). Report-only — no product code,
+no decision-doc changes.
+
 ### docs(pm): PROGRAM-SELFHOST-DECOMPOSE active implement program (2026-07-17)
 
 L0 program under `docs/planning/gap-analysis-2026-07-16/`: gap-close → archive main → component

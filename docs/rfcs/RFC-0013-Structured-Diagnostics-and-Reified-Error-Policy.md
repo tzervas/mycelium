@@ -355,8 +355,157 @@ invariants I1–I5 are verified, when the tooling lands, by:
 - **Richer audit views** (§4.6): the representation-crossing view generalized to other structured-diagnostic
   reports (e.g. per-module honesty-bound summaries) over the same content-addressed projection machinery.
 
+## 10. Amendment A1 (Draft, captured 2026-07-18 from maintainer steer P3-Q1) — first-fault envelope fields
+
+> **Status of this amendment.** Append-only capture, not a revision of §1–§9 above (house rule #3): no
+> existing normative text in this RFC is changed. This section is **Draft, pending ratification** — the
+> RFC's own header `Status` (**Enacted**, for the v0 §4 design) is unaffected until this amendment is
+> separately ratified and its Phase-2 implementation (below) lands. Grounds:
+> `docs/planning/design-steer-2026-07-17/PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §1.3 P3-Q1, §4 item 3;
+> `docs/planning/gap-analysis-2026-07-16/DESIGN-03-MACHINERY-DIAGNOSTICS-AND-UX.md` §3.3/§3.3a/§3.5.
+
+### 10.1 One record, not a third system (P3-Q1 / G-9)
+
+Design pack 03 evaluated three options for a "first-fault bus" — a new diagnostic kernel, extending
+this RFC's `Diag` record, or continued ad hoc per-domain strings — and the maintainer steered on the
+middle one: **the first-fault bus *is* this RFC's `Diag` record, extended.** No parallel schema is
+introduced. `Diag` (`crates/mycelium-diag/src/lib.rs:216-229`) already carries content hashing
+(`Diag::content_hash`, lines 318-362) and the dual human/JSON projection this RFC's **I3** requires
+(`Diag::human`/`Diag::machine`, lines 375-439); what it is missing is exactly the envelope fields a
+first-fault junction needs to answer *where / how / why* in one hop (DESIGN-03 §3.2), listed below.
+This closes audit item **G-9** ("no new error/diag schema outside `mycelium-diag::Diag`/RFC-0013") from
+the same handoff's Phase-0 ledger (§3) by construction — the extension happens *in* `Diag`, not beside
+it.
+
+### 10.2 Envelope fields added to `Diag`
+
+The following fields extend the `Diag` record (`crates/mycelium-diag/src/lib.rs:216-229`, alongside the
+existing `severity`/`code`/`message`/`locus`/`trace`/`notes`). Two DESIGN-03 §3.3 minimum-schema fields
+are **not** new additions because `Diag` already carries them under a different name — noted rather than
+duplicated: `site`/`where` maps onto the existing `locus: Option<Locus>`, and `why`/`message` maps onto
+the existing `message: String`.
+
+| New field | Type (Declared sketch) | Meaning | Grounds |
+|---|---|---|---|
+| `event_id` | a stable identifier for this fault *instance* | Distinguishes two occurrences of a structurally-identical `Diag` (e.g. the same refusal firing twice at runtime) — **open**: whether `event_id` coincides with `Diag::content_hash()` (identity over content) or is a separate per-occurrence counter/nonce is left to the Phase-2 implementation; flagged, not decided here (G2/VR-5). | DESIGN-03 §3.3 |
+| `phase` | closed enum `compile \| check \| runtime \| transpile \| packaging` | Which stage emitted the record. | DESIGN-03 §3.3 |
+| `site_kind` | closed enum + `Other(String)` escape hatch, mirroring the existing `Code` enum shape (`crates/mycelium-diag/src/lib.rs:144-166`) | The junction kind — the 13-entry catalog, §10.3 below. | DESIGN-03 §3.3a |
+| `decision` | closed enum + `Other(String)` escape hatch | `refuse \| seal_fail \| not_validated \| resolved \| fallback \| remint \| candidate \| …` — what the junction concluded. | DESIGN-03 §3.3 |
+| `how` | opaque string (v0) | The registry machine code for this record. Rides **DN-22**'s compact-code shape (`docs/notes/DN-22-Compact-Diagnostic-Code-Representation.md`) once DN-22 ratifies (DN-22 is **Draft** today); until then `how` is a `Declared` opaque string, never fabricated as a ratified code. | DESIGN-03 §3.3; DN-22 |
+| `grades` | `{ in: Vec<GuaranteeStrength>, out: Option<GuaranteeStrength> }` (`mycelium_core::GuaranteeStrength`) | Input grade(s) and the result grade, if any. **Never upgraded by the record itself** (VR-5) — `grades` *reports* what the junction already computed. | DESIGN-03 §3.3, rule 4 |
+| `policy_ref` | `Option<ContentHash>` | The content hash of the selection policy that shaped this decision, if any — the same `Meta.policy_used`-style handle P1-Q2 (handoff §1.1) uses for swap-cert handles. | DESIGN-03 §3.3 |
+| `cert_mode` | `mycelium_core::CertMode` | The active mode (`Fast`/`Balanced`/`Certified`, RFC-0034 §5) at emission time — always present, feeding the "always print active `CertMode`" P0 UX item (DESIGN-03 §5.1). | DESIGN-03 §3.3; RFC-0034 §5 |
+| `basis_ref` | opaque string/hash, optional | Matrix row id / predicate id / cert hash the decision rests on, or absent. | DESIGN-03 §3.3 |
+| `parent_event` / `child_cause` | `Option<EventId>` each | Blame-style causality: a symptom names the fault it is downstream of (`parent_event`), and/or the record it directly caused (`child_cause`) — never a full tree by default (§10.4). | DESIGN-03 §3.3, rule 1 |
+
+`event_id`/`parent_event`/`child_cause` all key off the same identifier space; its exact shape is the
+one field left genuinely open above (not silently decided — G2).
+
+### 10.3 The site-kind catalog (DESIGN-03 §3.3a, 13 entries — the `Code`-adjacent registry)
+
+`site_kind` is a **closed, `Code`-adjacent registry** (mirroring the existing `Code` enum's
+closed-set-plus-`Other`-escape-hatch shape, `crates/mycelium-diag/src/lib.rs:144-166`), enumerated in
+full — this is the complete Localize-1 attachment list, no separate annex:
+
+| `site_kind` | Phase | Trigger | Pack home |
+|---|---|---|---|
+| `policy_resolve` | check | Selection resolution to a `PolicyRef` (updated vocabulary: `policy: ambient`/catalog name per P1-Q1, handoff §1.1 — not the design pack's now-superseded `policy: default` wording) | 01 |
+| `legal_pair_refuse` | check | Illegal `Repr` pair | 01 |
+| `missing_conversion` | check | Cross-paradigm without a written `swap` | 01 |
+| `regime_type_lie` | check | Total type over a partial regime | 01 |
+| `swap_exec` | runtime | Swap `Ok`/`Err` / out-of-range | 01 |
+| `swap_check` | runtime | Cert `Validated`/`Refuted`/`NotValidated` — first emitter site is `ModeGatedSwapEngine`'s `SwapEngine` impl, the `NotValidated` branch (`crates/mycelium-cert/src/mode.rs:202-217`) | 01 · 02 |
+| `meet_boundary` | check/runtime | Export / certified demand / `Exact` partition | 02 |
+| `grade_meet` | runtime | Dynamic meet of tagged values | 02 |
+| `seal_remint` | runtime | Airlock pass/fail | 02 |
+| `mode_firewall` | check | Mode × grade refuse without a seal | 02 |
+| `grade_annotation` | check | Illegal strengthen | 02 |
+| `import_first_edge` | check | First bad import edge | 03 |
+| `transpile_gap` | transpile | First poison / residual | 03 |
+
+**Non-sites** (never emit a record — DESIGN-03 §3.3, unchanged by this amendment): every plain
+arithmetic/field access; a pure `Exact` success in `fast` (optional crumb only, never mandatory); an
+intermediate meet inside an already-quarantined bag (packaged once at export). Isolation `EXPLAIN`
+fields (design pack 02) are a **field-set** of this one envelope for isolation `site_kind`s — one bus,
+many sites, per P3-Q1.
+
+### 10.4 First-fault linking rules
+
+1. **First-fault wins.** The default UX surfaces the first fault, not a full causal tree; `parent_event`/
+   `child_cause` let a symptom cite its cause, with an optional "expand children" for audit
+   (DESIGN-03 §3.3 rule 1).
+2. **Symptoms cite cause, not the reverse-engineered tree.** A downstream record names its `parent_event`
+   rather than the consumer re-deriving causality by re-walking every emitted record.
+3. **Never invent success; never upgrade grades in the diagnostic itself** (DESIGN-03 §3.3 rule 4 = this
+   RFC's **VR-5**, restated at the envelope level): `grades` and `decision` report what the junction
+   already concluded — the record is not itself a place a grade gets stronger.
+4. **Additive, not substitutive** (this RFC's **I1**, §4.1, restated for the envelope): a first-fault
+   record is additive over the explicit `Option`/`Result`/type error the junction already raised. It
+   never substitutes for that error, exactly as no policy/level/route may suppress a diagnostic today.
+5. **One policy system.** `policy_ref` is populated only from the pack-01 catalog + resolve mechanism
+   (P1-Q1); this amendment introduces no second policy-identity source (DESIGN-03 §3.3 rule 6).
+
+### 10.5 Consumption tiers — the existing `minimal`/`medium`/`detailed`, no new tier system
+
+Per P3-Q1's explicit instruction, this amendment adds **no** new verbosity/tier vocabulary. This RFC's
+§4.2 graded levels (`minimal`/`medium`/`detailed`, **I2** — a verbosity knob, never a gate) are the
+consumption tiers for the extended envelope too. DESIGN-03 §3.5's `lean`/`normal`/`audit` naming is a
+**presentation-layer synonym set over the same three tiers**, not a fourth kind of dial:
+`lean ≡ minimal`, `normal ≡ medium`, `audit ≡ detailed` (the `detailed`/`audit` tier stays the
+**allowlisted** set this RFC's §4.5 **X2** already fixes — no wholesale dump). Signal **generation**
+for these records is always ≥ middle tier (§10.6); **consumption** of that signal stays dialable exactly
+as §4.2/§4.3 already specify — gen ≠ consumption is not a new rule, it is this RFC's existing I2/I3
+posture applied to the first-fault envelope.
+
+### 10.6 Consumers: RFC-0005 EXPLAIN, CLI, LSP — over the one record
+
+RFC-0005 `EXPLAIN`, the `myc check`/`myc run` CLI, and the LSP (hover + code actions) are **consumers**
+of the one extended `Diag` record — none defines its own diagnostic schema (P3-Q1; DESIGN-03 §3.2's
+`BUS → CLI / LSP / EXPLAIN` fan-out). The closed v0 route vocabulary this RFC already ratified in §8
+(`stream`/`audit`/`log`/`null`/`mesh`, resolved M-354) is the existing dispatch mechanism for a fourth
+consumer, the mode-gated runtime sink (DESIGN-03 §3.2's `LOG` node) — no new routing surface is needed
+for that leg either.
+
+**Cross-reference (P3-Q2, not restated here).** Whether first-fault record generation is always-on in
+`fast` mode is answered by **RFC-0034 §7**'s clarifying footnote (captured 2026-07-18, the same steer
+session): that footnote states first-fault records *are* the inspectability-signal generation §7
+already mandates "always generated from the middle tier up," so always-on generation in `fast` is a
+clarification of existing RFC-0034 normative text, not a new rule of this RFC. See RFC-0034 §7 directly;
+this amendment does not restate it.
+
+### 10.7 Scope, honesty, and landing
+
+This amendment is **additive-never-substitutive** in the same sense this RFC's governing invariant
+**I1** (§4.1) already requires of every diagnostic: a first-fault envelope field reports what a
+junction decided, it never itself decides anything, and no field here can cause an explicit
+`Option`/`Result`/refusal to stop propagating. No guarantee tag is upgraded by this amendment (VR-5);
+`grades`/`basis_ref`/`cert_mode` are read-off reporting fields, exactly like this RFC's existing §4.6
+audit view.
+
+**Nothing in this amendment lands as code with this capture.** Per the handoff's Phase-1/Phase-2 split
+(§4 item 3, §5), the concrete extension of `crates/mycelium-diag/src/lib.rs`'s `Diag` struct with the
+§10.2 fields, the `site_kind` enum, and the first `swap_check`/`policy_resolve` emitter sites are
+**Wave W-A** ("X15 bus, first emitters") — the maintainer-ratifies-first discipline this RFC's own
+history follows (§8's route-target resolution, Meta changelog below). Until W-A lands and this section
+is ratified, it stays **Draft, pending ratification**; it is recorded here first so the design is
+reviewable before code (house rule #3 — a spec moves to "implemented (Rust-first), pending
+ratification," never silently to `Accepted`).
+
 ## Meta — changelog
 
+- **2026-07-18 — Amendment A1 captured (Draft, pending ratification) — first-fault envelope fields
+  (§10).** Records the maintainer steer P3-Q1
+  (`docs/planning/design-steer-2026-07-17/PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §1.3, §4 item 3):
+  the first-fault bus is this RFC's `Diag` record extended, never a third system (closes audit item
+  G-9). Adds ten envelope fields (`event_id`, `phase`, `site_kind`, `decision`, `how`, `grades`,
+  `policy_ref`, `cert_mode`, `basis_ref`, `parent_event`/`child_cause`) over the 13-entry `site_kind`
+  catalog (DESIGN-03 §3.3a), the first-fault linking rules (first-fault wins; symptoms cite cause),
+  and confirms the consumption tiers stay this RFC's existing `minimal`/`medium`/`detailed` (**I2**) —
+  no new tier system. Cross-references, and does not restate, the RFC-0034 §7 P3-Q2 clarifying
+  footnote on always-on `fast`-mode generation. This section is append-only (house rule #3): no §1–§9
+  text changed, and the header `Status` (**Enacted**, for the v0 §4 design) is unchanged — §10 itself
+  stays **Draft, pending ratification** until Wave W-A (handoff §5) lands the concrete `Diag` struct
+  extension and the maintainer ratifies. No code lands with this capture (VR-5/G2).
 - **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
 - **2026-06-16 — §8 route targets resolved + bound to RFC-0008 sinks (M-354; RFC-0008 Accepted).** The
   last genuinely-open §8 question — the concrete `route` set and how it composes with RFC-0008's

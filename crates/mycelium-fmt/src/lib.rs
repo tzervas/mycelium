@@ -1078,6 +1078,9 @@ fn item_first_lines(nodule: &Nodule, tokens: &[Spanned]) -> Vec<u32> {
             let is_opener = match item {
                 Item::Use(_) => s.tok == Tok::Use,
                 Item::Default(_) => s.tok == Tok::Default,
+                // DN-142 §3.2: `default policy <name>;` also opens on `default` (same keyword as
+                // `default paradigm`).
+                Item::DefaultPolicy(_) => s.tok == Tok::Default,
                 Item::Type(_) => matches!(s.tok, Tok::Type | Tok::Pub),
                 Item::Trait(_) => matches!(s.tok, Tok::Trait | Tok::Pub),
                 Item::Impl(_) => s.tok == Tok::Impl,

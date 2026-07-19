@@ -1155,16 +1155,19 @@ fn cases() -> Vec<Case> {
         },
         // NEGATIVE control: a closure that mutates a PURELY INTERNAL local (never escapes, never a
         // capture — bound and mutated entirely within the closure's own body) must NOT be
-        // misclassified as a captured-mutation `Closure` gap. It still gaps (Mycelium's body
-        // grammar has no assignment-statement production at all, `MultiStmtBody`'s pre-existing
-        // semicolon-terminated-statement refusal), but via the ordinary generic path — pinning
-        // that the DN-109 D7 scan does not false-positive on a shadowed/local name.
+        // misclassified as a captured-mutation `Closure` gap. It still gaps — Mycelium's body
+        // grammar has no assignment-statement production at all — but via the ordinary generic
+        // path: since G-γ (2026-07-18) lowered the value-discarding-statement `MultiStmtBody` wall
+        // to `let _ = .. in ..`, the `acc += x;` statement is now attempted through `emit_expr`
+        // itself and refused there as an unsupported compound-assign operator (`Category::Other`,
+        // deeper/more precise than the old blanket "semicolon-terminated statement" MultiStmtBody
+        // wall) — pinning that the DN-109 D7 scan does not false-positive on a shadowed/local name.
         Case {
             name: "closure_purely_local_mutation_not_misclassified_as_closure_gap",
             rust: "fn f(n: u16) -> u16 { let g = |x: u16| { let mut acc = 0; acc += x; acc }; \
                    g(n) }",
             expect: Expect::Gapped {
-                category: Category::MultiStmtBody,
+                category: Category::Other,
             },
         },
         // T-A1 (DN-122 §13.2 WU-A; positive control): a single-param, param-only-sig foreign-trait
@@ -2084,10 +2087,12 @@ fn conversion_and_unmapped_methods_never_fabricate_unknown_prim() {
 }
 
 /// The sharpened `MultiStmtBody` reason (this leaf, E33-1 M-1006 phase-1) names the *kind* of the
-/// offending interior statement — a nested item (local `static`/`const`/`fn`), a macro invocation,
-/// or a semicolon-terminated statement expression — so the gap report is precise, not generic
-/// (G2). Each is a genuinely design-blocked form (no local-item / no macro / value-discard has no
-/// grammar surface); this pins the diagnostic text, not any emission.
+/// offending interior statement — a nested item (local `static`/`const`/`fn`) or a macro
+/// invocation — so the gap report is precise, not generic (G2). Each is a genuinely design-blocked
+/// form (no local-item / no macro production in this grammar fragment); this pins the diagnostic
+/// text, not any emission. (The former third case here — a semicolon-terminated value-discarding
+/// statement, `g(x); x` — is **no longer** a `MultiStmtBody` gap: G-γ, 2026-07-18, below, lowers it
+/// to `let _ = g(x) in x` instead. See `discard_statement_lowers_to_let_underscore_binding`.)
 #[test]
 fn multi_stmt_body_reason_names_the_statement_kind() {
     let cases = [
@@ -2100,11 +2105,6 @@ fn multi_stmt_body_reason_names_the_statement_kind() {
         (
             "fn f(x: u8) -> u8 { debug_assert!(x > 0); x }",
             "macro-invocation statement",
-        ),
-        // A semicolon-terminated (value-discarding) statement expression.
-        (
-            "fn f(x: u8) -> u8 { g(x); x }",
-            "semicolon-terminated (value-discarding) statement expression",
         ),
     ];
     for (rust, needle) in cases {
@@ -2123,6 +2123,65 @@ fn multi_stmt_body_reason_names_the_statement_kind() {
                 .collect::<Vec<_>>()
         );
     }
+}
+
+/// G-γ (2026-07-18, Phase-D remeasure): a value-discarding statement expression (Rust's `g(x);`
+/// mid-body, semicolon-terminated) now LOWERS instead of gapping — the Mycelium surface for
+/// "evaluate and discard" already exists (`_` is an ordinary bound `Ident`; the checker has no
+/// unused-binding diagnostic, confirmed against the real oracle in
+/// `discard_statement_and_let_wild_check_clean_live`), so `g(x); x` emits `let _ = g(x) in x`
+/// rather than gapping the whole body with "no local-item production". Text-only pin (the sibling
+/// live-oracle test below proves it also `myc-check`-cleans); still routes the discarded
+/// expression through the ordinary `emit_expr` (nothing new is fabricated — an expression `emit_expr`
+/// itself can't lower still gaps exactly as before, just deeper).
+#[test]
+fn discard_statement_lowers_to_let_underscore_binding() {
+    let rust = "fn g(x: u8) -> u8 { x } fn f(x: u8) -> u8 { g(x); x }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::MultiStmtBody),
+        "expected no MultiStmtBody gap for a plain discarded call, got: {:?}",
+        report
+            .gaps
+            .iter()
+            .map(|g| (g.category.as_str(), g.reason.as_str()))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("let _ = g(x) in x"),
+        "expected the discard to lower to `let _ = g(x) in x`, got:\n{myc}"
+    );
+}
+
+/// G-γ (2026-07-18): the companion `Pat::Wild` case — a Rust `let _ = e;` binding (the explicit-
+/// discard idiom, distinct syntactically from a bare `e;` statement above but with the identical
+/// Mycelium lowering) also emits `let _ = <value> in <rest>` rather than gapping as an "unsupported
+/// pattern".
+#[test]
+fn let_wild_binding_lowers_to_let_underscore() {
+    let rust = "fn g(x: u8) -> u8 { x } fn f(x: u8) -> u8 { let _ = g(x); x }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+    assert!(
+        !report
+            .gaps
+            .iter()
+            .any(|g| g.category == Category::MultiStmtBody),
+        "expected no MultiStmtBody gap for `let _ = g(x);`, got: {:?}",
+        report
+            .gaps
+            .iter()
+            .map(|g| (g.category.as_str(), g.reason.as_str()))
+            .collect::<Vec<_>>()
+    );
+    assert!(
+        myc.contains("let _ = g(x) in x"),
+        "expected `let _ = g(x);` to lower to `let _ = g(x) in x`, got:\n{myc}"
+    );
 }
 
 use super::vet::find_myc_check;
@@ -2193,6 +2252,69 @@ fn binop_operand_gated_forms_check_clean() {
             report.gaps
         );
         let path = dir.join(format!("case_{i}.myc"));
+        std::fs::write(&path, &myc).expect("write case .myc");
+
+        let checker = crate::vet::MycChecker {
+            command: vec![bin.display().to_string()],
+            cwd: None,
+        };
+        let rec = checker.vet_file(&path, "fixture.rs", 1, 1);
+        assert_eq!(
+            rec.class,
+            crate::vet::VetClass::Clean,
+            "case {i} (`{rust}`) must check CLEAN with the real myc-check oracle — emitted:\n{myc}\n\
+             diagnostic={:?}",
+            rec.diagnostic
+        );
+    }
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// **G-γ verify-first live-oracle proof** (mitigation #14, Phase-D remeasure 2026-07-18): both the
+/// `Stmt::Expr` value-discard lowering and the `Pat::Wild` (`let _ = e;`) lowering must
+/// `myc-check`-clean, not just text-match — proves the `let _ = .. in ..` surface this fix relies
+/// on is real (confirmed once by hand against the built oracle before this fix landed; this test
+/// keeps that proof CI-checked going forward). Skips gracefully when `myc-check` isn't built,
+/// exactly like the sibling oracle tests in this file.
+#[test]
+fn discard_statement_and_let_wild_check_clean_live() {
+    let Some(bin) = find_myc_check() else {
+        eprintln!(
+            "emit: live oracle test skipped — no runnable myc-check (set MYC_CHECK_CMD or build \
+             `cargo build -p mycelium-check --bin myc-check`). The text-assertion tests above \
+             still cover the emitted shape."
+        );
+        return;
+    };
+
+    let dir = std::env::temp_dir().join(format!(
+        "mycelium-transpile-emit-discard-oracle-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0)
+    ));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+
+    let rust_snippets = [
+        // Bare value-discarding statement (`Stmt::Expr`, semicolon-terminated).
+        "fn g(x: u8) -> u8 { x } fn f(x: u8) -> u8 { g(x); x }",
+        // Explicit-discard `let _ = e;` (`Stmt::Local` with `Pat::Wild`).
+        "fn g(x: u8) -> u8 { x } fn f(x: u8) -> u8 { let _ = g(x); x }",
+        // Multiple discards in sequence (repeated `_` shadowing must stay legal).
+        "fn g(x: u8) -> u8 { x } fn f(x: u8) -> u8 { g(x); let _ = g(x); g(x); x }",
+    ];
+    for (i, rust) in rust_snippets.iter().enumerate() {
+        let (myc, report) = transpile_source(rust, "fixture.rs", "oracle")
+            .unwrap_or_else(|e| panic!("failed to parse/transpile `{rust}`: {e}"));
+        assert!(
+            !report.emitted_items.is_empty(),
+            "case {i} (`{rust}`) failed to emit at all: gaps={:?}",
+            report.gaps
+        );
+        let path = dir.join(format!("discard_case_{i}.myc"));
         std::fs::write(&path, &myc).expect("write case .myc");
 
         let checker = crate::vet::MycChecker {

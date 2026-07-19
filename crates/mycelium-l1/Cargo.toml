@@ -17,6 +17,15 @@ workspace = true
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
 mycelium-cert = { path = "../mycelium-cert" }
+# W-C X5 (RFC-0013 Amendment A1 first-fault envelope): mycelium-l1 already transitively depends on
+# mycelium-diag via mycelium-cert (mode.rs's swap_check emitter, W-A) — this makes that dependency
+# DIRECT so the checker itself can build envelope instances (`policy_resolve`/`legal_pair_refuse`/
+# `regime_type_lie`) at check_swap's own refuse sites, instead of a second, parallel diagnostic
+# system (G-9). Architecturally clean: both crates are `core`-tier (xtask/deps-strata.toml), the
+# edge is strictly downward (mycelium-l1 stratum 4 -> mycelium-diag stratum 1, well under l1's
+# existing stratum), and no new node enters the workspace dependency graph (mycelium-diag was
+# already pulled in transitively).
+mycelium-diag = { path = "../mycelium-diag" }
 # `forage` activation (M-906, DN-70 D1/DN-63 §3.5): reuses the existing RFC-0005 SelectionPolicy
 # machinery verbatim ("no new mechanism", DN-70) for the D-lite single-node placement decision +
 # its mandatory EXPLAIN. FLAG (M-906 kickoff-note deviation): the task brief's file-ownership list

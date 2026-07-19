@@ -19,10 +19,18 @@ mycelium-interp = { path = "../mycelium-interp" }
 mycelium-numerics = { path = "../mycelium-numerics" }
 # The M-231 Dense<->VSA swap reuses the M-131 checked capacity instantiation (RFC-0003 §5).
 mycelium-vsa = { path = "../mycelium-vsa" }
+# The canonical RFC-0013 `Diag`/first-fault-envelope record (W-A, DN-142 §4.2): the `swap_check`
+# emitter site (`mode.rs`) presents a `CheckVerdict` through this crate's `Diag`, never a second
+# diagnostic schema (KC-3 / G-9 — `mycelium-diag` depends only on `mycelium-core`, so this adds no
+# cycle).
+mycelium-diag = { path = "../mycelium-diag" }
 serde.workspace = true
+serde_json.workspace = true
+blake3.workspace = true
 
 [dev-dependencies]
-serde_json.workspace = true
+# serde_json moved to [dependencies] above (the store's cert-body hashing needs it outside test
+# cfg too); no longer duplicated here.
 # M-882: `mycelium-proj`/`mycelium-spore` were previously dev-dependencies here for the M-794 §13
 # conformance suite (tests/conformance.rs). That created two dev-dep cycles — `cert →[dev] proj → …
 # → l1 → cert` and `cert →[dev] spore → proj → … → l1 → cert` — because (unlike the removed comment

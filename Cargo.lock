@@ -252,7 +252,9 @@ dependencies = [
 name = "mycelium-cert"
 version = "0.463.1"
 dependencies = [
+ "blake3",
  "mycelium-core",
+ "mycelium-diag",
  "mycelium-interp",
  "mycelium-numerics",
  "mycelium-vsa",
@@ -354,6 +356,7 @@ dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-dense",
+ "mycelium-diag",
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",

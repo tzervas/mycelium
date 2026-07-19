@@ -116,8 +116,101 @@ once-per-`(n,m)` round-trip lemma (P1/P2) by content hash, with `params = {width
 (RFC-0002 §3). `guarantee = Exact`, `bound = None`. Out-of-range is the `Option`/error path, not a
 certificate.
 
+## Amendment — 2026-07-18: W-1 binary width canon corrective (append-only)
+
+**Status of this amendment.** Captured 2026-07-18 from the maintainer's binding corrective
+(`docs/planning/design-steer-2026-07-17/PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §2, "Corrective
+W-1"). This section **amends by addition**, not by rewrite — §1-§6 above (the M-012 `8↔6` spec, ratified
+2026-06-09) stand unchanged and remain a valid, retained worked example. Implementation (the sweep listed
+in §2.2 item 5 of the corrective) is **Phase-C work** (the program handoff's §5 wave W-D) and is
+**pending** — this section records the corrected canon; it does not itself land code. The doc's own
+`Status` field above is left unchanged (**Ratified**, 2026-06-09): this is an additive capture of a
+binding steer, not an independent re-ratification.
+
+### A.1 The canon corrects: 8/6 was never a ratified default
+
+§1-§6 above document the `n=8, m=6` pair as a **worked example** of the general `enc`/`dec` construction
+— it was never a `Default`/literal-grammar canon. The maintainer's 2026-07-17 repository audit (recorded
+in the program handoff §2.1) confirms no literal grammar or `impl Default for Repr` exists anywhere in
+the tree for any width; the 8-bit canon was **de facto**, established by which pairs the stdlib happened
+to export and which literals appeared at non-test kernel/runtime sites, not by any ratified default. The
+corrective below replaces that de facto canon; it does not revise the M-012 proof obligations (§4 P1-P4
+above), which hold for **every** legal `(n, m)` pair, `8↔6` included.
+
+### A.2 Canonical width
+
+**`Binary{64}` is the canonical width** wherever a width must be assumed, exemplified, or exported as the
+primary form; **`Binary{32}`** is the recognized common fallback. `Binary{8}`/`Ternary{6}` and
+`Binary{4}`/`Ternary{3}` are **demoted to embedded profiles and test vectors** — retained (§5's worked
+example above stays valid and useful for small-width verification), but no longer the assumed default.
+**All widths remain first-class and supported** — the corrective narrows which width is *assumed* when
+none is stated; it does not narrow which widths are legal (the legality condition of §2 above is
+unchanged and applies at every width).
+
+### A.3 Canonical bijection pairs
+
+Two pairs are canonical going forward, both `LosslessWithinRange` per RFC-0002 §4 exactly as §2-§6 above
+already establish (the proof shape is unchanged; only the featured widths change):
+
+- **`Binary{32} ↔ Ternary{21}`** — legal per §2's condition (`2^(n−1) ≤ (3^m−1)/2`): `binary{32}` needs
+  21 trits (`3^20 < 2^32 ≤ 3^21`, per the program handoff §2.1), which already fits within the kernel's
+  `i64`-exact conversion-utility ceiling of `m ≤ 40` — **available now**.
+- **`Binary{64} ↔ Ternary{41}`** — legal per the same §2 condition: `binary{64}` needs 41 trits
+  (`3^40 < 2^64 ≤ 3^41`, per the program handoff §2.1), but **behind enablement item E-W1** (§A.5 below).
+  The kernel's arbitrary-width ternary *arithmetic* has no ceiling (`BigTernary`, landed, Exact,
+  never-overflows — M-756, per RFC-0033/ADR-029), but the narrower **conversion utilities**
+  (`int_to_trits`/`trits_to_int`/`max_magnitude`) still route through `i64` and return `None` at
+  `m ≥ 41` (`crates/mycelium-std-ternary/src/arithmetic.rs:43-70`,
+  `crates/mycelium-core/src/ternary/mod.rs:108-131` — both already never-silent about the ceiling, per
+  their own doc comments; this is a narrower enablement gap than the arithmetic core, not a bug). So
+  `Binary{64} ↔ Ternary{41}` is **legal but not yet constructible via the existing conversion-utility
+  fast path** until E-W1 lands.
+
+### A.4 Length/count canon (pointer)
+
+Length- and count-typed returns across the swap surface (for example a row-count or byte-count return)
+standardize on `Binary{64}` under this corrective, for `usize` parity with the transpiler's
+`u64`/`usize` → width-64 mapping. The specific site-list fix (including `lib/std/swap.myc`'s
+`matrix_len`/`bytes_len` mismatch) is recorded in `docs/spec/stdlib/swap.md`'s companion 2026-07-18
+amendment, not restated here — this spec does not own the length-typed surface.
+
+### A.4b Landed follow-up (2026-07-19, append-only — supersedes the "pending" framing above)
+
+The E-W1 enablement and the §A canonical-pair sweep **have landed** (course-correction W-D,
+2026-07-18): `mycelium-core::ternary` and `mycelium-std-ternary::arithmetic` widened `i64` → `i128`
+(new ceiling m ≤ 80; m ≥ 81 explicit `None`), making `Binary{64}↔Ternary{41}` constructible via
+the conversion-utility fast path, and `lib/std/swap.myc` gained the `bin64_to_tern41`/
+`tern41_to_bin64` (and 32/21) exports, `myc check`-clean and exercised end-to-end against the live
+Rust oracle. M-1119 is `done` with a landed-basis note in `tools/github/issues.yaml`. The
+"pending"/"behind E-W1" wording in §A.3/§A.5 above is retained as the capture-time record; this
+note is the landed status (same pattern as `docs/spec/stdlib/ternary.md`'s 2026-07-18 amendment).
+
+### A.5 Enablement item E-W1 (tracked separately)
+
+Lifting the `int_to_trits`/`trits_to_int`/`max_magnitude` `i64` ceiling (routing `m > 40` through `i128`
+or the existing `BigTernary` path) is tracked as its own work item — see `docs/spec/stdlib/swap.md`'s
+companion amendment for the tracking-id proposal (**M-1119**, proposed to the integrating parent and not
+filed in `tools/github/issues.yaml` by this capture — `issues.yaml` is orchestrator-owned). `M-758`
+(`PackedTernary`, the limbed perf path) remains YAGNI/benchmark-gated and is **not** activated by this
+corrective (the program handoff §2.2 item 4 is explicit on this point).
+
+### A.6 Sweep-list pointer
+
+The full non-test-site sweep (kernel `Repr::Binary { width: 8 }` literals across
+`mycelium-interp`/`mycelium-mlir`/`mycelium-std-spore`/`mycelium-std-content`/`mycelium-std-select`/
+`mycelium-lsp`/`mycelium-core`, plus `docs/lib-index/INDEX.md` regeneration) is enumerated in
+`PROGRAM-HANDOFF-DESIGN-STEER-2026-07-17.md` §2.1/§2.2 item 5 — this spec does not duplicate that list;
+that document is the tracking source for the Phase-C sweep.
+
 ## Meta — changelog
 
 - **2026-06-09 (ratified):** initial precise `enc`/`dec` spec for the canonical `8↔6` width, with
   legality condition, the four correctness obligations (M-121), and a worked round-trip + out-of-range
   example. Grounded in RFC-0002 §4/§5 and T2.1 (IOTA TIP-5 / Jones). Append-only henceforth.
+- **2026-07-18 — W-1 corrective captured (Amendment, append-only; see §A above).** Records the
+  maintainer's binding width-canon corrective: `Binary{64}` canonical (`Binary{32}` recognized
+  fallback); `8↔6`/`4↔3` demoted to embedded profiles and retained test vectors (§1-§6 above unchanged);
+  canonical bijection pairs `Binary{32}↔Ternary{21}` (available now) and `Binary{64}↔Ternary{41}` (behind
+  enablement item E-W1, proposed as **M-1119**); both stay `LosslessWithinRange` per RFC-0002 §4 with the
+  same §4 proof obligations. No implementation lands with this capture (Phase-C, pending). `Status` field
+  unchanged (**Ratified**, 2026-06-09) — this is an additive amendment, not a re-ratification.
