@@ -12,6 +12,37 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### ci+docs(pm): Phase G executed via self-hosted release CI — 92/92 dispatched; second-pass review fixes (2026-07-19)
+
+Maintainer-directed continuation: the tag cut now runs through a new per-repo
+`.github/workflows/release.yml` (workflow_dispatch at the exact manifest rev; fresh-tags-only;
+`permissions: contents: write`; zero third-party actions — plain `curl` on each repo's own REST
+API; `runs-on: [self-hosted, linux, x64, podman]`, the gha-runner-ctl-compliant label set with no
+GitHub-hosted fallback). Rolled to all 92 repos (45 Rust + 46 `*-myc` + umbrella) via one PR each,
+all merged; all 92 dispatches queued at the pinned `RELEASE-v0.464.0.md` revs — runs execute when
+the fleet's listeners register (queue-confirmed; run-level conclusions observable fleet-side).
+
+Second-pass `/pr-review` of the trunk PR (fix-then-merge verdict) — fixes applied:
+
+- **Critical (VR-5):** the 26/20 twin-tally correction lacked a committed verification artifact
+  and contradicted the measurements doc's unreconciled 25/20 re-read. Now reconciled IN
+  `docs/measurements/course-correction-dual-side-2026-07-18.md` §2.3 (dated note): delivery-run
+  records recount to 26/20 over 46; the 45-repo re-read (25/20) is exactly consistent once the
+  46th twin (`mycelium-cli-myc`, CLEAN per its committed `DELIVERY.md`) is included; 27/19 was a
+  ledger miscount. The §5 flag row is resolved; the Phase F entry below now has this note as its
+  citable basis.
+- **Medium:** `docs/spec/swaps/binary-ternary.md` (new §A.4b) and `docs/spec/stdlib/swap.md`
+  (new §B.2b) gain append-only landed-status notes — the E-W1 lift and the std-export sweep those
+  docs described as "pending" landed later in this same branch (W-D).
+- **Deferred Lows (ledgered):** `PolicySlot` eviction via `Vec::remove(0)` vs its CertStore
+  `VecDeque` precedent (efficiency nit at caps 64/1024); `meet_boundary::check_boundary`'s
+  `CertifiedConsumer` invariant enforced by `debug_assert!` only (tighten before W-E wires a real
+  caller); `Diag.envelope` missing `skip_serializing_if` (emits `"envelope":null`). Future leaves.
+
+Everything else in the review came back clean: no unearned tag upgrades, no new silent paths,
+append-only discipline intact, all cross-doc numbers exact (92/92 manifest-vs-lock match;
+reject-ledger 9/9 at pins; every cited test count reproduced exactly).
+
 ### docs(pm): Phase G — v0.464.0 release staged; tag pushes policy-blocked, manifest committed (2026-07-18)
 
 Course-correction Phase G: the `v0.464.0` cut is fully staged in

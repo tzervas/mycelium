@@ -138,6 +138,24 @@ report uses as the headline number** (it is the program's own recorded delivery-
 the local re-read is noted as a plausibility cross-check that came out close but not exact, flagged
 rather than silently smoothed over.
 
+**Reconciliation (2026-07-19, integrating parent — closes the flag above).** The discrepancy is
+now resolved with checked artifacts, and the correct tally is **26/46 CLEAN, 20/46 FINDINGS**:
+
+1. The Phase-E delivery-run records (the driver's per-repo `myc-check --project lib` SUMMARY
+   lines) recount to 24 CLEAN + 20 FINDINGS in the batch run, plus the pilot (`std-swap-myc`,
+   CLEAN) and `mycelium-cli-myc` (CLEAN) = **26 CLEAN / 20 FINDINGS over 46**.
+2. This section's own 45-repo re-read (**25/20**) is *exactly consistent* with that figure: the
+   one twin absent from this sandbox was `mycelium-cli-myc` (checked out at a different path),
+   whose own committed `DELIVERY.md` records `CLEAN — ok: 2 file(s) checked, no findings`;
+   25 + that 1 CLEAN = 26, and the FINDINGS count matches at 20.
+3. The originally-cited **27/19 was a program-ledger miscount** (off by one in each column),
+   corrected in the ledger, `CHANGELOG.md`, and the umbrella lock header.
+
+Ground truth remains the per-repo `DELIVERY.md` files (all merged in the twin repos); the
+per-repo results themselves were never wrong — only the aggregate tally drifted. `Empirical`
+(artifact recount, method above). The headline sentence above retaining 27/19 is superseded by
+this note: **use 26/46 CLEAN, 20/46 FINDINGS.**
+
 Per-file gap examples from the local `DELIVERY.md` re-read (representative, not exhaustive): the
 FINDINGS repos gap on missing-in-.myc Rust types not yet ported (`Box`, `BTreeSet`, `PathBuf`,
 `ContentHash`, `ScalarKind`, `GuaranteeStrength`, `ScopeId`, `CertMode`, `ErrorOp`, `BudgetError`,
@@ -326,7 +344,7 @@ recorded as an explicit gap, not silently omitted (G2).
 | `docs/planning/course-correction-2026-07-18/PROGRAM.md` | Phase F row needs a phase-log entry (pending → complete) citing this report's path + headline numbers; this file does not edit `PROGRAM.md` (parent-owned). |
 | `CHANGELOG.md` / `docs/Doc-Index.md` | This new measurements doc is unlogged in the shared changelog/index — integrating parent applies once. |
 | `tools/github/issues.yaml` | No specific issue id was given for this Phase-F task; if one exists it should gain a `doc_refs` entry to this file. Not edited here (shared file). |
-| Twin CLEAN/FINDINGS discrepancy (§2.3) | 25/20 local re-read vs 27/19 cited — flagged, not resolved. A future pass could re-run `myc-check` per twin to reconcile which repo(s) drifted, and confirm the 46th twin missing from this sandbox. |
+| Twin CLEAN/FINDINGS discrepancy (§2.3) | **RESOLVED 2026-07-19** — see the §2.3 reconciliation note: the 46th twin (`mycelium-cli-myc`) is CLEAN per its committed `DELIVERY.md`, making the correct tally **26/46 CLEAN, 20/46 FINDINGS** (the original 27/19 was a ledger miscount, corrected everywhere it appeared). |
 | `lib/compiler` check-latency gap (§2.1) | 5.0s median vs `lib/std`'s 0.2s median (9 files vs 22) has no prior committed baseline to compare against — flagged as a UX data point, not investigated as a regression (no evidence it IS one). |
 
 ## 6. Judgment calls (recorded, not silent)

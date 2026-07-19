@@ -174,6 +174,17 @@ standardize on `Binary{64}` under this corrective, for `usize` parity with the t
 `matrix_len`/`bytes_len` mismatch) is recorded in `docs/spec/stdlib/swap.md`'s companion 2026-07-18
 amendment, not restated here — this spec does not own the length-typed surface.
 
+### A.4b Landed follow-up (2026-07-19, append-only — supersedes the "pending" framing above)
+
+The E-W1 enablement and the §A canonical-pair sweep **have landed** (course-correction W-D,
+2026-07-18): `mycelium-core::ternary` and `mycelium-std-ternary::arithmetic` widened `i64` → `i128`
+(new ceiling m ≤ 80; m ≥ 81 explicit `None`), making `Binary{64}↔Ternary{41}` constructible via
+the conversion-utility fast path, and `lib/std/swap.myc` gained the `bin64_to_tern41`/
+`tern41_to_bin64` (and 32/21) exports, `myc check`-clean and exercised end-to-end against the live
+Rust oracle. M-1119 is `done` with a landed-basis note in `tools/github/issues.yaml`. The
+"pending"/"behind E-W1" wording in §A.3/§A.5 above is retained as the capture-time record; this
+note is the landed status (same pattern as `docs/spec/stdlib/ternary.md`'s 2026-07-18 amendment).
+
 ### A.5 Enablement item E-W1 (tracked separately)
 
 Lifting the `int_to_trits`/`trits_to_int`/`max_magnitude` `i64` ceiling (routing `m > 40` through `i128`

@@ -235,6 +235,16 @@ see that file for the legality arithmetic and the E-W1 enablement gate; not rest
 exports' certificate class unchanged from §6 of `docs/spec/swaps/binary-ternary.md` (both pairs stay
 `LosslessWithinRange`, RFC-0002 §4).
 
+### B.2b Landed follow-up (2026-07-19, append-only — supersedes the "pending" framing above)
+
+The §B.2 std-export sweep **has landed** (course-correction W-D, 2026-07-18): `lib/std/swap.myc`
+now exports `bin32_to_tern21`/`tern21_to_bin32` and `bin64_to_tern41`/`tern41_to_bin64` (the E-W1
+`i64` → `i128` conversion-utility widening that gated the 64/41 pair landed in the same wave;
+M-1119 `done`), `myc check`-clean and dual-witnessed. Of the §B.3 fix-list, `matrix_len` moved to
+the `Binary{64}` canon in the same sweep; `bytes_len`'s matching move remains a ledgered residual
+(kernel-primitive-registry change, disclosed in `lib/std/swap.myc`). The "pending"/"out of scope"
+wording in §B.2 above is retained as the capture-time record; this note is the landed status.
+
 ### B.3 Length/count canon fix-list (normative TODO, not landed here)
 
 The corrective also standardizes length- and count-typed returns on `Binary{64}` (`usize` parity with
