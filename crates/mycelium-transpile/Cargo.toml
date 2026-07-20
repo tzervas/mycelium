@@ -18,7 +18,7 @@ path = "src/bin/mycelium-transpile.rs"
 [dependencies]
 # Parse layer (kickoff-sanctioned fallback: no reusable AST-walk exists in the maintainer's
 # py2rust/py-rust-bridge scaffolds, so we build on `syn` directly).
-syn = { version = "2", features = ["full", "extra-traits"] }
+syn = { version = "3", features = ["full", "extra-traits"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 # `quote` is syn's standard companion for rendering AST nodes back to source text (used only for
 # gap snippets / unsupported-construct messages here, never for code generation). Not in the
