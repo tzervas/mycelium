@@ -96,7 +96,7 @@ jobs:
       - name: Upload coverage to Codecov (advisory)
         if: always()
         continue-on-error: true
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           files: experiments/coverage.xml
           flags: experiments
