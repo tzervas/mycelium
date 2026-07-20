@@ -227,7 +227,7 @@ checksum = "88904434abc2901f197fe8cc55f0445e7ded921dba5911dad2e2b39b48e663c4"
 
 [[package]]
 name = "mycelium-bench"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-build"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "serde",
@@ -250,7 +250,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-cert"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-interp",
@@ -262,7 +262,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-check"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cli-common",
  "mycelium-l1",
@@ -272,7 +272,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-cli"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cli-common",
  "mycelium-interp",
@@ -283,11 +283,11 @@ dependencies = [
 
 [[package]]
 name = "mycelium-cli-common"
-version = "0.0.0"
+version = "0.463.1"
 
 [[package]]
 name = "mycelium-core"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "serde",
@@ -296,14 +296,14 @@ dependencies = [
 
 [[package]]
 name = "mycelium-dense"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
 ]
 
 [[package]]
 name = "mycelium-diag"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -313,7 +313,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-doc"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -326,7 +326,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-fmt"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cli-common",
  "mycelium-l1",
@@ -336,7 +336,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-interp"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -349,7 +349,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-l1"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
@@ -364,7 +364,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-lint"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cli-common",
  "mycelium-doc",
@@ -374,7 +374,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-lsp"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-cert",
@@ -390,7 +390,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-mir-passes"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-workstack",
@@ -398,7 +398,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-mlir"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
@@ -416,7 +416,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-numerics"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "proptest",
@@ -426,7 +426,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-proj"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-l1",
@@ -435,7 +435,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-rt-abi"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-interp",
@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-sched"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "proptest",
@@ -453,14 +453,14 @@ dependencies = [
 
 [[package]]
 name = "mycelium-sec"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cli-common",
 ]
 
 [[package]]
 name = "mycelium-select"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-interp",
@@ -470,7 +470,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-spore"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -480,14 +480,14 @@ dependencies = [
 
 [[package]]
 name = "mycelium-stack"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "stacker",
 ]
 
 [[package]]
 name = "mycelium-std-cmp"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -495,7 +495,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-collections"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -503,7 +503,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-conformance"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
@@ -526,21 +526,21 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-content"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
 ]
 
 [[package]]
 name = "mycelium-std-core"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
 ]
 
 [[package]]
 name = "mycelium-std-dense"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-dense",
@@ -548,14 +548,14 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-diag"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-diag",
 ]
 
 [[package]]
 name = "mycelium-std-error"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -564,7 +564,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-fmt"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -575,7 +575,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-fs"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -583,7 +583,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-io"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -594,7 +594,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-iter"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -602,7 +602,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-math"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-numerics",
@@ -612,7 +612,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-numerics"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-numerics",
@@ -622,7 +622,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-rand"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -630,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-recover"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -643,7 +643,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-runtime"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-rt-abi",
@@ -655,7 +655,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-select"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-select",
@@ -663,7 +663,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-spore"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "blake3",
  "mycelium-core",
@@ -679,7 +679,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-swap"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
@@ -688,11 +688,11 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-sys"
-version = "0.0.0"
+version = "0.463.1"
 
 [[package]]
 name = "mycelium-std-sys-host"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-std-rand",
  "mycelium-std-sys",
@@ -701,14 +701,14 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-ternary"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
 ]
 
 [[package]]
 name = "mycelium-std-testing"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-diag",
@@ -718,7 +718,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-text"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-time"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
@@ -734,7 +734,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-vsa"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-vsa",
@@ -742,7 +742,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-transpile"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-l1",
  "mycelium-workstack",
@@ -751,12 +751,12 @@ dependencies = [
  "quote",
  "serde",
  "serde_json",
- "syn",
+ "syn 3.0.2",
 ]
 
 [[package]]
 name = "mycelium-vsa"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "proptest",
@@ -765,7 +765,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-vsa-decode"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-core",
  "mycelium-select",
@@ -774,7 +774,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-workstack"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "mycelium-stack",
 ]
@@ -983,7 +983,7 @@ checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -1029,9 +1029,20 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.118"
+version = "2.0.119"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b9ae57f904213ebb649ce6895b8a66c66f0203b9319718f69a5612a065b1422"
+checksum = "872831b642d1a07999a962a351ed35b955ea2cfc8f3862091e2a240a84f17297"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-ident",
+]
+
+[[package]]
+name = "syn"
+version = "3.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a207d6d6a2b7fc470b80443726053f18a2481b7e1eee970597051596567987a3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1068,7 +1079,7 @@ checksum = "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -1169,7 +1180,7 @@ checksum = "1ebf944e87a7c253233ad6766e082e3cd714b5d03812acc24c318f549614536e"
 
 [[package]]
 name = "xtask"
-version = "0.0.0"
+version = "0.463.1"
 dependencies = [
  "cargo_metadata",
  "mycelium-cert",
@@ -1198,7 +1209,7 @@ checksum = "1ae7f38b72ec2a254e2b87ef277cf2cd4fb97cbebf944faa6f33354da0867930"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn",
+ "syn 2.0.119",
 ]
 
 [[package]]
